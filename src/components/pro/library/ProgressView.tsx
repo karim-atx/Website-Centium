@@ -13,6 +13,7 @@ import { EmptyState } from "../EmptyState";
 import { ProCardSkeleton, ProError } from "../states";
 import { DetailHeader } from "./libraryUi";
 import { currentWeek, deltaKg, fmtKg, isActive, programmeWeeks, topLift, weekCell, type WeekCell } from "./libraryModel";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR7 "Progress per client" for one programme.
@@ -80,7 +81,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
 
   const fill = (c: WeekCell) =>
     c === "all" ? INK.fill : c === "part" ? (dark ? "rgba(174,161,220,0.35)" : "#DDD7F2") : INK.soft;
-  const label: Record<WeekCell, string> = { all: "All done", part: "Partly done", none: "Not yet", future: "Not yet" };
+  const label: Record<WeekCell, string> = { all: tk("All done"), part: tk("Partly done"), none: tk("Not yet"), future: tk("Not yet") };
   const weeksRow = Array.from({ length }, (_, i) => i + 1);
 
   const grid = (rows: { key: string; name: string; url?: string | null; cells: WeekCell[] | null }[]) => (
@@ -88,7 +89,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
       <div style={{ minWidth: 100 + length * 30 }}>
         <div className="flex" style={{ gap: 4, paddingInlineStart: 96, paddingBottom: 8, borderBottom: `1px solid ${INK.b06}` }}>
           {weeksRow.map((w) => (
-            <span key={w} className="flex-1 text-center" style={{ fontSize: textPx(10.5), color: INK.chF, minWidth: 26 }}>{`W${w}`}</span>
+            <span key={w} className="flex-1 text-center" style={{ fontSize: textPx(10.5), color: INK.chF, minWidth: 26 }}>{t("W{n}", { n: w })}</span>
           ))}
         </div>
         {rows.map((r) => (
@@ -99,12 +100,12 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
             </span>
             {r.cells === null ? (
               <span className="flex items-center flex-1" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
-                <Lock size={12} aria-hidden /> Not sharing workout activity.
+                <Lock size={12} aria-hidden /> {t("Not sharing workout activity.")}
               </span>
             ) : (
               weeksRow.map((w, i) => {
                 const c = r.cells![i] ?? "future";
-                return <span key={w} role="img" aria-label={`Week ${w}: ${label[c]}`} className="flex-1" style={{ height: 24, borderRadius: 7, minWidth: 26, background: fill(c) }} />;
+                return <span key={w} role="img" aria-label={t("Week {n}: {status}", { n: w, status: t(label[c]) })} className="flex-1" style={{ height: 24, borderRadius: 7, minWidth: 26, background: fill(c) }} />;
               })
             )}
           </div>
@@ -113,7 +114,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
           {(["all", "part", "none"] as WeekCell[]).map((c) => (
             <span key={c} className="flex items-center" style={{ gap: 6, fontSize: textPx(11.5), color: INK.chF }}>
               <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: fill(c) }} />
-              {label[c]}
+              {t(label[c])}
             </span>
           ))}
         </div>
@@ -147,18 +148,18 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
 
   return (
     <div>
-      <DetailHeader title={template.name} eyebrow="Progress" onBack={onBack} />
-      <SegmentedTabs className="mb-3" items={[{ key: "client", label: "By client" }, { key: "workout", label: "By workout" }]} activeKey={tab} onChange={(k) => setTab(k as "client" | "workout")} />
-      {active.length === 0 && <EmptyState icon={TrendingUp} title="Not assigned to anyone yet." />}
+      <DetailHeader title={template.name} eyebrow={t("Progress")} onBack={onBack} />
+      <SegmentedTabs className="mb-3" items={[{ key: "client", label: t("By client") }, { key: "workout", label: t("By workout") }]} activeKey={tab} onChange={(k) => setTab(k as "client" | "workout")} />
+      {active.length === 0 && <EmptyState icon={TrendingUp} title={t("Not assigned to anyone yet.")} />}
       {failed && <ProError onRetry={() => setReload((n) => n + 1)} />}
       {!failed && active.length > 0 && !cells && <ProCardSkeleton lines={4} />}
       {!failed && cells && (tab === "client" ? grid(clientRows) : grid([workoutRow]))}
 
       {!failed && sessions && active.length > 0 && (
         <>
-          <SectionHead label="Top lifts this block" />
+          <SectionHead label={t("Top lifts this block")} />
           {lifts.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF }}>No sessions logged yet.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("No sessions logged yet.")}</p>
           ) : (
             <ListCard
               rows={lifts.map(({ a, c, l }) => {
@@ -167,7 +168,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
                   key: a.id,
                   icon: up ? TrendingUp : TrendingDown,
                   title: `${c.name} · ${l.exercise}`,
-                  meta: `${fmtKg(l.firstKg)} to ${fmtKg(l.lastKg)} kg x ${l.reps}`,
+                  meta: t("{from} to {to} kg x {reps}", { from: fmtKg(l.firstKg), to: fmtKg(l.lastKg), reps: l.reps }),
                   trailing: (
                     <span className="flex items-center shrink-0" style={{ gap: 4, fontSize: textPx(13), fontWeight: 700, color: up ? INK.good : INK.hi }}>
                       {up ? <TrendingUp size={14} aria-hidden /> : <TrendingDown size={14} aria-hidden />}

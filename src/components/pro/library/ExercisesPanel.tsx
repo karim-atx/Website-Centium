@@ -16,16 +16,17 @@ import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey } from 
 import { linePx, textPx } from "../../../theme/textSize";
 import type { ExerciseClassification, ExerciseTag, MuscleGroup, WorkoutTemplate } from "../../../types";
 import { INK } from "../proInk";
+import { t, tk, tn } from "../../../i18n/core";
 
 const CLASSIFICATION: Record<ExerciseClassification, string> = {
-  barbell: "Barbell",
-  dumbbell: "Dumbbell",
-  machine_other: "Machine / Other",
-  weighted_bodyweight: "Weighted Bodyweight",
-  assisted_bodyweight: "Assisted Bodyweight",
-  reps_only: "Reps Only",
-  cardio: "Cardio",
-  duration: "Duration",
+  barbell: tk("Barbell"),
+  dumbbell: tk("Dumbbell"),
+  machine_other: tk("Machine / Other"),
+  weighted_bodyweight: tk("Weighted Bodyweight"),
+  assisted_bodyweight: tk("Assisted Bodyweight"),
+  reps_only: tk("Reps Only"),
+  cardio: tk("Cardio"),
+  duration: tk("Duration"),
 };
 
 interface Row {
@@ -64,7 +65,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
   const categories = useMemo(() => {
     const present = new Set<MuscleGroup>();
     for (const e of exerciseCatalog) for (const mg of e.muscleGroups) present.add(mg);
-    return [...present].sort((a, b) => MUSCLE_GROUP_LABEL[a].localeCompare(MUSCLE_GROUP_LABEL[b]));
+    return [...present].sort((a, b) => t(MUSCLE_GROUP_LABEL[a]).localeCompare(t(MUSCLE_GROUP_LABEL[b])));
   }, [exerciseCatalog]);
 
   const usage = useMemo(() => {
@@ -96,11 +97,11 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
   }, [customExercises, exerciseCatalog, query, category]);
 
   const loading = exerciseCatalog.length === 0 && !exerciseCatalogError;
-  const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : "Couldn't save. Try again.");
+  const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : tk("Couldn't save. Try again."));
 
   const saveCreated = async (data: CustomExerciseData) => {
     if (!online) {
-      setToast("Couldn't save. Try again.");
+      setToast(tk("Couldn't save. Try again."));
       return;
     }
     const error = await addCustomExercise(data);
@@ -110,7 +111,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
   const meta = (r: Row) => {
     const muscle = r.muscleGroups.find((m) => m !== "other") ?? r.muscleGroups[0];
     const n = r.id ? usage.get(r.id) ?? 0 : 0;
-    return [muscle ? MUSCLE_GROUP_LABEL[muscle] : null, CLASSIFICATION[r.classification], n ? `used in ${n} template${n === 1 ? "" : "s"}` : null].filter(Boolean).join(" · ");
+    return [muscle ? t(MUSCLE_GROUP_LABEL[muscle]) : null, t(CLASSIFICATION[r.classification]), n ? tn(n, "used in {n} template", "used in {n} templates") : null].filter(Boolean).join(" · ");
   };
 
   return (
@@ -118,7 +119,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
       <SegmentedTabs
         variant="teal"
         scroll
-        items={[{ key: "all", label: "All" }, ...categories.map((c) => ({ key: c, label: MUSCLE_GROUP_LABEL[c] }))]}
+        items={[{ key: "all", label: t("All") }, ...categories.map((c) => ({ key: c, label: t(MUSCLE_GROUP_LABEL[c]) }))]}
         activeKey={category ?? "all"}
         onChange={(k) => setCategory(k === "all" ? null : (k as MuscleGroup))}
         activeFillDark="#79A8A1"
@@ -131,7 +132,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
             onClick={() => setDetail(r)}
             className={`tap w-full flex flex-col text-start ${i > 0 ? "border-t-[0.5px] border-charcoal/[0.08]" : ""}`}
             style={{ padding: "12px 4px", minHeight: 44 }}
-            aria-label={`${r.name}, details`}
+            aria-label={t("{name}, details", { name: r.name })}
           >
             <span className="flex items-center" style={{ gap: 6 }}>
               <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 500, color: INK.ch }}>{r.name}</span>
@@ -141,10 +142,10 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
           </button>
         ))}
         {loading && <SkeletonRows count={8} height={46} divided />}
-        {exerciseCatalogError && <LoadErrorCard message="Couldn't load exercises." onRetry={retryExerciseCatalog} />}
+        {exerciseCatalogError && <LoadErrorCard message={t("Couldn't load exercises.")} onRetry={retryExerciseCatalog} />}
         {!loading && !exerciseCatalogError && rows.length === 0 && (
           <p className="text-center" style={{ padding: "28px 0", fontSize: textPx(13.5), color: INK.chF }}>
-            No matches. Use Create exercise above to add your own.
+            {t("No matches. Use Create exercise above to add your own.")}
           </p>
         )}
       </div>
@@ -169,7 +170,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
       />
       <ExerciseHistorySheet open={!!history} onClose={() => setHistory(null)} name={history?.name ?? ""} match={history?.match ?? null} />
       <ExerciseInfoSheet open={!!info} onClose={() => setInfo(null)} name={info?.name ?? ""} source={info?.source ?? null} />
-      <Toast open={!!toast} message={toast ?? ""} icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />} onExpire={() => setToast(null)} />
     </div>
   );
 };

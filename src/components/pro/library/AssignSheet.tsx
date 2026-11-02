@@ -12,7 +12,8 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { fmtDay } from "../client/clientFormat";
-import { clientsLabel, isActive, programmeEnd } from "./libraryModel";
+import { isActive, programmeEnd } from "./libraryModel";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR5 "Assign to clients · start date and week".
@@ -65,9 +66,9 @@ export const AssignSheet: React.FC<{
   /** "Not on a programme" / "On {name}, ends {date}" / "On {name}" from my active assignments. */
   const statusOf = (clientId: string) => {
     const a = templateAssignments.find((x) => x.clientId === clientId && isActive(x));
-    if (!a) return "Not on a programme";
-    const name = workoutTemplates.find((t) => t.id === a.templateId)?.name ?? "";
-    return a.endsOn ? `On ${name}, ends ${fmtDay(a.endsOn)}` : `On ${name}`;
+    if (!a) return t("Not on a programme");
+    const name = workoutTemplates.find((w) => w.id === a.templateId)?.name ?? "";
+    return a.endsOn ? t("On {name}, ends {date}", { name, date: fmtDay(a.endsOn) }) : t("On {name}", { name });
   };
 
   const nameOf = (clientId: string) => roster.find((c) => c.clientId === clientId)?.name ?? "";
@@ -94,7 +95,7 @@ export const AssignSheet: React.FC<{
         setBusy(false);
         return;
       }
-      setErrors((e) => [...e, `${nameOf(clientId)}: ${result.message ?? "Couldn't assign that template."}`]);
+      setErrors((e) => [...e, t("{name}: {message}", { name: nameOf(clientId), message: result.message ? t(result.message) : t("Couldn't assign that template.") })]);
     }
     setBusy(false);
   };
@@ -102,20 +103,20 @@ export const AssignSheet: React.FC<{
   const finished = done.length > 0 && !busy && !pending && done.length + errors.length >= picked.length;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Assign to clients">
+    <BottomSheet open={open} onClose={onClose} title={t("Assign to clients")}>
       <div className="space-y-4 animate-fade-slide-up">
-        <p style={{ fontSize: textPx(13), color: INK.chS }}>{weeks ? `${template.name} · ${weeks} weeks` : template.name}</p>
+        <p style={{ fontSize: textPx(13), color: INK.chS }}>{weeks ? `${template.name} · ${tn(weeks, "{n} week", "{n} weeks")}` : template.name}</p>
 
         {template.isPublic ? (
           <>
             <UnverifiedProgramNotice isVerified={template.isVerified} isPublic={template.isPublic} />
             <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-              This is a starter program from Centium. It can't be assigned or edited. Duplicate it into a template of your own first.
+              {t("This is a starter program from Centium. It can't be assigned or edited. Duplicate it into a template of your own first.")}
             </p>
           </>
         ) : (
           <>
-            {roster.length === 0 && <p className="text-center text-sm text-charcoal-faint py-6">You don't have any clients yet.</p>}
+            {roster.length === 0 && <p className="text-center text-sm text-charcoal-faint py-6">{t("You don't have any clients yet.")}</p>}
             <div>
               {roster.map((c, i) => {
                 const id = c.clientId!;
@@ -145,7 +146,7 @@ export const AssignSheet: React.FC<{
                         {c.name}
                       </span>
                       <span className="block truncate" style={{ fontSize: textPx(12), color: INK.chF }}>
-                        {ok ? "Assigned" : statusOf(id)}
+                        {ok ? t("Assigned") : statusOf(id)}
                       </span>
                     </span>
                   </button>
@@ -155,7 +156,7 @@ export const AssignSheet: React.FC<{
 
             <div className="grid grid-cols-2" style={{ gap: 12 }}>
               <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Start date</span>
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Start date")}</span>
                 <input
                   type="date"
                   value={startsOn}
@@ -166,7 +167,7 @@ export const AssignSheet: React.FC<{
               </label>
               {weeks && weeks > 1 && (
                 <label className="block">
-                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Start at</span>
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Start at")}</span>
                   <select
                     value={joinWeek}
                     onChange={(e) => setJoinWeek(Number(e.target.value))}
@@ -174,25 +175,25 @@ export const AssignSheet: React.FC<{
                     style={{ minHeight: 44 }}
                   >
                     {Array.from({ length: weeks }, (_, i) => (
-                      <option key={i + 1} value={i + 1}>{`Week ${i + 1}`}</option>
+                      <option key={i + 1} value={i + 1}>{t("Week {n}", { n: i + 1 })}</option>
                     ))}
                   </select>
                   <span className="block mt-1.5" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                    Pick a later week to join mid-programme
+                    {t("Pick a later week to join mid-programme")}
                   </span>
                 </label>
               )}
             </div>
-            {ends && <p style={{ fontSize: textPx(12), color: INK.chS }}>{`Ends ${fmtDay(ends, true)}`}</p>}
+            {ends && <p style={{ fontSize: textPx(12), color: INK.chS }}>{t("Ends {date}", { date: fmtDay(ends, true) })}</p>}
 
             <div className="flex items-center justify-between rounded-2xl bg-cream-soft" style={{ padding: "12px 16px", gap: 12 }}>
               <span className="min-w-0">
-                <span className="block text-sm font-semibold text-charcoal">Each client gets their own copy</span>
-                <span className="block text-[12px] text-charcoal-faint">Edit one client without changing the template</span>
+                <span className="block text-sm font-semibold text-charcoal">{t("Each client gets their own copy")}</span>
+                <span className="block text-[12px] text-charcoal-faint">{t("Edit one client without changing the template")}</span>
               </span>
               {/* Always on: assign_template_to_client copies the template into
                   each client's own routine; there is no shared mode. */}
-              <Toggle checked onChange={() => undefined} disabled label="Each client gets their own copy" />
+              <Toggle checked onChange={() => undefined} disabled label={t("Each client gets their own copy")} />
             </div>
           </>
         )}
@@ -206,22 +207,24 @@ export const AssignSheet: React.FC<{
         {pending && (
           <div className="rounded-2xl border border-status-high/30 bg-cream-card p-3.5 space-y-3">
             <div>
-              <p className="text-sm font-bold text-charcoal">{pending.name} has changed this routine</p>
+              <p className="text-sm font-bold text-charcoal">{t("{name} has changed this routine", { name: pending.name })}</p>
               <p className="text-[11.5px] text-charcoal-soft leading-relaxed mt-0.5">
-                Re-assigning replaces {pending.routineName ? `"${pending.routineName}"` : "their routine"} with this template. These changes of theirs would be lost:
+                {pending.routineName
+                  ? t("Re-assigning replaces \"{routine}\" with this template. These changes of theirs would be lost:", { routine: pending.routineName })
+                  : t("Re-assigning replaces their routine with this template. These changes of theirs would be lost:")}
               </p>
             </div>
             {pending.differences.length === 0 ? (
-              <p className="text-[11.5px] text-charcoal-faint">They edited it, but it still matches this template exercise for exercise.</p>
+              <p className="text-[11.5px] text-charcoal-faint">{t("They edited it, but it still matches this template exercise for exercise.")}</p>
             ) : (
               <div className="space-y-1.5 max-h-[180px] overflow-y-auto no-scrollbar">
                 {pending.differences.map((d) => (
                   <div key={d.name} className="bg-cream-soft rounded-xl px-3 py-2">
                     <p className="text-[12.5px] font-semibold text-charcoal">{d.name}</p>
                     <p className="text-[11px] text-charcoal-soft flex items-center gap-1.5 flex-wrap">
-                      {d.current ? <span>they have {d.current}</span> : <span className="text-charcoal-faint">not in their routine</span>}
-                      <ArrowRight size={11} className="text-charcoal-faint shrink-0" />
-                      {d.proposed ? <span>template has {d.proposed}</span> : <span className="text-charcoal-faint">would be removed</span>}
+                      {d.current ? <span>{t("they have {value}", { value: d.current })}</span> : <span className="text-charcoal-faint">{t("not in their routine")}</span>}
+                      <ArrowRight size={11} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+                      {d.proposed ? <span>{t("template has {value}", { value: d.proposed })}</span> : <span className="text-charcoal-faint">{t("would be removed")}</span>}
                     </p>
                   </div>
                 ))}
@@ -238,7 +241,7 @@ export const AssignSheet: React.FC<{
                   if (rest.length) void run(rest);
                 }}
               >
-                Keep theirs
+                {t("Keep theirs")}
               </Button>
               <Button
                 fullWidth
@@ -250,7 +253,7 @@ export const AssignSheet: React.FC<{
                   void run(queue, true);
                 }}
               >
-                <Check size={14} /> Replace it
+                <Check size={14} /> {t("Replace it")}
               </Button>
             </div>
           </div>
@@ -259,12 +262,12 @@ export const AssignSheet: React.FC<{
         {!template.isPublic && !finished && (
           <Button fullWidth size="lg" disabled={busy || !!pending || picked.filter((id) => !done.includes(id)).length === 0} onClick={() => void run(picked.filter((id) => !done.includes(id)))}>
             <UserPlus size={16} />
-            {busy ? "Assigning…" : `Assign to ${clientsLabel(picked.filter((id) => !done.includes(id)).length)}`}
+            {busy ? t("Assigning…") : tn(picked.filter((id) => !done.includes(id)).length, "Assign to {n} client", "Assign to {n} clients")}
           </Button>
         )}
         {(template.isPublic || finished) && (
           <Button variant="outline" fullWidth onClick={onClose}>
-            Done
+            {t("Done")}
           </Button>
         )}
       </div>

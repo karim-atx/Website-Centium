@@ -8,7 +8,9 @@ import { CtaButton } from "../../ui/PinnedCta";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
-import { DAY_LONG, DAY_SHORT } from "../../../utils/week";
+import { t, tn } from "../../../i18n/core";
+import { weekdayLong, weekdayShort } from "../proDates";
+import { programmeMetaText, statusText } from "./programmeText";
 import { INK } from "../proInk";
 import { ProCardSkeleton, ProError } from "../states";
 import { Card, ListCard, SectionHead } from "../client/kit";
@@ -16,7 +18,7 @@ import { fmtDay } from "../client/clientFormat";
 import { DetailHeader, ErrorLine, FilterChip, SquareBtn } from "../library/libraryUi";
 import { copyProgrammeWeek, deleteProgramme, moveProgrammeDaySession, setProgrammeDay, setProgrammeWeekNote } from "../../../services/programmes";
 import { moveGripLabel } from "../../../services/programmes/copy";
-import { addToDay, assignmentStatus, buildGrid, MAX_PER_DAY, moveInDay, programmeMeta, removeFromDay, weekCount } from "../../../services/programmes/model";
+import { addToDay, buildGrid, MAX_PER_DAY, moveInDay, removeFromDay, weekCount } from "../../../services/programmes/model";
 import type { ProgrammesState } from "./useProgrammes";
 import { AddWorkoutSheet } from "./AddWorkoutSheet";
 import { AssignProgrammeSheet } from "./AssignProgrammeSheet";
@@ -84,8 +86,8 @@ export const ProgrammeBuilder: React.FC<{
   const programme = state.programmes.find((p) => p.id === programmeId) ?? null;
   const weeks = programme?.durationWeeks ?? 0;
   const grid = buildGrid(weeks, state.slots[programmeId] ?? []);
-  const own = useMemo(() => workoutTemplates.filter((t) => !t.isPublic), [workoutTemplates]);
-  const byId = useMemo(() => new Map(workoutTemplates.map((t) => [t.id, t])), [workoutTemplates]);
+  const own = useMemo(() => workoutTemplates.filter((x) => !x.isPublic), [workoutTemplates]);
+  const byId = useMemo(() => new Map(workoutTemplates.map((x) => [x.id, x])), [workoutTemplates]);
   const w = Math.min(Math.max(week, 1), weeks);
 
   /** One write, then a re-read; errors stay on screen until the next write. */
@@ -118,15 +120,15 @@ export const ProgrammeBuilder: React.FC<{
   if (!programme) {
     return (
       <>
-        <DetailHeader title="Programme" onBack={onBack} />
-        <p style={{ fontSize: textPx(13), color: INK.chF }}>This programme isn't available any more.</p>
+        <DetailHeader title={t("Programme")} onBack={onBack} />
+        <p style={{ fontSize: textPx(13), color: INK.chF }}>{t("This programme isn't available any more.")}</p>
       </>
     );
   }
 
   const days = grid[w - 1] ?? [];
   const active = state.assignments.filter((a) => a.programmeId === programme.id && !a.endedAt);
-  const clientName = (id: string) => professionalClients.find((c) => c.clientId === id)?.name ?? "A former client";
+  const clientName = (id: string) => professionalClients.find((c) => c.clientId === id)?.name ?? t("A former client");
 
   const saveDay = (day: number, ids: string[]) => void write(() => setProgrammeDay(programme.id, w, day, ids));
 
@@ -148,32 +150,32 @@ export const ProgrammeBuilder: React.FC<{
     <div style={{ paddingBottom: 32 }}>
       <DetailHeader
         title={programme.name}
-        eyebrow="Programme"
+        eyebrow={t("Programme")}
         onBack={onBack}
-        right={<SquareBtn ref={menuRef} icon={EllipsisVertical} label="Programme options" onClick={() => setMenuAnchor(menuRef.current)} />}
+        right={<SquareBtn ref={menuRef} icon={EllipsisVertical} label={t("Programme options")} onClick={() => setMenuAnchor(menuRef.current)} />}
       />
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8 }}>{programmeMeta(weeks, grid, new Set(active.map((a) => a.clientId)).size)}</p>
+      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8 }}>{programmeMetaText(weeks, grid, new Set(active.map((a) => a.clientId)).size)}</p>
       {programme.description && <p style={{ fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 8, whiteSpace: "pre-wrap" }}>{programme.description}</p>}
       {programme.coachNote && (
         <div style={{ background: INK.soft, borderRadius: 14, padding: "10px 12px", marginBottom: 10 }}>
-          <p style={{ fontSize: textPx(11), fontWeight: 700, color: INK.chF, marginBottom: 2 }}>Coach note</p>
+          <p style={{ fontSize: textPx(11), fontWeight: 700, color: INK.chF, marginBottom: 2 }}>{t("Coach note")}</p>
           <p style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45, whiteSpace: "pre-wrap" }}>{programme.coachNote}</p>
         </div>
       )}
       <div className="flex" style={{ marginBottom: 14 }}>
-        <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label="Assign to a client" onClick={() => setAssigning(true)} />
+        <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={t("Assign to a client")} onClick={() => setAssigning(true)} />
       </div>
 
-      {error && <ErrorLine>{error}</ErrorLine>}
-      {state.status === "error" && <ErrorLine>{state.offline ? "You're offline. Showing what was loaded." : "Couldn't refresh this programme."}</ErrorLine>}
+      {error && <ErrorLine>{t(error)}</ErrorLine>}
+      {state.status === "error" && <ErrorLine>{state.offline ? t("You're offline. Showing what was loaded.") : t("Couldn't refresh this programme.")}</ErrorLine>}
 
       <div className="flex items-center" style={{ gap: 8, marginBottom: 12 }}>
-        <div className="flex-1 min-w-0 flex scroll-row no-scrollbar" style={{ gap: 6 }} role="tablist" aria-label="Weeks">
+        <div className="flex-1 min-w-0 flex scroll-row no-scrollbar" style={{ gap: 6 }} role="tablist" aria-label={t("Weeks")}>
           {Array.from({ length: weeks }, (_, i) => (
-            <FilterChip key={i + 1} label={`Week ${i + 1}`} on={w === i + 1} onClick={() => setWeek(i + 1)} />
+            <FilterChip key={i + 1} label={t("Week {n}", { n: i + 1 })} on={w === i + 1} onClick={() => setWeek(i + 1)} />
           ))}
         </div>
-        <SquareBtn ref={weekRef} icon={EllipsisVertical} label={`Week ${w} options`} onClick={() => setWeekAnchor(weekRef.current)} />
+        <SquareBtn ref={weekRef} icon={EllipsisVertical} label={t("Week {n} options", { n: w })} onClick={() => setWeekAnchor(weekRef.current)} />
       </div>
 
       <WeekNoteField
@@ -199,7 +201,7 @@ export const ProgrammeBuilder: React.FC<{
               }}
             >
               <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: ids.length ? 6 : 0 }}>
-                <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, minWidth: 36 }}>{DAY_SHORT[i]}</span>
+                <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, minWidth: 36 }}>{weekdayShort(i)}</span>
                 {ids.length === 0 ? (
                   <button
                     type="button"
@@ -207,9 +209,9 @@ export const ProgrammeBuilder: React.FC<{
                     onClick={() => setAdding(day)}
                     className="tap flex-1 flex items-center justify-between text-start"
                     style={{ minHeight: 40, borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 12px", color: INK.chF, fontSize: textPx(12.5), fontWeight: 600 }}
-                    aria-label={`Rest day. Add a workout to ${DAY_LONG[i]}`}
+                    aria-label={t("Rest day. Add a workout to {day}", { day: weekdayLong(i) })}
                   >
-                    Rest day
+                    {t("Rest day")}
                     <Plus size={15} strokeWidth={2} aria-hidden />
                   </button>
                 ) : (
@@ -220,16 +222,16 @@ export const ProgrammeBuilder: React.FC<{
                       onClick={() => setAdding(day)}
                       className="tap relative flex items-center before:absolute before:-inset-3 before:content-['']"
                       style={{ gap: 4, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
-                      aria-label={`Add a workout to ${DAY_LONG[i]}`}
+                      aria-label={t("Add a workout to {day}", { day: weekdayLong(i) })}
                     >
-                      <Plus size={13} strokeWidth={2.4} aria-hidden /> Add
+                      <Plus size={13} strokeWidth={2.4} aria-hidden /> {t("Add")}
                     </button>
                   )
                 )}
               </div>
               {ids.map((id, k) => {
-                const t = byId.get(id);
-                const card: CardRef = { day, position: k, name: t?.name ?? "A workout" };
+                const tpl = byId.get(id);
+                const card: CardRef = { day, position: k, name: tpl?.name ?? t("A workout") };
                 const lifted = drag.dragging?.day === day && drag.dragging.position === k;
                 return (
                   <div
@@ -254,11 +256,11 @@ export const ProgrammeBuilder: React.FC<{
                     </button>
                     <span className="flex-1 min-w-0">
                       <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
-                        {t?.name ?? "A workout"}
+                        {tpl?.name ?? t("A workout")}
                       </span>
-                      {t && (
+                      {tpl && (
                         <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>
-                          {[`${t.exercises.length} ${t.exercises.length === 1 ? "exercise" : "exercises"}`, t.durationMin ? `${t.durationMin} min` : null].filter(Boolean).join(" · ")}
+                          {[tn(tpl.exercises.length, "{n} exercise", "{n} exercises"), tpl.durationMin ? t("{n} min", { n: tpl.durationMin }) : null].filter(Boolean).join(" · ")}
                         </span>
                       )}
                     </span>
@@ -267,7 +269,7 @@ export const ProgrammeBuilder: React.FC<{
                         type="button"
                         disabled={busy}
                         onClick={() => saveDay(day, moveInDay(ids, k, -1))}
-                        aria-label={`Move ${t?.name ?? "workout"} up`}
+                        aria-label={tpl ? t("Move {name} up", { name: tpl.name }) : t("Move workout up")}
                         className="tap relative shrink-0 flex items-center justify-center before:absolute before:-inset-2 before:content-['']"
                         style={{ width: 28, height: 28, color: INK.chS }}
                       >
@@ -278,7 +280,7 @@ export const ProgrammeBuilder: React.FC<{
                       type="button"
                       disabled={busy}
                       onClick={() => saveDay(day, removeFromDay(ids, k))}
-                      aria-label={`Remove ${t?.name ?? "workout"} from ${DAY_LONG[i]}`}
+                      aria-label={tpl ? t("Remove {name} from {day}", { name: tpl.name, day: weekdayLong(i) }) : t("Remove workout from {day}", { day: weekdayLong(i) })}
                       className="tap relative shrink-0 flex items-center justify-center before:absolute before:-inset-2 before:content-['']"
                       style={{ width: 28, height: 28, color: INK.chS }}
                     >
@@ -292,16 +294,16 @@ export const ProgrammeBuilder: React.FC<{
         })}
       </Card>
 
-      <SectionHead label="Assigned to clients" className="mt-2" />
+      <SectionHead label={t("Assigned to clients")} className="mt-2" />
       {active.length === 0 ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>Not assigned to anyone yet.</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{t("Not assigned to anyone yet.")}</p>
       ) : (
         <ListCard
           rows={active.map((a) => ({
             key: a.id,
             icon: UserRound,
             title: clientName(a.clientId),
-            meta: [assignmentStatus(a, weeks, today, (d) => fmtDay(d)), `ends ${fmtDay(a.endsOn)}`].filter(Boolean).join(" · "),
+            meta: [statusText(a, weeks, today, (d) => fmtDay(d)), t("ends {date}", { date: fmtDay(a.endsOn) })].filter(Boolean).join(" · "),
             onClick: () => onOpenAssignment(a.id),
           }))}
         />
@@ -312,9 +314,9 @@ export const ProgrammeBuilder: React.FC<{
         anchor={menuAnchor}
         onClose={() => setMenuAnchor(null)}
         options={[
-          { value: "edit", label: "Edit details", icon: <Pencil size={15} /> },
-          { value: "assign", label: "Assign to a client", icon: <Send size={15} /> },
-          { value: "delete", label: "Delete", icon: <Trash2 size={15} />, destructive: true },
+          { value: "edit", label: t("Edit details"), icon: <Pencil size={15} /> },
+          { value: "assign", label: t("Assign to a client"), icon: <Send size={15} /> },
+          { value: "delete", label: t("Delete"), icon: <Trash2 size={15} />, destructive: true },
         ]}
         onSelect={(v) => {
           setMenuAnchor(null);
@@ -328,8 +330,8 @@ export const ProgrammeBuilder: React.FC<{
         anchor={weekAnchor}
         onClose={() => setWeekAnchor(null)}
         options={[
-          { value: "copy", label: "Copy this week to…", icon: <Copy size={15} />, disabled: weeks < 2 || weekCount(days) === 0 },
-          { value: "clear", label: "Clear this week", icon: <Eraser size={15} />, destructive: true, disabled: weekCount(days) === 0 },
+          { value: "copy", label: t("Copy this week to…"), icon: <Copy size={15} />, disabled: weeks < 2 || weekCount(days) === 0 },
+          { value: "clear", label: t("Clear this week"), icon: <Eraser size={15} />, destructive: true, disabled: weekCount(days) === 0 },
         ]}
         onSelect={(v) => {
           setWeekAnchor(null);
@@ -343,7 +345,7 @@ export const ProgrammeBuilder: React.FC<{
       <AddWorkoutSheet
         open={adding !== null}
         onClose={() => setAdding(null)}
-        dayLabel={adding ? DAY_LONG[adding - 1] : ""}
+        dayLabel={adding ? weekdayLong(adding - 1) : ""}
         templates={own}
         onPick={(templateId) => {
           const day = adding;
@@ -351,7 +353,7 @@ export const ProgrammeBuilder: React.FC<{
           if (!day) return;
           const next = addToDay(days[day - 1] ?? [], templateId);
           if (next) saveDay(day, next);
-          else setError("A day can hold up to four workouts.");
+          else setError(t("A day can hold up to four workouts."));
         }}
       />
       <BuilderMoveSheet
@@ -374,10 +376,10 @@ export const ProgrammeBuilder: React.FC<{
         programmeId={programme.id}
         onAssigned={() => void state.reload()}
       />
-      <BottomSheet open={copying} onClose={() => setCopying(false)} title={`Copy week ${w}`}>
+      <BottomSheet open={copying} onClose={() => setCopying(false)} title={t("Copy week {n}", { n: w })}>
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Copy to</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Copy to")}</span>
             <select
               value={copyTo}
               onChange={(e) => setCopyTo(Number(e.target.value))}
@@ -387,14 +389,14 @@ export const ProgrammeBuilder: React.FC<{
               {Array.from({ length: weeks }, (_, i) => i + 1)
                 .filter((n) => n !== w)
                 .map((n) => (
-                  <option key={n} value={n}>{`Week ${n}${weekCount(grid[n - 1]) ? ` (${weekCount(grid[n - 1])} workouts)` : ""}`}</option>
+                  <option key={n} value={n}>{weekCount(grid[n - 1]) ? tn(weekCount(grid[n - 1]), "Week {week} ({n} workout)", "Week {week} ({n} workouts)", { week: n }) : t("Week {n}", { n })}</option>
                 ))}
             </select>
           </label>
           <p style={{ fontSize: textPx(12.5), color: targetHasWorkouts ? INK.hi : INK.chS, lineHeight: 1.45 }}>
             {targetHasWorkouts
-              ? `Week ${copyTo} is replaced. Its ${weekCount(grid[copyTo - 1])} workouts are removed first.`
-              : `Week ${copyTo} will look like week ${w}.`}
+              ? tn(weekCount(grid[copyTo - 1]), "Week {week} is replaced. Its {n} workout is removed first.", "Week {week} is replaced. Its {n} workouts are removed first.", { week: copyTo })
+              : t("Week {to} will look like week {from}.", { to: copyTo, from: w })}
           </p>
           <Button
             fullWidth
@@ -411,27 +413,27 @@ export const ProgrammeBuilder: React.FC<{
               }
             }}
           >
-            {busy ? "Copying…" : targetHasWorkouts ? `Replace week ${copyTo}` : `Copy to week ${copyTo}`}
+            {busy ? t("Copying…") : targetHasWorkouts ? t("Replace week {n}", { n: copyTo }) : t("Copy to week {n}", { n: copyTo })}
           </Button>
         </div>
       </BottomSheet>
 
       <ConfirmCard
         open={confirm === "clear"}
-        title={`Clear week ${w}?`}
-        subtitle={`Its ${weekCount(days)} workouts leave the programme. Clients' calendars change when you assign it again.`}
-        confirmLabel="Clear week"
+        title={t("Clear week {n}?", { n: w })}
+        subtitle={tn(weekCount(days), "Its {n} workout leaves the programme. Clients' calendars change when you assign it again.", "Its {n} workouts leave the programme. Clients' calendars change when you assign it again.")}
+        confirmLabel={t("Clear week")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={() => void clearWeek()}
       />
       <ConfirmCard
         open={confirm === "delete"}
-        title={`Delete ${programme.name}?`}
+        title={t("Delete {name}?", { name: programme.name })}
         subtitle={
           active.length
-            ? `It ends now for ${active.length} ${active.length === 1 ? "client" : "clients"}: the sessions ahead leave their calendars. The routines they have stay.`
-            : "This can't be undone."
+            ? tn(active.length, "It ends now for {n} client: the sessions ahead leave their calendars. The routines they have stay.", "It ends now for {n} clients: the sessions ahead leave their calendars. The routines they have stay.")
+            : t("This can't be undone.")
         }
         busy={busy}
         onCancel={() => setConfirm(null)}

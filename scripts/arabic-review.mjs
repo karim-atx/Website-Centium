@@ -35,6 +35,7 @@ const AREAS = [
   ["proprofile", "Professional tools: More, profile, services and credentials"],
   ["procalendar", "Professional tools: Calendar"],
   ["promessages", "Professional tools: Messages"],
+  ["prolibrary", "Professional tools: Library, templates and programmes"],
 ];
 
 const rows = [];

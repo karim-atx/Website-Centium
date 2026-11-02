@@ -4,6 +4,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import type { WorkoutTemplate } from "../../../types";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Round D · DT1 D-S1 "Add a workout to {day}": the professional's own workout
@@ -26,37 +27,37 @@ export const AddWorkoutSheet: React.FC<{
     if (open) setQuery("");
   }
   const q = query.trim().toLowerCase();
-  const list = templates.filter((t) => !q || t.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+  const list = templates.filter((w) => !q || w.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`Add a workout to ${dayLabel}`}>
+    <BottomSheet open={open} onClose={onClose} title={t("Add a workout to {day}", { day: dayLabel })}>
       <div className="space-y-3 animate-fade-slide-up">
         <label className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8 }}>
           <Search size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your workouts"
-            aria-label="Search your workouts"
+            placeholder={t("Search your workouts")}
+            aria-label={t("Search your workouts")}
             className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint"
             style={{ fontSize: textPx(14), color: INK.ch }}
           />
         </label>
         {templates.length === 0 ? (
           <p className="text-center py-6" style={{ fontSize: textPx(13), color: INK.chF }}>
-            No workouts yet. Build one under Templates first.
+            {t("No workouts yet. Build one under Templates first.")}
           </p>
         ) : list.length === 0 ? (
           <p className="text-center py-6" style={{ fontSize: textPx(13), color: INK.chF }}>
-            No matches.
+            {t("No matches.")}
           </p>
         ) : (
           <div>
-            {list.map((t, i) => (
+            {list.map((w, i) => (
               <button
-                key={t.id}
+                key={w.id}
                 type="button"
-                onClick={() => onPick(t.id)}
+                onClick={() => onPick(w.id)}
                 className="tap w-full flex items-center text-start"
                 style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < list.length - 1 ? `1px solid ${INK.b06}` : "none" }}
               >
@@ -65,10 +66,10 @@ export const AddWorkoutSheet: React.FC<{
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
-                    {t.name}
+                    {w.name}
                   </span>
                   <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>
-                    {[`${t.exercises.length} ${t.exercises.length === 1 ? "exercise" : "exercises"}`, t.durationMin ? `${t.durationMin} min` : null].filter(Boolean).join(" · ")}
+                    {[tn(w.exercises.length, "{n} exercise", "{n} exercises"), w.durationMin ? t("{n} min", { n: w.durationMin }) : null].filter(Boolean).join(" · ")}
                   </span>
                 </span>
               </button>

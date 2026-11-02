@@ -7,6 +7,7 @@ import { createProgramme, setProgrammePlaylist, updateProgramme, type Programme 
 import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
 import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 import { MAX_WEEKS, NAME_MAX, TEXT_MAX } from "../../../services/programmes/model";
+import { t } from "../../../i18n/core";
 
 /**
  * Round D · DT1: a week-by-day programme's details, new or edited: name
@@ -88,14 +89,14 @@ export const ProgrammeDetailsSheet: React.FC<{
   const label = (text: string) => <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{text}</span>;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={programme ? "Edit programme" : "New programme"}>
+    <BottomSheet open={open} onClose={onClose} title={programme ? t("Edit programme") : t("New programme")}>
       <div className="space-y-4 animate-fade-slide-up">
         <label className="block">
-          {label("Name")}
-          <input value={name} maxLength={NAME_MAX} onChange={(e) => setName(e.target.value)} className={FIELD} placeholder="Strength block" />
+          {label(t("Name"))}
+          <input value={name} maxLength={NAME_MAX} onChange={(e) => setName(e.target.value)} className={FIELD} placeholder={t("Strength block")} />
         </label>
         <label className="block">
-          {label("Length in weeks")}
+          {label(t("Length in weeks"))}
           <input
             type="number"
             inputMode="numeric"
@@ -106,30 +107,30 @@ export const ProgrammeDetailsSheet: React.FC<{
             className={FIELD}
             style={{ maxWidth: 140 }}
           />
-          {!weeksOk && weeks !== "" && <span className="block mt-1.5" style={{ fontSize: textPx(11.5), color: INK.hi }}>Between 1 and 52 weeks.</span>}
+          {!weeksOk && weeks !== "" && <span className="block mt-1.5" style={{ fontSize: textPx(11.5), color: INK.hi }}>{t("Between 1 and 52 weeks.")}</span>}
         </label>
         <label className="block">
-          {label("Description (optional)")}
+          {label(t("Description (optional)"))}
           <textarea value={description} maxLength={TEXT_MAX} onChange={(e) => setDescription(e.target.value)} rows={3} className={FIELD} />
         </label>
         <label className="block">
-          {label("Coach note (clients see this)")}
-          <textarea value={coachNote} maxLength={TEXT_MAX} onChange={(e) => setCoachNote(e.target.value)} rows={3} className={FIELD} placeholder="Keep the last two reps hard but clean." />
+          {label(t("Coach note (clients see this)"))}
+          <textarea value={coachNote} maxLength={TEXT_MAX} onChange={(e) => setCoachNote(e.target.value)} rows={3} className={FIELD} placeholder={t("Keep the last two reps hard but clean.")} />
         </label>
         <PlaylistField
           value={playlist}
           onChange={setPlaylist}
-          hint="Clients see it on this programme and can play it while they train."
+          hint={t("Clients see it on this programme and can play it while they train.")}
           labelStyle={{ fontWeight: 600 }}
           inputStyle={{ borderRadius: 12, minHeight: 42, fontSize: textPx(14), fontWeight: 400 }}
         />
         {error && (
           <p role="alert" style={{ fontSize: textPx(11.5), fontWeight: 600, color: INK.hi }}>
-            {error}
+            {t(error)}
           </p>
         )}
         <Button fullWidth size="lg" disabled={!ok} onClick={() => void save()}>
-          {busy ? "Saving…" : programme ? "Save" : "Create programme"}
+          {busy ? t("Saving…") : programme ? t("Save") : t("Create programme")}
         </Button>
       </div>
     </BottomSheet>
