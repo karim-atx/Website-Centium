@@ -30098,6 +30098,7 @@ export type Database = {
         Args: never
         Returns: {
           done: number
+          done_sessions: number[]
           next_locked: boolean
           next_on: string
           next_session_number: number
