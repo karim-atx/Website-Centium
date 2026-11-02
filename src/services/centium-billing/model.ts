@@ -232,8 +232,11 @@ export function seatPurchaseRefusal(
   code: string | undefined,
   action: "buy" | "cancel" = "buy",
   serverMessage?: string
-): { kind: "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
+): { kind: "in_app" | "already_pending" | "no_plan" | "no_price" | "not_on_sale" | "not_owner" | "range" | "final" | "not_found" | "failed"; message: string } {
   switch (code) {
+    case "ATXQ3":
+      // G fixes 4: this business pays for its seats in the Centium app.
+      return { kind: "in_app", message: t("Buy seat blocks in the Centium app. The seats are added once your purchase is confirmed.") };
     case "ATXD7":
       return { kind: "already_pending", message: t("A seat order is already waiting for payment.") };
     case "ATXD6": {

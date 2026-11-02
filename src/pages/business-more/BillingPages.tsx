@@ -36,6 +36,7 @@ import { t, tn } from "../../i18n/core";
 import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 import { BusinessPlanLevels } from "../../components/premium/BusinessPlanLevels";
 import { usePlanLevel } from "../../components/premium/usePlanLevel";
+import { paysInApp } from "../../services/premium";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -174,6 +175,9 @@ export function SubscriptionPage() {
   // for this business; off (or loading) the page is today's.
   const planLevel = usePlanLevel(billing.businessId);
   const levelsOn = !!planLevel.level?.businessPlansOn;
+  // G fixes 4 (the Database's G1 rule): a business that pays in the app (the
+  // switch on, or a store plan) is never asked for cash or a bank transfer.
+  const inApp = paysInApp(planLevel.level);
   const period = useBillingPeriod(authUserId ?? null, isOwner);
   const [periodAsk, setPeriodAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
   const [periodBusy, setPeriodBusy] = useState(false);
@@ -329,7 +333,9 @@ export function SubscriptionPage() {
           )}
           {s && s.pendingCharges > 0 && billing.canSeeBilling && (
             <BizNote>
-              {t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
+              {inApp
+                ? t("Earlier Centium charges of {price} are still open. The Centium team will contact you about them.", { price: money(s.pendingAmount) })
+                : t("{price} is awaiting payment to Centium. Pay by cash or bank transfer; your plan and seats update once Centium records the payment.", { price: money(s.pendingAmount) })}
             </BizNote>
           )}
           {(!live || billing.canSeeBilling) && (
