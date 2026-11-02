@@ -97,13 +97,14 @@ test("the plan page: in the app only while plans_in_app, else exactly today's ma
   assert.equal(proPlanPath(undefined), "mailto");
 });
 
-test("Bought in the Centium app: the plan name and renewal, only when bought in the app under the switch", () => {
+test("Bought in the Centium app: the plan name and renewal whenever the plan came from the store, switch on or off", () => {
   const line = proPlanBoughtLine(parseProPlanInApp([PLAN_ROW]));
   assert.ok(line?.startsWith("Growth · Yearly · renews "), line ?? "null");
   assert.ok(line?.includes("2027"));
   assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, bought_in_app: false }])), null);
-  // Off: today's page, nothing new.
-  assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, plans_in_app: false }])), null);
+  // A store plan shows the line with the switch off too (as businesses' paysInApp does).
+  assert.ok(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, plans_in_app: false }]))?.startsWith("Growth · Yearly"));
+  assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, plans_in_app: false, bought_in_app: false }])), null);
   assert.equal(proPlanBoughtLine(null), null);
   assert.equal(proPlanBoughtLine(parseProPlanInApp([{ ...PLAN_ROW, billing_period: null, renews_at: null }])), "Growth");
 });

@@ -681,11 +681,12 @@ export const proPlanPath = (p: Pick<ProPlanInApp, "plansInApp"> | null | undefin
 
 /**
  * "Bought in the Centium app"'s detail: "Growth · Yearly · renews 9 November
- * 2027". Only while plans_in_app and the plan is a store purchase; null
+ * 2027". Whenever the plan in force came from the store, whatever the switch
+ * (Karim 2026-11-03: professionals match businesses' paysInApp); null
  * otherwise (today's screen).
  */
 export function proPlanBoughtLine(p: ProPlanInApp | null | undefined): string | null {
-  if (!p || proPlanPath(p) !== "app" || !p.boughtInApp || !p.tierName) return null;
+  if (!p || !p.boughtInApp || !p.tierName) return null;
   const parts = [p.tierName];
   if (p.billingPeriod) parts.push(p.billingPeriod === "monthly" ? t("Monthly") : t("Yearly"));
   if (p.renewsAt) parts.push(t("renews {date}", { date: premiumDate(p.renewsAt) }));
