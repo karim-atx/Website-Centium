@@ -34,12 +34,6 @@ export default function LanguagePage() {
                 {/* MO1.8.5: rows 45 pt apart, so 13 + 19 + 13; the check is 18 / 2.4. */}
                 <span className="flex items-center gap-2 min-w-0">
                   <span className="text-[15px] leading-[19px] font-medium text-charcoal">{l.name}</span>
-                  {/* Round F (F7): Beta until every area is translated. */}
-                  {l.beta && (
-                    <span lang={language} className="rounded-full bg-primary-pale px-2 py-0.5 text-[11px] font-bold leading-[14px] text-primary-accent">
-                      {t("Beta")}
-                    </span>
-                  )}
                 </span>
                 {selected && <Check size={18} strokeWidth={2.4} className="text-primary shrink-0" aria-hidden />}
               </button>
@@ -47,9 +41,6 @@ export default function LanguagePage() {
           })}
         </div>
       </SettingsSection>
-      <p className="mt-3 px-1 text-[12.5px] leading-[18px] text-charcoal-faint">
-        {t("Arabic is in beta: some screens are still in English while we translate them.")}
-      </p>
       </SettingsBody>
     </div>
   );

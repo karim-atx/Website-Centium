@@ -79,4 +79,3 @@ paired line by line with the English, under "Legal pages and summaries".
 | message / conversation / group | رسالة / محادثة / مجموعة |
 | help / support | المساعدة / الدعم |
 | Terms of Service / Privacy Policy | شروط الخدمة / سياسة الخصوصية |
-| beta | تجريبية |

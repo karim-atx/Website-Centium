@@ -127,9 +127,7 @@ export default function BusinessSettings() {
   const [rateOpen, setRateOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  // Round F (F7): Arabic reads "العربية · Beta" until every area is translated.
-  const languageEntryNow = languageEntry(language);
-  const languageName = languageEntryNow.beta ? `${languageEntryNow.name} · ${t("Beta")}` : languageEntryNow.name;
+  const languageName = languageEntry(language).name;
 
   return (
     <div>

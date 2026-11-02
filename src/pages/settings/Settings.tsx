@@ -207,9 +207,7 @@ function SettingsHub() {
 
   const dark = useIsDark();
   const isIos = detectPlatform() === "ios";
-  // Round F (F7): Arabic reads "العربية · Beta" until every area is translated.
-  const languageEntryNow = languageEntry(language);
-  const languageName = languageEntryNow.beta ? `${languageEntryNow.name} · ${t("Beta")}` : languageEntryNow.name;
+  const languageName = languageEntry(language).name;
 
   return (
     <div>
