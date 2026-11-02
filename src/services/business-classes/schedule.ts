@@ -3,6 +3,7 @@ import { prepareForumPhoto } from "../forum/photo";
 import { playlistSaveError } from "../music/playlistLink";
 import { stageAndSubmit } from "../moderation/images";
 import {
+  busyDateOf,
   refusalMessage,
   refusalOf,
   type BookingPolicy,
@@ -28,12 +29,15 @@ type RpcResult<T> = PromiseLike<{ data: T | null; error: DbError | null }>;
 const rpc = <T>(fn: string, args: Record<string, unknown>): RpcResult<T> =>
   (supabase as unknown as { rpc: (f: string, a: Record<string, unknown>) => RpcResult<T> }).rpc(fn, args);
 
-export type Done<T> = { ok: true; value: T } | { ok: false; refusal: ScheduleRefusal; message: string };
+// busyDay: an ATXD9's date, read from the server's own message before any
+// translation (the shown message is in the app's language, so it can't be parsed).
+export type Done<T> = { ok: true; value: T } | { ok: false; refusal: ScheduleRefusal; message: string; busyDay?: string | null };
 
 const fail = <T>(action: ScheduleAction, error: DbError | null, people?: "clients" | "members"): Done<T> => {
   console.error(`[business-classes] ${action} refused:`, error?.code, error?.message);
   // Round E: a refused playlist link (ATXN0-2) says what's wrong with the link.
-  return { ok: false, refusal: refusalOf(error), message: playlistSaveError(error?.code) ?? refusalMessage(action, error, people) };
+  const refusal = refusalOf(error);
+  return { ok: false, refusal, message: playlistSaveError(error?.code) ?? refusalMessage(action, error, people), busyDay: refusal === "busy" ? busyDateOf(error?.message) : null };
 };
 
 /** save_class_series / edit_class field keys (class_fields_check refuses any other key with 22023). */

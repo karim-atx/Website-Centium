@@ -235,7 +235,7 @@ function HiringRow({ businessId, tick }: { businessId: string; tick: number }) {
       if (o.ok && tr.ok) {
         const fresh = o.value.reduce((n, x) => n + x.newApplicantCount, 0);
         setState({ key, sub: hiringRowLine(o.value.length, fresh, tr.value.length), isNew: fresh > 0 });
-      } else if ((!o.ok && o.pending) || (!tr.ok && tr.pending)) setState({ key, sub: HIRING_ROW_PENDING, isNew: false });
+      } else if ((!o.ok && o.pending) || (!tr.ok && tr.pending)) setState({ key, sub: t(HIRING_ROW_PENDING), isNew: false });
       else setState({ key, sub: t("Couldn't load your hiring figures."), isNew: false });
     });
     return () => {

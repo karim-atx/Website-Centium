@@ -138,9 +138,3 @@ export function clashRows(c: ClashClass, first: string, busy: ClashBusy): { k: s
     { k: first ? t("{name}'s calendar", { name: first }) : t("Their calendar"), v: v2 },
   ];
 }
-
-/** The day the ATXD9 line names ("… at that time on Wed, Oct 21. Choose …", scheduleRules.refusalMessage), or null. */
-export function busyDayOf(message: string | null | undefined): string | null {
-  const m = /at that time on ([A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2})\./.exec(message ?? "");
-  return m ? m[1] : null;
-}

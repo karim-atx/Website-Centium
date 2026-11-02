@@ -6,6 +6,7 @@ import { STATUS_STEPS, marketPalette } from "../../../theme/marketTokens";
 import { HIRING_ERROR_TEXT } from "../../../services/hiring/model";
 import { OutlineButton, lh, px, useMarketColors } from "../listingParts";
 import { EXISTING_TEAM_LABEL } from "./teamModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4-B · the small pieces Team, Hiring fees and Add your
 // existing team share (Business Hiring Screens; literal values per element).
@@ -76,7 +77,7 @@ export function ExistingTeamChip() {
       <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
         <path d="M20 6 9 17l-5-5" />
       </svg>
-      {EXISTING_TEAM_LABEL}
+      {t(EXISTING_TEAM_LABEL)}
     </div>
   );
 }

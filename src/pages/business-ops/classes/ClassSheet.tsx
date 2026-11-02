@@ -44,7 +44,7 @@ import { PlaylistField, playlistFieldValid } from "../../../components/music/Pla
 import { normalisePrice, repeatProblem, ruleOf, type ClassForm, type RepeatKind } from "./classForm";
 import { InstructorPicker } from "./InstructorPicker";
 import { useClassTeam } from "./useClassTeam";
-import { NO_INSTRUCTOR, busyDayOf, clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, type ClashBusy, type ClashClass, type PickerPerson } from "./instructorTeam";
+import { NO_INSTRUCTOR, clashBody, clashRows, clashTitle, firstNameOf, livePeople, teamPeople, type ClashBusy, type ClashClass, type PickerPerson } from "./instructorTeam";
 import { CentredDialog } from "../../business-market/listingParts";
 import { HIRING_ERROR_TEXT } from "../../../services/hiring/model";
 import { conflictsFor, durationMinutes, durationOptions, everyText, initialOf, isLegacyType, joinAnd, longDate, mondayOf, addDays, running, type SessionLite } from "./scheduleModel";
@@ -134,7 +134,7 @@ export interface ClassSheetProps {
   people: "clients" | "members";
   onClose: () => void;
   /** `rule` is the repeat a new class asks for (null: one class); `cover` a newly picked cover photo, sent for approval after the save. */
-  onSave: (draft: ClassDraft, rule: RepeatRule | null, cover: File | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy" }>;
+  onSave: (draft: ClassDraft, rule: RepeatRule | null, cover: File | null) => Promise<{ ok: true } | { ok: false; message: string; code?: "capacity" | "permission" | "busy"; busyDay?: string | null }>;
   /** The business the class belongs to: the Team (my_team) is read for it. */
   businessId?: string | null;
   /** The picker's "Go to Hiring" / "Post an opening": leave for Hiring with the draft kept. */
@@ -188,7 +188,7 @@ function SheetBody({
   const [instrErr, setInstrErr] = useState<string | null>(null);
   const [durOpen, setDurOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
-  const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string } | null>(null);
+  const [conflict, setConflict] = useState<{ hits: SessionLite[]; dates: number; elsewhere?: string; busyDay?: string | null } | null>(null);
   // my_team (Database Release 2); `pending` (a stack without it) keeps the live instructors.
   const [team, retryTeam] = useClassTeam(businessId, open);
   const [repeatOpen, setRepeatOpen] = useState(false);
@@ -309,7 +309,7 @@ function SheetBody({
   const doSave = async () => {
     setSaving(true);
     setFailed(false);
-    const timeout = new Promise<{ ok: false; message: string }>((r) => window.setTimeout(() => r({ ok: false, message: CLASS_SAVE_FAILED }), 15_000));
+    const timeout = new Promise<{ ok: false; message: string }>((r) => window.setTimeout(() => r({ ok: false, message: t(CLASS_SAVE_FAILED) }), 15_000));
     const r = await Promise.race([onSave(draftOf(form), mode === "create" ? ruleOf(form) : null, coverPick?.file ?? null), timeout]);
     setSaving(false);
     if (r.ok) {
@@ -326,7 +326,7 @@ function SheetBody({
     }
     if ("code" in r && r.code === "busy") {
       // ATXD9: the server's clash check, any business (AN3-066 O3: never says where).
-      setConflict({ hits: [], dates: 1, elsewhere: r.message });
+      setConflict({ hits: [], dates: 1, elsewhere: r.message, busyDay: r.busyDay ?? null });
       return;
     }
     if ("code" in r && r.code === "capacity") {
@@ -342,7 +342,7 @@ function SheetBody({
     setBanner(
       typeof navigator !== "undefined" && navigator.onLine === false
         ? { kind: "offline", text: t("You're offline. The class isn't saved yet. Tap Retry when you're back online. Everything you entered is kept.") }
-        : { kind: "fail", text: mode === "edit" ? t("Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept.") : CLASS_SAVE_FAILED }
+        : { kind: "fail", text: mode === "edit" ? t("Couldn't save your changes. Check your connection and tap Retry. Everything you entered is kept.") : t(CLASS_SAVE_FAILED) }
     );
   };
 
@@ -419,7 +419,7 @@ function SheetBody({
   const clashHit = conflict && !conflict.elsewhere ? conflict.hits[0] ?? null : null;
   const clashBusy: ClashBusy = clashHit
     ? { startTime: clashHit.startTime, endTime: clashHit.endTime, dayText: null }
-    : { startTime: null, endTime: null, dayText: busyDayOf(conflict?.elsewhere) };
+    : { startTime: null, endTime: null, dayText: conflict?.busyDay ?? null };
 
   const blankUntouched = mode === "create" && !dirty;
   const editUnchanged = mode === "edit" && !dirty;

@@ -149,7 +149,7 @@ export function AddAppointmentSheet({
     const r = await bookAppointmentFor(businessId, client.id, serviceId, staffId, startsAt);
     setBusy(false);
     if (!r.ok) {
-      const msg = r.pending ? t("Adding appointments is coming soon.") : bookForErrorMessage(r.code, r.message ?? "", t("Couldn't add the appointment. Try again."));
+      const msg = r.pending ? t("Adding appointments is coming soon.") : t(bookForErrorMessage(r.code, r.message ?? "", t("Couldn't add the appointment. Try again.")));
       if (r.code === "ATXF2" || r.code === "ATXF3") setTimeError(msg);
       else if (r.code === "ATX96") setClientError(msg);
       else setError(msg);
