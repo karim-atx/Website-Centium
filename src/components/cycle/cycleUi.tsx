@@ -5,7 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { linePx, textPx } from "../../theme/textSize";
 import { Toggle } from "../ui/Toggle";
 import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
-import { getLanguage, t } from "../../i18n/core";
+import { getLanguage, t, tx } from "../../i18n/core";
 import { DISCLAIMER, DISCLAIMER_LONG, PRIVACY_LINE } from "../../services/cycle/guidance";
 import { appLocale } from "../../i18n/format";
 
@@ -260,7 +260,7 @@ export const CycleFooter: React.FC<{ privacy?: boolean; className?: string }> = 
   <div className={className}>
     {privacy && <PrivacyLine style={{ marginTop: 14 }} />}
     <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 600, { marginTop: 12 })}>
-      {DISCLAIMER}
+      {t(DISCLAIMER)}
     </p>
     <p className="text-center text-charcoal-faint" style={type(10, 14.5, 400, { marginTop: 4, padding: "0 8px" })}>
       {DISCLAIMER_LONG}
@@ -359,7 +359,7 @@ export const PopupButtons: React.FC<{
           ...type(14, 21, 700),
         }}
       >
-        {busy ? <span className="inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-label={t("Working")} /> : confirm}
+        {busy ? <span className="inline-block w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" aria-label={tx("Working", "in progress")} /> : confirm}
       </button>
     </div>
   );

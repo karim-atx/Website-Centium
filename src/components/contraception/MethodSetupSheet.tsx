@@ -20,7 +20,7 @@ import {
 } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { MONDAY_FIRST_JS_WEEKDAYS } from "../../utils/week";
-import { getLanguage, t, tk } from "../../i18n/core";
+import { getLanguage, t, tk, tx } from "../../i18n/core";
 
 // Setting up, or changing, the method.
 //
@@ -190,7 +190,7 @@ export const MethodSetupSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={plan ? G.CHANGE_METHOD : G.SETUP_TITLE}
+        title={plan ? t(G.CHANGE_METHOD) : t(G.SETUP_TITLE)}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
@@ -205,10 +205,10 @@ export const MethodSetupSheet: React.FC<{
           </div>
         }
       >
-        <div className="flex flex-wrap" role="radiogroup" aria-label={t("Method")} style={{ gap: 6 }}>
+        <div className="flex flex-wrap" role="radiogroup" aria-label={tx("Method", "contraception")} style={{ gap: 6 }}>
           {METHODS.map((m) => (
             <OptionButton key={m} role="radio" size="sheet" selected={draft.method === m} onClick={() => chooseMethod(m)}>
-              {G.METHOD_LABEL[m]}
+              {t(G.METHOD_LABEL[m])}
             </OptionButton>
           ))}
         </div>
@@ -226,7 +226,7 @@ export const MethodSetupSheet: React.FC<{
               {numberField("activeDays", t("Active days"), 20, 28)}
               {numberField("breakDays", t("Break days"), 0, 7)}
             </div>
-            {label(G.REMINDER_TIME_LABEL)}
+            {label(t(G.REMINDER_TIME_LABEL))}
             {draft.reminderTime ? (
               <>
                 <TimeWheel

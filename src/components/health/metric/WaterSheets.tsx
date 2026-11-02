@@ -8,7 +8,7 @@ import { HealthPopup } from "./HealthPopup";
 import { useWaterUnit, type WaterUnit } from "../../../services/preferences/units";
 import { PINNED_FILL_STYLE, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
 import { appLocale } from "../../../i18n/format";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 
 // Water's own sheets and popups (OURS-health-water-custom-popup,
 // OURS-health-overflow-menus #3 Units and #5 Water goal, OURS-health-delete-
@@ -122,7 +122,7 @@ export const WaterDeleteConfirm: React.FC<{ open: boolean; onClose: () => void; 
     open={open}
     onClose={onClose}
     role="alertdialog"
-    title={t("Delete this entry?")}
+    title={tx("Delete this entry?", "health")}
     body={t("This removes it from your history and totals.")}
     secondary={{ label: t("Cancel"), onClick: onClose }}
     primary={{ label: t("Delete"), onClick: onDelete, tone: "destructive" }}

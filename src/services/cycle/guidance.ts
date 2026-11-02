@@ -30,13 +30,17 @@
 //     typical pattern and says so on its face.
 
 import type { CycleFlag, CyclePhase, Confidence } from "./types";
+import { t, tk, tn } from "../../i18n/core";
+
+// UI labels below are marked with tk() and translated where they are shown; the
+// paragraphs stay English for clinical review (F13).
 
 // ---------------------------------------------------------------------------
 // The line that is always on screen
 // ---------------------------------------------------------------------------
 
 /** Always visible on the overview. Not behind a tap, not in a footer. */
-export const DISCLAIMER = "Estimates · Not a method of contraception";
+export const DISCLAIMER = tk("Estimates · Not a method of contraception");
 
 /** Under the overview, once, in full. */
 export const DISCLAIMER_LONG =
@@ -48,13 +52,13 @@ export const DISCLAIMER_LONG =
 // ---------------------------------------------------------------------------
 
 export const PHASE_LABEL: Record<CyclePhase, string> = {
-  menstrual: "Period",
-  follicular: "Follicular",
-  ovulatory: "Ovulation",
-  luteal: "Luteal",
-  hormonal_contraception: "On hormonal contraception",
-  pregnant: "Pregnant",
-  unavailable: "Not enough data",
+  menstrual: tk("Period"),
+  follicular: tk("Follicular"),
+  ovulatory: tk("Ovulation"),
+  luteal: tk("Luteal"),
+  hormonal_contraception: tk("On hormonal contraception"),
+  pregnant: tk("Pregnant"),
+  unavailable: tk("Not enough data"),
 };
 
 /** One plain sentence about what the phase is. Shown under the phase chip. */
@@ -136,9 +140,9 @@ export const PHASE_BAR: readonly CyclePhase[] = [
 // ---------------------------------------------------------------------------
 
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {
-  low: "Low confidence",
-  medium: "Medium confidence",
-  high: "High confidence",
+  low: tk("Low confidence"),
+  medium: tk("Medium confidence"),
+  high: tk("High confidence"),
 };
 
 /**
@@ -156,7 +160,7 @@ export const CONFIDENCE_WHY: Record<Confidence, string> = {
 // The hormone illustration
 // ---------------------------------------------------------------------------
 
-export const HORMONE_TITLE = "Typical hormone pattern";
+export const HORMONE_TITLE = tk("Typical hormone pattern");
 
 /**
  * ON THE FACE OF THE GRAPH, not in a tooltip.
@@ -165,18 +169,18 @@ export const HORMONE_TITLE = "Typical hormone pattern";
  * an average cycle, stretched to the length this user's own cycle is predicted
  * to be — useful for seeing where you are, and not a measurement of anything.
  */
-export const HORMONE_DISCLAIMER = "Illustrative, not measured";
+export const HORMONE_DISCLAIMER = tk("Illustrative, not measured");
 
 export const HORMONE_EXPLAINER =
   "This is the pattern a typical cycle follows, stretched to your predicted cycle " +
   "length. It is drawn from your dates, not from a blood test.";
 
 export const HORMONE_LABEL: Record<string, string> = {
-  estrogen: "Estrogen",
-  progesterone: "Progesterone",
-  lh: "LH",
-  fsh: "FSH",
-  testosterone: "Testosterone",
+  estrogen: tk("Estrogen"),
+  progesterone: tk("Progesterone"),
+  lh: tk("LH"),
+  fsh: tk("FSH"),
+  testosterone: tk("Testosterone"),
 };
 
 /** Why the graph is absent rather than flat, for each case that hides it. */
@@ -199,12 +203,12 @@ export const HORMONE_HIDDEN_PREGNANT =
  * PCOS" is making a diagnosis from a phone.
  */
 export const FLAG_TITLE: Record<CycleFlag, string> = {
-  cycle_under_21: "Short cycles",
-  cycle_over_35: "Long cycles",
-  period_over_7: "Long periods",
-  heavy_flow: "Heavy flow",
-  intermenstrual_bleeding: "Bleeding between periods",
-  no_period_90_days: "No period logged in 90 days",
+  cycle_under_21: tk("Short cycles"),
+  cycle_over_35: tk("Long cycles"),
+  period_over_7: tk("Long periods"),
+  heavy_flow: tk("Heavy flow"),
+  intermenstrual_bleeding: tk("Bleeding between periods"),
+  no_period_90_days: tk("No period logged in 90 days"),
 };
 
 // The thresholds are FIGO 2018's (Database 20261013010000): under 24 days,
@@ -229,17 +233,17 @@ export const FLAG_EXTRA: Partial<Record<CycleFlag, string>> = {
 export const FLAG_ADVICE = "It might be worth mentioning to your doctor.";
 
 /** Above the list, when there is one. */
-export const FLAGS_HEADING = "Worth a conversation";
+export const FLAGS_HEADING = tk("Worth a conversation");
 
 // ---------------------------------------------------------------------------
 // Empty and setup states
 // ---------------------------------------------------------------------------
 
-export const SETUP_TITLE = "When did your last period start?";
+export const SETUP_TITLE = tk("When did your last period start?");
 export const SETUP_BODY =
   "That's all it takes to start. Everything else (cycle length, phases, estimates) " +
   "is worked out from the days you log.";
-export const SETUP_CTA = "Log my last period";
+export const SETUP_CTA = tk("Log my last period");
 
 export const NO_PREDICTION =
   "There isn't enough logged yet to estimate your cycle. Log a period and the " +
@@ -274,41 +278,41 @@ export const MUCUS_LABEL: Record<string, string> = {
 };
 
 export const LH_LABEL: Record<string, string> = {
-  negative: "Negative",
-  positive: "Positive",
-  peak: "Peak",
+  negative: tk("Negative"),
+  positive: tk("Positive"),
+  peak: tk("Peak"),
 };
 
 export const PREGNANCY_TEST_LABEL: Record<string, string> = {
-  negative: "Negative",
-  positive: "Positive",
+  negative: tk("Negative"),
+  positive: tk("Positive"),
 };
 
 export const SEX_ACTIVITY_LABEL: Record<string, string> = {
-  none: "None",
-  protected: "Protected",
-  unprotected: "Unprotected",
+  none: tk("None"),
+  protected: tk("Protected"),
+  unprotected: tk("Unprotected"),
 };
 
 /** Beside the sexual-activity row. It is the truth: no sharing category covers it. */
-export const SEX_ACTIVITY_PRIVACY = "Private: never shared";
+export const SEX_ACTIVITY_PRIVACY = tk("Private: never shared");
 
 export const SYMPTOM_LABEL: Record<string, string> = {
-  cramps: "Cramps",
-  headache: "Headache",
-  bloating: "Bloating",
-  breast_tenderness: "Breast tenderness",
-  acne: "Acne",
-  backache: "Backache",
-  nausea: "Nausea",
-  fatigue: "Fatigue",
-  insomnia: "Insomnia",
-  cravings: "Cravings",
-  diarrhoea: "Diarrhoea",
-  constipation: "Constipation",
-  dizziness: "Dizziness",
-  hot_flashes: "Hot flashes",
-  other: "Other",
+  cramps: tk("Cramps"),
+  headache: tk("Headache"),
+  bloating: tk("Bloating"),
+  breast_tenderness: tk("Breast tenderness"),
+  acne: tk("Acne"),
+  backache: tk("Backache"),
+  nausea: tk("Nausea"),
+  fatigue: tk("Fatigue"),
+  insomnia: tk("Insomnia"),
+  cravings: tk("Cravings"),
+  diarrhoea: tk("Diarrhoea"),
+  constipation: tk("Constipation"),
+  dizziness: tk("Dizziness"),
+  hot_flashes: tk("Hot flashes"),
+  other: tk("Other"),
 };
 
 export const MOOD_LABEL: Record<string, string> = {
@@ -348,7 +352,7 @@ export const BBT_HELP =
 export const POSITIVE_TEST_PROMPT =
   "You've logged a positive test. Nothing changes automatically. You can switch " +
   "pregnancy tracking on whenever you're ready.";
-export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
+export const POSITIVE_TEST_CTA = tk("Start pregnancy tracking");
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -372,49 +376,49 @@ export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
  * nothing to switch. The offer has to live on the one screen that renders
  * without a row.
  */
-export const TRACKER_OFF_TITLE = "Cycle tracking is off";
+export const TRACKER_OFF_TITLE = tk("Cycle tracking is off");
 export const TRACKER_OFF_BODY =
   "It's off by default for this profile. Switch it on if you want to track a cycle. " +
   "Everything stays private to you unless you share it.";
-export const TRACKER_OFF_CTA = "Turn on cycle tracking";
+export const TRACKER_OFF_CTA = tk("Turn on cycle tracking");
 
-export const TIMEZONE_TITLE = "Time zone";
+export const TIMEZONE_TITLE = tk("Time zone");
 
 export const CONDITION_LABEL: Record<string, string> = {
-  pcos: "PCOS",
-  endometriosis: "Endometriosis",
-  thyroid: "Thyroid condition",
-  irregular_cycles: "Irregular cycles",
-  perimenopause: "Perimenopause",
-  other: "Other",
+  pcos: tk("PCOS"),
+  endometriosis: tk("Endometriosis"),
+  thyroid: tk("Thyroid condition"),
+  irregular_cycles: tk("Irregular cycles"),
+  perimenopause: tk("Perimenopause"),
+  other: tk("Other"),
 };
 
 export const CONDITIONS_HELP =
   "Recorded so estimates can be read in context. Nothing here is a diagnosis, and " +
   "nothing is shared unless you switch sharing on.";
 
-export const DELETE_ALL_TITLE = "Delete all cycle data";
+export const DELETE_ALL_TITLE = tk("Delete all cycle data");
 export const DELETE_ALL_BODY =
   "This removes every day you've logged, your cycle settings and any pregnancy record. " +
   "It cannot be undone, and anyone you're sharing with stops seeing your phase " +
   "immediately.";
-export const DELETE_ALL_CONFIRM = "Delete everything";
+export const DELETE_ALL_CONFIRM = tk("Delete everything");
 
 /** Shown when the tracker is switched off, rather than deleting anything. */
-export const TRACKER_OFF_KEEPS_DATA =
-  "Switching the tracker off hides it and stops sharing your phase. Your logs are kept. " +
-  "Use Delete all cycle data if you want them gone.";
+export const TRACKER_OFF_KEEPS_DATA = tk(
+  "Switching the tracker off hides it and stops sharing your phase. Your logs are kept. Use Delete all cycle data if you want them gone.",
+);
 
 /** HE1.10.b.5: the confirm before the tracker goes off (body is TRACKER_OFF_KEEPS_DATA). */
-export const TURN_OFF_TITLE = "Turn off cycle tracking?";
-export const TURN_OFF_KEEP = "Keep tracking";
-export const TURN_OFF_CONFIRM = "Turn off";
+export const TURN_OFF_TITLE = tk("Turn off cycle tracking?");
+export const TURN_OFF_KEEP = tk("Keep tracking");
+export const TURN_OFF_CONFIRM = tk("Turn off");
 /** The off card's way back on (OURS-cycle-empty-states #3). */
-export const TURN_BACK_ON = "Turn it back on";
+export const TURN_BACK_ON = tk("Turn it back on");
 /** HE1.10.b.4's cancel. */
-export const DELETE_ALL_KEEP = "Keep my data";
+export const DELETE_ALL_KEEP = tk("Keep my data");
 /** HE1.10.b.4 Error (handover assumption): the popup stays with this line. */
-export const DELETE_ALL_FAILED = "Couldn't delete. Try again.";
+export const DELETE_ALL_FAILED = tk("Couldn't delete. Try again.");
 
 /**
  * The privacy line under every cycle tab (V6-12: the handover line, extended
@@ -428,74 +432,78 @@ export const PRIVACY_LINE =
 export const LENGTHS_HELP =
   "Your estimates are worked out from the days you log. These lengths are a starting point.";
 /** Typing a length out of range (HE1.10.b #22). */
-export const LENGTH_RANGE_ERROR = (min: number, max: number) => `Enter a number from ${min} to ${max} days.`;
+export const LENGTH_RANGE_ERROR = (min: number, max: number) => t("Enter a number from {min} to {max} days.", { min, max });
 
 // ---------------------------------------------------------------------------
 // The v6 page (HE1.10 → HE1.10.b.3): labels
 // ---------------------------------------------------------------------------
 
-export const PAGE_TITLE = "Cycle tracking";
-export const LOG_THIS_DAY = "Log this day";
-export const BACK_TO_TODAY = "Back to today";
-export const SCRUB_EARLIER = "Earlier";
-export const SCRUB_LATER = "Later";
-export const LOAD_ERROR = "Couldn't load your cycle.";
-export const INSIGHTS_LOAD_ERROR = "Couldn't load your insights.";
-export const RETRY = "Retry";
+export const PAGE_TITLE = tk("Cycle tracking");
+export const LOG_THIS_DAY = tk("Log this day");
+export const BACK_TO_TODAY = tk("Back to today");
+export const SCRUB_EARLIER = tk("Earlier");
+export const SCRUB_LATER = tk("Later");
+export const LOAD_ERROR = tk("Couldn't load your cycle.");
+export const INSIGHTS_LOAD_ERROR = tk("Couldn't load your insights.");
+export const RETRY = tk("Retry");
 
-export const INSIGHTS_CYCLE_LENGTH = "Cycle length";
-export const INSIGHTS_PERIOD_DAYS = "Period days";
-export const INSIGHTS_REST_OF_CYCLE = "Rest of the cycle";
+export const INSIGHTS_CYCLE_LENGTH = tk("Cycle length");
+export const INSIGHTS_PERIOD_DAYS = tk("Period days");
+export const INSIGHTS_REST_OF_CYCLE = tk("Rest of the cycle");
 /** "Last 6 cycles. Strip length is the cycle in days." (the count follows the data). */
 export const INSIGHTS_STRIPS_NOTE = (n: number) =>
-  `Last ${n} cycle${n === 1 ? "" : "s"}. Strip length is the cycle in days.`;
-export const INSIGHTS_AVG_CYCLE = "Avg cycle";
-export const INSIGHTS_AVG_PERIOD = "Avg period";
-export const INSIGHTS_VARIATION = "Variation";
+  tn(n, "Last {n} cycle. Strip length is the cycle in days.", "Last {n} cycles. Strip length is the cycle in days.");
+export const INSIGHTS_AVG_CYCLE = tk("Avg cycle");
+export const INSIGHTS_AVG_PERIOD = tk("Avg period");
+export const INSIGHTS_VARIATION = tk("Variation");
 export const INSIGHTS_AVERAGES_NOTE =
   "Averages come from the cycles you've logged. Your next cycle length is an estimate.";
-export const SYMPTOMS_BY_PHASE = "Symptoms by phase";
-export const SYMPTOMS_GRID_NOTE = "Days you logged each symptom, grouped by the phase it happened in.";
+export const SYMPTOMS_BY_PHASE = tk("Symptoms by phase");
+export const SYMPTOMS_GRID_NOTE = tk("Days you logged each symptom, grouped by the phase it happened in.");
 /** The grid's column heads, abbreviated as drawn (HE1.10.a #34). */
-export const GRID_HEAD_SYMPTOM = "Symptom";
+export const GRID_HEAD_SYMPTOM = tk("Symptom");
 export const GRID_PHASE_SHORT: Record<CyclePhase, string> = {
-  menstrual: "Period",
-  follicular: "Follic.",
-  ovulatory: "Ovul.",
-  luteal: "Luteal",
+  menstrual: tk("Period"),
+  follicular: tk("Follic."),
+  ovulatory: tk("Ovul."),
+  luteal: tk("Luteal"),
   hormonal_contraception: "",
   pregnant: "",
   unavailable: "",
 };
 
-export const SETTINGS_TRACKING = "Tracking";
-export const SETTINGS_YOUR_CYCLE = "Your cycle";
-export const SETTINGS_PREGNANCY = "Pregnancy";
-export const SETTINGS_MORE = "More";
-export const SETTINGS_CONDITIONS = "Conditions";
-export const SETTINGS_DATA = "Data and privacy";
-export const SETTINGS_CYCLE_LENGTH = "Typical cycle length";
-export const SETTINGS_PERIOD_LENGTH = "Typical period length";
-export const SETTINGS_LUTEAL_LENGTH = "Luteal length";
-export const SETTINGS_CONTRACEPTION = "Contraception";
+export const SETTINGS_TRACKING = tk("Tracking");
+export const SETTINGS_YOUR_CYCLE = tk("Your cycle");
+export const SETTINGS_PREGNANCY = tk("Pregnancy");
+export const SETTINGS_MORE = tk("More");
+export const SETTINGS_CONDITIONS = tk("Conditions");
+export const SETTINGS_DATA = tk("Data and privacy");
+export const SETTINGS_CYCLE_LENGTH = tk("Typical cycle length");
+export const SETTINGS_PERIOD_LENGTH = tk("Typical period length");
+export const SETTINGS_LUTEAL_LENGTH = tk("Luteal length");
+export const SETTINGS_CONTRACEPTION = tk("Contraception");
+/** The action, not "set up" as a state: shown through tx(…, "action"). */
 export const SETTINGS_CONTRACEPTION_SET_UP = "Set up";
-export const SETTINGS_REMINDERS = "Reminders";
-export const SETTINGS_REMINDERS_VALUE = "Notifications";
-export const SETTINGS_WHO_CAN_SEE = "Who can see your cycle phase";
-export const SETTINGS_ONLY_YOU = "Only you";
-export const SETTINGS_SHARED_WITH = (n: number) => `Shared with ${n}`;
-export const SETTINGS_TIMEZONE_NOT_SET = "Not set";
-export const SWITCH_ON_TO_TRACK = "Switch it on to start tracking.";
+export const SETTINGS_REMINDERS = tk("Reminders");
+export const SETTINGS_REMINDERS_VALUE = tk("Notifications");
+export const SETTINGS_WHO_CAN_SEE = tk("Who can see your cycle phase");
+export const SETTINGS_ONLY_YOU = tk("Only you");
+export const SETTINGS_SHARED_WITH = (n: number) => t("Shared with {n}", { n });
+export const SETTINGS_TIMEZONE_NOT_SET = tk("Not set");
+export const SWITCH_ON_TO_TRACK = tk("Switch it on to start tracking.");
 
 /**
  * The period-due reminder (Database B2 + B4 period_due). The help line quotes
  * exactly what the lock screen will say for the wording chosen in
  * Contraception (queue_period_reminders' own titles).
  */
-export const PERIOD_REMINDER_TITLE = "Period reminder";
-export const PERIOD_REMINDER_SUB = "Before your next period is expected.";
-export const PERIOD_REMINDER_DAYS_LABEL = "How many days before";
-export const PERIOD_REMINDER_DAYS_OPTION = (n: number) => `${n} day${n === 1 ? "" : "s"} before`;
+export const PERIOD_REMINDER_TITLE = tk("Period reminder");
+export const PERIOD_REMINDER_SUB = tk("Before your next period is expected.");
+export const PERIOD_REMINDER_DAYS_LABEL = tk("How many days before");
+// n is 1–3 (PERIOD_REMINDER_DAYS). Whole keys, since "{n} days before" is already
+// the business "the {n} days before" plural.
+export const PERIOD_REMINDER_DAYS_OPTION = (n: number) =>
+  n === 1 ? t("1 day before") : n === 2 ? t("2 days before") : n === 3 ? t("3 days before") : `${n} days before`;
 export const PERIOD_REMINDER_WORDING: Record<"neutral" | "detailed", string> = {
   neutral: 'Your lock screen shows "A reminder from your tracker". Change the wording in Contraception.',
   detailed: 'Your lock screen shows "Your period may be due soon". Change the wording in Contraception.',
@@ -505,7 +513,7 @@ export const PERIOD_REMINDER_WORDING: Record<"neutral" | "detailed", string> = {
 // Who can see your cycle (HE1.10.b.3)
 // ---------------------------------------------------------------------------
 
-export const SHARING_TITLE = "Who can see your cycle";
+export const SHARING_TITLE = tk("Who can see your cycle");
 /**
  * The intro. The board's line ends "Sex…"; the drawn frame completes it with
  * SEX_ACTIVITY_PRIVACY's own rule ("Sexual activity is private: never
@@ -514,19 +522,19 @@ export const SHARING_TITLE = "Who can see your cycle";
 export const SHARING_INTRO =
   "Professionals you choose see only the phase name or the trimester. Logged days, " +
   "symptoms and notes stay with you. Sexual activity is private: never shared.";
-export const SHARING_MIRRORED = "The same switches are in Profile › Connected professionals.";
-export const SHARING_NONE = "You haven't connected any professionals.";
-export const SHARING_FIND = "Find a professional";
-export const SHARING_LOAD_ERROR = "Couldn't load your professionals.";
+export const SHARING_MIRRORED = tk("The same switches are in Profile › Connected professionals.");
+export const SHARING_NONE = tk("You haven't connected any professionals.");
+export const SHARING_FIND = tk("Find a professional");
+export const SHARING_LOAD_ERROR = tk("Couldn't load your professionals.");
 
 // ---------------------------------------------------------------------------
 // Sharing
 // ---------------------------------------------------------------------------
 
-export const SHARE_PHASE_LABEL = "Cycle phase";
-export const SHARE_PHASE_DESCRIPTION = "Only the phase name, e.g. Luteal";
-export const SHARE_PREGNANCY_LABEL = "Pregnancy";
-export const SHARE_PREGNANCY_DESCRIPTION = "Only 'Pregnant' and the week";
+export const SHARE_PHASE_LABEL = tk("Cycle phase");
+export const SHARE_PHASE_DESCRIPTION = tk("Only the phase name, e.g. Luteal");
+export const SHARE_PREGNANCY_LABEL = tk("Pregnancy");
+export const SHARE_PREGNANCY_DESCRIPTION = tk("Only 'Pregnant' and the week");
 
 /**
  * What the professional sees when the function returns `unavailable`.
@@ -536,7 +544,7 @@ export const SHARE_PREGNANCY_DESCRIPTION = "Only 'Pregnant' and the week";
  * pregnancy they have not also shared. Reporting that as "not sharing" would
  * blame the client for a gap they did not create.
  */
-export const PHASE_UNAVAILABLE = "Shared, but no phase to show right now.";
+export const PHASE_UNAVAILABLE = tk("Shared, but no phase to show right now.");
 
 // ---------------------------------------------------------------------------
 // The workout surfaces

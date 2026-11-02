@@ -4,7 +4,11 @@ import { Button } from "../ui/Button";
 import type { BloodMarker } from "../../types";
 import { hasArabic, loadArabicForCanvas } from "../../i18n/fonts";
 import { Download, Share2 } from "lucide-react";
-import { t } from "../../i18n/core";
+import { getLanguage, t, tx } from "../../i18n/core";
+
+// The status pill's word, read when the card is drawn.
+const statusWord = (s: "low" | "normal" | "high") =>
+  s === "low" ? tx("LOW", "marker status") : s === "normal" ? tx("NORMAL", "marker status") : tx("HIGH", "marker status");
 
 // Manrope, and the Arabic face for a marker name, unit or date in Arabic.
 const FAMILY = 'Manrope, "IBM Plex Sans Arabic", sans-serif';
@@ -90,13 +94,13 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
     ctx.fill();
     ctx.fillStyle = "#FFFFFF";
     ctx.font = `700 18px ${FAMILY}`;
-    ctx.fillText(marker.status.toUpperCase(), 78, pillY + 29);
+    ctx.fillText(statusWord(marker.status), 78, pillY + 29);
   }
 
   // history
   ctx.fillStyle = "rgba(255,255,255,0.65)";
   ctx.font = `600 16px ${FAMILY}`;
-  ctx.fillText("HISTORY", 48, 470);
+  ctx.fillText(t("HISTORY"), 48, 470);
 
   const historyY = 500;
   const chartW = CARD_W - 96;
@@ -125,7 +129,7 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   // footer
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = `500 15px ${FAMILY}`;
-  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, CARD_H - 48);
+  ctx.fillText(t("Prototype health tracking, not a diagnosis."), 48, CARD_H - 48);
 }
 
 // V7 (QA 7.0): "the ability to share a summary of the entire biomarkers
@@ -152,7 +156,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
   // V10 (QA 10.0): "should be bigger and more readable."
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   ctx.font = `700 44px ${FAMILY}`;
-  ctx.fillText("BIOMARKER SUMMARY", 48, 80);
+  ctx.fillText(t("BIOMARKER SUMMARY"), 48, 80);
 
   const statusDot: Record<"low" | "normal" | "high", string> = {
     normal: "#7ED6A5",
@@ -183,7 +187,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
 
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.font = `500 14px ${FAMILY}`;
-    ctx.fillText(`Range: ${m.range} ${m.unit}`, 80, y + rowH / 2 + 20);
+    ctx.fillText(t("Range: {range} {unit}", { range: m.range, unit: m.unit }), 80, y + rowH / 2 + 20);
 
     const last = m.history[m.history.length - 1]?.value ?? m.value;
     const prev = m.history[m.history.length - 2]?.value ?? last;
@@ -201,7 +205,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = `500 15px ${FAMILY}`;
-  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, canvas.height - 24);
+  ctx.fillText(t("Prototype health tracking, not a diagnosis."), 48, canvas.height - 24);
 }
 
 export const ShareBiomarkerSheet: React.FC<{
@@ -229,7 +233,8 @@ export const ShareBiomarkerSheet: React.FC<{
       else if (markers) drawSummaryCard(canvas, markers);
       setReady(true);
     };
-    const text = JSON.stringify(marker ?? markers);
+    // The card's own labels are Arabic in Arabic, so they count as Arabic text too.
+    const text = JSON.stringify(marker ?? markers) + (getLanguage() === "ar" ? t("HISTORY") : "");
     // Without Arabic, drawn at once as before; with it, once the face is in
     // (a canvas never redraws when a font arrives later).
     if (!hasArabic(text)) {

@@ -89,7 +89,7 @@ export const EndPregnancySheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={close}
-        title={G.END_TITLE}
+        title={t(G.END_TITLE)}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
@@ -100,14 +100,14 @@ export const EndPregnancySheet: React.FC<{
                 {t(error)}
               </p>
             )}
-            <CtaButton label={G.END_CONFIRM} disabled={!outcome} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
+            <CtaButton label={t(G.END_CONFIRM)} disabled={!outcome} loading={busy} onClick={() => void save()} style={{ lineHeight: "21px" }} />
           </div>
         }
       >
-        <div className="flex flex-col" role="radiogroup" aria-label={G.END_TITLE} style={{ gap: 8 }}>
+        <div className="flex flex-col" role="radiogroup" aria-label={t(G.END_TITLE)} style={{ gap: 8 }}>
           {OUTCOMES.map((o) => (
             <OptionButton key={o} role="radio" size="tall" selected={outcome === o} onClick={() => setOutcome(o)} className="w-full !justify-start text-start">
-              {G.END_OUTCOME_LABEL[o]}
+              {t(G.END_OUTCOME_LABEL[o])}
             </OptionButton>
           ))}
         </div>

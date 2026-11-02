@@ -237,7 +237,7 @@ const health: Catalogue = {
   "Add Photo / Upload File": "إضافة صورة / رفع ملف",
   "Lab results, reports, etc.": "نتائج التحاليل، التقارير، وغيرها",
   "BLOOD PRESSURE": "ضغط الدم",
-  "{n} bpm": "{n} نبضة/د",
+  "{n} bpm": "{n} نبضة/دقيقة",
   "Add a reading": "إضافة قراءة",
   "Nothing recorded for this day": "لا شيء مسجّل لهذا اليوم",
   "You're offline. Entries save when you reconnect.": "أنت غير متصل. تُحفظ الإدخالات عند عودة الاتصال.",
@@ -275,7 +275,7 @@ const health: Catalogue = {
   "{n} L": "{n} ل",
   "Save {n} ml": "حفظ {n} مل",
   "{day} so far {amount} of {goal}": "{day} حتى الآن {amount} من {goal}", // note: {day} is «اليوم» or a date; {amount} is drawn bold
-  Amount: "الكمية",
+  "Amount|quantity": "الكمية", // a quantity of water, not money
   "+ {n} ml": "+ {n} مل",
   "Amount in ml": "الكمية بالمليلتر",
   ml: "مل",
@@ -302,18 +302,18 @@ const health: Catalogue = {
   "Couldn't sync.": "تعذّرت المزامنة.",
   "Last synced {when}": "آخر مزامنة {when}", // note: {when} is «اليوم الساعة …», «أمس الساعة …» or «في 5 تشرين الأول الساعة …»
   "yesterday at {time}": "أمس الساعة {time}",
-  "on {date} at {time}": "في {date} الساعة {time}",
+  "on {date} at {time}": "يوم {date} الساعة {time}",
   "Go to date": "الانتقال إلى تاريخ",
-  "Connect a source": "ربط مصدر",
+  "Connect a source": "اربط مصدرًا",
   "Remove from Centium?": "إزالة من Centium؟",
   "It stays in {source}. Centium won't import it again.": "تبقى في {source}. لن يستوردها Centium مرة أخرى.", // note: health wording; a synced reading removed from Centium only
-  "Delete this entry?": "حذف هذا الإدخال؟",
+  "Delete this entry?|health": "حذف هذا الإدخال؟", // note: health wording; a logged reading (water, weight, blood pressure), not a journal entry
   "This removes it from your history and totals.": "يؤدي هذا إلى إزالته من سجلك ومن المجاميع.",
   "Saved on this device until you reconnect.": "حُفظ على هذا الجهاز إلى أن يعود الاتصال.", // note: the offline queue's toast (services/health-log/offlineQueue SAVED_ON_DEVICE), shown on the Water page
   Goal: "الهدف",
   "Goal {n}": "الهدف {n}",
   "Goal {n}.": "الهدف {n}.",
-  "Goal reached": "تم بلوغ الهدف",
+  "Goal reached": "بلغت الهدف",
   "{pct}% of goal": "{pct}% من الهدف",
   "Days ahead": "الأيام القادمة",
   "Months ahead": "الأشهر القادمة",
@@ -366,7 +366,7 @@ const health: Catalogue = {
   "No steps yet. Your week fills in once steps sync.": "لا خطوات بعد. يمتلئ أسبوعك عند مزامنة الخطوات.",
   "No steps yet. Your month fills in once steps sync.": "لا خطوات بعد. يمتلئ شهرك عند مزامنة الخطوات.",
   "No steps yet. Your year fills in once steps sync.": "لا خطوات بعد. تمتلئ سنتك عند مزامنة الخطوات.",
-  "Share your steps": "مشاركة خطواتك",
+  "Share your steps": "شارك خطواتك",
   "Nothing to share yet. Sync your steps first.": "لا شيء للمشاركة بعد. زامن خطواتك أولًا.",
   "Nothing to share yet. Reach your step goal first.": "لا شيء للمشاركة بعد. بلّغ هدف خطواتك أولًا.",
   "Step goal saved": "تم حفظ هدف الخطوات",
@@ -419,12 +419,12 @@ const health: Catalogue = {
   "Usual bedtime {time}": "وقت النوم المعتاد {time}",
   "{m}m": "{m} د",
   Deep: "عميق", // note: health wording; sleep stage
-  REM: "حركة العين السريعة", // note: health wording; sleep stage (REM)
-  Awake: "مستيقظ", // note: health wording; sleep stage
+  REM: "REM", // note: health wording; sleep stage, kept Latin as the member branch and EH1 have it
+  Awake: "يقظة", // note: health wording; sleep stage
   Stages: "المراحل", // note: health wording; sleep stages
   "Stages, {right}. {list}.": "المراحل، {right}. {list}.", // note: health wording
   "{stage} {time}, {pct}%": "{stage} {time}، {pct}%", // note: health wording
-  "Share your sleep": "مشاركة نومك",
+  "Share your sleep": "شارك نومك",
   "Nothing to share yet. Log or sync your sleep first.": "لا شيء للمشاركة بعد. سجّل نومك أو زامنه أولًا.",
   "Wind down": "الاسترخاء قبل النوم",
   "No sleep recorded last night": "لم يُسجَّل نوم الليلة الماضية", // note: health wording
@@ -454,7 +454,7 @@ const health: Catalogue = {
   "Best night · {date}": "أفضل ليلة · {date}",
   "Bedtime to wake": "من وقت النوم إلى الاستيقاظ",
   "Nights ahead": "الليالي القادمة",
-  Asleep: "النوم", // note: health wording; the chart legend for time asleep
+  Asleep: "مدة النوم", // note: health wording; the chart legend for time asleep
   "Average asleep": "متوسط النوم", // note: health wording
   "Average bedtime (top scale {from} to {to})": "متوسط وقت النوم (المقياس العلوي من {from} إلى {to})",
   "No sleep logged this week": "لا نوم مسجّل هذا الأسبوع",
@@ -494,7 +494,7 @@ const health: Catalogue = {
   "Water units": "وحدات الماء",
   "{n} ml added": "تمت إضافة {n} مل",
   "of {n} goal": "من هدف {n}",
-  "{n} to go": "متبقٍّ {n}",
+  "{n} to go": "تبقّى {n}",
   "{pct}% today": "{pct}% اليوم",
   "avg a day this week": "المتوسط اليومي هذا الأسبوع",
   "avg a day in {period}": "المتوسط اليومي في {period}",
@@ -507,7 +507,7 @@ const health: Catalogue = {
   "{n} of {goal} so far": "{n} من {goal} حتى الآن",
   "{n} of {goal}": "{n} من {goal}",
   "last drink {time}": "آخر مشروب {time}",
-  "Nothing logged yet today": "لا شيء مسجّل اليوم بعد",
+  "Nothing logged yet today": "لم تسجّل شيئًا اليوم بعد",
   "Nothing logged this day": "لا شيء مسجّل في هذا اليوم",
   "Today's water.": "ماء اليوم.",
   "{day}'s water.": "الماء في {day}.",
@@ -530,7 +530,7 @@ const health: Catalogue = {
   "Days at goal in {year}": "أيام بلوغ الهدف في {year}",
   "running total": "المجموع المتراكم",
   "day total": "مجموع اليوم",
-  "Share your water": "مشاركة الماء",
+  "Share your water": "شارك شرب الماء",
   "Nothing to share yet. Log your water first.": "لا شيء للمشاركة بعد. سجّل الماء أولًا.",
   "Nothing to share yet. Reach your water goal first.": "لا شيء للمشاركة بعد. بلّغ هدف الماء أولًا.",
   "Edit daily goal": "تعديل الهدف اليومي",
@@ -571,7 +571,7 @@ const health: Catalogue = {
   "{unit} change": "التغيّر بـ{unit}", // note: health wording (weight change)
   "Week avg {unit}": "متوسط الأسبوع ({unit})",
   "Lowest {unit}": "الأدنى ({unit})",
-  "vs last week": "مقارنةً مع الأسبوع الماضي",
+  "vs last week": "مقارنةً بالأسبوع الماضي",
   "Avg {unit}": "المتوسط ({unit})",
   "{unit} per week": "{unit} في الأسبوع", // note: health wording (weight change)
   "Avg {unit} since {month}": "المتوسط ({unit}) منذ {month}",
@@ -804,7 +804,7 @@ const health: Catalogue = {
   "No reading yet": "لا قراءة بعد",
   Morning: "الصباح",
   Evening: "المساء",
-  "{n} readings": { zero: "0 قراءات", one: "قراءة واحدة", two: "قراءتان", few: "{n} قراءات", many: "{n} قراءةً", other: "{n} قراءة" }, // note: health wording
+  "{n} readings": { zero: "لا قراءات", one: "قراءة واحدة", two: "قراءتان", few: "{n} قراءات", many: "{n} قراءة", other: "{n} قراءة" }, // note: health wording
   "Reference ranges": "النطاقات المرجعية", // note: health wording; the category words and ranges under it are clinical copy (English)
   "{category} · latest": "{category} · الأحدث", // note: health wording; {category} is the guideline's category word (clinical copy, English)
   "Left arm": "الذراع اليسرى",
@@ -861,15 +861,15 @@ const health: Catalogue = {
   "under {high}": "أقل من {high}", // note: health wording (a one-sided range)
   "above {low}": "أكثر من {low}", // note: health wording (a one-sided range)
   Below: "منخفض", // note: health wording (status word in the results table: below the range)
-  "Below range": "أدنى من النطاق", // note: health wording
+  "Below range": "تحت النطاق", // note: health wording
   Above: "مرتفع", // note: health wording (status word: above the range)
-  "Above range": "أعلى من النطاق", // note: health wording
+  "Above range": "فوق النطاق", // note: health wording
 
   // == Health · Records · page ==
   "Biomarkers & imaging": "المؤشرات الحيوية والتصوير الطبي", // note: health wording
   Biomarkers: "المؤشرات الحيوية", // note: health wording
-  Labs: "التحاليل", // note: health wording (the tab of uploaded lab reports)
-  Imaging: "التصوير الطبي", // note: health wording
+  "Labs|health records": "التحاليل", // note: health wording; the tab of uploaded lab reports, «التحاليل» as the landing page writes "labs"
+  "Imaging|health records": "التصوير الطبي", // note: health wording; the tab of imaging reports, paired with "Labs"
   History: "السجل", // note: health wording (the medical-history tab and a marker's result history)
   "Search markers": "البحث في المؤشرات", // note: health wording
   "Share all": "مشاركة الكل",
@@ -889,11 +889,11 @@ const health: Catalogue = {
   "{name}, {date}. This can't be undone.": "{name}، {date}. لا يمكن التراجع عن ذلك.", // note: health wording
   "Record deleted.": "حُذف السجل.", // note: health wording
   "Lab report removed.": "أُزيل تقرير المختبر.", // note: health wording
-  Condition: "حالة صحية", // note: health wording
+  "Condition|health": "حالة صحية", // note: health wording; a health-history entry kind, not a status
   Surgery: "عملية جراحية", // note: health wording
   Medication: "دواء", // note: health wording
   Injury: "إصابة", // note: health wording
-  "More options": "خيارات أخرى",
+  "More options": "خيارات أكثر",
   Manage: "إدارة",
 
   // == Health · Records · Biomarkers tab ==
@@ -946,7 +946,7 @@ const health: Catalogue = {
   "View file": "عرض الملف",
   "Your scans are now shared one at a time": "صورك الطبية تُشارَك الآن واحدةً واحدة", // note: health wording
   "Professionals you're connected with no longer see your imaging. They see a scan only after you share that file with them. Open a scan's menu and choose Share.": "لم يعد المختصون المرتبطون بك يرون تصويرك الطبي. لا يرون صورة طبية إلا بعد أن تشارك ذلك الملف معهم. افتح قائمة الصورة واختر «مشاركة».", // note: health wording
-  "Got it": "فهمت",
+  "Got it": "حسنًا",
   MRI: "رنين مغناطيسي", // note: health wording (imaging type; the stored value stays "MRI")
   "X-ray": "أشعة سينية", // note: health wording (imaging type)
   Ultrasound: "موجات فوق صوتية", // note: health wording (imaging type)
@@ -1240,7 +1240,7 @@ const health: Catalogue = {
   "Your care plan": "خطة رعايتك", // note: health wording
   "From {name} · reviewed {date}": "من {name} · رُوجعت في {date}", // note: health wording
   "Loading your care plan": "جارٍ تحميل خطة رعايتك", // note: health wording
-  "No care plan yet": "لا توجد خطة رعاية بعد", // note: health wording
+  "No care plan yet": "لا خطة رعاية بعد", // note: health wording
   "When a professional shares a care plan with you, it shows here.": "عندما يشارك معك مختص خطة رعاية، ستظهر هنا.", // note: health wording
   "Next review {date}": "المراجعة التالية {date}", // note: health wording
   "What {name} recommends": "ما يوصي به {name}", // note: health wording
@@ -1296,7 +1296,7 @@ const health: Catalogue = {
   // == Health · Advanced health monitoring (setting, plan and check-in) ==
   "Couldn't turn it on. Please try again.": "تعذّر التشغيل. يُرجى المحاولة مرة أخرى.",
   "Couldn't turn it off. Please try again.": "تعذّر الإيقاف. يُرجى المحاولة مرة أخرى.",
-  "Turn on": "تشغيل",
+  "Turn on": "تفعيل",
   "Mood check-in": "متابعة المزاج", // note: health wording; "check-in" as «متابعة», as for a professional's form (Round F B). The four questions and their answers are approved clinical copy and stay English
   "It may help to talk to a doctor about how you've been feeling.": "قد يفيدك أن تتحدث مع طبيب عن شعورك في الفترة الأخيرة.", // note: health wording; "may" kept as «قد»
   "See warning signs": "عرض العلامات التحذيرية", // note: health wording
@@ -1306,6 +1306,14 @@ const health: Catalogue = {
   "Four short questions.": "أربعة أسئلة قصيرة.",
   "Start|begin": "بدء",
   "Right-hand dates show when each was last checked, from your own records.": "تُظهر التواريخ المقابلة لكل فحص موعد آخر فحص، من سجلاتك أنت.", // note: health wording; "right-hand" dropped, since in Arabic the dates sit on the left
+  // == Health · the biomarker share card (drawn on a canvas) ==
+  "LOW|marker status": "منخفض", // note: health wording; the share card's status pill
+  "NORMAL|marker status": "طبيعي", // note: health wording
+  "HIGH|marker status": "مرتفع", // note: health wording
+  HISTORY: "السجل", // note: health wording; the share card's heading over the history line
+  "BIOMARKER SUMMARY": "ملخص المؤشرات الحيوية", // note: health wording; the summary card's title
+  "Range: {range} {unit}": "النطاق: {range} {unit}", // note: health wording; same Arabic as the pro branch
+  "Prototype health tracking, not a diagnosis.": "تتبّع صحي تجريبي، وليس تشخيصًا.", // note: health wording; the share card's footer
 };
 
 export default health;

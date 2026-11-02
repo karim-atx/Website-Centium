@@ -60,7 +60,7 @@ import { Toast } from "../../../components/ui/Toast";
 import { WeightScaleIcon } from "../../../components/icons/PartBIcons";
 import { bmiApplies } from "../../../services/pregnancy/weight";
 import { BMI_NOT_USED } from "../../../services/pregnancy/guidance";
-import { t, tn } from "../../../i18n/core";
+import { t, tn, tx } from "../../../i18n/core";
 import type { WeightUnit } from "../../../services/preferences/units";
 
 /** The unit word shown ("kg" / "lb", translated; call at render time). */
@@ -426,7 +426,7 @@ export default function WeightPage() {
       <HealthPopup
         open={deleting !== null}
         onClose={() => setDeleting(null)}
-        title={t("Delete this entry?")}
+        title={tx("Delete this entry?", "health")}
         body={<p>{t("This removes it from your history and totals.")}</p>}
         secondary={{ label: t("Cancel"), onClick: () => setDeleting(null) }}
         primary={{

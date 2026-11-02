@@ -2,7 +2,7 @@ import React from "react";
 import { packDays, type ContraceptionEvent, type ContraceptionPlan } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { linePx, textPx } from "../../theme/textSize";
-import { getLanguage, t } from "../../i18n/core";
+import { getLanguage, t, tx } from "../../i18n/core";
 
 // The pack, day by day (HE1.10.b.2 #12-#16).
 //
@@ -42,7 +42,7 @@ export const PillPack: React.FC<{
 
   return (
     <>
-      <div className="grid" role="grid" aria-label={G.PACK_TITLE} style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))", rowGap: 8 }}>
+      <div className="grid" role="grid" aria-label={t(G.PACK_TITLE)} style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))", rowGap: 8 }}>
         {pack.days.map((d) => {
           const logged = byDate.get(d.date);
           const taken = logged === "pill_taken" || logged === "pill_late";
@@ -60,7 +60,7 @@ export const PillPack: React.FC<{
               : ringed || active
                 ? "rgb(var(--c-primary-deep-text))"
                 : "rgb(var(--c-charcoal-faint))";
-          const label = [t("Day {n}", { n: d.day }), active ? G.PACK_ACTIVE : G.PACK_BREAK, logged ? G.EVENT_LABEL[logged] : null, isToday ? t("today") : null]
+          const label = [t("Day {n}", { n: d.day }), active ? tx(G.PACK_ACTIVE, "pill pack") : t(G.PACK_BREAK), logged ? tx(G.EVENT_LABEL[logged], "contraception") : null, isToday ? t("today") : null]
             .filter(Boolean)
             .join(getLanguage() === "ar" ? "، " : ", ");
           return (
@@ -93,9 +93,9 @@ export const PillPack: React.FC<{
       </div>
 
       <div className="flex flex-wrap items-center" style={{ gap: 14, marginTop: 10 }}>
-        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgb(var(--c-primary-pale))" }} />} label={G.PACK_ACTIVE} />
-        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgb(var(--c-cream-soft))" }} />} label={G.PACK_BREAK} />
-        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ boxShadow: "inset 0 0 0 1.5px rgb(var(--c-status-high))" }} />} label={G.EVENT_LABEL.pill_missed} />
+        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgb(var(--c-primary-pale))" }} />} label={tx(G.PACK_ACTIVE, "pill pack")} />
+        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ background: "rgb(var(--c-cream-soft))" }} />} label={t(G.PACK_BREAK)} />
+        <Legend swatch={<span className="w-2.5 h-2.5 rounded-full" style={{ boxShadow: "inset 0 0 0 1.5px rgb(var(--c-status-high))" }} />} label={tx(G.EVENT_LABEL.pill_missed, "contraception")} />
       </div>
     </>
   );

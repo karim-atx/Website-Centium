@@ -119,7 +119,7 @@ export const PregnancyOverview: React.FC<{
               <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
             </button>
           ))}
-          <p className="mt-1.5 text-[10px] font-semibold text-charcoal-faint">{G.PROVIDER_FIRST}</p>
+          <p className="mt-1.5 text-[10px] font-semibold text-charcoal-faint">{t(G.PROVIDER_FIRST)}</p>
         </CycleCard>
       </div>
 

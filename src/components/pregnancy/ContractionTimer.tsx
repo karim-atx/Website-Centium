@@ -98,7 +98,7 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
 
   return (
     <CycleCard style={{ marginBottom: 12 }}>
-      <CapsLabel>{G.CONTRACTIONS_TITLE}</CapsLabel>
+      <CapsLabel>{t(G.CONTRACTIONS_TITLE)}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">
         {G.CONTRACTIONS_EXPLAINER}
       </p>

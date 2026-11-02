@@ -5,7 +5,7 @@ import * as G from "../../services/cycle/guidance";
 import { getCycleStats, type CycleServerStats } from "../../services/cycle";
 import { CapsLabel, CycleCard, CycleFooter, hair, type, useCycleMode } from "./cycleUi";
 import { appLocale } from "../../i18n/format";
-import { tn } from "../../i18n/core";
+import { t, tn } from "../../i18n/core";
 
 // HE1.10.a, the Insights tab.
 //
@@ -98,8 +98,8 @@ export const CycleInsightsTab: React.FC<{
         </CycleCard>
       ) : (
         <>
-          <CycleCard style={{ marginTop: 4 }} ariaLabel={G.INSIGHTS_CYCLE_LENGTH}>
-            <CapsLabel style={{ marginBottom: 12 }}>{G.INSIGHTS_CYCLE_LENGTH}</CapsLabel>
+          <CycleCard style={{ marginTop: 4 }} ariaLabel={t(G.INSIGHTS_CYCLE_LENGTH)}>
+            <CapsLabel style={{ marginBottom: 12 }}>{t(G.INSIGHTS_CYCLE_LENGTH)}</CapsLabel>
             <div className="flex flex-col" style={{ gap: 10 }}>
               {history.map((c, i) => {
                 const latest = i === history.length - 1;
@@ -142,11 +142,11 @@ export const CycleInsightsTab: React.FC<{
             <div className="flex items-center flex-wrap" style={{ gap: 14, marginTop: 14 }}>
               <span className="inline-flex items-center text-charcoal-soft" style={{ gap: 6, ...type(10, 15, 600) }}>
                 <span aria-hidden className="rounded-full" style={{ width: 12, height: 8, background: "rgb(var(--metric-cycle-main))" }} />
-                {G.INSIGHTS_PERIOD_DAYS}
+                {t(G.INSIGHTS_PERIOD_DAYS)}
               </span>
               <span className="inline-flex items-center text-charcoal-soft" style={{ gap: 6, ...type(10, 15, 600) }}>
                 <span aria-hidden className="rounded-full" style={{ width: 12, height: 8, background: dark ? "rgb(169 145 254 / 0.35)" : "#D6CFF0" }} />
-                {G.INSIGHTS_REST_OF_CYCLE}
+                {t(G.INSIGHTS_REST_OF_CYCLE)}
               </span>
             </div>
             <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 400, { marginTop: 10 })}>
@@ -161,9 +161,9 @@ export const CycleInsightsTab: React.FC<{
           >
             {(
               [
-                [G.INSIGHTS_AVG_CYCLE, avgCycle, "rgb(var(--c-primary-dark))"],
-                [G.INSIGHTS_AVG_PERIOD, avgPeriod, dark ? "#EDA9C0" : "rgb(var(--metric-cycle-accent))"],
-                [G.INSIGHTS_VARIATION, stats.variationDays, dark ? "#B8B3C7" : "#6B6570"],
+                [t(G.INSIGHTS_AVG_CYCLE), avgCycle, "rgb(var(--c-primary-dark))"],
+                [t(G.INSIGHTS_AVG_PERIOD), avgPeriod, dark ? "#EDA9C0" : "rgb(var(--metric-cycle-accent))"],
+                [t(G.INSIGHTS_VARIATION), stats.variationDays, dark ? "#B8B3C7" : "#6B6570"],
               ] as const
             ).map(([label, value, ink], i) => (
               <div
@@ -192,22 +192,22 @@ export const CycleInsightsTab: React.FC<{
           </p>
           {statsFailed && (
             <p role="alert" className="text-center text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>
-              {G.INSIGHTS_LOAD_ERROR}{" "}
+              {t(G.INSIGHTS_LOAD_ERROR)}{" "}
               <button type="button" onClick={() => setRetry((n) => n + 1)} className="tap text-primary-dark" style={{ minHeight: 32, fontWeight: 700 }}>
-                {G.RETRY}
+                {t(G.RETRY)}
               </button>
             </p>
           )}
 
           {/* K1: kept above Symptoms, repo copy verbatim. */}
           {prediction !== null && prediction.flags.length > 0 && (
-            <CycleCard style={{ marginTop: 12 }} ariaLabel={G.FLAGS_HEADING}>
-              <CapsLabel style={{ marginBottom: 10 }}>{G.FLAGS_HEADING}</CapsLabel>
+            <CycleCard style={{ marginTop: 12 }} ariaLabel={t(G.FLAGS_HEADING)}>
+              <CapsLabel style={{ marginBottom: 10 }}>{t(G.FLAGS_HEADING)}</CapsLabel>
               <div className="flex flex-col" style={{ gap: 10 }}>
                 {prediction.flags.map((f) => (
                   <div key={f}>
                     <p className="text-charcoal" style={type(13, 19.5, 700)}>
-                      {G.FLAG_TITLE[f]}
+                      {t(G.FLAG_TITLE[f])}
                     </p>
                     <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                       {G.FLAG_BODY[f]} {G.FLAG_ADVICE}
@@ -223,8 +223,8 @@ export const CycleInsightsTab: React.FC<{
             </CycleCard>
           )}
 
-          <CycleCard style={{ marginTop: 12 }} ariaLabel={G.SYMPTOMS_BY_PHASE}>
-            <CapsLabel style={{ marginBottom: 12 }}>{G.SYMPTOMS_BY_PHASE}</CapsLabel>
+          <CycleCard style={{ marginTop: 12 }} ariaLabel={t(G.SYMPTOMS_BY_PHASE)}>
+            <CapsLabel style={{ marginBottom: 12 }}>{t(G.SYMPTOMS_BY_PHASE)}</CapsLabel>
             {grid.symptoms.length === 0 ? (
               <p className="text-charcoal-soft" style={type(12, 18, 400)}>
                 {G.SYMPTOM_GRID_TOO_LITTLE}
@@ -235,12 +235,12 @@ export const CycleInsightsTab: React.FC<{
                   <thead>
                     <tr>
                       <th scope="col" className="text-start uppercase text-charcoal-faint" style={type(8.5, 12.8, 800, { letterSpacing: 1 })}>
-                        {G.GRID_HEAD_SYMPTOM}
+                        {t(G.GRID_HEAD_SYMPTOM)}
                       </th>
                       {G.PHASE_BAR.map((p) => (
                         <th key={p} scope="col" className="uppercase text-charcoal-faint" style={type(8.5, 12.8, 800, { letterSpacing: 1, width: 61 })}>
-                          <abbr title={G.PHASE_LABEL[p]} className="no-underline">
-                            {G.GRID_PHASE_SHORT[p]}
+                          <abbr title={t(G.PHASE_LABEL[p])} className="no-underline">
+                            {t(G.GRID_PHASE_SHORT[p])}
                           </abbr>
                         </th>
                       ))}
@@ -250,7 +250,7 @@ export const CycleInsightsTab: React.FC<{
                     {grid.symptoms.map((sym) => (
                       <tr key={sym}>
                         <th scope="row" className="text-start text-charcoal" style={type(12, 18, 600)}>
-                          {G.SYMPTOM_LABEL[sym]}
+                          {t(G.SYMPTOM_LABEL[sym])}
                         </th>
                         {G.PHASE_BAR.map((p) => {
                           const n = grid.counts[sym]?.[p] ?? 0;
@@ -280,7 +280,7 @@ export const CycleInsightsTab: React.FC<{
                   </tbody>
                 </table>
                 <p className="text-charcoal-faint" style={type(10.5, 15.2, 400, { marginTop: 10 })}>
-                  {G.SYMPTOMS_GRID_NOTE}
+                  {t(G.SYMPTOMS_GRID_NOTE)}
                 </p>
               </>
             )}

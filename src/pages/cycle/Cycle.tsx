@@ -230,7 +230,7 @@ export default function Cycle() {
 
   const header = (withTabs: boolean) => (
     <FixedHeader paddingBottom={withTabs ? 14 : 10} fillClassName="bg-cream dark:bg-[#1C1F28]">
-      <CycleTitleRow title={G.PAGE_TITLE} onBack={back} />
+      <CycleTitleRow title={t(G.PAGE_TITLE)} onBack={back} />
       {withTabs && (
         <SegmentedTabs
           className="mt-3"
@@ -298,7 +298,7 @@ export default function Cycle() {
 
   const startPregnancyLink = (
     <button type="button" onClick={() => openPage("start-pregnancy")} className="tap w-full text-primary-dark" style={{ marginTop: 6, minHeight: 44, ...type(13, 19.5, 700) }}>
-      {PG.START_TITLE}
+      {t(PG.START_TITLE)}
     </button>
   );
 
@@ -338,7 +338,7 @@ export default function Cycle() {
               cursor: backToToday.active ? undefined : "default",
             }}
           >
-            <span className="truncate">{G.BACK_TO_TODAY}</span>
+            <span className="truncate">{t(G.BACK_TO_TODAY)}</span>
           </button>
         )}
       </div>
@@ -385,7 +385,7 @@ export default function Cycle() {
             setDeleteError(null);
           }
         }}
-        title={G.DELETE_ALL_TITLE}
+        title={t(G.DELETE_ALL_TITLE)}
         geometry="partB"
         align="start"
       >
@@ -402,12 +402,12 @@ export default function Cycle() {
         )}
         <div style={{ marginTop: 16 }}>
           <PopupButtons
-            cancel={G.DELETE_ALL_KEEP}
+            cancel={t(G.DELETE_ALL_KEEP)}
             onCancel={() => {
               setConfirmDelete(false);
               setDeleteError(null);
             }}
-            confirm={G.DELETE_ALL_CONFIRM}
+            confirm={t(G.DELETE_ALL_CONFIRM)}
             destructive
             busy={busy}
             onConfirm={async () => {
@@ -416,7 +416,7 @@ export default function Cycle() {
               const result = await deleteAllCycleData();
               setBusy(false);
               if (!result.ok) {
-                setDeleteError(G.DELETE_ALL_FAILED);
+                setDeleteError(t(G.DELETE_ALL_FAILED));
                 return;
               }
               setConfirmDelete(false);
@@ -443,7 +443,7 @@ export default function Cycle() {
       <div className="animate-fade-slide-up" style={{ paddingBottom: 96 }}>
         {header(false)}
         {heroMessage(
-          G.TRACKER_OFF_TITLE,
+          t(G.TRACKER_OFF_TITLE),
           G.TRACKER_OFF_BODY,
           <button
             type="button"
@@ -452,7 +452,7 @@ export default function Cycle() {
             className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
             style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
           >
-            {G.TRACKER_OFF_CTA}
+            {t(G.TRACKER_OFF_CTA)}
           </button>
         )}
         {startPregnancyLink}
@@ -508,7 +508,7 @@ export default function Cycle() {
     return day < ovu ? "follicular" : "luteal";
   };
   const selectedPhase = phaseOfDay(selectedDay);
-  const phaseName = G.PHASE_LABEL[selectedPhase];
+  const phaseName = t(G.PHASE_LABEL[selectedPhase]);
 
   // --- the centre text (repo headline rule, on three lines) ------------------
   // Away from today: the date, "Day N", the phase. On a period day "Period ·
@@ -602,7 +602,7 @@ export default function Cycle() {
           {trackerOff
             ? lastEndedPregnancy?.outcome === "loss"
               ? heroMessage(
-                  PG.LOSS_TITLE,
+                  t(PG.LOSS_TITLE),
                   <>
                     <p>{PG.LOSS_BODY}</p>
                     <p style={{ marginTop: 6 }}>{PG.LOSS_SUPPORT}</p>
@@ -614,12 +614,12 @@ export default function Cycle() {
                     className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
                     style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
                   >
-                    {PG.LOSS_RESUME}
+                    {t(PG.LOSS_RESUME)}
                   </button>
                 )
               : heroMessage(
-                  G.TRACKER_OFF_TITLE,
-                  G.TRACKER_OFF_KEEPS_DATA,
+                  t(G.TRACKER_OFF_TITLE),
+                  t(G.TRACKER_OFF_KEEPS_DATA),
                   <button
                     type="button"
                     disabled={busy}
@@ -627,13 +627,13 @@ export default function Cycle() {
                     className="tap bg-fill-pinned text-on-primary-fill disabled:opacity-40"
                     style={{ marginTop: 14, height: 48, borderRadius: 14, padding: "0 20px", ...type(14, 21, 700) }}
                   >
-                    {G.TURN_BACK_ON}
+                    {t(G.TURN_BACK_ON)}
                   </button>
                 )
-            : heroMessage(G.SETUP_TITLE, G.SETUP_BODY)}
+            : heroMessage(t(G.SETUP_TITLE), G.SETUP_BODY)}
           {startPregnancyLink}
           <CycleFooter />
-          {!trackerOff && pinnedCta({ label: G.LOG_THIS_DAY, onClick: () => openLog(today) })}
+          {!trackerOff && pinnedCta({ label: t(G.LOG_THIS_DAY), onClick: () => openLog(today) })}
         </>
       );
     } else {
@@ -666,7 +666,7 @@ export default function Cycle() {
                 </>,
                 "fertile"
               )}
-            {prediction.confidence && chip(G.CONFIDENCE_LABEL[prediction.confidence], "confidence")}
+            {prediction.confidence && chip(t(G.CONFIDENCE_LABEL[prediction.confidence]), "confidence")}
           </div>
 
           {isNatural && (
@@ -727,7 +727,7 @@ export default function Cycle() {
           </div>
 
           {pinnedCta(
-            { label: G.LOG_THIS_DAY, onClick: () => openLog(selectedDate) },
+            { label: t(G.LOG_THIS_DAY), onClick: () => openLog(selectedDate) },
             { active: offsetDays !== 0, onClick: () => setOffsetDays(0) }
           )}
         </>

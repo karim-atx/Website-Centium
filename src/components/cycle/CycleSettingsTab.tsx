@@ -9,7 +9,7 @@ import type { Pregnancy } from "../../services/pregnancy";
 import { gestationOn } from "../../services/pregnancy";
 import type { Method } from "../../services/contraception";
 import { zonePlace } from "../settings/timezoneOptions";
-import { t, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 import { CycleCard, CycleFooter, CycleHelp, CycleRow, CycleSection, OptionButton, type, useCycleMode } from "./cycleUi";
 
 // HE1.10.b, the Settings tab, in the open Settings layout: lavender section
@@ -46,24 +46,24 @@ export const CycleSettingsTab: React.FC<{
 }> = (p) => {
   const { settings } = p;
   const pregnancyWeek = p.pregnancy ? gestationOn(p.today, p.pregnancy) : null;
-  const zoneCity = p.timezone ? zonePlace(p.timezone) : G.SETTINGS_TIMEZONE_NOT_SET;
+  const zoneCity = p.timezone ? zonePlace(p.timezone) : t(G.SETTINGS_TIMEZONE_NOT_SET);
 
   return (
     <div data-cycle-tab="settings">
-      <CycleSection label={G.SETTINGS_TRACKING} style={{ marginTop: 26 }}>
+      <CycleSection label={t(G.SETTINGS_TRACKING)} style={{ marginTop: 26 }}>
         <CycleRow
           glyph={<CycleCalendarIcon size={18} />}
           title={t("Cycle tracking")}
           toggle={{ checked: settings.trackerEnabled, onChange: p.onTrackerChange, disabled: p.busy, label: t("Cycle tracking") }}
           last
         />
-        <CycleHelp style={{ marginTop: 2 }}>{settings.trackerEnabled ? G.TRACKER_OFF_KEEPS_DATA : G.SWITCH_ON_TO_TRACK}</CycleHelp>
+        <CycleHelp style={{ marginTop: 2 }}>{settings.trackerEnabled ? t(G.TRACKER_OFF_KEEPS_DATA) : t(G.SWITCH_ON_TO_TRACK)}</CycleHelp>
       </CycleSection>
 
-      <CycleSection label={G.SETTINGS_YOUR_CYCLE} style={{ marginTop: 26 }}>
+      <CycleSection label={t(G.SETTINGS_YOUR_CYCLE)} style={{ marginTop: 26 }}>
         <NumberRow
           icon={RefreshCw}
-          label={G.SETTINGS_CYCLE_LENGTH}
+          label={t(G.SETTINGS_CYCLE_LENGTH)}
           value={settings.typicalCycleLength}
           limits={SETTINGS_LIMITS.cycleLength}
           disabled={p.busy}
@@ -71,7 +71,7 @@ export const CycleSettingsTab: React.FC<{
         />
         <NumberRow
           icon={Droplet}
-          label={G.SETTINGS_PERIOD_LENGTH}
+          label={t(G.SETTINGS_PERIOD_LENGTH)}
           value={settings.typicalPeriodLength}
           limits={SETTINGS_LIMITS.periodLength}
           disabled={p.busy}
@@ -79,7 +79,7 @@ export const CycleSettingsTab: React.FC<{
         />
         <NumberRow
           icon={Moon}
-          label={G.SETTINGS_LUTEAL_LENGTH}
+          label={t(G.SETTINGS_LUTEAL_LENGTH)}
           value={settings.lutealLength}
           limits={SETTINGS_LIMITS.lutealLength}
           disabled={p.busy}
@@ -89,7 +89,7 @@ export const CycleSettingsTab: React.FC<{
         <CycleHelp style={{ marginTop: 2 }}>{G.LENGTHS_HELP}</CycleHelp>
       </CycleSection>
 
-      <CycleSection label={G.SETTINGS_PREGNANCY} style={{ marginTop: 26 }}>
+      <CycleSection label={t(G.SETTINGS_PREGNANCY)} style={{ marginTop: 26 }}>
         {p.pregnancy ? (
           <>
             <CycleRow
@@ -101,17 +101,17 @@ export const CycleSettingsTab: React.FC<{
                   : undefined
               }
             />
-            <CycleRow icon={XCircle} title={PG.END_TITLE} onClick={p.onEndPregnancy} last />
+            <CycleRow icon={XCircle} title={t(PG.END_TITLE)} onClick={p.onEndPregnancy} last />
           </>
         ) : (
-          <CycleRow icon={Baby} title={PG.START_TITLE} onClick={p.onStartPregnancy} last />
+          <CycleRow icon={Baby} title={t(PG.START_TITLE)} onClick={p.onStartPregnancy} last />
         )}
         {/* K1: after a loss, the one thing offered is a way back; after a
             birth, how rough the estimates will be. Repo copy verbatim. */}
         {!p.pregnancy && p.lastEndedPregnancy?.outcome === "loss" && !settings.trackerEnabled && (
-          <CycleCard style={{ marginTop: 12 }} ariaLabel={PG.LOSS_TITLE}>
+          <CycleCard style={{ marginTop: 12 }} ariaLabel={t(PG.LOSS_TITLE)}>
             <p className="text-charcoal" style={type(13.5, 20.3, 600)}>
-              {PG.LOSS_TITLE}
+              {t(PG.LOSS_TITLE)}
             </p>
             <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 4 })}>
               {PG.LOSS_BODY}
@@ -126,7 +126,7 @@ export const CycleSettingsTab: React.FC<{
               className="tap text-primary-dark disabled:opacity-40"
               style={{ marginTop: 6, minHeight: 44, ...type(13, 19.5, 700) }}
             >
-              {PG.LOSS_RESUME}
+              {t(PG.LOSS_RESUME)}
             </button>
           </CycleCard>
         )}
@@ -134,9 +134,9 @@ export const CycleSettingsTab: React.FC<{
           p.lastEndedPregnancy?.outcome === "birth" &&
           p.lastEndedPregnancy.postpartumUntil !== null &&
           p.lastEndedPregnancy.postpartumUntil >= p.today && (
-            <CycleCard style={{ marginTop: 12 }} ariaLabel={PG.POSTPARTUM_TITLE}>
+            <CycleCard style={{ marginTop: 12 }} ariaLabel={t(PG.POSTPARTUM_TITLE)}>
               <p className="text-charcoal" style={type(13.5, 20.3, 600)}>
-                {PG.POSTPARTUM_TITLE}
+                {t(PG.POSTPARTUM_TITLE)}
               </p>
               <p className="text-charcoal-soft" style={type(12, 18, 400, { marginTop: 4 })}>
                 {PG.POSTPARTUM_BODY}
@@ -145,11 +145,11 @@ export const CycleSettingsTab: React.FC<{
           )}
       </CycleSection>
 
-      <CycleSection label={G.SETTINGS_MORE} style={{ marginTop: 32 }}>
+      <CycleSection label={t(G.SETTINGS_MORE)} style={{ marginTop: 32 }}>
         <CycleRow
           icon={Pill}
-          title={G.SETTINGS_CONTRACEPTION}
-          value={p.method && p.method !== "none" ? METHOD_LABEL[p.method] : G.SETTINGS_CONTRACEPTION_SET_UP}
+          title={t(G.SETTINGS_CONTRACEPTION)}
+          value={p.method && p.method !== "none" ? t(METHOD_LABEL[p.method]) : tx(G.SETTINGS_CONTRACEPTION_SET_UP, "action")}
           onClick={p.onContraception}
         />
         {/* Period-due reminder (Database B2 columns, B4 sender period_due;
@@ -157,13 +157,13 @@ export const CycleSettingsTab: React.FC<{
             wording follows notification_detail on the same row. */}
         <CycleRow
           icon={CalendarClock}
-          title={G.PERIOD_REMINDER_TITLE}
-          subtitle={G.PERIOD_REMINDER_SUB}
-          toggle={{ checked: settings.periodReminder, onChange: (on) => void p.save({ periodReminder: on }), disabled: p.busy, label: G.PERIOD_REMINDER_TITLE }}
+          title={t(G.PERIOD_REMINDER_TITLE)}
+          subtitle={t(G.PERIOD_REMINDER_SUB)}
+          toggle={{ checked: settings.periodReminder, onChange: (on) => void p.save({ periodReminder: on }), disabled: p.busy, label: t(G.PERIOD_REMINDER_TITLE) }}
         />
         {settings.periodReminder && (
           <div style={{ paddingBlock: "0 12px", paddingInline: "50px 0" }}>
-            <div className="flex" role="radiogroup" aria-label={G.PERIOD_REMINDER_DAYS_LABEL} style={{ gap: 6 }}>
+            <div className="flex" role="radiogroup" aria-label={t(G.PERIOD_REMINDER_DAYS_LABEL)} style={{ gap: 6 }}>
               {Array.from({ length: PERIOD_REMINDER_DAYS.max - PERIOD_REMINDER_DAYS.min + 1 }, (_, i) => PERIOD_REMINDER_DAYS.min + i).map((d) => (
                 <OptionButton
                   key={d}
@@ -179,12 +179,12 @@ export const CycleSettingsTab: React.FC<{
             <CycleHelp style={{ marginTop: 6 }}>{G.PERIOD_REMINDER_WORDING[settings.notificationDetail]}</CycleHelp>
           </div>
         )}
-        <CycleRow icon={Bell} title={G.SETTINGS_REMINDERS} value={G.SETTINGS_REMINDERS_VALUE} onClick={p.onReminders} />
-        <CycleRow icon={Globe} title={G.TIMEZONE_TITLE} value={zoneCity} onClick={p.onTimezone} last />
+        <CycleRow icon={Bell} title={t(G.SETTINGS_REMINDERS)} value={t(G.SETTINGS_REMINDERS_VALUE)} onClick={p.onReminders} />
+        <CycleRow icon={Globe} title={t(G.TIMEZONE_TITLE)} value={zoneCity} onClick={p.onTimezone} last />
       </CycleSection>
 
-      <CycleSection label={G.SETTINGS_CONDITIONS} style={{ marginTop: 32 }}>
-        <div className="flex flex-wrap" style={{ gap: 6, marginTop: 12 }} role="group" aria-label={G.SETTINGS_CONDITIONS}>
+      <CycleSection label={t(G.SETTINGS_CONDITIONS)} style={{ marginTop: 32 }}>
+        <div className="flex flex-wrap" style={{ gap: 6, marginTop: 12 }} role="group" aria-label={t(G.SETTINGS_CONDITIONS)}>
           {CONDITIONS.map((c) => {
             const on = settings.conditions.includes(c);
             return (
@@ -198,7 +198,7 @@ export const CycleSettingsTab: React.FC<{
                   })
                 }
               >
-                {G.CONDITION_LABEL[c]}
+                {t(G.CONDITION_LABEL[c])}
               </OptionButton>
             );
           })}
@@ -206,14 +206,14 @@ export const CycleSettingsTab: React.FC<{
         <CycleHelp style={{ marginTop: 6 }}>{G.CONDITIONS_HELP}</CycleHelp>
       </CycleSection>
 
-      <CycleSection label={G.SETTINGS_DATA} style={{ marginTop: 26 }}>
+      <CycleSection label={t(G.SETTINGS_DATA)} style={{ marginTop: 26 }}>
         <CycleRow
           icon={Eye}
-          title={G.SETTINGS_WHO_CAN_SEE}
-          value={p.sharedWith === null ? undefined : p.sharedWith === 0 ? G.SETTINGS_ONLY_YOU : G.SETTINGS_SHARED_WITH(p.sharedWith)}
+          title={t(G.SETTINGS_WHO_CAN_SEE)}
+          value={p.sharedWith === null ? undefined : p.sharedWith === 0 ? t(G.SETTINGS_ONLY_YOU) : G.SETTINGS_SHARED_WITH(p.sharedWith)}
           onClick={p.onSharing}
         />
-        <CycleRow icon={Trash2} title={G.DELETE_ALL_TITLE} destructive onClick={p.onDeleteAll} last />
+        <CycleRow icon={Trash2} title={t(G.DELETE_ALL_TITLE)} destructive onClick={p.onDeleteAll} last />
       </CycleSection>
 
       <CycleFooter />

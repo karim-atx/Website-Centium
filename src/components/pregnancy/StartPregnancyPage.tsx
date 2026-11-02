@@ -48,7 +48,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
     value === null
       ? null
       : basis === "lmp" && value < shiftDay(today, -MAX_LMP_DAYS)
-        ? G.START_LMP_TOO_LONG_AGO
+        ? t(G.START_LMP_TOO_LONG_AGO)
         : null;
   const derived = value && !fieldError ? (basis === "lmp" ? dueDateFromLmp(value) : lmpFromDueDate(value)) : null;
 
@@ -68,7 +68,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
   return (
     <div className="animate-fade-slide-up" style={{ paddingBottom: 176 }} data-cycle-page="start-pregnancy">
       <FixedHeader paddingBottom={10}>
-        <CycleTitleRow title={G.START_TITLE} onBack={onBack} sub />
+        <CycleTitleRow title={t(G.START_TITLE)} onBack={onBack} sub />
       </FixedHeader>
       <p className="text-charcoal-soft" style={type(12.5, 19.4, 400, { marginTop: 4 })}>
         {G.START_BODY}
@@ -77,8 +77,8 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
       <div className="flex" role="radiogroup" aria-label={t("How to work out the dates")} style={{ gap: 8, marginTop: 16 }}>
         {(
           [
-            ["lmp", G.START_FROM_LMP],
-            ["due", G.START_FROM_DUE],
+            ["lmp", t(G.START_FROM_LMP)],
+            ["due", t(G.START_FROM_DUE)],
           ] as const
         ).map(([key, label]) => (
           <OptionButton
@@ -99,12 +99,12 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
       </div>
 
       <p className="text-charcoal-faint" style={type(12, 16, 600, { margin: "14px 0 6px 2px" })}>
-        {basis === "lmp" ? G.START_LMP_LABEL : G.START_DUE_LABEL}
+        {basis === "lmp" ? t(G.START_LMP_LABEL) : t(G.START_DUE_LABEL)}
       </p>
       <CycleDateField
         value={value}
         onClick={() => setPickerOpen(true)}
-        ariaLabel={basis === "lmp" ? G.START_LMP_LABEL : G.START_DUE_LABEL}
+        ariaLabel={basis === "lmp" ? t(G.START_LMP_LABEL) : t(G.START_DUE_LABEL)}
         invalid={!!fieldError}
       />
       {fieldError && (
@@ -118,7 +118,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
         </p>
       )}
 
-      <CycleSection label={G.START_DUE_SECTION} style={{ marginTop: 22 }}>
+      <CycleSection label={t(G.START_DUE_SECTION)} style={{ marginTop: 22 }}>
         <CycleHelp style={{ marginTop: 2 }}>{G.DUE_DATE_HELP}</CycleHelp>
       </CycleSection>
 
@@ -129,12 +129,12 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
       )}
 
       <p className="text-center text-charcoal-faint" style={type(10.5, 15.8, 600, { marginTop: 22 })}>
-        {G.PROVIDER_FIRST}
+        {t(G.PROVIDER_FIRST)}
       </p>
 
       <PinnedCta
         primary={{
-          label: G.START_CTA,
+          label: t(G.START_CTA),
           onClick: () => void save(),
           disabled: !value || !!fieldError || !authUserId,
           loading: busy,
@@ -150,7 +150,7 @@ export const StartPregnancyPage: React.FC<{ onBack: () => void; onStarted: () =>
         variant="partB"
         maxDate={basis === "lmp" ? today : undefined}
         minDate={basis === "due" ? today : shiftDay(today, -MAX_LMP_DAYS)}
-        title={basis === "lmp" ? G.START_LMP_LABEL : G.START_DUE_LABEL}
+        title={basis === "lmp" ? t(G.START_LMP_LABEL) : t(G.START_DUE_LABEL)}
         onSelect={(d) => {
           setValue(d);
           setPickerOpen(false);

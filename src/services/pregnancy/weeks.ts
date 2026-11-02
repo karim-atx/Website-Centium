@@ -1,4 +1,4 @@
-import { t, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 
 // Where a pregnancy is, in weeks and days.
 //
@@ -110,7 +110,7 @@ export function gestationOn(
  * an alarm: most pregnancies that reach 40 weeks continue a little past it.
  */
 export function dueLabel(g: Gestation): string {
-  if (g.daysUntilDue === 0) return t("Due today");
+  if (g.daysUntilDue === 0) return tx("Due today", "due date");
   if (g.daysUntilDue > 0) {
     return tn(g.daysUntilDue, "Due in {n} day", "Due in {n} days");
   }

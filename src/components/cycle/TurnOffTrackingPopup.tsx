@@ -3,7 +3,7 @@ import { CentredPopup } from "../ui/CentredPopup";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA, TURN_OFF_CONFIRM, TURN_OFF_KEEP, TURN_OFF_TITLE } from "../../services/cycle/guidance";
 import { PopupButtons, type } from "./cycleUi";
-import { tk } from "../../i18n/core";
+import { t, tk } from "../../i18n/core";
 
 /**
  * HE1.10.b.5 "Turn off cycle tracking?": the confirm both tracker switches
@@ -37,12 +37,12 @@ export const TurnOffTrackingPopup: React.FC<{
   };
 
   return (
-    <CentredPopup open={open} onClose={busy ? () => undefined : onClose} title={TURN_OFF_TITLE} geometry="partB" align="start">
+    <CentredPopup open={open} onClose={busy ? () => undefined : onClose} title={t(TURN_OFF_TITLE)} geometry="partB" align="start">
       <p className="text-charcoal-soft" style={type(13, 20.2, 400, { marginTop: -6 })}>
-        {TRACKER_OFF_KEEPS_DATA}
+        {t(TRACKER_OFF_KEEPS_DATA)}
       </p>
       <div style={{ marginTop: 16 }}>
-        <PopupButtons cancel={TURN_OFF_KEEP} onCancel={onClose} confirm={TURN_OFF_CONFIRM} onConfirm={() => void turnOff()} busy={busy} />
+        <PopupButtons cancel={t(TURN_OFF_KEEP)} onCancel={onClose} confirm={t(TURN_OFF_CONFIRM)} onConfirm={() => void turnOff()} busy={busy} />
       </div>
     </CentredPopup>
   );

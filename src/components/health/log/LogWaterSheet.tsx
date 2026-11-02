@@ -8,7 +8,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
 import { FieldLabel, MeasuredOnPopup, WhenField, dayLabel, isoDay, partBSheetTone, whenLabel } from "./LogSheetParts";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 
 // HE1.1.1 "Log water" (health-b-handover.md 2866-3013): the shared Log sheet
 // for one drink. "Today so far", Amount chips (+ 250 ml / + 500 ml / Custom
@@ -131,7 +131,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
         </p>
 
         <div style={{ marginTop: 16 }}>
-          <FieldLabel id="log-water-amount">{t("Amount")}</FieldLabel>
+          <FieldLabel id="log-water-amount">{tx("Amount", "quantity")}</FieldLabel>
           <div role="radiogroup" aria-labelledby="log-water-amount" className="flex flex-wrap" style={{ gap: 8 }}>
             {CHIPS.map((ml) => {
               const on = choice === ml;

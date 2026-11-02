@@ -109,13 +109,13 @@ export const CycleScrubber: React.FC<{
       </div>
       <div className="flex items-start justify-between" style={{ marginTop: 11, gap: 8 }}>
         <span className="text-charcoal-faint shrink-0" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
-          {SCRUB_EARLIER}
+          {t(SCRUB_EARLIER)}
         </span>
         <span className="text-charcoal-soft text-center min-w-0" data-scrub-label="" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
           {centreLabel}
         </span>
         <span className="text-charcoal-faint shrink-0" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
-          {SCRUB_LATER}
+          {t(SCRUB_LATER)}
         </span>
       </div>
     </div>

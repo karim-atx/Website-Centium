@@ -35,7 +35,7 @@ const todayISO = () => {
 
 const ProviderLine: React.FC = () => (
   <p className="mt-3 text-[10px] leading-[1.45] font-semibold text-charcoal-soft">
-    {G.PROVIDER_FIRST}
+    {t(G.PROVIDER_FIRST)}
   </p>
 );
 
@@ -115,7 +115,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
                       size="sm"
                       onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: offered })}
                     >
-                      {G.APPLY_TARGETS_CTA}
+                      {t(G.APPLY_TARGETS_CTA)}
                     </Button>
                   )}
                   {applied > 0 && (
@@ -124,7 +124,7 @@ export const PregnancyNutritionCard: React.FC<{ pregnancy: Pregnancy }> = ({ pre
                       variant="secondary"
                       onClick={() => setNutritionGoal({ ...nutritionGoal, pregnancyKcal: 0 })}
                     >
-                      {G.APPLY_TARGETS_UNDO}
+                      {t(G.APPLY_TARGETS_UNDO)}
                     </Button>
                   )}
                 </div>
@@ -192,7 +192,7 @@ export const PregnancyWorkoutCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregn
       <Bullets items={G.EXERCISE_AVOID} />
 
       <div className="mt-3.5 rounded-xl bg-status-high-bg px-3.5 py-3">
-        <p className="text-[11.5px] font-bold text-charcoal mb-1.5">{G.EXERCISE_STOP_TITLE}</p>
+        <p className="text-[11.5px] font-bold text-charcoal mb-1.5">{t(G.EXERCISE_STOP_TITLE)}</p>
         <Bullets items={G.EXERCISE_STOP_SIGNS} color="rgb(var(--c-status-high))" />
       </div>
 
@@ -321,7 +321,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
           className="tap w-full flex items-center gap-2 text-start"
         >
           <AlertTriangle size={14} className="text-status-high shrink-0" />
-          <span className="flex-1 text-[11.5px] font-bold text-charcoal">{G.URGENT_TITLE}</span>
+          <span className="flex-1 text-[11.5px] font-bold text-charcoal">{t(G.URGENT_TITLE)}</span>
           <span className="text-[11px] font-semibold text-charcoal-faint">
             {signsOpen ? t("Hide") : t("Show")}
           </span>

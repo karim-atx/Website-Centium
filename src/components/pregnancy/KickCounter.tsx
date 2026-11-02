@@ -97,7 +97,7 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
 
   return (
     <CycleCard style={{ marginBottom: 12 }}>
-      <CapsLabel>{G.KICKS_TITLE}</CapsLabel>
+      <CapsLabel>{t(G.KICKS_TITLE)}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">{G.KICKS_EXPLAINER}</p>
 
       {sessionId ? (

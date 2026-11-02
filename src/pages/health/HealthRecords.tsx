@@ -36,7 +36,7 @@ import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
 import { useShareLocks } from "../../components/share/client/useShareLocks";
 import { imagingTypeLabel } from "../../components/health/imagingTypes";
-import { t, tk, tn } from "../../i18n/core";
+import { t, tn, tx } from "../../i18n/core";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
 // HE1.9 · Biomarkers & imaging (docs/health-b-handover.md 614-2863): one full
@@ -53,11 +53,13 @@ import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from 
 // reminder sweep) show their pending states in place.
 
 type Tab = "biomarkers" | "labs" | "imaging" | "history";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "biomarkers", label: tk("Biomarkers") },
-  { key: "labs", label: tk("Labs") },
-  { key: "imaging", label: tk("Imaging") },
-  { key: "history", label: tk("History") },
+// The labels are read at display; "Labs" and "Imaging" carry a context key
+// (health records), since the bare words read differently on the pro side.
+const TABS: { key: Tab; label: () => string }[] = [
+  { key: "biomarkers", label: () => t("Biomarkers") },
+  { key: "labs", label: () => tx("Labs", "health records") },
+  { key: "imaging", label: () => tx("Imaging", "health records") },
+  { key: "history", label: () => t("History") },
 ];
 const tabFromHash = (hash: string): Tab => {
   const h = hash.replace(/^#/, "");
@@ -399,7 +401,7 @@ export default function HealthRecords() {
         onClose={() => setHistoryMenu(null)}
         anchor={historyMenu}
         options={[
-          { value: "condition", label: t("Condition"), icon: <Stethoscope size={15} /> },
+          { value: "condition", label: tx("Condition", "health"), icon: <Stethoscope size={15} /> },
           { value: "surgery", label: t("Surgery"), icon: <Scissors size={15} /> },
           { value: "medication", label: t("Medication"), icon: <Pill size={15} /> },
           { value: "injury", label: t("Injury"), icon: <Bandage size={15} /> },
@@ -457,7 +459,7 @@ export default function HealthRecords() {
       <RecordsHeader title={t("Biomarkers & imaging")} onBack={back} menu={menu} shared={recordsShared}>
         <SegmentedTabs
           className="mt-3"
-          items={TABS.map((x) => ({ ...x, label: t(x.label) }))}
+          items={TABS.map((x) => ({ key: x.key, label: x.label() }))}
           activeKey={tab}
           onChange={(k) => setTab(k as Tab)}
           size="compact"

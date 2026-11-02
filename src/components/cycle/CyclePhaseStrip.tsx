@@ -4,7 +4,7 @@ import { PHASE_LABEL, PHASE_TRAINING_NOTE, phaseThemeColor } from "../../service
 import * as PG from "../../services/pregnancy/guidance";
 import { gestationOn } from "../../services/pregnancy";
 import { PREGNANCY_COLOR } from "../pregnancy/PregnancyRing";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 import { PregnancyWorkoutCard } from "../pregnancy/PregnancyGuidance";
 
 // "Luteal phase · day 22", where training happens.
@@ -78,7 +78,7 @@ export const CyclePhaseStrip: React.FC = () => {
               className="tap mt-1 text-[11px] font-bold"
               style={{ color: PREGNANCY_COLOR }}
             >
-              {open ? t("Hide the guidance") : PG.WORKOUT_STRIP_LINK}
+              {open ? t("Hide the guidance") : t(PG.WORKOUT_STRIP_LINK)}
             </button>
           </div>
         </div>
@@ -100,8 +100,8 @@ export const CyclePhaseStrip: React.FC = () => {
       <div className="min-w-0">
         <p className="text-[12px] font-bold" style={{ color }}>
           {strip.day !== null
-            ? t("{phase} phase · day {n}", { phase: PHASE_LABEL[strip.phase], n: strip.day })
-            : t("{phase} phase", { phase: PHASE_LABEL[strip.phase] })}
+            ? t("{phase} phase · day {n}", { phase: t(PHASE_LABEL[strip.phase]), n: strip.day })
+            : tx("{phase} phase", "named", { phase: t(PHASE_LABEL[strip.phase]) })}
         </p>
         <p className="mt-0.5 text-[11px] leading-snug text-charcoal-soft">{strip.note}</p>
       </div>
@@ -136,7 +136,7 @@ export const CyclePhaseChip: React.FC = () => {
       style={{ background: phaseThemeColor(strip.phase, 0.12), color }}
       title={strip.note}
     >
-      {PHASE_LABEL[strip.phase]}
+      {t(PHASE_LABEL[strip.phase])}
       {strip.day !== null && ` · ${strip.day}`}
     </span>
   );

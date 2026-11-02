@@ -55,7 +55,7 @@ import { usePregnancyFlags } from "../../../components/pregnancy/usePregnancyFla
 import { deleteBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
 import { averageReading, categoryCounts, classifyBloodPressure, isSevere, splitByTimeOfDay } from "../../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL, BP_NO_READINGS } from "../../../services/blood-pressure/guidance";
-import { t, tk, tn } from "../../../i18n/core";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // HE1.6 Blood pressure (opens on Week) with HE1.6.d / .m / .y and HE1.6.a.
 //
@@ -312,7 +312,7 @@ export default function BloodPressurePage() {
         open={!!deleting}
         onClose={() => setDeleting(null)}
         tile={{ background: "#FCEDEC", darkBackground: "#3C2A30", icon: <Trash2 size={18} style={{ color: dark ? "#F09A8E" : "#B4372C" }} /> }}
-        title={t("Delete this entry?")}
+        title={tx("Delete this entry?", "health")}
         meta={deleting ? `${t("{sys}/{dia} mmHg", { sys: deleting.systolic, dia: deleting.diastolic })} · ${relativeDayTitle(localDayOf(deleting.recordedAt), today)} ${clock12(deleting.recordedAt)}` : undefined}
         body={t("This removes it from your history and totals.")}
         secondary={{ label: t("Cancel"), onClick: () => setDeleting(null) }}

@@ -58,9 +58,9 @@ export const HormoneGraph: React.FC<{
   return (
     <div>
       <p className="uppercase text-primary-deep-text" style={{ fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 800, letterSpacing: 1.3 }}>
-        {HORMONE_TITLE}{" "}
+        {t(HORMONE_TITLE)}{" "}
         <span className="normal-case text-charcoal-faint" style={{ fontWeight: 600, letterSpacing: 0 }}>
-          · {HORMONE_DISCLAIMER}
+          · {t(HORMONE_DISCLAIMER)}
         </span>
       </p>
       <p className="text-charcoal-faint" style={{ marginTop: 2, marginBottom: 8, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400 }}>
@@ -76,8 +76,8 @@ export const HormoneGraph: React.FC<{
         role="img"
         aria-label={
           markerX !== null && !hideDayLabel
-            ? t("{title}, {disclaimer}. Day {n} marked", { title: HORMONE_TITLE, disclaimer: HORMONE_DISCLAIMER, n: selectedDay as number })
-            : `${HORMONE_TITLE}, ${HORMONE_DISCLAIMER}`
+            ? t("{title}, {disclaimer}. Day {n} marked", { title: t(HORMONE_TITLE), disclaimer: t(HORMONE_DISCLAIMER), n: selectedDay as number })
+            : t("{title}, {disclaimer}", { title: t(HORMONE_TITLE), disclaimer: t(HORMONE_DISCLAIMER) })
         }
       >
         {/* Ovulation, the one landmark the curves are built around (repo): dashed. */}
@@ -124,7 +124,7 @@ export const HormoneGraph: React.FC<{
         {HORMONES.map((h) => (
           <span key={h} className="inline-flex items-center uppercase" style={{ gap: 4, color: colors[h], fontSize: textPx(8), lineHeight: linePx(12), fontWeight: 800, letterSpacing: 0.8 }}>
             <span aria-hidden style={{ width: 8, height: 2, borderRadius: 1, background: colors[h] }} />
-            {HORMONE_LABEL[h]}
+            {t(HORMONE_LABEL[h])}
           </span>
         ))}
       </div>

@@ -141,7 +141,7 @@ export const PhaseBar: React.FC<{ phases: readonly CyclePhase[]; active: CyclePh
                   : { fontSize: textPx(9), lineHeight: linePx(20), fontWeight: 700, letterSpacing: 1.1 }
               }
             >
-              {PHASE_LABEL[p]}
+              {t(PHASE_LABEL[p])}
             </span>
           </div>
         </div>

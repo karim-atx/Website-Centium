@@ -37,7 +37,7 @@ import {
 } from "../../services/cycle/guidance";
 import { Info, Lock } from "lucide-react";
 import { appLocale } from "../../i18n/format";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 // Logging one day.
 //
@@ -223,7 +223,7 @@ export const LogDaySheet: React.FC<{
     >
       <div>
         <Section title={t("Flow")}>
-          <OptionRow label={t("Flow")}>{FLOWS.map((f) => opt(f, FLOW_LABEL[f], flow === f, () => setFlow(flow === f ? null : f)))}</OptionRow>
+          <OptionRow label={t("Flow")}>{FLOWS.map((f) => opt(f, tx(FLOW_LABEL[f], "flow"), flow === f, () => setFlow(flow === f ? null : f)))}</OptionRow>
           {/* Only offered where it is not already implied, so the two controls
               cannot contradict each other. */}
           {(flow === null || flow === "none" || flow === "spotting") && (
@@ -238,12 +238,12 @@ export const LogDaySheet: React.FC<{
 
         <Section title={t("Symptoms")}>
           <OptionRow label={t("Symptoms")}>
-            {SYMPTOMS.map((sym) => opt(sym, SYMPTOM_LABEL[sym], symptoms.includes(sym), () => setSymptoms(toggle(sym)), "checkbox"))}
+            {SYMPTOMS.map((sym) => opt(sym, t(SYMPTOM_LABEL[sym]), symptoms.includes(sym), () => setSymptoms(toggle(sym)), "checkbox"))}
           </OptionRow>
         </Section>
 
         <Section title={t("Mood")}>
-          <OptionRow label={t("Mood")}>{MOODS.map((m) => opt(m, MOOD_LABEL[m], mood.includes(m), () => setMood(toggle(m)), "checkbox"))}</OptionRow>
+          <OptionRow label={t("Mood")}>{MOODS.map((m) => opt(m, tx(MOOD_LABEL[m], "mood"), mood.includes(m), () => setMood(toggle(m)), "checkbox"))}</OptionRow>
         </Section>
 
         {/* Energy 1-5, each level named (ENERGY_LABEL); tapping the chosen
@@ -251,13 +251,13 @@ export const LogDaySheet: React.FC<{
         <Section title={t("Energy")}>
           <OptionRow label={t("Energy, 1 very low to 5 very high")}>
             {Array.from({ length: LOG_LIMITS.energy.max - LOG_LIMITS.energy.min + 1 }, (_, k) => LOG_LIMITS.energy.min + k).map((e) =>
-              opt(String(e), ENERGY_LABEL[e], energy === e, () => setEnergy(energy === e ? null : e))
+              opt(String(e), tx(ENERGY_LABEL[e], "energy"), energy === e, () => setEnergy(energy === e ? null : e))
             )}
           </OptionRow>
         </Section>
 
         <Section title={t("Cervical mucus")}>
-          <OptionRow label={t("Cervical mucus")}>{MUCUS_OPTIONS.map((m) => opt(m, MUCUS_LABEL[m], mucus === m, () => setMucus(mucus === m ? null : m)))}</OptionRow>
+          <OptionRow label={t("Cervical mucus")}>{MUCUS_OPTIONS.map((m) => opt(m, tx(MUCUS_LABEL[m], "mucus"), mucus === m, () => setMucus(mucus === m ? null : m)))}</OptionRow>
         </Section>
 
         <Section title={t("Temperature")} hint="°C">
@@ -276,12 +276,12 @@ export const LogDaySheet: React.FC<{
         </Section>
 
         <Section title={t("LH test")}>
-          <OptionRow label={t("LH test")}>{LH_OPTIONS.map((o) => opt(o, LH_LABEL[o], lh === o, () => setLh(lh === o ? null : o)))}</OptionRow>
+          <OptionRow label={t("LH test")}>{LH_OPTIONS.map((o) => opt(o, t(LH_LABEL[o]), lh === o, () => setLh(lh === o ? null : o)))}</OptionRow>
         </Section>
 
         <Section title={t("Pregnancy test")}>
           <OptionRow label={t("Pregnancy test")}>
-            {PREGNANCY_TEST_OPTIONS.map((o) => opt(o, PREGNANCY_TEST_LABEL[o], pregnancyTest === o, () => setPregnancyTest(pregnancyTest === o ? null : o)))}
+            {PREGNANCY_TEST_OPTIONS.map((o) => opt(o, t(PREGNANCY_TEST_LABEL[o]), pregnancyTest === o, () => setPregnancyTest(pregnancyTest === o ? null : o)))}
           </OptionRow>
           {pregnancyTest === "positive" && (
             // The shared Info box: #9A8CD6@12% r14 pad 12 14, 12/18 #5B5349.
@@ -293,7 +293,7 @@ export const LogDaySheet: React.FC<{
                 </p>
                 {onStartPregnancy && (
                   <button type="button" onClick={onStartPregnancy} className="tap text-primary-dark" style={{ marginTop: 4, minHeight: 32, ...type(13, 19.5, 700) }}>
-                    {POSITIVE_TEST_CTA}
+                    {t(POSITIVE_TEST_CTA)}
                   </button>
                 )}
               </div>
@@ -303,12 +303,12 @@ export const LogDaySheet: React.FC<{
 
         <Section title={t("Sexual activity")}>
           <OptionRow label={t("Sexual activity")}>
-            {SEX_ACTIVITY_OPTIONS.map((o) => opt(o, SEX_ACTIVITY_LABEL[o], sexActivity === o, () => setSexActivity(sexActivity === o ? null : o)))}
+            {SEX_ACTIVITY_OPTIONS.map((o) => opt(o, t(SEX_ACTIVITY_LABEL[o]), sexActivity === o, () => setSexActivity(sexActivity === o ? null : o)))}
           </OptionRow>
           {/* TRUE, AND CHECKED: no access_category covers this column, and
               client_cycle_phase returns one word. Nothing can read it. */}
           <p className="flex items-center text-charcoal-faint" style={{ gap: 5, marginTop: 8, ...type(11, 16, 600) }}>
-            <Lock size={12} aria-hidden /> {SEX_ACTIVITY_PRIVACY}
+            <Lock size={12} aria-hidden /> {t(SEX_ACTIVITY_PRIVACY)}
           </p>
         </Section>
 
