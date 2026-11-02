@@ -21,6 +21,8 @@ import { saveListingActive } from "../../../services/business-market";
 import { useImagePreview } from "./useImagePreview";
 import "../shell/onboarding.css";
 import { t, tk } from "../../../i18n/core";
+import { usePlanLevel, usePlanLevelPrices } from "../../../components/premium/usePlanLevel";
+import { awaitingPlanPayment, pendingPlanLine } from "../../../services/premium/model";
 
 // /app/business/setup: where a business lands after Submit for review, and
 // what it sees until it is live: OB-238 Pending review; OB-240 You're live,
@@ -58,6 +60,11 @@ export default function BusinessSetupPage() {
   const [biz, setBizState] = useState<BusinessLaneDraft>(() => (uid ? readLocal(uid) : null) ?? emptyBusinessDraft());
   const [fix, setFix] = useState<BizFlowKey | null>(null);
   const [celebrate, setCelebrate] = useState(false);
+  // Round G1 fixes: while the first plan charge is unpaid (business_plans_on
+  // only), Pending review says approval waits for it.
+  const planLevel = usePlanLevel(biz.businessId);
+  const unpaid = awaitingPlanPayment(planLevel.level);
+  const prices = usePlanLevelPrices(unpaid);
   const [toast, showToast] = useObToast();
   const loaded = useRef(false);
 
@@ -173,7 +180,14 @@ export default function BusinessSetupPage() {
   if (!status || status.status === "none") return <Navigate to="/app" replace />;
 
   if (status.status === "pending") {
-    return <PendingScreen name={name} submittedAt={status.submittedAt} footer={{ label: t("Go to Dashboard"), onClick: () => navigate("/app") }} />;
+    return (
+      <PendingScreen
+        name={name}
+        submittedAt={status.submittedAt}
+        planUnpaid={unpaid ? { line: pendingPlanLine(planLevel.level, prices) } : null}
+        footer={{ label: t("Go to Dashboard"), onClick: () => navigate("/app") }}
+      />
+    );
   }
 
   if (status.status === "approved") {

@@ -29,6 +29,7 @@ export const FILES: string[] = [
   "components/premium/HiringCreditsCard.tsx",
   "pages/pro/more/PremiumPasses.tsx",
   "pages/onboarding/client/TrialOfferStep.tsx",
+  "pages/onboarding/business/PlanStep.tsx",
 ];
 
 const premium: Catalogue = {
@@ -90,6 +91,7 @@ const premium: Catalogue = {
   "What Premium adds": "ما يضيفه Premium",
 
   // == Your Premium status (components/premium/PremiumStatusCard, services/premium/model) ==
+  "Premium from {name}": "Premium من {name}", // note: {name} is the professional's first name or the gym's name (my_premium().from_name), shown in <bdi>
   "Premium from your professional": "Premium من مختصّك",
   "Premium with your gym membership": "Premium مع اشتراكك في النادي",
   "Premium free trial": "تجربة Premium المجانية",
@@ -99,9 +101,10 @@ const premium: Catalogue = {
   // == The Round G1 refusals (services/premium/model premiumCodeMessage) ==
   "That isn't available yet.": "هذا غير متاح بعد.",
   "That's part of Centium Premium.": "هذا جزء من Centium Premium.",
-  "Start your business plan before you add a venue.": "ابدأ خطة نشاطك التجاري قبل إضافة مكان.",
-  "Start your business plan before you submit your verification.": "ابدأ خطة نشاطك التجاري قبل إرسال طلب التحقق.",
-  "Start your business plan first.": "ابدأ خطة نشاطك التجاري أولًا.",
+  "Choose your business plan before you add a venue.": "اختر خطة نشاطك التجاري قبل إضافة مكان.",
+  "Choose your business plan before you submit your verification.": "اختر خطة نشاطك التجاري قبل إرسال طلب التحقق.",
+  "Choose your business plan first.": "اختر خطة نشاطك التجاري أولًا.",
+  "Your verification is approved once your plan is paid.": "تتم الموافقة على التحقق بعد دفع خطتك.",
   "No hiring credit free. A role offer needs one.": "لا يوجد رصيد توظيف متاح. يحتاج عرض الوظيفة إلى رصيد واحد.",
 
   // == Premium passes, the professional's page (pages/pro/more/PremiumPasses) ==
@@ -170,11 +173,25 @@ const premium: Catalogue = {
   "Choose your plan for your next renewal": "اختر خطتك لتجديدك التالي",
   "Your plan renews on {date}. Pick the level you want from then.": "تتجدّد خطتك في {date}. اختر المستوى الذي تريده من ذلك الحين.",
   "Pick the level you want from your next renewal.": "اختر المستوى الذي تريده من تجديدك التالي.",
-  "Start your plan to go live": "ابدأ خطتك لتصبح متاحًا",
-  "Your business goes live once your first plan payment is recorded. Until then you can't submit your verification or add a venue.": "يصبح نشاطك التجاري متاحًا بعد تسجيل أول دفعة لخطتك. وحتى ذلك الحين لا يمكنك إرسال طلب التحقق أو إضافة مكان.",
+  "Choose your business plan": "اختر خطة نشاطك التجاري",
+  "Choose a level and how you're billed to carry on. Your verification is approved once your plan is paid.": "اختر المستوى وطريقة الفوترة لتتابع. تتم الموافقة على التحقق بعد دفع خطتك.",
+  "Your plan payment is pending.": "دفعة خطتك قيد الانتظار.",
+  "Your verification is approved once it's paid.": "تتم الموافقة على التحقق بعد دفعها.",
+  "{price}, billed monthly": "{price}، بفوترة شهرية",
+  "{price}, billed yearly": "{price}، بفوترة سنوية",
   // pages/business-more/BillingPages.tsx and pages/onboarding/business/PaymentsStep.tsx (Round G1 lines).
   "Your plan charge, {price}, is awaiting payment.": "رسم خطتك، {price}، بانتظار الدفع.",
-  "Your plan is paid first: your business goes live, and you can submit your verification, once its first payment is recorded.": "تُدفع خطتك أولًا: يصبح نشاطك التجاري متاحًا، ويمكنك إرسال طلب التحقق، بعد تسجيل دفعتها الأولى.",
+  "Your verification is approved, and your business goes live, once your plan's first payment is recorded.": "تتم الموافقة على التحقق، ويصبح نشاطك التجاري متاحًا، بعد تسجيل أول دفعة لخطتك.",
+
+  // == The plan step at the start of business onboarding (pages/onboarding/business/PlanStep; G1 fixes) ==
+  "Before step 2": "قبل الخطوة 2",
+  "Your plan comes first. Your verification is approved once it's paid.": "تأتي خطتك أولًا. تتم الموافقة على التحقق بعد دفعها.",
+  "Your plan charge": "رسم خطتك",
+  "How to pay": "طريقة الدفع",
+  "Pay Centium {price} by cash or bank transfer. Centium records the payment, and your verification is approved once it's paid.": "ادفع لـ Centium مبلغ {price} نقدًا أو بتحويل مصرفي. تسجّل Centium الدفعة، وتتم الموافقة على التحقق بعد دفعها.",
+  "Pay Centium by cash or bank transfer. Centium records the payment, and your verification is approved once it's paid.": "ادفع لـ Centium نقدًا أو بتحويل مصرفي. تسجّل Centium الدفعة، وتتم الموافقة على التحقق بعد دفعها.",
+  "You can carry on setting up your business now.": "يمكنك متابعة إعداد نشاطك التجاري الآن.",
+  "You're offline. Connect to start your plan.": "أنت غير متصل. اتصل بالإنترنت لبدء خطتك.",
 
   // == Hiring credits (components/premium/HiringCreditsCard, pages/business-market/hiring/HireConfirmDialog) ==
   "Hiring credits": "أرصدة التوظيف",
