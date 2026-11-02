@@ -86,7 +86,7 @@ export const CycleSettingsTab: React.FC<{
           onSave={(v) => p.save({ lutealLength: v })}
           last
         />
-        <CycleHelp style={{ marginTop: 2 }}>{G.LENGTHS_HELP}</CycleHelp>
+        <CycleHelp style={{ marginTop: 2 }}>{t(G.LENGTHS_HELP)}</CycleHelp>
       </CycleSection>
 
       <CycleSection label={t(G.SETTINGS_PREGNANCY)} style={{ marginTop: 26 }}>
@@ -203,7 +203,7 @@ export const CycleSettingsTab: React.FC<{
             );
           })}
         </div>
-        <CycleHelp style={{ marginTop: 6 }}>{G.CONDITIONS_HELP}</CycleHelp>
+        <CycleHelp style={{ marginTop: 6 }}>{t(G.CONDITIONS_HELP)}</CycleHelp>
       </CycleSection>
 
       <CycleSection label={t(G.SETTINGS_DATA)} style={{ marginTop: 26 }}>

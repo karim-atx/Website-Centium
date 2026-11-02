@@ -188,7 +188,7 @@ export const CycleInsightsTab: React.FC<{
             ))}
           </div>
           <p className="text-center text-charcoal-faint" style={type(10.5, 15.2, 400, { marginTop: 8 })}>
-            {G.INSIGHTS_AVERAGES_NOTE}
+            {t(G.INSIGHTS_AVERAGES_NOTE)}
           </p>
           {statsFailed && (
             <p role="alert" className="text-center text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>

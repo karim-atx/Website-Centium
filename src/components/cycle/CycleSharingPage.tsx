@@ -49,7 +49,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
         <CycleTitleRow title={t(G.SHARING_TITLE)} onBack={onBack} sub />
       </FixedHeader>
       <p className="text-charcoal-soft" style={type(12.5, 19.4, 400, { marginTop: 4 })}>
-        {G.SHARING_INTRO}
+        {t(G.SHARING_INTRO)}
       </p>
 
       {error && (
