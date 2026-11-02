@@ -67,7 +67,7 @@ const member: Catalogue = {
   "{name} on Centium": "{name} على Centium",
   "Business tools are an early preview": "أدوات الأنشطة التجارية معاينة مبكرة",
   "Connect with a professional": "تواصل مع مختص",
-  "Dietitians, trainers, doctors & more": "أخصائيو تغذية ومدرّبون وأطباء والمزيد",
+  "Dietitians, trainers, doctors & more": "أخصائيو تغذية علاجية ومدرّبون وأطباء والمزيد",
 
   // == Home: date pill and date picker ==
   "Previous day": "اليوم السابق",
@@ -385,7 +385,7 @@ const member: Catalogue = {
   Connect: "تواصل",
   "Professional code": "رمز المختص",
   "Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.":
-    "لديك رمز من مدرّب أو أخصائي تغذية أو طبيب؟ أدخله هنا للتواصل وبدء مشاركة البيانات.",
+    "لديك رمز من مدرّب أو أخصائي تغذية علاجية أو طبيب؟ أدخله هنا للتواصل وبدء مشاركة البيانات.",
 
   // == Profile: bio and certification (professionals) ==
   Bio: "النبذة",
@@ -515,7 +515,7 @@ const member: Catalogue = {
 
   // == More ==
   "Habits, journal & meditation": "العادات واليوميات والتأمل",
-  "Trainers, dietitians & doctors": "مدرّبون وأخصائيو تغذية وأطباء",
+  "Trainers, dietitians & doctors": "مدرّبون وأخصائيو تغذية علاجية وأطباء",
   "Forum discussions & fitness courses": "نقاشات المنتدى ودورات اللياقة",
   "Gyms, classes & the marketplace": "النوادي والحصص والسوق",
   "Your account & settings": "حسابك وإعداداتك",

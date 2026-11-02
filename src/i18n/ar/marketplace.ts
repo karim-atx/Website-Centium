@@ -275,8 +275,8 @@ const marketplace: Catalogue = {
 
   // == Explore (professional) ==
   Colleagues: "الزملاء",
-  Dietitians: "أخصائيو التغذية",
-  Physios: "أخصائيو العلاج الطبيعي",
+  Dietitians: "أخصائيو التغذية العلاجية",
+  Physios: "أخصائيو العلاج الفيزيائي",
   Doctors: "الأطباء",
   Coaches: "المدرّبون",
   "Request sent to {name}. They check your credentials and reply here.": "أُرسل الطلب إلى {name}. سيتحقق من مؤهلاتك ويرد هنا.",
@@ -320,7 +320,7 @@ const marketplace: Catalogue = {
   "Sort: {sort}": "الترتيب: {sort}",
   "Affordable now": "متاح لي الآن", // note: offers the member's balance already covers
   "Find a professional": "ابحث عن مختص",
-  "Trainers, dietitians and more": "مدرّبون وأخصائيو تغذية وغيرهم",
+  "Trainers, dietitians and more": "مدرّبون وأخصائيو تغذية علاجية وغيرهم",
   "Loading businesses": "جارٍ تحميل الأنشطة التجارية",
   "No businesses yet": "لا أنشطة تجارية بعد",
   "No businesses here yet": "لا أنشطة تجارية هنا بعد",
@@ -582,7 +582,7 @@ const marketplace: Catalogue = {
   "Marked as paid.": "سُجّل كمدفوع.",
   "Group fitness": "لياقة جماعية",
   "Personal training": "تدريب شخصي",
-  "Physio session": "جلسة علاج طبيعي", // note: a class type name (physiotherapy), neutral
+  "Physio session": "جلسة علاج فيزيائي", // note: a class type name (physiotherapy), neutral
   "Max {n}": "الحد الأقصى {n}",
   "Delete {name}": "حذف {name}",
   "{n} events": { zero: "لا فعاليات", one: "فعالية واحدة", two: "فعاليتان", few: "{n} فعاليات", many: "{n} فعالية", other: "{n} فعالية" },
