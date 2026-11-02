@@ -74,11 +74,12 @@ export const NutritionCheckInTrend: React.FC<{ clientId: string; firstName: stri
           { key: "submitted", label: t("Check-ins submitted"), type: "bar", color: colours.submitted, values: submitted, noLegend: true },
         ]}
         tooltip={(i) => (list[i] ? { title: t("Week starting {date}", { date: x[i] }), lines: counts(list[i]) } : null)}
-        summary={t("Weekly nutrition check-in: {submitted} submitted and {missed} missed in the last {weeks} weeks.", {
-          submitted: list.reduce((s, w) => s + w.submitted, 0),
-          missed: list.reduce((s, w) => s + w.missed, 0),
-          weeks: list.length,
-        })}
+        summary={tn(
+          list.length,
+          "Weekly nutrition check-in: {submitted} submitted and {missed} missed in the last week.",
+          "Weekly nutrition check-in: {submitted} submitted and {missed} missed in the last {n} weeks.",
+          { submitted: list.reduce((s, w) => s + w.submitted, 0), missed: list.reduce((s, w) => s + w.missed, 0) }
+        )}
         scrubHint={t("Drag sideways to scrub, tap a week to pin it")}
       />
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, margin: "6px 0 10px", fontSize: textPx(11), color: INK.chF }}>

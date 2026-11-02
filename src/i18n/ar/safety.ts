@@ -94,7 +94,14 @@ const safety: Catalogue = {
   "{n} missed": { zero: "لم تفت أي متابعة", one: "فاتت متابعة واحدة", two: "فاتت متابعتان", few: "فاتت {n} متابعات", many: "فاتت {n} متابعة", other: "فاتت {n} متابعة" },
   "{n} still due": { zero: "لا متابعات مستحقة", one: "متابعة واحدة مستحقة", two: "متابعتان مستحقتان", few: "{n} متابعات مستحقة", many: "{n} متابعة مستحقة", other: "{n} متابعة مستحقة" },
   "Week starting {date}": "الأسبوع الذي يبدأ في {date}",
-  "Weekly nutrition check-in: {submitted} submitted and {missed} missed in the last {weeks} weeks.": "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر {weeks} أسبوعًا.", // note: {weeks} is 12
+  "Weekly nutrition check-in: {submitted} submitted and {missed} missed in the last {n} weeks.": {
+    zero: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر {n} أسبوع.",
+    one: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في الأسبوع الأخير.",
+    two: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر أسبوعين.",
+    few: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر {n} أسابيع.",
+    many: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر {n} أسبوعًا.",
+    other: "متابعة التغذية الأسبوعية: أُرسلت {submitted} وفاتت {missed} في آخر {n} أسبوع.",
+  }, // note: plural on the weeks ({n}) (Karim, G fixes 2): one week, two weeks, 3–10 weeks, 11–99 weeks (12 today), 100+
   "Drag sideways to scrub, tap a week to pin it": "اسحب جانبيًا للتنقّل، واضغط على أسبوع لتثبيته",
   "Trends start after two check-ins.": "تبدأ الاتجاهات بعد متابعتين.",
   "{name}'s own answer each week": "إجابة {name} نفسه كل أسبوع",
