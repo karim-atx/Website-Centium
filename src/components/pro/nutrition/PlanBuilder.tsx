@@ -41,6 +41,7 @@ import { useDietaryNeeds, useNuRoster, useTileBg } from "./hooks";
 import { itemLine, itemMacros } from "./itemFacts";
 import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · NU2 v3 "Meal-plan builder · visual day total" (source gen
@@ -143,8 +144,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   if (!plan) {
     return (
       <div>
-        <NuHead title="Meal plan" onBack={onBack} />
-        {state.error ? <ProError onRetry={reload} /> : <EmptyState icon={UtensilsCrossed} title="This meal plan isn't available" line="It may have been deleted." />}
+        <NuHead title={t("Meal plan")} onBack={onBack} />
+        {state.error ? <ProError onRetry={reload} /> : <EmptyState icon={UtensilsCrossed} title={t("This meal plan isn't available")} line={t("It may have been deleted.")} />}
       </div>
     );
   }
@@ -173,13 +174,13 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       : null;
 
   const submitItem = async (draft: ItemDraft, alsoTemplate: boolean): Promise<string | null> => {
-    if (!theDay) return "Pick a day first.";
+    if (!theDay) return t("Pick a day first.");
     const r = adding?.swap ? await replaceItem(adding.swap.id, draft) : await addItem(theDay.id, draft);
     if (!r.ok) return r.message;
     if (alsoTemplate && plan.sourcePlanId) {
       const tDay = await templateDayId(plan.sourcePlanId, theDay.dayIndex);
-      const t = tDay ? await addItem(tDay, draft) : { ok: false as const, message: "The template has no matching day." };
-      if (!t.ok) setMsg(`Added to ${firstName}'s plan. The template couldn't be updated: ${t.message}`);
+      const tr = tDay ? await addItem(tDay, draft) : { ok: false as const, message: t("The template has no matching day.") };
+      if (!tr.ok) setMsg(t("Added to {name}'s plan. The template couldn't be updated: {message}", { name: firstName, message: tr.message }));
     }
     reload();
     return null;
@@ -194,24 +195,24 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   };
 
   const menuOptions = [
-    { value: "rename", label: "Rename" },
-    { value: "targets", label: "Plan targets" },
+    { value: "rename", label: t("Rename") },
+    { value: "targets", label: t("Plan targets") },
     // Round E: the plan's cook-along playlist.
-    { value: "playlist", label: plan.playlistUrl ? "Playlist" : "Add a playlist" },
-    ...(isCopy ? [] : [{ value: "assign", label: "Assign to clients" }]),
-    isCopy ? { value: "end", label: `End ${firstName || "this"}'s plan`, destructive: true } : { value: "delete", label: "Delete template", destructive: true },
+    { value: "playlist", label: plan.playlistUrl ? t("Playlist") : t("Add a playlist") },
+    ...(isCopy ? [] : [{ value: "assign", label: t("Assign to clients") }]),
+    isCopy ? { value: "end", label: firstName ? t("End {name}'s plan", { name: firstName }) : t("End this plan"), destructive: true } : { value: "delete", label: t("Delete template"), destructive: true },
   ];
 
   return (
     <div>
       <NuHead
         title={plan.name}
-        eyebrow={isCopy ? `${clientName}'s copy` : "Template"}
+        eyebrow={isCopy ? t("{name}'s copy", { name: clientName }) : t("Template")}
         onBack={onBack}
         right={
           <div className="flex shrink-0" style={{ gap: 8 }}>
-            {!isCopy && <RoundBtn icon={UserPlus} label="Assign" onClick={() => onAssign(plan)} />}
-            <RoundBtn ref={moreRef} icon={MoreHorizontal} label="More" expanded={!!menuAnchor} onClick={() => moreRef.current && setMenuAnchor(moreRef.current)} />
+            {!isCopy && <RoundBtn icon={UserPlus} label={t("Assign")} onClick={() => onAssign(plan)} />}
+            <RoundBtn ref={moreRef} icon={MoreHorizontal} label={t("More")} expanded={!!menuAnchor} onClick={() => moreRef.current && setMenuAnchor(moreRef.current)} />
           </div>
         }
       />
@@ -223,11 +224,11 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       )}
       {isCopy && <DietStrip name={clientName} {...diet} />}
       {isCopy && assignment?.endedAt && (
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>This plan has ended. Changes won't reach the client.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("This plan has ended. Changes won't reach the client.")}</p>
       )}
 
       {/* Day tabs (r6b tabsScroll6, h 34) */}
-      <div role="tablist" aria-label="Day" className="flex items-center overflow-x-auto no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
+      <div role="tablist" aria-label={t("Day")} className="flex items-center overflow-x-auto no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
         {days.map((d) => {
           const on = d.dayIndex === current;
           return (
@@ -254,20 +255,20 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           const list = items.filter((i) => i.slot === slot);
           const kcal = Math.round(sumMacros(list.map((i) => itemMacros(i, src))).kcal);
           return (
-            <section key={slot} style={{ marginBottom: 10 }} aria-label={SLOT_LABEL[slot]}>
+            <section key={slot} style={{ marginBottom: 10 }} aria-label={t(SLOT_LABEL[slot])}>
               <div className="flex items-center justify-between" style={{ marginBottom: 6, gap: 8 }}>
                 <h2 style={{ fontSize: textPx(13), fontWeight: 800, color: INK.ch, whiteSpace: "nowrap" }}>
-                  {SLOT_LABEL[slot]} <span style={{ fontWeight: 600, fontSize: textPx(11.5), color: INK.chF }}>{`${kcal.toLocaleString(appLocale("en-GB"))} kcal`}</span>
+                  {t(SLOT_LABEL[slot])} <span style={{ fontWeight: 600, fontSize: textPx(11.5), color: INK.chF }}>{t("{n} kcal", { n: kcal.toLocaleString(appLocale("en-GB")) })}</span>
                 </h2>
                 <button
                   type="button"
                   onClick={() => setAdding({ slot, swap: null })}
-                  aria-label={`Add food to ${SLOT_LABEL[slot]}`}
+                  aria-label={t("Add food to {meal}", { meal: t(SLOT_LABEL[slot]) })}
                   className="tap flex items-center relative before:absolute before:-inset-3 before:content-['']"
                   style={{ gap: 3, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
                 >
                   <Plus size={12} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} />
-                  Add food
+                  {t("Add food")}
                 </button>
               </div>
               {list.length > 0 && (
@@ -290,7 +291,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
                         </span>
                         <button
                           type="button"
-                          aria-label={`${it.name} options`}
+                          aria-label={t("{name} options", { name: it.name })}
                           onClick={(e) => setItemMenu({ item: it, anchor: e.currentTarget })}
                           className="tap flex items-center justify-center shrink-0"
                           style={{ width: 44, height: 44, marginInlineEnd: -12 }}
@@ -334,8 +335,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
         anchor={itemMenu?.anchor ?? null}
         onClose={() => setItemMenu(null)}
         options={[
-          { value: "swap", label: "Swap" },
-          { value: "remove", label: "Remove", destructive: true },
+          { value: "swap", label: t("Swap") },
+          { value: "remove", label: t("Remove"), destructive: true },
         ]}
         align="right"
         width={160}
@@ -379,14 +380,14 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
             <CtaButton
               size="page"
-              label="Choose a swap"
+              label={t("Choose a swap")}
               onClick={() => {
                 const it = flagged!.item;
                 setFlagged(null);
                 setAdding({ slot: it.slot, swap: it });
               }}
             />
-            <CtaButton size="page" variant="secondary" label="Keep it" onClick={() => setFlagged(null)} />
+            <CtaButton size="page" variant="secondary" label={t("Keep it")} onClick={() => setFlagged(null)} />
           </div>
         )}
       </CentredPopup>
@@ -411,8 +412,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
 
       <ConfirmCard
         open={confirm === "delete"}
-        title={`Delete ${plan.name}?`}
-        subtitle="Clients already on it keep their own copy."
+        title={t("Delete {name}?", { name: plan.name })}
+        subtitle={t("Clients already on it keep their own copy.")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={async () => {
@@ -426,9 +427,9 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       />
       <ConfirmCard
         open={confirm === "end"}
-        title={`End ${firstName}'s plan?`}
-        subtitle="It stops today. Nothing is deleted."
-        confirmLabel="End plan"
+        title={t("End {name}'s plan?", { name: firstName })}
+        subtitle={t("It stops today. Nothing is deleted.")}
+        confirmLabel={t("End plan")}
         busy={busy}
         onCancel={() => setConfirm(null)}
         onConfirm={async () => {
@@ -460,11 +461,11 @@ const DayTotal: React.FC<{ heading: string; view: ReturnType<typeof dayTotalView
             <circle cx="56" cy="56" r={R} fill="none" stroke={dark ? "rgba(245,243,250,0.10)" : "rgba(36,31,27,0.07)"} strokeWidth="10" />
             {f > 0 && <circle cx="56" cy="56" r={R} fill="none" stroke={dark ? "#C3B3FB" : "#7D6BB5"} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(C * f).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 56 56)" />}
           </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center" role="img" aria-label={view.target ? `${view.kcal} of ${view.target} kcal` : `${view.kcal} kcal`}>
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center" role="img" aria-label={view.target ? t("{n} of {target} kcal", { n: view.kcal, target: view.target }) : t("{n} kcal", { n: view.kcal })}>
             <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", color: INK.ch, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{view.kcal.toLocaleString(appLocale("en-GB"))}</span>
-            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 3 }}>{view.target ? `of ${Math.round(view.target).toLocaleString(appLocale("en-GB"))} kcal` : empty ? "Nothing planned yet" : "No target set"}</span>
+            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 3 }}>{view.target ? t("of {n} kcal", { n: Math.round(view.target).toLocaleString(appLocale("en-GB")) }) : empty ? t("Nothing planned yet") : t("No target set")}</span>
             {view.left !== null && (
-              <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: view.left >= 0 ? INK.good : INK.hi }}>{view.left >= 0 ? `${view.left.toLocaleString(appLocale("en-GB"))} left` : `${Math.abs(view.left).toLocaleString(appLocale("en-GB"))} over`}</span>
+              <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: view.left >= 0 ? INK.good : INK.hi }}>{view.left >= 0 ? t("{n} left", { n: view.left.toLocaleString(appLocale("en-GB")) }) : t("{n} over", { n: Math.abs(view.left).toLocaleString(appLocale("en-GB")) })}</span>
             )}
           </div>
         </div>
@@ -478,7 +479,7 @@ const DayTotal: React.FC<{ heading: string; view: ReturnType<typeof dayTotalView
                 </span>
                 <span style={{ fontSize: textPx(12), fontVariantNumeric: "tabular-nums", color: m.over ? INK.hi : INK.chS, whiteSpace: "nowrap" }}>
                   <b style={{ color: m.over ? INK.hi : INK.ch }}>{m.value}</b>
-                  {m.target !== null ? ` / ${m.target} g` : " g"}
+                  {m.target !== null ? ` / ${t("{n} g", { n: m.target })}` : ` ${t("g")}`}
                 </span>
               </div>
               <span className="block relative overflow-hidden" style={{ height: 7, borderRadius: 9999, background: INK.soft, marginTop: 4 }}>
@@ -492,7 +493,7 @@ const DayTotal: React.FC<{ heading: string; view: ReturnType<typeof dayTotalView
         over.map((m) => (
           <p key={m.key} className="flex" style={{ gap: 6, fontSize: textPx(11.5), color: INK.hi, fontWeight: 600, marginTop: 10 }}>
             <CircleAlert size={13} strokeWidth={2} aria-hidden style={{ flexShrink: 0, marginTop: 2, ...NO_ICON_SCALE }} />
-            {`${m.label} ${m.value - (m.target ?? 0)} g over.`}
+            {t("{macro} {n} g over.", { macro: m.label, n: m.value - (m.target ?? 0) })}
           </p>
         ))}
     </div>
@@ -513,12 +514,12 @@ const RenameSheet: React.FC<{ open: boolean; name: string; onClose: () => void; 
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Rename"
+      title={t("Rename")}
       footer={
         <CtaButton
           className="w-full"
           size="sheet"
-          label="Save"
+          label={t("Save")}
           loading={busy}
           disabled={!v.trim()}
           onClick={async () => {
@@ -535,7 +536,7 @@ const RenameSheet: React.FC<{ open: boolean; name: string; onClose: () => void; 
         value={v}
         maxLength={80}
         onChange={(e) => setV(e.target.value)}
-        aria-label="Meal plan name"
+        aria-label={t("Meal plan name")}
         className="w-full outline-none"
         style={{ height: 44, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", fontSize: textPx(14), color: INK.ch }}
       />
@@ -577,12 +578,12 @@ const PlanPlaylistSheet: React.FC<{ open: boolean; url: string | null; isCopy: b
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Playlist"
+      title={t("Playlist")}
       footer={
         <CtaButton
           className="w-full"
           size="sheet"
-          label={!v && url ? "Remove playlist" : "Save"}
+          label={!v && url ? t("Remove playlist") : t("Save")}
           loading={busy}
           disabled={!ok || v === (url ?? "")}
           onClick={async () => {
@@ -603,11 +604,11 @@ const PlanPlaylistSheet: React.FC<{ open: boolean; url: string | null; isCopy: b
             if (err) setErr(null);
           }}
           error={err}
-          hint={isCopy ? "Shown with this client's plan." : "Shown with the plan. Clients you assign it to get it with their copy."}
+          hint={isCopy ? t("Shown with this client's plan.") : t("Shown with the plan. Clients you assign it to get it with their copy.")}
           labelStyle={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS }}
           inputStyle={{ background: INK.soft, borderRadius: 12, fontSize: textPx(14), fontWeight: 400 }}
         />
-        {v && ok && <PlaylistCard url={v} heading="Your playlist" />}
+        {v && ok && <PlaylistCard url={v} heading={t("Your playlist")} />}
       </div>
     </BottomSheet>
   );
@@ -630,12 +631,12 @@ const PlanTargetsSheet: React.FC<{ open: boolean; plan: MealPlan; onClose: () =>
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Plan targets"
+      title={t("Plan targets")}
       footer={
         <CtaButton
           className="w-full"
           size="sheet"
-          label="Save"
+          label={t("Save")}
           loading={busy}
           onClick={async () => {
             setBusy(true);
@@ -650,18 +651,18 @@ const PlanTargetsSheet: React.FC<{ open: boolean; plan: MealPlan; onClose: () =>
     >
       <label className="block" style={{ marginBottom: 14 }}>
         <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-          Daily calories
+          {t("Daily calories")}
         </span>
         <span className="flex items-center" style={{ gap: 8 }}>
           <input
             value={kcal}
             inputMode="numeric"
             onChange={(e) => setKcal(e.target.value.replace(/\D/g, "").slice(0, 5))}
-            aria-label="Daily calories"
+            aria-label={t("Daily calories")}
             className="outline-none"
             style={{ width: 128, height: 44, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", fontSize: textPx(18), fontWeight: 700, color: INK.ch }}
           />
-          <span style={{ fontSize: textPx(14), color: INK.chF }}>kcal / day</span>
+          <span style={{ fontSize: textPx(14), color: INK.chF }}>{t("kcal / day")}</span>
         </span>
       </label>
       <MacroSplitEditor split={split} calories={n > 0 ? n : 0} onChange={setSplit} squares />

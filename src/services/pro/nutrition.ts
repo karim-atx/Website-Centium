@@ -30,6 +30,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
+import { t, tk } from "../../i18n/core";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
 import { shiftIso } from "./home";
@@ -38,7 +39,7 @@ import type { ConflictKind } from "../../components/pro/proRules";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
-const failed = (error: unknown, fallback: string): { ok: false; message: string } => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
+const failed = (error: unknown, fallback: string): { ok: false; message: string } => ({ ok: false, message: isOffline(error) ? t(OFFLINE_MESSAGE) : fallback });
 const num = (v: unknown): number | null => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? null : Number(v));
 
 // ---------------------------------------------------------------------------
@@ -136,7 +137,7 @@ function toItem(dayId: string, r: ItemRow): PlanItem {
     kind,
     refId: r.recipe_id ?? r.custom_meal_id ?? r.food_id ?? r.custom_food_id,
     // A deleted source (ON DELETE SET NULL) leaves an item with no name.
-    name: r.recipes?.title ?? r.custom_meals?.title ?? r.foods?.name ?? r.custom_foods?.name ?? "Removed item",
+    name: r.recipes?.title ?? r.custom_meals?.title ?? r.foods?.name ?? r.custom_foods?.name ?? t("Removed item"),
     grams: num(r.grams),
     servings: num(r.servings),
     note: r.note,
@@ -239,17 +240,17 @@ const NAME_MAX = 80;
 /** A new template with its days (labels left empty: the builder names them). */
 export async function createTemplate(me: string, name: string, daysCount: number): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
   const n = name.trim();
-  if (!n) return { ok: false, message: "Name the meal plan first." };
-  if (n.length > NAME_MAX) return { ok: false, message: `Keep the name under ${NAME_MAX} characters.` };
+  if (!n) return { ok: false, message: t("Name the meal plan first.") };
+  if (n.length > NAME_MAX) return { ok: false, message: t("Keep the name under {n} characters.", { n: NAME_MAX }) };
   // is_template defaults to true and client_id to null (a template); authenticated may not write either column (column grants).
   const { data, error } = await from("meal_plans").insert({ professional_id: me, name: n, days_count: daysCount } as never).select("id").single();
-  if (error || !data) return failed(error, "Couldn't create the meal plan. Try again.");
+  if (error || !data) return failed(error, t("Couldn't create the meal plan. Try again."));
   const id = (data as unknown as { id: string }).id;
   const days = Array.from({ length: daysCount }, (_, i) => ({ meal_plan_id: id, day_index: i + 1 }));
   const d = await from("meal_plan_days").insert(days as never);
   if (d.error) {
     await from("meal_plans").delete().eq("id", id);
-    return failed(d.error, "Couldn't create the meal plan. Try again.");
+    return failed(d.error, t("Couldn't create the meal plan. Try again."));
   }
   return { ok: true, id };
 }
@@ -268,8 +269,8 @@ export async function updatePlanMeta(planId: string, patch: PlanMetaPatch): Prom
   const row: Record<string, unknown> = {};
   if (patch.name !== undefined) {
     const n = patch.name.trim();
-    if (!n) return { ok: false, message: "Name the meal plan first." };
-    if (n.length > NAME_MAX) return { ok: false, message: `Keep the name under ${NAME_MAX} characters.` };
+    if (!n) return { ok: false, message: t("Name the meal plan first.") };
+    if (n.length > NAME_MAX) return { ok: false, message: t("Keep the name under {n} characters.", { n: NAME_MAX }) };
     row.name = n;
   }
   if (patch.kcalTarget !== undefined) row.kcal_target = patch.kcalTarget;
@@ -281,13 +282,13 @@ export async function updatePlanMeta(planId: string, patch: PlanMetaPatch): Prom
   if (!error) return { ok: true };
   // The playlist is the shared, validated type: its refusal says what's wrong with the link.
   const link = isOffline(error) ? null : playlistSaveError((error as { code?: string }).code);
-  return link ? { ok: false, message: link } : failed(error, "Couldn't save the meal plan. Try again.");
+  return link ? { ok: false, message: t(link) } : failed(error, t("Couldn't save the meal plan. Try again."));
 }
 
 /** Deleting a template keeps every client's copy (template_id is set null). */
 export async function deleteTemplate(planId: string): Promise<Write> {
   const { error } = await from("meal_plans").delete().eq("id", planId).eq("is_template", true);
-  return error ? failed(error, "Couldn't delete the meal plan. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't delete the meal plan. Try again.")) : { ok: true };
 }
 
 export interface ItemRef {
@@ -314,18 +315,18 @@ export async function addItem(dayId: string, d: ItemDraft): Promise<Write> {
   const { data: last } = await from("meal_plan_items").select("position").eq("meal_plan_day_id", dayId).eq("meal_slot", d.slot).order("position", { ascending: false }).limit(1);
   const position = (((last ?? []) as unknown as { position: number }[])[0]?.position ?? -1) + 1;
   const { error } = await from("meal_plan_items").insert({ meal_plan_day_id: dayId, meal_slot: d.slot, position, grams: d.grams, servings: d.servings, ...refColumns(d.ref) } as never);
-  return error ? failed(error, "Couldn't add that. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't add that. Try again.")) : { ok: true };
 }
 
 /** A swap: the item keeps its place and takes the new food, recipe or meal. */
 export async function replaceItem(itemId: string, d: ItemDraft): Promise<Write> {
   const { error } = await from("meal_plan_items").update({ meal_slot: d.slot, grams: d.grams, servings: d.servings, ...refColumns(d.ref) } as never).eq("id", itemId);
-  return error ? failed(error, "Couldn't swap that. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't swap that. Try again.")) : { ok: true };
 }
 
 export async function deleteItem(itemId: string): Promise<Write> {
   const { error } = await from("meal_plan_items").delete().eq("id", itemId);
-  return error ? failed(error, "Couldn't remove that. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't remove that. Try again.")) : { ok: true };
 }
 
 /** "Also add to the template": the template's day with the same index. */
@@ -338,7 +339,7 @@ export async function templateDayId(templateId: string, dayIndex: number): Promi
 // Conflicts and assigning
 // ---------------------------------------------------------------------------
 
-const ALLERGEN_MSG = "This plan contains an allergen the client has.";
+const ALLERGEN_MSG = tk("This plan contains an allergen the client has.");
 
 export async function fetchConflicts(clientId: string, ref: ItemRef | null, name: string | null): Promise<ConflictRow[] | null> {
   const cols = ref ? refColumns(ref) : { food_id: null, custom_food_id: null, recipe_id: null, custom_meal_id: null };
@@ -358,17 +359,17 @@ export async function fetchConflicts(clientId: string, ref: ItemRef | null, name
 export async function assignMealPlan(templateId: string, clientId: string, startsOn: string, endsOn: string | null): Promise<{ ok: true; planId: string } | { ok: false; message: string; blocked?: boolean }> {
   const { data, error } = await rpc("assign_meal_plan", { p_template_id: templateId, p_client_id: clientId, p_starts_on: startsOn, p_ends_on: endsOn });
   if (error) {
-    if (error.code === "ATXG7") return { ok: false, message: ALLERGEN_MSG, blocked: true };
-    if (error.code === "ATX12") return { ok: false, message: "Nutrition coaching isn't on for this client." };
-    if (error.code === "23514") return { ok: false, message: "The end date must be after the start." };
-    return failed(error, "Couldn't assign the meal plan. Try again.");
+    if (error.code === "ATXG7") return { ok: false, message: t(ALLERGEN_MSG), blocked: true };
+    if (error.code === "ATX12") return { ok: false, message: t("Nutrition coaching isn't on for this client.") };
+    if (error.code === "23514") return { ok: false, message: t("The end date must be after the start.") };
+    return failed(error, t("Couldn't assign the meal plan. Try again."));
   }
   return { ok: true, planId: String(data) };
 }
 
 export async function endAssignment(assignmentId: string): Promise<Write> {
   const { error } = await rpc("end_meal_plan_assignment", { p_assignment_id: assignmentId });
-  return error ? failed(error, "Couldn't end the meal plan. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't end the meal plan. Try again.")) : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -467,10 +468,10 @@ export const FEEDBACK_MAX = 1000;
 
 export async function commentOnEntry(entryId: string, body: string | null, reaction: Reaction | null): Promise<Write> {
   const b = body?.trim() || null;
-  if (!b && !reaction) return { ok: false, message: "Write something first." };
-  if (b && b.length > FEEDBACK_MAX) return { ok: false, message: `Keep it under ${FEEDBACK_MAX} characters.` };
+  if (!b && !reaction) return { ok: false, message: t("Write something first.") };
+  if (b && b.length > FEEDBACK_MAX) return { ok: false, message: t("Keep it under {n} characters.", { n: FEEDBACK_MAX }) };
   const { error } = await rpc("comment_on_food_entry", { p_entry_id: entryId, p_body: b, p_reaction: reaction });
-  return error ? failed(error, "Couldn't send that. Try again.") : { ok: true };
+  return error ? failed(error, t("Couldn't send that. Try again.")) : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -611,7 +612,7 @@ export interface TargetsDraft {
 }
 
 export async function saveTargets(clientId: string, d: TargetsDraft): Promise<Write> {
-  if (!(d.calories > 0)) return { ok: false, message: "Set a daily target first." };
+  if (!(d.calories > 0)) return { ok: false, message: t("Set a daily target first.") };
   const { error } = await rpc("set_client_nutrition_targets", {
     p_client_id: clientId,
     p_target_calories: d.calories,
@@ -623,8 +624,8 @@ export async function saveTargets(clientId: string, d: TargetsDraft): Promise<Wr
     p_lock: d.lock,
     p_desired_weight_kg: d.desiredWeightKg,
   });
-  if (error?.code === "22023") return { ok: false, message: "Enter a target weight between 1 and 500 kg." };
-  if (error?.code === "ATX12") return { ok: false, message: "Nutrition coaching isn't on for this client." };
-  if (error?.code === "23514") return { ok: false, message: "Protein, carbs and fat must add up to 100%." };
-  return error ? failed(error, "Couldn't save the targets. Try again.") : { ok: true };
+  if (error?.code === "22023") return { ok: false, message: t("Enter a target weight between 1 and 500 kg.") };
+  if (error?.code === "ATX12") return { ok: false, message: t("Nutrition coaching isn't on for this client.") };
+  if (error?.code === "23514") return { ok: false, message: t("Protein, carbs and fat must add up to 100%.") };
+  return error ? failed(error, t("Couldn't save the targets. Try again.")) : { ok: true };
 }

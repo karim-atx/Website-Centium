@@ -13,6 +13,7 @@ import type { ProLane } from "../subtypeLanes";
 import { allergenLabel, restrictionLabel } from "./nuFormat";
 import { useNuRoster } from "./hooks";
 import { clientConflictLine, type ClientConflictLine, type ConflictRow } from "./nutritionModel";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · NU13 "Assign template with conflicts" (source gen r7.js
@@ -81,7 +82,7 @@ export const AssignSheet: React.FC<{
   const n = checked.size;
   const assign = async () => {
     if (!template || !n) return;
-    if (endsOn && endsOn < startsOn) return setMsg("The end date must be after the start.");
+    if (endsOn && endsOn < startsOn) return setMsg(t("The end date must be after the start."));
     setBusy(true);
     setMsg(null);
     const failures: string[] = [];
@@ -89,7 +90,7 @@ export const AssignSheet: React.FC<{
     for (const id of checked) {
       const r = await assignMealPlan(template.id, id, startsOn, endsOn || null);
       if (r.ok) done++;
-      else failures.push(`${clients?.find((c) => c.clientId === id)?.name ?? "A client"}: ${r.message}`);
+      else failures.push(t("{name}: {message}", { name: clients?.find((c) => c.clientId === id)?.name ?? t("A client"), message: r.message }));
     }
     setBusy(false);
     if (failures.length) {
@@ -107,21 +108,21 @@ export const AssignSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Assign template"
-      footer={<CtaButton className="w-full" size="sheet" icon={<UserPlus size={15} />} label={n === 1 ? "Assign to 1 client" : `Assign to ${n} clients`} disabled={!n} loading={busy} onClick={() => void assign()} />}
+      title={t("Assign template")}
+      footer={<CtaButton className="w-full" size="sheet" icon={<UserPlus size={15} />} label={tn(n, "Assign to 1 client", "Assign to {n} clients")} disabled={!n} loading={busy} onClick={() => void assign()} />}
     >
       {template && (
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 10 }}>{`${template.name} template · ${template.daysCount} ${template.daysCount === 1 ? "day" : "days"}`}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 10 }}>{t("{name} template · {days}", { name: template.name, days: tn(template.daysCount, "{n} day", "{n} days") })}</p>
       )}
       {error ? (
         <ProError onRetry={retry} />
       ) : !clients ? (
         <p role="status" style={{ fontSize: textPx(12.5), color: INK.chF, padding: "10px 0" }}>
-          Loading clients…
+          {t("Loading clients…")}
         </p>
       ) : clients.length === 0 ? (
         <p style={{ fontSize: textPx(12.5), color: INK.chF, padding: "10px 0" }}>
-          {lane === "nutrition" ? "No clients yet." : "No clients with nutrition coaching on. Turn it on from a client's Plan tab."}
+          {lane === "nutrition" ? t("No clients yet.") : t("No clients with nutrition coaching on. Turn it on from a client's Plan tab.")}
         </p>
       ) : (
         clients.map((c) => {
@@ -133,13 +134,13 @@ export const AssignSheet: React.FC<{
           const tone = typeof line === "object" ? line.tone : "none";
           const colour = tone === "att" ? INK.hi : tone === "req" ? INK.goldInk : INK.chF;
           const text = isAlready
-            ? "Already on this plan"
+            ? t("Already on this plan")
             : line === "loading" || line === undefined
-              ? "Checking dietary needs…"
+              ? t("Checking dietary needs…")
               : line === "error"
-                ? "Couldn't check dietary needs. Try again later."
+                ? t("Couldn't check dietary needs. Try again later.")
                 : blocked
-                  ? `${line.text} Swap it in the template first.`
+                  ? t("{conflicts} Swap it in the template first.", { conflicts: line.text })
                   : line.text;
           return (
             <div key={c.clientId} style={{ padding: "10px 0", borderBottom: `1px solid ${INK.b06}` }}>
@@ -177,17 +178,17 @@ export const AssignSheet: React.FC<{
           );
         })
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10, lineHeight: 1.5 }}>Each client gets their own copy, where you can swap items. Foods with an allergen the client has recorded are never added.</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10, lineHeight: 1.5 }}>{t("Each client gets their own copy, where you can swap items. Foods with an allergen the client has recorded are never added.")}</p>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 12 }}>
         <label className="block min-w-0">
           <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-            Starts
+            {t("Starts")}
           </span>
           <input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value || todayLocal())} style={field} />
         </label>
         <label className="block min-w-0">
           <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-            Ends (optional)
+            {t("Ends (optional)")}
           </span>
           <input type="date" value={endsOn} min={startsOn} onChange={(e) => setEndsOn(e.target.value)} style={field} />
         </label>

@@ -5,6 +5,7 @@ import { INK, NO_ICON_SCALE } from "../proInk";
 import type { DietaryNeeds } from "../../../services/pro/clientPage";
 import { allergenLabel, restrictionLabel } from "./nuFormat";
 import type { ConflictRow } from "./nutritionModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 the NU screens' shared pieces, literal from the board
@@ -29,8 +30,8 @@ export const NuHead: React.FC<{ title: string; eyebrow?: string; onBack?: () => 
   <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
     <div className="flex items-start min-w-0" style={{ gap: 10 }}>
       {onBack && (
-        <button type="button" onClick={onBack} aria-label="Back" className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-          <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+        <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
+          <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
         </button>
       )}
       <div className="min-w-0">
@@ -71,7 +72,7 @@ export const SearchField: React.FC<{ value: string; onChange: (v: string) => voi
       style={{ fontSize: textPx(14), color: INK.ch }}
     />
     {value && (
-      <button type="button" onClick={() => onChange("")} aria-label="Clear search" className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
+      <button type="button" onClick={() => onChange("")} aria-label={t("Clear search")} className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
         <X size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
       </button>
     )}
@@ -102,11 +103,11 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
   const red = row.kind === "allergy_confirmed";
   const text =
     row.kind === "allergy_confirmed"
-      ? `${allergenLabel(row.allergen ?? "")} allergy`
+      ? t("{allergen} allergy", { allergen: allergenLabel(row.allergen ?? "") })
       : row.kind === "allergy_check"
-        ? "Check this"
+        ? t("Check this")
         : row.kind === "restriction"
-          ? `Not ${restrictionLabel(row.restriction ?? "").toLowerCase()}`
+          ? t("Not {restriction}", { restriction: restrictionLabel(row.restriction ?? "").toLowerCase() })
           : restrictionLabel(row.restriction ?? "");
   const Icon = red ? AlertTriangle : AlertCircle;
   const style: React.CSSProperties = { gap: 3, marginInlineStart: 6, fontSize: textPx(10.5), fontWeight: red ? 800 : 700, color: red ? INK.hi : row.kind === "preference" ? INK.chF : INK.goldInk, whiteSpace: "nowrap" };
@@ -134,18 +135,18 @@ export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; sha
   const allergies = needs?.allergies ?? [];
   const none = !!needs && !allergies.length && !restrictions.length && !prefs.length;
   return (
-    <div role="region" aria-label="Dietary needs" style={{ borderRadius: 14, background: INK.raised, border: `1px solid ${INK.b06}`, padding: "9px 10px", marginBottom: 12 }}>
-      <p style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: 6, overflowWrap: "anywhere" }}>{`${name}'s dietary needs`}</p>
+    <div role="region" aria-label={t("Dietary needs")} style={{ borderRadius: 14, background: INK.raised, border: `1px solid ${INK.b06}`, padding: "9px 10px", marginBottom: 12 }}>
+      <p style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: 6, overflowWrap: "anywhere" }}>{t("{name}'s dietary needs", { name })}</p>
       {!shared ? (
-        <p style={{ fontSize: textPx(12), color: INK.chS }}>{`${name.split(" ")[0]} hasn't shared allergies or dietary needs with you.`}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS }}>{t("{name} hasn't shared allergies or dietary needs with you.", { name: name.split(" ")[0] })}</p>
       ) : loading ? (
         <div aria-hidden style={{ height: 24, borderRadius: 8, background: INK.soft, width: "60%" }} />
       ) : none ? (
-        <p style={{ fontSize: textPx(12), color: INK.chS }}>{`${name.split(" ")[0]} has no allergies or dietary needs recorded.`}</p>
+        <p style={{ fontSize: textPx(12), color: INK.chS }}>{t("{name} has no allergies or dietary needs recorded.", { name: name.split(" ")[0] })}</p>
       ) : (
         <div className="flex flex-wrap" style={{ gap: 5 }}>
           {allergies.map((a) => (
-            <AllergyTag key={a.allergen} label={`Allergy: ${allergenLabel(a.allergen)}`} />
+            <AllergyTag key={a.allergen} label={t("Allergy: {allergen}", { allergen: allergenLabel(a.allergen) })} />
           ))}
           {restrictions.map((r) => (
             <RestrictionTag key={r.restriction} label={restrictionLabel(r.restriction)} />
@@ -156,7 +157,7 @@ export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; sha
         </div>
       )}
       {shared && !allergiesShared && !loading && (
-        <p style={{ marginTop: 6, fontSize: textPx(11), color: INK.chF }}>Allergies aren't shared, so they can't be checked.</p>
+        <p style={{ marginTop: 6, fontSize: textPx(11), color: INK.chF }}>{t("Allergies aren't shared, so they can't be checked.")}</p>
       )}
     </div>
   );
