@@ -9,6 +9,7 @@ import type { CourseAudience } from "../../../services/courses/authorRules";
 import { Field, Label, Note, RadioRows } from "./courseUi";
 import { DRIP_EVERY_DAYS, parsePrice } from "./courseModel";
 import { ChooseClients } from "./ChooseClients";
+import { t } from "../../../i18n/core";
 
 export interface AccessDraft {
   free: boolean;
@@ -46,41 +47,41 @@ export const AccessStep: React.FC<{
   const breakdown = cents !== null && commission !== null ? priceBreakdown(cents, commission) : null;
   return (
     <div>
-      <Label mt={0}>Who can join</Label>
+      <Label mt={0}>{t("Who can join")}</Label>
       <RadioRows
-        name="Who can join"
+        name={t("Who can join")}
         on={value.audience}
         onPick={(k) => onChange({ ...value, audience: k as CourseAudience })}
         locked={!audienceEditable}
         rows={[
-          { key: "my_clients", title: "All your clients", sub: "Anyone you work with now" },
+          { key: "my_clients", title: t("All your clients"), sub: t("Anyone you work with now") },
           {
             key: "selected",
-            title: "Selected clients",
-            sub: "Choose people",
+            title: t("Selected clients"),
+            sub: t("Choose people"),
             trailing:
               value.audience === "selected" ? (
-                <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>{value.members.length} selected</span>
+                <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>{t("{n} selected", { n: value.members.length })}</span>
               ) : undefined,
           },
-          { key: "public", title: "Public", sub: "On your profile and in Community › Courses" },
+          { key: "public", title: t("Public"), sub: t("On your profile and in Community › Courses") },
         ]}
       />
       {value.audience === "selected" && audienceEditable && <ChooseClients picked={value.members} onChange={(members) => onChange({ ...value, members })} />}
       <Note mt={6}>
         {value.audience === "public"
-          ? "Anyone can find and join it. Your clients are told when it's first published."
+          ? t("Anyone can find and join it. Your clients are told when it's first published.")
           : value.audience === "my_clients"
-          ? "Only your current clients see it and can join. They're told when it's first published."
-          : "Only the clients you choose see it and can join. They're told when it's first published."}{" "}
-        This changes straight away, without review. Anyone already enrolled keeps the course.
+          ? t("Only your current clients see it and can join. They're told when it's first published.")
+          : t("Only the clients you choose see it and can join. They're told when it's first published.")}{" "}
+        {t("This changes straight away, without review. Anyone already enrolled keeps the course.")}
       </Note>
 
-      <Label>Price</Label>
+      <Label>{t("Price")}</Label>
       <SegmentedTabs
         items={[
-          { key: "free", label: "Free" },
-          { key: "paid", label: "Paid" },
+          { key: "free", label: t("Free") },
+          { key: "paid", label: t("Paid") },
         ]}
         activeKey={value.free ? "free" : "paid"}
         onChange={(k) => editable && onChange({ ...value, free: k === "free" })}
@@ -92,7 +93,7 @@ export const AccessStep: React.FC<{
       {!value.free && (
         <Field
           id="course-price"
-          ariaLabel="Price in dollars"
+          ariaLabel={t("Price in dollars")}
           value={value.price}
           onChange={(v) => onChange({ ...value, price: v })}
           inputMode="decimal"
@@ -103,38 +104,38 @@ export const AccessStep: React.FC<{
         />
       )}
       <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 6 }}>
-        You receive the price less Centium's commission. Paid courses open when payments in the app go live; until then a paid course can be published as free.
+        {t("You receive the price less Centium's commission. Paid courses open when payments in the app go live; until then a paid course can be published as free.")}
       </p>
       {!value.free && breakdown && breakdown.priceCents > 0 && (
         <div className="flex flex-col" style={{ borderRadius: 12, background: INK.soft, padding: "10px 12px", gap: 4, marginTop: 8, fontSize: textPx(12.5) }}>
           <span className="flex justify-between">
-            <span style={{ color: INK.chF }}>Learner pays</span>
+            <span style={{ color: INK.chF }}>{t("Learner pays")}</span>
             <b style={{ color: INK.ch }}>{formatCents(breakdown.priceCents)}</b>
           </span>
           <span className="flex justify-between">
-            <span style={{ color: INK.chF }}>Centium commission ({commission}%)</span>
+            <span style={{ color: INK.chF }}>{t("Centium commission ({commission}%)", { commission: commission ?? 0 })}</span>
             <span style={{ color: INK.chF }}>−{formatCents(breakdown.commissionCents)}</span>
           </span>
           <span className="flex justify-between" style={{ borderTop: `1px solid ${INK.b06}`, paddingTop: 4 }}>
-            <b style={{ color: INK.ch }}>You receive</b>
+            <b style={{ color: INK.ch }}>{t("You receive")}</b>
             <b style={{ color: INK.ch }}>{formatCents(breakdown.netCents)}</b>
           </span>
         </div>
       )}
 
-      <Label>How lessons unlock</Label>
+      <Label>{t("How lessons unlock")}</Label>
       <RadioRows
-        name="How lessons unlock"
+        name={t("How lessons unlock")}
         on={value.mode}
         locked={!editable}
         onPick={(k) => onChange({ ...value, mode: k as DripMode })}
         rows={[
-          { key: "all_at_once", title: "All at once", sub: "Clients go at their own pace" },
+          { key: "all_at_once", title: t("All at once"), sub: t("Clients go at their own pace") },
           {
             key: "weekly",
-            title: "One week at a time",
-            sub: `The next week opens ${DRIP_EVERY_DAYS} days after the last`,
-            trailing: <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>Every {DRIP_EVERY_DAYS} days</span>,
+            title: t("One week at a time"),
+            sub: t("The next week opens {n} days after the last", { n: DRIP_EVERY_DAYS }),
+            trailing: <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, whiteSpace: "nowrap" }}>{t("Every {n} days", { n: DRIP_EVERY_DAYS })}</span>,
           },
         ]}
       />

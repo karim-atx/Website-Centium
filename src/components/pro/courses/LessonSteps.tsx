@@ -40,10 +40,9 @@ import { LessonMarkdown } from "../../courses/LessonMarkdown";
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../moderation/ImageApproval";
 import { Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
-import { lessonEyebrow } from "./courseModel";
+import { lessonEyebrow, lessonKindLabel } from "./courseModel";
 import { appLocale } from "../../../i18n/format";
-
-const KIND_LABEL: Record<LessonKind, string> = { video: "Video", reading: "Reading", pdf: "PDF", quiz: "Quiz", image: "Image", check_in: "Check-in" };
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO28 "Create course · 3 Lesson type" (cLessonType18):
@@ -55,37 +54,37 @@ const KIND_LABEL: Record<LessonKind, string> = { video: "Video", reading: "Readi
  */
 export const LessonTypeStep: React.FC<{ weekLabel: string; kind: LessonKind | null; onPick: (k: LessonKind) => void; footer: React.ReactNode }> = ({ weekLabel, kind, onPick, footer }) => {
   const types: { key: LessonKind | null; icon: LucideIcon; name: string; line: string }[] = [
-    { key: "video", icon: PlayCircle, name: "Video", line: "Upload or link a video" },
-    { key: "reading", icon: FileText, name: "Reading", line: "Text with headings, lists and links" },
-    { key: "pdf", icon: FileDown, name: "PDF", line: "A plan or handout to download" },
-    { key: "image", icon: ImageIcon, name: "Image", line: "A photo or diagram" },
-    { key: "quiz", icon: ListChecks, name: "Quiz", line: "Short questions with answers" },
-    { key: "check_in", icon: ClipboardCheck, name: "Check-in", line: "A question your clients answer for you" },
+    { key: "video", icon: PlayCircle, name: lessonKindLabel("video"), line: tk("Upload or link a video") },
+    { key: "reading", icon: FileText, name: lessonKindLabel("reading"), line: tk("Text with headings, lists and links") },
+    { key: "pdf", icon: FileDown, name: lessonKindLabel("pdf"), line: tk("A plan or handout to download") },
+    { key: "image", icon: ImageIcon, name: lessonKindLabel("image"), line: tk("A photo or diagram") },
+    { key: "quiz", icon: ListChecks, name: lessonKindLabel("quiz"), line: tk("Short questions with answers") },
+    { key: "check_in", icon: ClipboardCheck, name: lessonKindLabel("check_in"), line: tk("A question your clients answer for you") },
   ];
   return (
     <div>
       <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 10 }}>{weekLabel}</p>
-      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }} role="radiogroup" aria-label="Lesson type">
-        {types.map((t) => {
-          const on = !!t.key && t.key === kind;
+      <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }} role="radiogroup" aria-label={t("Lesson type")}>
+        {types.map((ty) => {
+          const on = !!ty.key && ty.key === kind;
           return (
             <button
-              key={t.name}
+              key={ty.name}
               type="button"
               role="radio"
               aria-checked={on}
-              disabled={!t.key}
-              onClick={() => t.key && onPick(t.key)}
+              disabled={!ty.key}
+              onClick={() => ty.key && onPick(ty.key)}
               className="tap text-start disabled:cursor-default"
-              style={{ borderRadius: 16, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, padding: 12, opacity: t.key ? 1 : 0.7 }}
+              style={{ borderRadius: 16, border: `1px solid ${on ? INK.pr : INK.b10}`, background: on ? INK.prPale : INK.card, padding: 12, opacity: ty.key ? 1 : 0.7 }}
             >
               <span className="flex items-center justify-between" style={{ gap: 6 }}>
                 <span className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 10, background: on ? INK.card : INK.prPale }}>
-                  <t.icon size={17} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
+                  <ty.icon size={17} strokeWidth={2} aria-hidden style={{ color: INK.prDeep }} />
                 </span>
               </span>
-              <p style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, marginTop: 8 }}>{t.name}</p>
-              <p style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.35, marginTop: 2 }}>{t.line}</p>
+              <p style={{ fontSize: textPx(14), fontWeight: 800, color: INK.ch, marginTop: 8 }}>{ty.name}</p>
+              <p style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.35, marginTop: 2 }}>{t(ty.line)}</p>
             </button>
           );
         })}
@@ -299,10 +298,10 @@ export const LessonEditor: React.FC<{
         className="tap appearance-none disabled:opacity-60"
         style={{ ...fieldBox(), height: 40 }}
       >
-        <option value="">Not set</option>
+        <option value="">{t("Not set")}</option>
         {minuteOptions(minutes).map((m) => (
           <option key={m} value={m}>
-            {m} min
+            {t("{n} min", { n: m })}
           </option>
         ))}
       </select>
@@ -313,8 +312,8 @@ export const LessonEditor: React.FC<{
     <div>
       <SegmentedTabs
         items={[
-          { key: "edit", label: "Edit" },
-          { key: "preview", label: "Preview" },
+          { key: "edit", label: t("Edit") },
+          { key: "preview", label: t("Preview") },
         ]}
         activeKey={tab}
         onChange={(k) => setTab(k as "edit" | "preview")}
@@ -341,38 +340,38 @@ export const LessonEditor: React.FC<{
               <div style={{ height: 120, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }} aria-hidden />
             )}
             <div style={{ padding: "12px 14px" }}>
-              <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF }}>{lessonEyebrow(weekIndex, KIND_LABEL[kind], kind === "quiz" ? null : minutes)}</p>
+              <p style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF }}>{lessonEyebrow(weekIndex, lessonKindLabel(kind), kind === "quiz" ? null : minutes)}</p>
               <p style={{ fontSize: textPx(18), fontWeight: 800, color: INK.ch, marginTop: 4, overflowWrap: "anywhere" }}>{title}</p>
               {(kind === "reading" || kind === "image" || kind === "check_in") && body && (
                 <LessonMarkdown text={body} linkColour={INK.prDeep} style={{ fontSize: textPx(13.5), color: INK.chS, lineHeight: 1.6, marginTop: 8 }} />
               )}
               {kind === "check_in" && (
-                <div style={{ marginTop: 10, height: 72, borderRadius: 12, border: `1px solid ${INK.b10}`, background: INK.soft, padding: 10, fontSize: textPx(12.5), color: INK.chF }}>Your answer</div>
+                <div style={{ marginTop: 10, height: 72, borderRadius: 12, border: `1px solid ${INK.b10}`, background: INK.soft, padding: 10, fontSize: textPx(12.5), color: INK.chF }}>{t("Your answer")}</div>
               )}
             </div>
           </div>
-          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 8 }}>This is how clients see it.</p>
+          <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 8 }}>{t("This is how clients see it.")}</p>
         </div>
       ) : (
         <div>
-          <Field id="lesson-title" label="Lesson title" value={title} onChange={setTitle} maxLength={LIMITS.lessonTitle.max} disabled={!editable} />
-          {inRevision && lesson && title.trim() !== lesson.title && <Note mt={6}>{RENAME_RESETS_PROGRESS}</Note>}
+          <Field id="lesson-title" label={t("Lesson title")} value={title} onChange={setTitle} maxLength={LIMITS.lessonTitle.max} disabled={!editable} />
+          {inRevision && lesson && title.trim() !== lesson.title && <Note mt={6}>{t(RENAME_RESETS_PROGRESS)}</Note>}
           {kind === "reading" && (
             <>
               <div style={{ height: 12 }} />
-              <TextBox id="lesson-body" label="Text" value={body} onChange={setBody} rows={8} maxLength={LIMITS.body.max} disabled={!editable} />
-              <Note mt={6}>{FORMATTING_HELP}</Note>
-              {minutesField("Reading time")}
+              <TextBox id="lesson-body" label={t("Text")} value={body} onChange={setBody} rows={8} maxLength={LIMITS.body.max} disabled={!editable} />
+              <Note mt={6}>{t(FORMATTING_HELP)}</Note>
+              {minutesField(t("Reading time"))}
             </>
           )}
           {kind === "image" && (
             <>
-              <Label mt={12}>Image</Label>
+              <Label mt={12}>{t("Image")}</Label>
               <button
                 type="button"
                 onClick={() => imageInput.current?.click()}
                 disabled={!editable || busy}
-                aria-label={imageSrc ? "Change the image" : "Choose an image"}
+                aria-label={imageSrc ? t("Change the image") : t("Choose an image")}
                 className="tap relative w-full flex flex-col items-center justify-center overflow-hidden disabled:cursor-default"
                 style={{ minHeight: 120, borderRadius: 16, background: INK.soft, border: imageSrc ? `1px solid ${INK.b10}` : `1.5px dashed rgb(var(--c-charcoal) / 0.11)`, gap: 6 }}
               >
@@ -381,7 +380,7 @@ export const LessonEditor: React.FC<{
                 ) : (
                   <>
                     <ImageIcon size={22} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
-                    <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>Choose an image</span>
+                    <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS }}>{t("Choose an image")}</span>
                   </>
                 )}
                 {shownOwn && <ImageApprovalBadge state={shownOwn} className="absolute top-2 start-2" />}
@@ -399,23 +398,23 @@ export const LessonEditor: React.FC<{
                 }}
               />
               {imagePick ? (
-                <Note mt={6}>Sent for approval when you save. Clients see it once our team approves it.</Note>
+                <Note mt={6}>{t("Sent for approval when you save. Clients see it once our team approves it.")}</Note>
               ) : shownOwn ? (
                 <>
                   <ImageApprovalNote state={shownOwn} className="mt-1.5" />
                   {shownOwn.status === "pending" && editable && (
                     <button type="button" onClick={() => void withdrawImage()} disabled={busy} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
-                      Remove this image
+                      {t("Remove this image")}
                     </button>
                   )}
                 </>
               ) : (
-                <Note mt={6}>JPEG, PNG or WebP, up to 5 MB. Our team approves it before clients see it.</Note>
+                <Note mt={6}>{t("JPEG, PNG or WebP, up to 5 MB. Our team approves it before clients see it.")}</Note>
               )}
               <div style={{ height: 12 }} />
-              <TextBox id="lesson-caption" label="Caption (optional)" value={body} onChange={setBody} rows={3} maxLength={LIMITS.body.max} disabled={!editable} />
-              <Note mt={6}>{FORMATTING_HELP}</Note>
-              {minutesField("Viewing time")}
+              <TextBox id="lesson-caption" label={t("Caption (optional)")} value={body} onChange={setBody} rows={3} maxLength={LIMITS.body.max} disabled={!editable} />
+              <Note mt={6}>{t(FORMATTING_HELP)}</Note>
+              {minutesField(t("Viewing time"))}
             </>
           )}
           {kind === "check_in" && (
@@ -423,18 +422,18 @@ export const LessonEditor: React.FC<{
               <div style={{ height: 12 }} />
               <TextBox
                 id="lesson-prompt"
-                label="Question for your clients"
+                label={t("Question for your clients")}
                 value={body}
                 onChange={setBody}
                 rows={4}
                 maxLength={LIMITS.body.max}
                 disabled={!editable}
-                placeholder="How did this week's sessions feel?"
+                placeholder={t("How did this week's sessions feel?")}
               />
               <Note mt={6}>
-                Each client writes an answer of up to {CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US"))} characters. Only you see the answers, under Check-in answers on the course's stats.
+                {t("Each client writes an answer of up to {n} characters. Only you see the answers, under Check-in answers on the course's stats.", { n: CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US")) })}
               </Note>
-              {minutesField("Time to answer")}
+              {minutesField(t("Time to answer"))}
             </>
           )}
           {kind === "video" && (
@@ -442,44 +441,44 @@ export const LessonEditor: React.FC<{
               <div style={{ height: 12 }} />
               <Field
                 id="lesson-url"
-                label="YouTube link"
+                label={t("YouTube link")}
                 value={url}
                 onChange={setUrl}
                 inputMode="url"
                 disabled={!editable}
-                placeholder="https://youtube.com/watch?v=…"
-                note={lesson ? "Paste a new link to replace the video. A single video, not a playlist." : "A single video. A playlist, a channel or any other site is refused."}
+                placeholder="https://youtube.com/watch?v=…" // i18n-ignore: a URL pattern
+                note={lesson ? t("Paste a new link to replace the video. A single video, not a playlist.") : t("A single video. A playlist, a channel or any other site is refused.")}
               />
-              {minutesField("Length")}
+              {minutesField(t("Length"))}
             </>
           )}
           {kind === "pdf" && (
             <>
-              <Label mt={12}>{lesson ? "Replace the PDF" : "File"}</Label>
+              <Label mt={12}>{lesson ? t("Replace the PDF") : t("File")}</Label>
               <label
                 className="tap flex items-center justify-center cursor-pointer"
                 style={{ ...fieldBox(), height: 44, fontSize: textPx(13), fontWeight: 700, opacity: editable && !busy ? 1 : 0.6 }}
               >
-                {file ? file.name : lesson ? "Choose a new file" : "Choose a PDF"}
+                {file ? file.name : lesson ? t("Choose a new file") : t("Choose a PDF")}
                 <input type="file" accept="application/pdf,.pdf" disabled={!editable || busy} className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
-              <Note mt={6}>We remove the author, the title and anything else hidden in the file before it's uploaded.</Note>
+              <Note mt={6}>{t("We remove the author, the title and anything else hidden in the file before it's uploaded.")}</Note>
             </>
           )}
           {kind === "quiz" && (
             <>
               <div style={{ height: 12 }} />
-              <Field id="lesson-pass" label="Pass mark" value={passMark} onChange={setPassMark} inputMode="numeric" disabled={!editable} note="The score needed to pass, as a percentage." invalid={!passOk} />
-              {lesson ? <QuizQuestions lessonId={lesson.id} editable={editable} /> : <Note>Add the questions once the quiz exists.</Note>}
+              <Field id="lesson-pass" label={t("Pass mark")} value={passMark} onChange={setPassMark} inputMode="numeric" disabled={!editable} note={t("The score needed to pass, as a percentage.")} invalid={!passOk} />
+              {lesson ? <QuizQuestions lessonId={lesson.id} editable={editable} /> : <Note>{t("Add the questions once the quiz exists.")}</Note>}
             </>
           )}
         </div>
       )}
-      {error && <FieldError mt={10}>{error}</FieldError>}
+      {error && <FieldError mt={10}>{t(error)}</FieldError>}
       {toFooter(
         <>
-          <CtaButton variant="secondary" label="Back" onClick={onBack} disabled={busy} />
-          {editable && <CtaButton label="Save lesson" icon={<Check size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={!ready} onClick={() => void save()} />}
+          <CtaButton variant="secondary" label={t("Back")} onClick={onBack} disabled={busy} />
+          {editable && <CtaButton label={t("Save lesson")} icon={<Check size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={!ready} onClick={() => void save()} />}
         </>
       )}
     </div>
@@ -526,7 +525,7 @@ function QuizQuestions({ lessonId, editable }: { lessonId: string; editable: boo
 
   return (
     <div>
-      {error && <FieldError mt={10}>{error}</FieldError>}
+      {error && <FieldError mt={10}>{t(error)}</FieldError>}
       {questions?.map((q, i) => (
         <QuestionBlock key={q.id} index={i} total={questions.length} question={q} editable={editable} onChanged={() => void load()} />
       ))}
@@ -534,14 +533,14 @@ function QuizQuestions({ lessonId, editable }: { lessonId: string; editable: boo
         (adding === null ? (
           <button type="button" onClick={() => setAdding("")} className="tap flex items-center" style={{ gap: 4, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep, marginTop: 10, minHeight: 36 }}>
             <Plus size={13} strokeWidth={2.4} aria-hidden />
-            Add question
+            {t("Add question")}
           </button>
         ) : (
           <div style={{ marginTop: 10 }}>
-            <Field id="new-question" label={`Question ${(questions?.length ?? 0) + 1}`} value={adding} onChange={setAdding} />
+            <Field id="new-question" label={t("Question {n}", { n: (questions?.length ?? 0) + 1 })} value={adding} onChange={setAdding} />
             <div className="flex" style={{ gap: 8, marginTop: 8 }}>
-              <CtaButton size="base" variant="secondary" label="Cancel" onClick={() => setAdding(null)} />
-              <CtaButton size="base" label="Add question" loading={busy} disabled={!adding.trim()} onClick={() => void add()} />
+              <CtaButton size="base" variant="secondary" label={t("Cancel")} onClick={() => setAdding(null)} />
+              <CtaButton size="base" label={t("Add question")} loading={busy} disabled={!adding.trim()} onClick={() => void add()} />
             </div>
           </div>
         ))}
@@ -599,17 +598,17 @@ function QuestionBlock({ index, total, question, editable, onChanged }: { index:
   return (
     <div style={{ marginTop: 14 }}>
       <Label mt={0} htmlFor={`q-${question.id}`}>
-        Question {index + 1} of {total}
+        {t("Question {n} of {total}", { n: index + 1, total })}
       </Label>
-      <Field id={`q-${question.id}`} ariaLabel={`Question ${index + 1}`} value={prompt} onChange={setPrompt} disabled={!editable} />
-      <div className="flex flex-col" style={{ gap: 6, marginTop: 8 }} role="radiogroup" aria-label={`Answers to question ${index + 1}`}>
+      <Field id={`q-${question.id}`} ariaLabel={t("Question {n}", { n: index + 1 })} value={prompt} onChange={setPrompt} disabled={!editable} />
+      <div className="flex flex-col" style={{ gap: 6, marginTop: 8 }} role="radiogroup" aria-label={t("Answers to question {n}", { n: index + 1 })}>
         {options.map((o, i) => (
           <div key={i} className="flex items-center" style={{ gap: 10, padding: "4px 12px", borderRadius: 12, background: o.isCorrect ? INK.goodBg : INK.soft, minHeight: 40 }}>
             <button
               type="button"
               role="radio"
               aria-checked={o.isCorrect}
-              aria-label={`Answer ${i + 1} is correct`}
+              aria-label={t("Answer {n} is correct", { n: i + 1 })}
               disabled={!editable}
               onClick={() => setOptions((p) => p.map((x, k) => ({ ...x, isCorrect: k === i })))}
               className="tap relative shrink-0 before:absolute before:-inset-3 before:content-['']"
@@ -620,16 +619,16 @@ function QuestionBlock({ index, total, question, editable, onChanged }: { index:
               value={o.body}
               onChange={(e) => setOptions((p) => p.map((x, k) => (k === i ? { ...x, body: e.target.value } : x)))}
               disabled={!editable}
-              placeholder={`Answer ${i + 1}`}
-              aria-label={`Answer ${i + 1}`}
+              placeholder={t("Answer {n}", { n: i + 1 })}
+              aria-label={t("Answer {n}", { n: i + 1 })}
               className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
               style={{ fontSize: textPx(13.5), color: INK.ch, height: 32 }}
             />
-            {o.isCorrect && <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.good }}>Correct</span>}
+            {o.isCorrect && <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.good }}>{t("Correct")}</span>}
             {editable && options.length > LIMITS.quizOptions.min && (
               <button
                 type="button"
-                aria-label={`Remove answer ${i + 1}`}
+                aria-label={t("Remove answer {n}", { n: i + 1 })}
                 onClick={() =>
                   setOptions((p) => {
                     const next = p.filter((_, k) => k !== i);
@@ -648,19 +647,19 @@ function QuestionBlock({ index, total, question, editable, onChanged }: { index:
         <div className="flex items-center flex-wrap" style={{ gap: 12, marginTop: 8 }}>
           {options.length < LIMITS.quizOptions.max && (
             <button type="button" onClick={() => setOptions((p) => [...p, { body: "", isCorrect: false }])} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
-              Add an answer
+              {t("Add an answer")}
             </button>
           )}
           <button type="button" onClick={() => void save()} disabled={busy || !ready} className="tap disabled:opacity-40" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
-            {saved && !busy ? "Saved" : "Save question"}
+            {saved && !busy ? t("Saved") : t("Save question")}
           </button>
           <button type="button" onClick={() => void remove()} disabled={busy} className="tap ms-auto" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
-            Delete
+            {t("Delete")}
           </button>
         </div>
       )}
-      {editable && !countOk && <Note mt={4}>A question needs between {LIMITS.quizOptions.min} and {LIMITS.quizOptions.max} answers with something written in them.</Note>}
-      {error && <FieldError>{error}</FieldError>}
+      {editable && !countOk && <Note mt={4}>{t("A question needs between {min} and {max} answers with something written in them.", { min: LIMITS.quizOptions.min, max: LIMITS.quizOptions.max })}</Note>}
+      {error && <FieldError>{t(error)}</FieldError>}
     </div>
   );
 }

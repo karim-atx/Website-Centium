@@ -12,6 +12,7 @@ import { fmtDay } from "../client/clientFormat";
 import { coverBackground } from "../../courses/courseCover";
 import { FieldError, Note } from "./courseUi";
 import { accessLine, sizeLine } from "./courseModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO28 "Create course · 5 Review" (cReview18): the course
@@ -41,12 +42,12 @@ export const ReviewStep: React.FC<{
   const blockers = frozen ? [] : submitBlockers(tree);
   const warnings = frozen ? [] : submitWarnings(shown, tree);
   const look = courseStatusLook(course.status);
-  const meta = [authorName, levelLabel(shown.level), sizeLine(modules.length, lessons.length)].filter(Boolean).join(" · ");
+  const meta = [authorName, t(levelLabel(shown.level)), sizeLine(modules.length, lessons.length)].filter(Boolean).join(" · ");
   return (
     <div>
       {course.status === "submitted" && (
         <Note mt={0}>
-          <b style={{ color: INK.ch }}>In review{course.submittedAt ? ` · Submitted ${fmtDay(course.submittedAt)}` : ""}.</b> {look.detail}
+          <b style={{ color: INK.ch }}>{course.submittedAt ? t("In review · Submitted {date}.", { date: fmtDay(course.submittedAt) }) : t("In review.")}</b> {t(look.detail)}
         </Note>
       )}
       <div style={{ borderRadius: 18, border: `1px solid ${INK.b10}`, overflow: "hidden", marginBottom: 10, marginTop: course.status === "submitted" ? 10 : 0 }}>
@@ -62,23 +63,23 @@ export const ReviewStep: React.FC<{
       </div>
       <ListCard
         rows={[
-          { key: "b", icon: CircleCheck, title: "Basics", meta: `Title, subtitle, ${levelLabel(shown.level)}`, onClick: () => onStep(0) },
-          { key: "s", icon: CircleCheck, title: "Structure", meta: sizeLine(modules.length, lessons.length).replace(" · ", ", "), onClick: () => onStep(1) },
-          { key: "a", icon: CircleCheck, title: "Access", meta: accessLine(formatPrice(shown.priceCents), dripMode), onClick: () => onStep(3) },
+          { key: "b", icon: CircleCheck, title: t("Basics"), meta: t("Title, subtitle, {level}", { level: t(levelLabel(shown.level)) }), onClick: () => onStep(0) },
+          { key: "s", icon: CircleCheck, title: t("Structure"), meta: sizeLine(modules.length, lessons.length, true), onClick: () => onStep(1) },
+          { key: "a", icon: CircleCheck, title: t("Access"), meta: accessLine(t(formatPrice(shown.priceCents)), dripMode), onClick: () => onStep(3) },
         ]}
       />
       {blockers.map((b) => (
         <FieldError key={b} mt={0}>
-          {b}
+          {t(b)}
         </FieldError>
       ))}
       {warnings.map((w) => (
         <Note key={w} mt={4}>
-          {w}
+          {t(w)}
         </Note>
       ))}
       <Note icon={ShieldCheck} iconColour={INK.tealDark}>
-        Centium checks every new course before it goes live, usually within 2 working days.
+        {t("Centium checks every new course before it goes live, usually within 2 working days.")}
       </Note>
       {footer}
     </div>

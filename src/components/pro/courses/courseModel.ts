@@ -1,10 +1,12 @@
 // Release 3 · W6 Courses (MO18 v3, MO28): the pure rules behind the screens,
 // kept apart from the components so they can be tested directly.
 
-import type { CourseStatus } from "../../../services/courses/authorRules";
+import type { CourseAudience, CourseStatus } from "../../../services/courses/authorRules";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 export type CourseTab = "Published" | "Drafts" | "Archived";
-export const COURSE_TABS: CourseTab[] = ["Published", "Drafts", "Archived"];
+/** English keys (tk), compared as values; show them with t(). */
+export const COURSE_TABS: CourseTab[] = [tk("Published"), tk("Drafts"), tk("Archived")];
 
 /** Published = live; Drafts = draft, in review, sent back; Archived = unpublished. */
 export function tabOf(status: CourseStatus): CourseTab {
@@ -13,37 +15,37 @@ export function tabOf(status: CourseStatus): CourseTab {
   return "Drafts";
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
-/** "{n} weeks · {n} lessons" (COPY MO18 v3, plural rule). */
-export function sizeLine(weeks: number, lessons: number): string {
-  return `${plural(weeks, "week", "weeks")} · ${plural(lessons, "lesson", "lessons")}`;
+/** "{n} weeks · {n} lessons" (COPY MO18 v3, plural rule); list: "{n} weeks, {n} lessons" (the Review and Edit rows). */
+export function sizeLine(weeks: number, lessons: number, list = false): string {
+  const w = tn(weeks, "{n} week", "{n} weeks");
+  const l = tn(lessons, "{n} lesson", "{n} lessons");
+  return list ? t("{weeks}, {lessons}", { weeks: w, lessons: l }) : `${w} · ${l}`;
 }
 
 /** The status dot's label on a Drafts or Archived card. */
 export function statusLabel(status: CourseStatus): string {
   switch (status) {
     case "draft":
-      return "Draft";
+      return t("Draft");
     case "submitted":
-      return "In review";
+      return t("In review");
     case "changes_requested":
-      return "Changes requested";
+      return t("Changes requested");
     case "unpublished":
-      return "Unpublished";
+      return t("Unpublished");
     default:
-      return "Published";
+      return t("Published");
   }
 }
 
-/** The steps of Create course (stepBar18 CSTEPS18). */
-export const STEPS = ["Basics", "Structure", "Lessons", "Access", "Review"] as const;
+/** The steps of Create course (stepBar18 CSTEPS18). English keys (tk); StepBar shows them with t(). */
+export const STEPS = [tk("Basics"), tk("Structure"), tk("Lessons"), tk("Access"), tk("Review")] as const;
 
 /** MO28 1 Basics, validation: "At least 8 characters." (the frame's rule; the database's own floor is 4). */
 export const TITLE_MIN = 8;
 
 export function titleError(title: string): string | null {
-  return title.trim().length < TITLE_MIN ? `Use at least ${TITLE_MIN} characters` : null;
+  return title.trim().length < TITLE_MIN ? t("Use at least {n} characters", { n: TITLE_MIN }) : null;
 }
 
 /**
@@ -69,13 +71,20 @@ export function ratingBars(stars: number[]): { stars: number; count: number }[] 
 }
 
 export function ratingsLine(average: number | null, count: number): string {
-  if (!count || average === null) return "No ratings yet";
-  return `${average.toFixed(1)} from ${plural(count, "rating", "ratings")}`;
+  if (!count || average === null) return t("No ratings yet");
+  return tn(count, "{average} from {n} rating", "{average} from {n} ratings", { average: average.toFixed(1) });
 }
 
 /** "Public · $19 · one week at a time" (MO28 5 Review › Access). */
 export function accessLine(priceLabel: string, mode: "all_at_once" | "weekly"): string {
-  return `Public · ${priceLabel} · ${mode === "weekly" ? "one week at a time" : "all at once"}`;
+  return mode === "weekly" ? t("Public · {price} · one week at a time", { price: priceLabel }) : t("Public · {price} · all at once", { price: priceLabel });
+}
+
+/** The Access row's meta: the audience in words (authorRules' audienceLabel, as shown text). */
+export function audienceText(audience: CourseAudience, selected?: number): string {
+  if (audience === "my_clients") return t("All your clients");
+  if (audience === "selected") return selected ? tn(selected, "{n} selected client", "{n} selected clients") : t("Selected clients");
+  return t("Public");
 }
 
 /** Dollars typed in the price field → cents, or null when it isn't a price (0 to 500). */
@@ -88,14 +97,19 @@ export function parsePrice(text: string): number | null {
   return cents >= 0 && cents <= 50_000 ? cents : null;
 }
 
-/** "Week 1 · Reading · 4 min" (the preview's eyebrow). */
+/** "Week 1 · Reading · 4 min" (the preview's eyebrow); kindLabel is already shown text. */
 export function lessonEyebrow(weekIndex: number, kindLabel: string, minutes: number | null): string {
-  return [`Week ${weekIndex + 1}`, kindLabel, minutes ? `${minutes} min` : null].filter(Boolean).join(" · ");
+  return [t("Week {n}", { n: weekIndex + 1 }), kindLabel, minutes ? t("{n} min", { n: minutes }) : null].filter(Boolean).join(" · ");
+}
+
+/** The lesson kind's shown label (LessonSteps' KIND_LABEL and the Structure rows). */
+export function lessonKindLabel(kind: string): string {
+  return kind === "video" ? t("Video") : kind === "reading" ? t("Reading") : kind === "pdf" ? "PDF" : kind === "image" ? t("Image") : kind === "check_in" ? tx("Check-in", "lesson kind") : t("Quiz");
 }
 
 /** "Video · 6 min", "Quiz · 4 questions", "PDF" (the Structure rows' meta). */
 export function lessonMeta(kind: string, minutes: number | null, questions?: number): string {
-  const label = kind === "video" ? "Video" : kind === "reading" ? "Reading" : kind === "pdf" ? "PDF" : kind === "image" ? "Image" : kind === "check_in" ? "Check-in" : "Quiz";
-  if (kind === "quiz") return questions === undefined ? label : `${label} · ${plural(questions, "question", "questions")}`;
-  return minutes ? `${label} · ${minutes} min` : label;
+  const label = lessonKindLabel(kind);
+  if (kind === "quiz") return questions === undefined ? label : `${label} · ${tn(questions, "{n} question", "{n} questions")}`;
+  return minutes ? `${label} · ${t("{n} min", { n: minutes })}` : label;
 }
