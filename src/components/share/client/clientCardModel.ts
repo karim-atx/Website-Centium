@@ -237,7 +237,7 @@ export const fmtKg = (kg: number) => (Math.round(kg * 10) / 10).toLocaleString(a
 /** "52 min" under an hour, else "3 h 26" (the board's durations). */
 export function fmtDuration(totalSec: number): string {
   const min = Math.max(0, Math.round(totalSec / 60));
-  if (min < 60) return t("{n} min", { n: min });
+  if (min < 60) return tn(min, "{n} min", "{n} min");
   return t("{h} h {m}", { h: Math.floor(min / 60), m: String(min % 60).padStart(2, "0") });
 }
 /** Minutes as the board's "1 h 36" / "48 min". */
@@ -415,7 +415,7 @@ export interface StepsFacts {
 export function stepsCard(s: StepsFacts): ClientCardSpec {
   const stats: ClientStat[] = [];
   if (s.distanceM != null && s.distanceM > 0) stats.push({ key: "distance", title: t("Distance"), value: t("{n} km", { n: (Math.round(s.distanceM / 100) / 10).toLocaleString(appLocale("en-US")) }), label: t("distance") });
-  if (s.activeMin != null && s.activeMin > 0) stats.push({ key: "active", title: tx("Active", "active minutes"), value: t("{n} min", { n: fmtInt(s.activeMin) }), label: tx("active", "active minutes") });
+  if (s.activeMin != null && s.activeMin > 0) stats.push({ key: "active", title: tx("Active", "active minutes"), value: tn(s.activeMin, "{n} min", "{n} min", { n: fmtInt(s.activeMin) }), label: tx("active", "active minutes") });
   return {
     template: "steps",
     id: "steps",
