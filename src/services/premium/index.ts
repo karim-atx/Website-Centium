@@ -5,14 +5,14 @@
 // A failed read is "off" too: the switches decide whether anything new is
 // shown at all, and nothing new is ever shown on a guess.
 //
-// NEVER buy_hiring_credits from the web (decision G10): credits are bought
-// in the Centium app only. The function has no caller here on purpose.
+// NEVER buy_hiring_credits or choose_business_plan_level from the web
+// (decision G10; G fixes 2): hiring credits and business plan levels are
+// bought in the Centium app only. Neither function has a caller here, on
+// purpose.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t } from "../../i18n/core";
-import { getLanguage } from "../../i18n/core";
-import { REFUND_POLICY_VERSION } from "../../marketing/legal/refund";
 import {
   parseCandidates,
   parseFreeLimits,
@@ -24,7 +24,6 @@ import {
   parseMyPremium,
   parseSwitches,
   premiumCodeMessage,
-  PLAN_START_WORDING_KEY,
   type FreeLimits,
   type GymPasses,
   type HiringCredits,
@@ -33,7 +32,6 @@ import {
   type PassCandidate,
   type PlanLevel,
   type PlanLevelPrice,
-  type PlanPeriod,
   type Switches,
 } from "./model";
 
@@ -105,32 +103,6 @@ export const fetchLevelPrices = (): Promise<Read<PlanLevelPrice[]>> => read(() =
 
 export const fetchPlanLevel = (businessId: string): Promise<Read<PlanLevel | null>> =>
   read(() => supabase.rpc("business_plan_level", { p_business_id: businessId }), parseLevel, t("Couldn't load your plan."));
-
-/**
- * "Start now": with no active plan it opens the plan charge (paid through
- * the existing Centium billing, by cash or bank transfer, recorded by
- * Centium) and returns its id; with an active plan it records the level for
- * the next renewal. The refund policy version is the one the page links.
- */
-export async function choosePlanLevel(businessId: string, seatBlocks: number, p: PlanPeriod): Promise<Write<string>> {
-  const r = await write(
-    () =>
-      supabase.rpc("choose_business_plan_level", {
-        p_business_id: businessId,
-        p_seat_blocks: seatBlocks,
-        p_period: p,
-        p_wording_key: PLAN_START_WORDING_KEY,
-        p_language: getLanguage() === "ar" ? "ar" : "en",
-        p_refund_policy_version: REFUND_POLICY_VERSION,
-        p_platform: "web",
-      }),
-    idOf,
-    t("Couldn't start the plan. Try again.")
-  );
-  if (!r.ok && r.code === "ATXD7") return { ...r, message: t("A plan charge is already waiting for payment.") };
-  if (!r.ok && r.code === "ATX03") return { ...r, message: t("Only the business owner can choose the plan.") };
-  return r;
-}
 
 // ---- hiring credits ----
 

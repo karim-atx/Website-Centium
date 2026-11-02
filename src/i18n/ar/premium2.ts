@@ -6,7 +6,7 @@ import type { Catalogue } from "../core";
 // design-handover/round-g/ARABIC_REVIEW_G.md for Karim's review before merge.
 // note (whole file): Premium stays «Premium» / «Centium Premium» (brand), as
 // in Round G1 (premium.ts). Terms as G1: the free plan «الخطة المجانية»;
-// streak «سلسلة», a streak shield «درع السلسلة»; waitlist «قائمة الانتظار».
+// streak «سلسلة», a streak shield «درع سلسلة الأيام» (two «درعا سلسلة الأيام», few «دروع سلسلة الأيام»); waitlist «قائمة الانتظار».
 
 // Source files this catalogue covers (paths from src/). The catalogue test
 // checks every t/tn/tk key in them has Arabic here or in another area file,
@@ -60,8 +60,8 @@ const premium2: Catalogue = {
   "Premium members earn 2x points.": "يكسب أعضاء Premium ضعف النقاط.",
 
   // == Streak shields (components/premium/StreakShields) ==
-  "{n} streak shields left this month": { zero: "بقي {n} درع سلسلة هذا الشهر", one: "بقي درع سلسلة واحد هذا الشهر", two: "بقي درعا سلسلة هذا الشهر", few: "بقيت {n} دروع سلسلة هذا الشهر", many: "بقي {n} درعًا للسلسلة هذا الشهر", other: "بقي {n} درع سلسلة هذا الشهر" },
-  "A shield covered {day}: {streaks}": "غطّى درعٌ يوم {day}: {streaks}",
+  "{n} streak shields left this month": { zero: "بقي {n} درع سلسلة الأيام هذا الشهر", one: "بقي درع سلسلة الأيام هذا الشهر", two: "بقي درعا سلسلة الأيام هذا الشهر", few: "بقيت {n} دروع سلسلة الأيام هذا الشهر", many: "بقي {n} درعًا لسلسلة الأيام هذا الشهر", other: "بقي {n} درع سلسلة الأيام هذا الشهر" }, // note: one is the singular alone; many (11–99) needs the accusative singular, so «درعًا لسلسلة الأيام»
+  "A shield covered {day}: {streaks}": "غطّى درع سلسلة الأيام يوم {day}: {streaks}",
   "Logging": "التسجيل",
   "Movement": "الحركة",
 

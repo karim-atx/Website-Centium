@@ -63,9 +63,13 @@ export const PendingScreen: React.FC<{
   name: string;
   submittedAt: string | null;
   footer: BizFooter;
-  /** Round G1 fixes: the plan's first charge is still unpaid (awaiting_payment, only with business_plans_on), so approval waits for it. */
-  planUnpaid?: { line: string | null } | null;
-}> = ({ name, submittedAt, footer, planUnpaid }) => {
+  /**
+   * Round G1 fixes, G fixes 2 (only with business_plans_on): the plan isn't
+   * bought in the Centium app yet ("choose"), or its purchase isn't
+   * confirmed yet ("pending"), so approval waits for it.
+   */
+  planWait?: "choose" | "pending" | null;
+}> = ({ name, submittedAt, footer, planWait }) => {
   const s = submittedLabel(submittedAt);
   return (
     <BizFrame footer={footer}>
@@ -77,10 +81,11 @@ export const PendingScreen: React.FC<{
         body={t("Usually 1 to 2 working days. We'll message and email you.")}
       />
       {/* undrawn (Round G, no handover) */}
-      {planUnpaid && (
-        <ObTip icon={Clock3} heading={t("Your plan payment is pending.")} tone="warn" margin="0 0 16px" role="status">
-          {t("Your verification is approved once your plan is paid.")}
-          {planUnpaid.line ? ` ${planUnpaid.line}` : ""}
+      {planWait && (
+        <ObTip icon={Clock3} heading={t("Business plan")} tone="warn" margin="0 0 16px" role="status">
+          {planWait === "choose"
+            ? t("Buy it in the Centium app. Your verification is approved once the purchase is confirmed.")
+            : t("Your verification is approved once your plan purchase is confirmed.")}
         </ObTip>
       )}
       <Timeline
