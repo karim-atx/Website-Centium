@@ -207,8 +207,8 @@ export default function BusinessMoreIndex() {
             <BizRow
               well="index"
               icon={Users}
-              title={STAFF_LABEL[kind]}
-              desc={team ? `${used} professional${used === 1 ? "" : "s"}` : PLACEHOLDER}
+              title={t(STAFF_LABEL[kind])}
+              desc={team ? tn(used, "{n} professional", "{n} professionals") : PLACEHOLDER}
               onClick={sub("employees")}
             />
             {kind !== "store" && (

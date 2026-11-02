@@ -67,7 +67,7 @@ const SRC = join(import.meta.dirname, "..");
 // Words that are the same in both languages (names, never translated).
 const SAME = /^(Centium|Atraxia|Centium Premium|Centium Business|Whish|Apple Health|Health Connect|Apple|Google|Google Play|App Store|English|العربية|OK|AI|PDF|QR|ID|×|·|•|—|–|\/|&|\+|%|kg|lb|cm|kcal)$/;
 // Props whose value is text a person reads.
-const TEXT_PROPS = new Set(["placeholder", "title", "aria-label", "alt", "label", "aria-description", "aria-placeholder", "subtitle", "sub", "description", "hint", "caption", "heading", "message", "helper", "ariaLabel"]);
+const TEXT_PROPS = new Set(["placeholder", "title", "aria-label", "alt", "label", "aria-description", "aria-placeholder", "subtitle", "sub", "description", "hint", "caption", "heading", "message", "helper", "ariaLabel", "desc"]);
 const IGNORE = /i18n-ignore|i18n-ok/;
 
 type Found = { keys: { key: string; plural: boolean; line: number }[]; bare: { text: string; line: number }[] };
