@@ -21,6 +21,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ProReminders } from "../../components/client-forms/ProReminders";
 import { StreakShieldsLine } from "../../components/premium/StreakShields";
+import { WeeklyReviewCard } from "./review/WeeklyReviewCard";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -155,6 +156,9 @@ export default function Home() {
           </>
         )
       )}
+
+      {/* Round G3: the weekly review, where the Monday push lands (nothing while the Premium switch is off). */}
+      {!isBusiness && <WeeklyReviewCard className="mb-[13px]" />}
 
       {isBusiness && (
         <Card

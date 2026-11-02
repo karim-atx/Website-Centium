@@ -30,7 +30,7 @@ import { t } from "../../../i18n/core";
 //
 // THE ROUTE: the Monday push (kind weekly_summary, queue_weekly_summary)
 // opens /app/weekly-review (send-reminder-push deepLinkFor, Database G3
-// fixes), exactly this path; the Home card that stood in for it is gone.
+// fixes), exactly this path. Home's WeeklyReviewCard is the standing way in.
 //
 // - Counts always; the numbers (average steps, sleep, meditation minutes)
 //   only when the review isn't hiding them (numbers_hidden in
