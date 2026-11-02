@@ -4,6 +4,7 @@ import { servingMultiplier, mealLabels } from "../../services/nutrition";
 import { useIsDark } from "../../hooks/useIsDark";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // Shared building blocks for mobile handoff item 10 (Food > Meal Prep
 // redesign): the Custom Meals + Recipes widget cards on MealPrepPanel, and
@@ -68,13 +69,13 @@ export const PREP_FAINT = "rgb(var(--c-charcoal-muted))";
  * whole figure reads "16g", not "16.0g"), carbs and kcal whole — literal
  * from CentiumMealPrep.dc.html's `macroStrip`.
  */
-export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, note }) => {
+export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t: totals, note }) => {
   const dark = useIsDark();
   const rows: [string, string, string][] = [
-    [String(Math.round(t.kcal)), "kcal", PREP_CHARCOAL],
-    [`${Math.round(t.p * 10) / 10}g`, "protein", dark ? FOOD_DARK.protein : "rgb(var(--th-7d6bb5))"],
-    [`${Math.round(t.c)}g`, "carbs", dark ? FOOD_DARK.carbs : "rgb(var(--th-8175c2))"],
-    [`${Math.round(t.f * 10) / 10}g`, "fat", dark ? FOOD_DARK.fat : "#4274D7"],
+    [String(Math.round(totals.kcal)), t("kcal"), PREP_CHARCOAL],
+    [t("{n}g", { n: Math.round(totals.p * 10) / 10 }), t("protein"), dark ? FOOD_DARK.protein : "rgb(var(--th-7d6bb5))"],
+    [t("{n}g", { n: Math.round(totals.c) }), t("carbs"), dark ? FOOD_DARK.carbs : "rgb(var(--th-8175c2))"],
+    [t("{n}g", { n: Math.round(totals.f * 10) / 10 }), t("fat"), dark ? FOOD_DARK.fat : "#4274D7"],
   ];
   return (
     <div>
@@ -94,7 +95,7 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
 // Master handover item 11: meal chips run Breakfast, Snacks, Lunch, Dinner
 // (approved decision 7: "Snacks" everywhere, from the shared mealLabels).
 export const PREP_MEAL_ORDER: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
-export const prepMealLabel = (m: MealType) => mealLabels[m];
+export const prepMealLabel = (m: MealType) => t(mealLabels[m]);
 
 // Item 11: solid primary fills for the flow's own buttons (List "Create",
 // Create "Save", Detail "Add to Diary") and the selected meal pill — teal for

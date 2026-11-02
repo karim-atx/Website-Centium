@@ -1,3 +1,5 @@
+import { t } from "../../i18n/core";
+
 /**
  * The meditation log's rules, as the app and the database agreed them
  * (Database 20261006000000). Pure, so they are tested without a server.
@@ -60,13 +62,13 @@ export function breathingSaveRule(cycles: number, seconds: number | null): "save
  * rounds its own minutes (750 s reads 13 min, not 12).
  */
 export function formatMeditationTime(seconds: number): string {
-  if (seconds <= 0) return "0 min";
-  if (seconds < 60) return `${seconds} sec`;
+  if (seconds <= 0) return t("{n} min", { n: 0 });
+  if (seconds < 60) return t("{n} sec", { n: seconds });
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t("{n} min", { n: minutes });
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+  return m === 0 ? t("{h} h", { h }) : t("{h} h {m} min", { h, m });
 }
 
 export interface MeditationSummary {

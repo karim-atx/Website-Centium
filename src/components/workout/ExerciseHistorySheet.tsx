@@ -6,6 +6,7 @@ import { exerciseHistory } from "../../services/workout/history";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // Mobile v5.1 R3, dark mode (no light islands): on the card's lavender 10%
 // tint (#2B2C3A dark) the stat label takes text.secondary dark (tertiary
@@ -33,12 +34,12 @@ export const ExerciseHistorySheet: React.FC<{
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`${name} history`}>
+    <BottomSheet open={open} onClose={onClose} title={t("{name} history", { name })}>
       {entries.length === 0 ? (
         <div className="flex flex-col items-center text-center animate-fade-slide-up" style={{ padding: "26px 12px 10px", gap: 10 }}>
           <BookOpen size={20} style={{ color: "rgb(var(--thi-aea1dc))" }} />
           <p style={{ margin: 0, fontSize: textPx(13), lineHeight: linePx(20), color: "rgb(var(--c-charcoal-muted))" }}>
-            No history yet. Log this exercise in a routine to see it here.
+            {t("No history yet. Log this exercise in a routine to see it here.")}
           </p>
         </div>
       ) : (
@@ -53,20 +54,20 @@ export const ExerciseHistorySheet: React.FC<{
               </div>
               <div className="flex" style={{ gap: 22, marginTop: 8 }}>
                 <div>
-                  <p style={label(dark)}>SETS</p>
+                  <p style={label(dark)}>{t("SETS")}</p>
                   <p style={value(dark)}>{e.sets}</p>
                 </div>
                 {e.top && (
                   <div>
-                    <p style={label(dark)}>TOP SET</p>
+                    <p style={label(dark)}>{t("TOP SET")}</p>
                     <p style={value(dark)}>
-                      {e.top.weightKg} kg × {e.top.reps}
+                      {`${e.top.weightKg} kg × ${e.top.reps}`}
                     </p>
                   </div>
                 )}
                 <div>
-                  <p style={label(dark)}>VOLUME</p>
-                  <p style={value(dark)}>{e.volumeKg.toLocaleString(appLocale())} kg</p>
+                  <p style={label(dark)}>{t("VOLUME")}</p>
+                  <p style={value(dark)}>{`${e.volumeKg.toLocaleString(appLocale())} kg`}</p>
                 </div>
               </div>
               <p className="truncate" style={{ margin: "8px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{e.line}</p>

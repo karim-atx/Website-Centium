@@ -44,6 +44,7 @@ import { foodFacts } from "../../components/share/client/clientShareData";
 import { isQueuedEntry } from "../../services/food/provisional";
 import { removeQueued } from "../../services/health-log/offlineQueue";
 import { appLocale } from "../../i18n/format";
+import { t, tn, tk } from "../../i18n/core";
 
 /**
  * Dark mode: the meal cards follow the dark tokens. These are the colours
@@ -78,20 +79,23 @@ const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 // each is its own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0,
 // 5.0, 5.6:1.
 const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: string; Icon: typeof Sunrise }> = {
-  breakfast: { label: "Breakfast", fill: "rgb(var(--th-beb4e6))", fillDark: "rgb(var(--th-797292))", Icon: Sunrise },
-  snack: { label: "Snacks", fill: "rgb(var(--th-b1a5df))", fillDark: "rgb(var(--th-726a90))", Icon: Clock },
-  lunch: { label: "Lunch", fill: "rgb(var(--th-b1a5e0))", fillDark: "rgb(var(--th-726a90))", Icon: Sun },
-  dinner: { label: "Dinner", fill: "rgb(var(--th-9284c4))", fillDark: "rgb(var(--th-6b6190))", Icon: Sunset },
+  breakfast: { label: tk("Breakfast"), fill: "rgb(var(--th-beb4e6))", fillDark: "rgb(var(--th-797292))", Icon: Sunrise },
+  snack: { label: tk("Snacks"), fill: "rgb(var(--th-b1a5df))", fillDark: "rgb(var(--th-726a90))", Icon: Clock },
+  lunch: { label: tk("Lunch"), fill: "rgb(var(--th-b1a5e0))", fillDark: "rgb(var(--th-726a90))", Icon: Sun },
+  dinner: { label: tk("Dinner"), fill: "rgb(var(--th-9284c4))", fillDark: "rgb(var(--th-6b6190))", Icon: Sunset },
 };
 
 const SWIPE_THRESHOLD = 60;
 
 // Release 3 · CU13: a food_conflicts restriction or preference named as the
 // dropdown names it ("Dairy-Free").
-const restrictionName = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
-const SAVE_FAILED = "Couldn't save. Try again.";
+const restrictionName = (r: string) => {
+  const label = dietaryRestrictionOptions.find((o) => o.value === r)?.label;
+  return label ? t(label) : r;
+};
+const SAVE_FAILED = tk("Couldn't save. Try again.");
 // Round D (O12): a write refused for want of a connection says so.
-const failedLine = (lead: string, offline: boolean) => `${lead} ${offline ? OFFLINE_MESSAGE : "Try again."}`;
+const failedLine = (lead: string, offline: boolean) => t("{lead} {reason}", { lead, reason: offline ? t(OFFLINE_MESSAGE) : t("Try again.") });
 
 // The calorie hero's height (FO1 #4: 101), so its placeholder does not shift the page.
 const HERO_PLACEHOLDER_HEIGHT = 101;
@@ -103,8 +107,8 @@ function DiaryShareButton({ share, date }: { share: ReturnType<typeof useClientS
   const facts = foodFacts(foodLog, date, nutritionGoal.targetCalories);
   return (
     <ShareEntryButton
-      label="Share your food day"
-      disabledHint={facts ? null : "Nothing to share yet. Log food for this day first."}
+      label={t("Share your food day")}
+      disabledHint={facts ? null : t("Nothing to share yet. Log food for this day first.")}
       onPress={() => facts && share.open(foodCard(facts))}
       style={{ marginBlock: "-8px", marginInline: "0 -8px" }}
     />
@@ -293,7 +297,6 @@ export default function Food() {
       else ids.add(id);
       return { ...cur, ids };
     });
-  const itemsLabel = (n: number) => `${n} item${n === 1 ? "" : "s"}`;
 
   /** Database first, as handleDelete; what fails stays selected and says so. */
   const deleteSelected = async () => {
@@ -316,7 +319,7 @@ export default function Food() {
     setBulkBusy(false);
     setConfirmDelete(false);
     if (failed.size > 0) {
-      setDeleteError(failedLine(`${itemsLabel(failed.size)} couldn't be deleted.`, offline));
+      setDeleteError(failedLine(tn(failed.size, "{n} item couldn't be deleted.", "{n} items couldn't be deleted."), offline));
       setSelecting({ ...activeSelection, ids: failed });
       return;
     }
@@ -341,11 +344,11 @@ export default function Food() {
     setBulkBusy(false);
     setCopyOpen(false);
     if (copied < selectedEntries.length) {
-      setDeleteError(failedLine(`${itemsLabel(selectedEntries.length - copied)} couldn't be copied.`, offline));
+      setDeleteError(failedLine(tn(selectedEntries.length - copied, "{n} item couldn't be copied.", "{n} items couldn't be copied."), offline));
       return;
     }
     setSelecting(null);
-    setBulkToast(`Copied ${itemsLabel(copied)} to ${COPY_MEAL_LABEL[meal]}, ${copyToastDate(day)}.`);
+    setBulkToast(tn(copied, "Copied {n} item to {meal}, {date}.", "Copied {n} items to {meal}, {date}.", { meal: t(COPY_MEAL_LABEL[meal]), date: copyToastDate(day) }));
   };
 
   const handleUndo = () => {
@@ -389,14 +392,14 @@ export default function Food() {
   // label and gram readout now, instead of stacked beneath it.
   const macroRow = (label: string, value: number, target: number) => (
     <div key={label} className="flex items-center gap-2">
-      <span className="w-[42px] shrink-0 text-[9.5px] font-bold text-white">{label}</span>
+      <span className="w-[42px] shrink-0 text-[9.5px] font-bold text-white">{t(label)}</span>
       {/* FO1 #18-#20: track #FFFFFF@28% (dark @8%*), fill #FFFFFF (dark
           #1C1F28), value #FFFFFF@66% (dark #FFFFFF). */}
       <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] dark:bg-white/[0.08] overflow-hidden">
         <span className="block h-full rounded-full bg-white dark:bg-[#1C1F28]" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
       </span>
       <span className="shrink-0 text-[9px] leading-[13.5px] text-white/[0.66] dark:text-white tabular-nums">
-        {Math.round(value)} / {target}g
+        {t("{value} / {target}g", { value: Math.round(value), target })}
       </span>
     </div>
   );
@@ -417,14 +420,14 @@ export default function Food() {
       <FixedHeader paddingBottom={16}>
         {tab === "diary" && !share.locks.foodDayLocked && !hideNumbers ? (
           <div className="flex items-center justify-between mb-[11px]">
-            <h1 className="m-0 text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
+            <h1 className="m-0 text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">{t("Food")}</h1>
             <DiaryShareButton share={share} date={selectedDate} />
           </div>
         ) : (
-          <h1 className="m-0 mb-[11px] text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">Food</h1>
+          <h1 className="m-0 mb-[11px] text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal">{t("Food")}</h1>
         )}
         <SegmentedTabs
-          items={foodTabs}
+          items={foodTabs.map((x) => ({ ...x, label: t(x.label) }))}
           activeKey={tab}
           onChange={(key) => setTab(key as Tab)}
           darkTone="partB"
@@ -443,7 +446,7 @@ export default function Food() {
         // FO1 O1: skeletons #F5F5F6 / #242730, pulse 1.2 s (static under
         // Reduce motion): date pill 358×41 r9999, card 358×101 r20, four
         // meal cards 358×51 r15.
-        <div aria-busy="true" aria-label="Diary, loading" className="flex flex-col">
+        <div aria-busy="true" aria-label={t("Diary, loading")} className="flex flex-col">
           <div className="animate-skeleton-pulse bg-cream-soft rounded-full" style={{ height: 41, marginBottom: 13 }} />
           <div className="animate-skeleton-pulse bg-cream-soft rounded-[20px]" style={{ height: 101, marginBottom: 13 }} />
           <div className="flex flex-col gap-2">
@@ -468,7 +471,7 @@ export default function Food() {
             >
               <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 700 }}>
                 {/* Round D: offline with nothing kept on this device yet, say so. */}
-                {online ? "Couldn't load your diary." : "You're offline. Your diary will load when you reconnect."}
+                {online ? t("Couldn't load your diary.") : t("You're offline. Your diary will load when you reconnect.")}
               </span>
               <button
                 type="button"
@@ -476,7 +479,7 @@ export default function Food() {
                 className="tap relative shrink-0 text-primary-deep-text before:absolute before:-inset-[12px] before:content-['']"
                 style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 700 }}
               >
-                Retry
+                {t("Retry")}
               </button>
             </div>
           )}
@@ -491,7 +494,7 @@ export default function Food() {
             // FO1 K8: restyled as the skeleton (O1 colours), the hero's size.
             <div
               aria-busy="true"
-              aria-label="Today, loading"
+              aria-label={t("Today, loading")}
               className="animate-skeleton-pulse bg-cream-soft rounded-[20px] mb-[13px]"
               style={{ height: HERO_PLACEHOLDER_HEIGHT }}
             />
@@ -504,10 +507,10 @@ export default function Food() {
               style={{ minHeight: 101 }}
             >
               <p className="text-sm font-bold text-charcoal mb-1">
-                {todaysEntries.length === 0 ? "Nothing logged yet today" : `${todaysEntries.length} item${todaysEntries.length === 1 ? "" : "s"} logged today`}
+                {todaysEntries.length === 0 ? t("Nothing logged yet today") : tn(todaysEntries.length, "{n} item logged today", "{n} items logged today")}
               </p>
               <p className="text-xs text-charcoal-faint">
-                Meals, notes, and how you're feeling, no calorie counting required.
+                {t("Meals, notes, and how you're feeling, no calorie counting required.")}
               </p>
             </div>
           ) : (
@@ -524,7 +527,7 @@ export default function Food() {
                 // passed through a route param.
                 navigate("/app/food/nutrient-summary");
               }}
-              aria-label="Open Nutrient Summary"
+              aria-label={t("Open Nutrient Summary")}
               className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-start"
               style={{ background: "var(--gradient-food-hero)" }}
             >
@@ -533,20 +536,20 @@ export default function Food() {
                   <p className="text-[26px] font-extrabold leading-none tracking-[-1px] text-white tabular-nums">
                     {Math.round(totals.calories).toLocaleString(appLocale())}
                   </p>
-                  <p className="mt-1 text-[9.5px] leading-[14.3px] text-white/70 dark:text-white">of {targets.calories.toLocaleString(appLocale())} kcal</p>
+                  <p className="mt-1 text-[9.5px] leading-[14.3px] text-white/70 dark:text-white">{t("of {n} kcal", { n: targets.calories.toLocaleString(appLocale()) })}</p>
                   {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
                       record the target is a published reference intake rather
                       than anything computed from this person. */}
                   {isReferenceOnlyTarget(user) && (
                     <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/60 dark:text-white/90">
-                      {REFERENCE_INTAKE_NOTE}
+                      {t(REFERENCE_INTAKE_NOTE)}
                     </p>
                   )}
                   {/* FO1 S13: "{n} over" once the day passes its goal. */}
                   <p className="mt-[7px] inline-block text-[9.5px] leading-[14.3px] font-bold text-white bg-white/20 dark:bg-white/[0.08] rounded-full px-2 py-[3px]">
                     {Math.round(totals.calories) > targets.calories
-                      ? `${Math.round(totals.calories) - targets.calories} over`
-                      : `${targets.calories - Math.round(totals.calories)} left`}
+                      ? t("{n} over", { n: Math.round(totals.calories) - targets.calories })
+                      : t("{n} left", { n: targets.calories - Math.round(totals.calories) })}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col gap-2 pe-5">
@@ -582,7 +585,7 @@ export default function Food() {
                   >
                     <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
                     {/* Ends in "…" rather than running into the corner under Larger text (D18). */}
-                    <span className="min-w-0 truncate">{label}</span>
+                    <span className="min-w-0 truncate">{t(label)}</span>
                   </button>
                 );
               })}
@@ -593,13 +596,13 @@ export default function Food() {
               says the list may be stale rather than implying it is empty. */}
           {diaryError && !deleteError && !noCacheError && (
             <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
-              Couldn't refresh your diary. Showing what was saved on this device.
+              {t("Couldn't refresh your diary. Showing what was saved on this device.")}
             </p>
           )}
 
           {deleteError && (
             <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
-              {deleteError}
+              {t(deleteError)}
             </p>
           )}
 
@@ -648,17 +651,17 @@ export default function Food() {
                     }}
                     className="tap w-full flex items-start gap-2.5 cursor-pointer"
                     style={{ background: headBg, padding: "13px 14px", transition: "background-color .18s ease" }}
-                    aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
+                    aria-label={collapsed ? t("Expand {section}", { section: t(mealLabels[meal]) }) : t("Collapse {section}", { section: t(mealLabels[meal]) })}
                   >
                     <span className="flex-1 min-w-0 flex items-start" style={{ gap: 22 }}>
-                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">{t(mealLabels[meal])}</h3>
                       {/* FO1.1: the meal menu, with clear space after the title. */}
                       <button
                         onClick={(ev) => {
                           ev.stopPropagation();
                           setMealMenu({ meal, anchor: ev.currentTarget });
                         }}
-                        aria-label={`${mealLabels[meal]} options`}
+                        aria-label={t("{meal} options", { meal: t(mealLabels[meal]) })}
                         className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[10px] before:content-['']"
                         style={{ width: 16, height: 18, color: "rgb(var(--c-charcoal-faint))" }}
                       >
@@ -678,11 +681,11 @@ export default function Food() {
                           )}
                         </span>
                         <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
-                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>P {Math.round(mealProtein)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("P {n}g", { n: Math.round(mealProtein) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>C {Math.round(mealCarbs)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("C {n}g", { n: Math.round(mealCarbs) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>F {Math.round(mealFat)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("F {n}g", { n: Math.round(mealFat) })}</span>
                         </span>
                       </span>
                     )}
@@ -719,7 +722,7 @@ export default function Food() {
                         // it an easy target.
                         className="tap relative flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1 before:absolute before:-inset-[8px] before:content-['']"
                       >
-                        <Undo2 size={11} /> Undo
+                        <Undo2 size={11} /> {t("Undo")}
                       </button>
                     </div>
                   )}
@@ -752,7 +755,7 @@ export default function Food() {
                                     }}
                                     role="checkbox"
                                     aria-checked={checked}
-                                    aria-label={`Select ${e.name}`}
+                                    aria-label={t("Select {name}", { name: e.name })}
                                     className="tap shrink-0 flex items-center justify-center"
                                     style={{
                                       width: 20,
@@ -783,7 +786,7 @@ export default function Food() {
                                 actions={[
                                   {
                                     key: "delete",
-                                    label: `Delete ${e.name}`,
+                                    label: t("Delete {name}", { name: e.name }),
                                     icon: <Trash2 size={16} />,
                                     destructive: true,
                                     onClick: () => void handleDelete(e.id),
@@ -814,7 +817,7 @@ export default function Food() {
                                       {e.display.isLebanese && <Star size={10} className="text-gold fill-gold shrink-0" />}
                                       {restricted && (
                                         <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5 shrink-0">
-                                          Not compatible
+                                          {t("Not compatible")}
                                         </span>
                                       )}
                                       {conflictBadge && <FoodConflictBadge badge={conflictBadge} />}
@@ -822,8 +825,8 @@ export default function Food() {
                                     {/* FO1 #47 / V6-145: one line with an ellipsis. */}
                                     <span className="block truncate text-[9.5px] leading-[14.3px] text-charcoal-tertiary">
                                       {e.quantity !== 1 ? `${e.quantity} × ` : ""}
-                                      {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
-                                      {isQueuedEntry(e.id) && <span className="font-bold text-status-caution"> · Waiting to save</span>}
+                                      {e.unit && e.unit !== "serving" ? t(e.unit) : e.display.serving}
+                                      {isQueuedEntry(e.id) && <span className="font-bold text-status-caution"> · {t("Waiting to save")}</span>}
                                     </span>
                                   </span>
                                   {!hideNumbers && (
@@ -846,7 +849,7 @@ export default function Food() {
                         <div className="flex items-center gap-2 rounded-[11px] bg-teal/[0.13] border-[0.5px] border-dashed border-team-teal-deep/40 px-[11px] py-[9px] mb-2">
                           <RefreshCw size={12} className="text-team-teal-deep shrink-0" />
                           <span className="text-[10.5px] leading-[1.45] text-team-teal-ink">
-                            Swipe right or double-tap to copy yesterday's {mealLabels[meal].toLowerCase()}
+                            {t("Swipe right or double-tap to copy yesterday's {meal}", { meal: t(mealLabels[meal]).toLowerCase() })}
                           </span>
                         </div>
                       )}
@@ -862,7 +865,7 @@ export default function Food() {
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
                             style={{ height: 36, gap: 6, borderRadius: 10, background: dc("deleteBg", dark), border: `1px solid ${dc("deleteBorder", dark)}`, color: dc("deleteInk", dark), fontSize: textPx(12.5), fontWeight: 700 }}
                           >
-                            <Trash2 size={13} /> Delete ({activeSelection.ids.size})
+                            <Trash2 size={13} /> {t("Delete ({n})", { n: activeSelection.ids.size })}
                           </button>
                           <button
                             onClick={(ev) => {
@@ -873,7 +876,7 @@ export default function Food() {
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
                             style={{ height: 36, gap: 6, borderRadius: 10, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12.5), fontWeight: 700 }}
                           >
-                            <Copy size={13} /> Copy ({activeSelection.ids.size})
+                            <Copy size={13} /> {t("Copy ({n})", { n: activeSelection.ids.size })}
                           </button>
                           <button
                             onClick={(ev) => {
@@ -883,7 +886,7 @@ export default function Food() {
                             className="tap shrink-0"
                             style={{ padding: "0 8px", height: 36, color: "rgb(var(--c-charcoal-faint))", fontSize: textPx(12.5), fontWeight: 500 }}
                           >
-                            Cancel
+                            {t("Cancel")}
                           </button>
                         </div>
                       )}
@@ -894,7 +897,7 @@ export default function Food() {
                         className="tap w-full flex items-center justify-center gap-[7px] rounded-[11px] text-[11px] leading-[16.5px] font-bold text-primary-deep-text py-[9px]"
                         style={{ background: lav(0.16) }}
                       >
-                        <Plus size={13} /> {entries.length > 0 ? "Add more" : "Add food"}
+                        <Plus size={13} /> {entries.length > 0 ? t("Add more") : t("Add food")}
                       </button>
                     </div>
                   )}
@@ -917,7 +920,7 @@ export default function Food() {
         // it. Same root cause already fixed for BottomSheet via portaling.
         <button
           onClick={() => openAdd(mealForCurrentTime(), null)}
-          aria-label="Add Food"
+          aria-label={t("Add Food")}
           // 104px over the nav plus the home-indicator inset, and 20px in from
           // the right edge of the centred 430px app column (01 GLOBAL).
           // FO1 #51-#52: #AEA1DC with its shadow, dark #A991FE without; the
@@ -943,8 +946,8 @@ export default function Food() {
             onClose={() => setMealMenu(null)}
             align="left"
             options={[
-              { value: "all", label: allChecked ? "Deselect all" : "Select all", icon: <ListChecks size={14} />, disabled: empty },
-              { value: "select", label: "Select", icon: <SquareDashedMousePointer size={14} />, disabled: empty },
+              { value: "all", label: allChecked ? t("Deselect all") : t("Select all"), icon: <ListChecks size={14} />, disabled: empty },
+              { value: "select", label: t("Select"), icon: <SquareDashedMousePointer size={14} />, disabled: empty },
             ]}
             onSelect={(v) => {
               const meal = mealMenu.meal;
@@ -961,8 +964,8 @@ export default function Food() {
 
       <ConfirmCard
         open={confirmDelete && !!activeSelection}
-        title={`Delete ${itemsLabel(activeSelection?.ids.size ?? 0)} from ${activeSelection ? mealLabels[activeSelection.meal] : ""}?`}
-        subtitle={selectedDate === todayLocal() ? "They'll be removed from today's diary." : "They'll be removed from this day's diary."}
+        title={tn(activeSelection?.ids.size ?? 0, "Delete {n} item from {meal}?", "Delete {n} items from {meal}?", { meal: activeSelection ? t(mealLabels[activeSelection.meal]) : "" })}
+        subtitle={selectedDate === todayLocal() ? t("They'll be removed from today's diary.") : t("They'll be removed from this day's diary.")}
         busy={bulkBusy}
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => void deleteSelected()}
@@ -983,7 +986,7 @@ export default function Food() {
       <Toast open={!!bulkToast} message={bulkToast ?? ""} onExpire={() => setBulkToast(null)} />
       <Toast
         open={!!saveToast}
-        message={saveToast ?? ""}
+        message={t(saveToast ?? "")}
         icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
         onExpire={() => setSaveToast(null)}
       />

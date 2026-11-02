@@ -1,6 +1,7 @@
 import type { LoggedExercise, WorkoutSession } from "../../types";
 import { isWorkingSet } from "./stats";
 import { loadKg } from "./index";
+import { t, tk } from "../../i18n/core";
 
 // WO3.1 History: the period, the hero summary, each card's top sets, and the
 // volume comparison phrase.
@@ -8,12 +9,12 @@ import { loadKg } from "./index";
 export type HistoryPeriod = "week" | "month" | "year" | "all" | "day" | "custom";
 
 export const PERIOD_LABEL: Record<HistoryPeriod, string> = {
-  week: "This week",
-  month: "This month",
-  year: "This year",
-  all: "All time",
-  day: "Pick a day",
-  custom: "Custom range",
+  week: tk("This week"),
+  month: tk("This month"),
+  year: tk("This year"),
+  all: tk("All time"),
+  day: tk("Pick a day"),
+  custom: tk("Custom range"),
 };
 
 /** Inclusive ISO day bounds; null = no bound. The week starts on Monday (as WO4.1's "By week"). */
@@ -81,16 +82,16 @@ export function topSet(ex: LoggedExercise): { weightKg: number; reps: number } |
 // animal or object of that similar weight" — whichever reference is closest
 // in weight to the total volume, so a small total still gets a sensible one.
 const WEIGHT_COMPARISONS: { weight: number; label: string; emoji: string }[] = [
-  { weight: 4, label: "a housecat", emoji: "🐱" },
-  { weight: 30, label: "a Labrador", emoji: "🐕" },
-  { weight: 70, label: "an adult human", emoji: "🧍" },
-  { weight: 200, label: "a grand piano", emoji: "🎹" },
-  { weight: 380, label: "a grizzly bear", emoji: "🐻" },
-  { weight: 900, label: "a motorbike", emoji: "🏍️" },
-  { weight: 1500, label: "a small car", emoji: "🚗" },
-  { weight: 5400, label: "an elephant", emoji: "🐘" },
-  { weight: 12000, label: "a school bus", emoji: "🚌" },
-  { weight: 180000, label: "a blue whale", emoji: "🐋" },
+  { weight: 4, label: tk("a housecat"), emoji: "🐱" },
+  { weight: 30, label: tk("a Labrador"), emoji: "🐕" },
+  { weight: 70, label: tk("an adult human"), emoji: "🧍" },
+  { weight: 200, label: tk("a grand piano"), emoji: "🎹" },
+  { weight: 380, label: tk("a grizzly bear"), emoji: "🐻" },
+  { weight: 900, label: tk("a motorbike"), emoji: "🏍️" },
+  { weight: 1500, label: tk("a small car"), emoji: "🚗" },
+  { weight: 5400, label: tk("an elephant"), emoji: "🐘" },
+  { weight: 12000, label: tk("a school bus"), emoji: "🚌" },
+  { weight: 180000, label: tk("a blue whale"), emoji: "🐋" },
 ];
 
 /** WO3.1: the emoji ends the sentence. Hidden (null) at 0 kg. */
@@ -99,7 +100,7 @@ export function comparisonPhrase(totalKg: number): string | null {
   const c = WEIGHT_COMPARISONS.reduce((best, x) =>
     Math.abs(x.weight - totalKg) < Math.abs(best.weight - totalKg) ? x : best
   );
-  return `That's the equivalent of lifting ${c.label} ${c.emoji}`;
+  return t("That's the equivalent of lifting {thing} {emoji}", { thing: t(c.label), emoji: c.emoji });
 }
 
 // --- WO14: one exercise across sessions ------------------------------------

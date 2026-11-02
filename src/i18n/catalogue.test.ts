@@ -26,13 +26,16 @@ import * as member from "./ar/member.ts";
 import * as community from "./ar/community.ts";
 import * as findpros from "./ar/findpros.ts";
 import * as misc from "./ar/misc.ts";
+import * as food from "./ar/food.ts";
+import * as workout from "./ar/workout.ts";
+import * as mind from "./ar/mind.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member, community, findpros, misc };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member, community, findpros, misc, food, workout, mind };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

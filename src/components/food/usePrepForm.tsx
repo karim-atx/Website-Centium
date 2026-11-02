@@ -22,6 +22,7 @@ import type { PrepKind } from "./MealPrepFlowSheet";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
+import { t } from "../../i18n/core";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
@@ -258,7 +259,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   };
 
   // The same screen for create and edit; an edit is titled "Edit …" (03 FO3.2).
-  const title_ = editing ? (isR ? "Edit Recipe" : "Edit Meal") : isR ? "Create Recipe" : "Create Meal";
+  const title_ = editing ? (isR ? t("Edit Recipe") : t("Edit Meal")) : isR ? t("Create Recipe") : t("Create Meal");
 
   const dirty =
     !!editing &&
@@ -276,7 +277,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           onChange={(e) =>
             setFoodDraft((d) => ({ ...d, [k]: e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "") }))
           }
-          placeholder={k === "calories" ? "kcal" : k}
+          placeholder={k === "calories" ? t("kcal") : t(k)}
           inputMode="decimal"
           className="w-full rounded-[10px] bg-cream-card px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
         />
@@ -291,17 +292,17 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search food, meals or ingredients…"
+            placeholder={t("Search food, meals or ingredients…")}
             className="focus:outline-none placeholder:text-charcoal-faint"
             style={fieldStyle}
           />
           {searching ? (
             <p className="text-center text-[13px] py-4" style={{ color: PREP_FAINT }}>
-              Searching…
+              {t("Searching…")}
             </p>
           ) : results.length === 0 ? (
             <p className="text-center text-[13px] py-4" style={{ color: PREP_FAINT }}>
-              {searchEmptyLine(searchFailed, online) ?? (query.trim() ? "Nothing matches that search." : "No foods yet.")}
+              {searchEmptyLine(searchFailed, online) ?? (query.trim() ? t("Nothing matches that search.") : t("No foods yet."))}
             </p>
           ) : (
             <div className="flex flex-col gap-1.5">
@@ -325,7 +326,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                     </span>
                     {!hide && (
                       <span className="flex-none text-[12px] font-semibold tabular-nums" style={{ color: PREP_FAINT }}>
-                        {Math.round(r.calories)} kcal
+                        {t("{n} kcal", { n: Math.round(r.calories) })}
                       </span>
                     )}
                   </button>
@@ -340,20 +341,20 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             onClick={() => setCreatingFood((v) => !v)}
             className="tap self-start flex items-center gap-1 text-[12.5px] font-bold text-primary-deep-text mt-1"
           >
-            <Plus size={13} /> Create a new food
+            <Plus size={13} /> {t("Create a new food")}
           </button>
           {creatingFood && (
             <div className="flex flex-col gap-2" style={containerStyle}>
               <input
                 value={foodDraft.name}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
-                placeholder="Food name"
+                placeholder={t("Food name")}
                 className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
               <input
                 value={foodDraft.serving}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, serving: e.target.value }))}
-                placeholder="Serving size"
+                placeholder={t("Serving size")}
                 className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
               {hide ? <NutritionDetails>{draftMacros}</NutritionDetails> : draftMacros}
@@ -364,7 +365,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                 // The board's #A198DF in light, primary-fill in dark.
                 style={{ background: "rgb(var(--c-fill-cta))" }}
               >
-                Add to {isR ? "recipe" : "meal"}
+                {isR ? t("Add to recipe") : t("Add to meal")}
               </button>
             </div>
           )}
@@ -372,11 +373,11 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
       ) : (
         <div className="flex flex-col gap-2.5 animate-fade-slide-up">
           <label className="block">
-            <span className={labelClass}>{isR ? "Recipe name" : "Meal name"}</span>
+            <span className={labelClass}>{isR ? t("Recipe name") : t("Meal name")}</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={isR ? "Lentil Mujaddara" : "Post-workout bowl"}
+              placeholder={isR ? t("Lentil Mujaddara") : t("Post-workout bowl")}
               className="focus:outline-none placeholder:text-charcoal-faint"
               style={fieldStyle}
             />
@@ -384,7 +385,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
 
           {isR && (
             <label className="block">
-              <span className={labelClass}>Number of servings</span>
+              <span className={labelClass}>{t("Number of servings")}</span>
               <input
                 value={servings}
                 onChange={(e) => setServings(e.target.value.replace(/\D/g, ""))}
@@ -398,14 +399,14 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
 
           <div style={containerStyle}>
             <div className="flex items-center justify-between">
-              <p style={capsLabelStyle(PREP_FAINT)}>Ingredients</p>
+              <p style={capsLabelStyle(PREP_FAINT)}>{t("Ingredients")}</p>
               <button onClick={() => setStep("search")} className="tap flex items-center gap-1 text-[12.5px] font-bold text-primary-deep-text">
-                <Plus size={13} /> Add food
+                <Plus size={13} /> {t("Add food")}
               </button>
             </div>
             {items.length === 0 ? (
               <p className="mt-2 text-[12.5px]" style={{ color: PREP_FAINT }}>
-                No foods added yet.
+                {t("No foods added yet.")}
               </p>
             ) : (
               <div className="mt-2.5 flex flex-col gap-1.5">
@@ -415,7 +416,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                       <span className="flex-1 min-w-0 text-[13px] font-semibold truncate" style={{ color: PREP_CHARCOAL }}>
                         {it.food.name}
                       </span>
-                      <button onClick={() => removeItem(i)} aria-label={`Remove ${it.food.name}`} className="tap shrink-0 text-charcoal-faint">
+                      <button onClick={() => removeItem(i)} aria-label={t("Remove {name}", { name: it.food.name })} className="tap shrink-0 text-charcoal-faint">
                         <X size={14} />
                       </button>
                     </div>
@@ -429,7 +430,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                           return next;
                         })}
                         inputMode="decimal"
-                        aria-label={`${it.food.name} quantity`}
+                        aria-label={t("{name} quantity", { name: it.food.name })}
                         className="w-14 shrink-0 text-center focus:outline-none"
                         style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: textPx(13.5), fontWeight: 700, color: PREP_CHARCOAL }}
                       />
@@ -450,7 +451,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
                       <input
                         value={it.note ?? ""}
                         onChange={(e) => patchItem(i, { note: e.target.value })}
-                        placeholder="Note, e.g. 400g dry"
+                        placeholder={t("Note, e.g. 400g dry")}
                         className="w-full mt-1.5 rounded-[8px] px-2.5 py-1.5 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
                         style={{ background: dark ? FOOD_DARK.box : "#F4F4F6" }}
                       />
@@ -464,18 +465,18 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           {!hide && (
             <MacroStrip
               t={strip}
-              note={isR ? "Per serving, updating as ingredients are added." : "Whole meal, updating as foods are added."}
+              note={isR ? t("Per serving, updating as ingredients are added.") : t("Whole meal, updating as foods are added.")}
             />
           )}
 
           {isR && (
             <label className="block">
-              <span className={labelClass}>Steps (optional)</span>
+              <span className={labelClass}>{t("Steps (optional)")}</span>
               <textarea
                 value={steps}
                 onChange={(e) => setSteps(e.target.value)}
                 rows={3}
-                placeholder="Fry the onions until deep brown…"
+                placeholder={t("Fry the onions until deep brown…")}
                 className="focus:outline-none placeholder:text-charcoal-faint resize-none"
                 style={fieldStyle}
               />
@@ -486,7 +487,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             <PlaylistField
               value={playlist}
               onChange={setPlaylist}
-              hint="A cook-along playlist, shown with the recipe."
+              hint={t("A cook-along playlist, shown with the recipe.")}
               labelStyle={{ fontSize: 12, fontWeight: 600 }}
               inputStyle={{ background: fieldStyle.background, fontSize: fieldStyle.fontSize, fontWeight: 400, minHeight: 46 }}
             />
@@ -498,8 +499,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
             {editing && (
               <button
                 onClick={() => void doDelete()}
-                aria-label={isR ? "Delete recipe" : "Delete meal"}
-                title={isR ? "Delete recipe" : "Delete meal"}
+                aria-label={isR ? t("Delete recipe") : t("Delete meal")}
+                title={isR ? t("Delete recipe") : t("Delete meal")}
                 className="tap shrink-0 flex items-center justify-center"
                 style={{ width: 60, height: 52, borderRadius: 14, background: dark ? FOOD_DARK.dangerBg : "#FCEDEC", border: `1px solid ${dark ? FOOD_DARK.dangerBorder : "#F2CFCC"}` }}
               >
@@ -512,12 +513,12 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
               className="tap flex-1 disabled:opacity-40 disabled:pointer-events-none"
               style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind], fontSize: textPx(15.5), fontWeight: 700 }}
             >
-              {saving ? "Saving…" : editing ? "Save changes" : "Save"}
+              {saving ? t("Saving…") : editing ? t("Save changes") : t("Save")}
             </button>
           </div>
           {confirmDelete && (
             <p className="text-[12px] font-semibold text-status-high text-center">
-              Tap again to delete this {isR ? "recipe" : "meal"}
+              {isR ? t("Tap again to delete this recipe") : t("Tap again to delete this meal")}
             </p>
           )}
         </div>
@@ -526,7 +527,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   );
 
   return {
-    title: step === "search" ? "Add food" : title_,
+    title: step === "search" ? t("Add food") : title_,
     /** The search step's back returns to the form; otherwise the caller's back applies. */
     searchBack: step === "search" ? () => setStep("form") : null,
     leaveForm: () => setStep("form"),

@@ -3,6 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { hasEmailPassword } from "../auth/passwordChangeLogic";
 import { describeLockError } from "./lockLogic";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The journal, in public.journal_folders and public.journal_entries.
 //
@@ -52,35 +53,35 @@ export type WriteResult = { ok: true } | { ok: false; message: string };
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return t("Your session expired. Sign in again to save this.");
   }
-  if (code === "23514") return "That's either empty or too long to store.";
-  if (code === "23502") return "This entry has no date. Reload and try again.";
+  if (code === "23514") return t("That's either empty or too long to store.");
+  if (code === "23502") return t("This entry has no date. Reload and try again.");
   if (code === "42501") {
-    return "You don't have permission to save this. Sign in again and try once more.";
+    return t("You don't have permission to save this. Sign in again and try once more.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return t("Couldn't save that. Check your connection and try again.");
 }
 
 export function validateFolderName(name: string): string | null {
-  const t = name.trim();
-  if (t.length < 1) return "Give the folder a name.";
-  if (t.length > JOURNAL_LIMITS.folderMax) {
-    return `Keep the folder name under ${JOURNAL_LIMITS.folderMax} characters.`;
+  const n = name.trim();
+  if (n.length < 1) return t("Give the folder a name.");
+  if (n.length > JOURNAL_LIMITS.folderMax) {
+    return t("Keep the folder name under {n} characters.", { n: JOURNAL_LIMITS.folderMax });
   }
   return null;
 }
 
 export function validateEntry(title: string, body: string): string | null {
-  const t = title.trim();
+  const ti = title.trim();
   const b = body.trim();
-  if (t.length < 1) return "Give the entry a title.";
-  if (t.length > JOURNAL_LIMITS.titleMax) {
-    return `Keep the title under ${JOURNAL_LIMITS.titleMax} characters.`;
+  if (ti.length < 1) return t("Give the entry a title.");
+  if (ti.length > JOURNAL_LIMITS.titleMax) {
+    return t("Keep the title under {n} characters.", { n: JOURNAL_LIMITS.titleMax });
   }
-  if (b.length < 1) return "Write something before saving.";
+  if (b.length < 1) return t("Write something before saving.");
   if (body.length > JOURNAL_LIMITS.bodyMax) {
-    return `That's longer than ${JOURNAL_LIMITS.bodyMax.toLocaleString(appLocale())} characters.`;
+    return t("That's longer than {n} characters.", { n: JOURNAL_LIMITS.bodyMax.toLocaleString(appLocale()) });
   }
   return null;
 }
@@ -157,7 +158,7 @@ export async function createJournalFolder(
 
   if (error || !data) {
     console.error("[journal] Could not add the folder:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Couldn't add that folder." };
+    return { ok: false, message: error ? describe(error) : t("Couldn't add that folder.") };
   }
   return { ok: true, value: { id: data.id, name: data.name, position: data.position, locked: false } };
 }
@@ -191,7 +192,7 @@ export async function createJournalEntry(entry: {
 
   if (error || !data) {
     console.error("[journal] Could not save the entry:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Couldn't save that entry." };
+    return { ok: false, message: error ? describe(error) : t("Couldn't save that entry.") };
   }
   return {
     ok: true,

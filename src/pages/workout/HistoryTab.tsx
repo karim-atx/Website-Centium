@@ -34,6 +34,7 @@ import { ShareGlyph } from "../../components/share/client/ShareEntryButton";
 import { workoutCard } from "../../components/share/client/clientCardModel";
 import { weightOn, workoutFacts } from "../../components/share/client/clientShareData";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // WO3.1 · History as a card stack: a hero summary for the chosen period
 // (Total volume, Time taken, the comparison phrase, workouts and sets), then
@@ -101,7 +102,7 @@ export default function HistoryTab() {
     const info = sent[s.id];
     if (!info) return null;
     const pro = s.routineId ? routines.find((r) => r.id === s.routineId)?.assignedByProfessionalId : undefined;
-    return sentLine((pro && coachNames[pro]) || "your coach", info.swaps);
+    return sentLine((pro && coachNames[pro]) || t("your coach"), info.swaps);
   };
   const [period, setPeriod] = useState<HistoryPeriod>("month");
   const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
@@ -138,8 +139,8 @@ export default function HistoryTab() {
     focused.current = focusId;
     setPeriod("all");
     setExpandedId(focusId);
-    const t = window.setTimeout(() => document.getElementById(`session-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => document.getElementById(`session-${focusId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }), 80);
+    return () => window.clearTimeout(timer);
     // Once per link, when the session is in the list.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId, workoutSessions.length]);
@@ -153,13 +154,13 @@ export default function HistoryTab() {
   const flush = () => {
     const p = pending.current;
     pending.current = null;
-    if (p?.commit) void p.commit().then((m) => m && setError(m));
+    if (p?.commit) void p.commit().then((m) => m && setError(t(m)));
   };
   useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
-  const showToast = (t: ToastState) => {
+  const showToast = (next: ToastState) => {
     flush();
-    pending.current = t.commit ? t : null;
-    setToast(t);
+    pending.current = next.commit ? next : null;
+    setToast(next);
   };
 
   const familyOf = (s: WorkoutSession): FolderFamily => {
@@ -172,13 +173,15 @@ export default function HistoryTab() {
     const from = s.date;
     const message = await moveWorkoutSession(s.id, date);
     if (message) {
-      setError(message);
+      setError(t(message));
       return;
     }
     setError(null);
     const outside = !inRange(date, range);
     showToast({
-      message: outside ? `Moved to ${shortDate(date)} (outside ${period === "day" && custom ? shortDate(custom.from) : PERIOD_LABEL[period]}).` : `Moved to ${shortDate(date)}.`,
+      message: outside
+        ? t("Moved to {date} (outside {period}).", { date: shortDate(date), period: period === "day" && custom ? shortDate(custom.from) : t(PERIOD_LABEL[period]) })
+        : t("Moved to {date}.", { date: shortDate(date) }),
       undo: () => void moveWorkoutSession(s.id, from),
     });
   };
@@ -191,7 +194,7 @@ export default function HistoryTab() {
     if (!handle) return;
     if (expandedId === s.id) setExpandedId(null);
     showToast({
-      message: "Workout deleted.",
+      message: t("Workout deleted."),
       icon: <Trash2 size={14} className="flex-none" style={{ color: "rgb(var(--thi-a2c8c2))" }} />,
       undo: handle.undo,
       commit: handle.commit,
@@ -201,7 +204,7 @@ export default function HistoryTab() {
   return (
     <div className="animate-fade-slide-up">
       <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Summary</p>
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">{t("Summary")}</p>
         <button
           onClick={(e) => setMenuAnchor(e.currentTarget)}
           className="tap flex items-center bg-cream-card"
@@ -214,7 +217,7 @@ export default function HistoryTab() {
               ? custom.from === custom.to
                 ? shortDate(custom.from)
                 : `${shortDate(custom.from)} – ${shortDate(custom.to)}`
-              : PERIOD_LABEL[period]}
+              : t(PERIOD_LABEL[period])}
           </span>
           <ChevronDown size={14} style={{ color: chipColor("chevron") }} />
         </button>
@@ -228,7 +231,7 @@ export default function HistoryTab() {
             <div className="flex items-start justify-between" style={{ gap: 12 }}>
               <div className="min-w-0">
                 <p style={{ margin: 0, fontSize: textPx(8.5), lineHeight: linePx(12), fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
-                  TOTAL VOLUME
+                  {t("TOTAL VOLUME")}
                 </p>
                 <p className="flex items-baseline" style={{ margin: "3px 0 0", height: 28, whiteSpace: "nowrap" }}>
                   <span style={{ fontSize: textPx(24), lineHeight: linePx(28), fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{summary.volumeKg.toLocaleString(appLocale())}</span>
@@ -237,7 +240,7 @@ export default function HistoryTab() {
               </div>
               <div className="text-end flex-none">
                 <p style={{ margin: 0, fontSize: textPx(8.5), lineHeight: linePx(12), fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.72)" }}>
-                  TIME TAKEN
+                  {t("TIME TAKEN")}
                 </p>
                 <p style={{ margin: "3px 0 0", fontSize: textPx(18), lineHeight: linePx(24), fontWeight: 800 }}>{formatCompactDuration(summary.seconds)}</p>
               </div>
@@ -252,27 +255,28 @@ export default function HistoryTab() {
             <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <CalendarDays size={12} />
               <span>
-                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.workouts}</b> {summary.workouts === 1 ? "workout" : "workouts"}
+                {/* The count is bold inside the sentence: {n} is split around the words. */}
+                <CountWords n={summary.workouts} shown={String(summary.workouts)} words={tn(summary.workouts, "{n} workout", "{n} workouts")} />
               </span>
             </span>
             <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <Dumbbell size={12} />
               <span>
-                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.sets.toLocaleString(appLocale())}</b> {summary.sets === 1 ? "set" : "sets"}
+                <CountWords n={summary.sets} shown={summary.sets.toLocaleString(appLocale())} words={tn(summary.sets, "{n} set", "{n} sets")} />
               </span>
             </span>
           </div>
         }
       />
 
-      {error && <p className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 10 }}>{error}</p>}
+      {error && <p className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 10 }}>{t(error)}</p>}
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide" style={{ margin: "20px 0 10px" }}>
-        Logged sessions
+        {t("Logged sessions")}
       </p>
 
       {listed.length === 0 ? (
-        <p className="text-center text-sm text-charcoal-faint py-8">No logged workouts yet. Finish a routine to see it here.</p>
+        <p className="text-center text-sm text-charcoal-faint py-8">{t("No logged workouts yet. Finish a routine to see it here.")}</p>
       ) : (
         <div className="flex flex-col" style={{ gap: 8 }}>
           {listed.map((s) => (
@@ -296,7 +300,7 @@ export default function HistoryTab() {
         open={!!menuAnchor}
         anchor={menuAnchor}
         onClose={() => setMenuAnchor(null)}
-        options={PERIODS.map((p) => ({ value: p, label: PERIOD_LABEL[p] }))}
+        options={PERIODS.map((p) => ({ value: p, label: t(PERIOD_LABEL[p]) }))}
         selected={period}
         onSelect={(p) => {
           if (p === "custom") setRangeStep({ step: "from" });
@@ -310,7 +314,7 @@ export default function HistoryTab() {
       <CalendarPickerSheet
         open={pickingDay}
         onClose={() => setPickingDay(false)}
-        title="Choose a date"
+        title={t("Choose a date")}
         selectedDate={period === "day" && custom ? custom.from : today}
         today={today}
         maxDate={today}
@@ -325,7 +329,7 @@ export default function HistoryTab() {
       <CalendarPickerSheet
         open={!!rangeStep}
         onClose={() => setRangeStep(null)}
-        title={rangeStep?.step === "to" ? "End date" : "Start date"}
+        title={rangeStep?.step === "to" ? t("End date") : t("Start date")}
         selectedDate={rangeStep?.from ?? custom?.from ?? today}
         today={today}
         maxDate={today}
@@ -346,7 +350,7 @@ export default function HistoryTab() {
       <CalendarPickerSheet
         open={!!moving}
         onClose={() => setMoving(null)}
-        title="Change workout date"
+        title={t("Change workout date")}
         selectedDate={moving?.date ?? today}
         today={today}
         maxDate={today}
@@ -356,7 +360,7 @@ export default function HistoryTab() {
 
       <ConfirmCard
         open={!!deleting}
-        title="Delete this workout?"
+        title={t("Delete this workout?")}
         subtitle={deleting ? `${deleting.routineName} · ${shortDate(deleting.date)} · ${deleting.totalVolumeKg.toLocaleString(appLocale())} kg` : undefined}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
@@ -387,6 +391,23 @@ export default function HistoryTab() {
 }
 
 const LIST_LIMIT = 5;
+
+/**
+ * A count sentence with its number in bold ("**3** workouts"): the translated
+ * words around the number, which may come before or after it in Arabic.
+ */
+const CountWords: React.FC<{ n: number; shown: string; words: string }> = ({ n, shown, words }) => {
+  const at = words.indexOf(String(n));
+  const bold = <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{shown}</b>;
+  if (at < 0) return <>{words}</>;
+  return (
+    <>
+      {words.slice(0, at)}
+      {bold}
+      {words.slice(at + String(n).length)}
+    </>
+  );
+};
 
 /**
  * One logged session (WO3.1): a date block in the routine's folder-header
@@ -423,17 +444,17 @@ const SessionCard: React.FC<{
     <SwipeActions
       radius={14}
       actions={[
-        { key: "date", label: "Change date", icon: <Pencil size={16} />, onClick: onChangeDate },
+        { key: "date", label: t("Change date"), icon: <Pencil size={16} />, onClick: onChangeDate },
         // C-SH.1 e2History: the Share tile (#F0EDF9, the #7D6BB5 share glyph).
-        ...(onShare ? [{ key: "share", label: "Share", ariaLabel: `Share ${session.routineName}`, icon: <ShareGlyph size={15} color="currentColor" />, onClick: onShare, light: { fill: "#F0EDF9", ink: "#7D6BB5" } }] : []),
-        { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: onDelete, destructive: true },
+        ...(onShare ? [{ key: "share", label: t("Share"), ariaLabel: t("Share {name}", { name: session.routineName }), icon: <ShareGlyph size={15} color="currentColor" />, onClick: onShare, light: { fill: "#F0EDF9", ink: "#7D6BB5" } }] : []),
+        { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, onClick: onDelete, destructive: true },
       ]}
     >
       <div id={`session-${session.id}`} className="overflow-hidden" style={{ borderRadius: 14, background: family.row }}>
         <div className="flex" style={{ minHeight: 63 }}>
           <button
             onClick={onChangeDate}
-            aria-label={`Change date of ${session.routineName}`}
+            aria-label={t("Change date of {name}", { name: session.routineName })}
             className="tap flex-none flex flex-col items-center justify-center"
             // The folder header's ink (headInk): near-black on the light
             // folder colours, white on Black, so the date reads at 4.5:1.
@@ -451,7 +472,8 @@ const SessionCard: React.FC<{
                 {session.routineName}
               </span>
               <span className="block truncate" style={{ marginTop: 3, fontSize: textPx(11.5), lineHeight: linePx(15), color: "rgb(var(--c-charcoal-muted))" }}>
-                {session.totalVolumeKg.toLocaleString(appLocale())} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
+                {/* kg stays as data (the unit), as on the hero. */}
+                {`${session.totalVolumeKg.toLocaleString(appLocale())} kg · ${formatCompactDuration(session.durationSec)} · ${tn(exercises.length, "{n} ex", "{n} ex")}`}
               </span>
               {sentText && (
                 // CU1 v4: 6 under the meta, send 12 and 11.5/700 in the
@@ -510,7 +532,7 @@ const SessionCard: React.FC<{
                     {ex.name}
                   </span>
                   <span className="flex-none" style={{ fontSize: textPx(12), lineHeight: linePx(19), color: "rgb(var(--c-charcoal-soft))", whiteSpace: "nowrap" }}>
-                    {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? `${done} ${done === 1 ? "set" : "sets"}` : ""}
+                    {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? tn(done, "{n} set", "{n} sets") : ""}
                   </span>
                 </div>
               );
@@ -521,7 +543,7 @@ const SessionCard: React.FC<{
                 className="tap flex items-center"
                 style={{ paddingBlock: "7px 0", paddingInline: "2px 0", gap: 12, fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
               >
-                <Plus size={12} strokeWidth={2.4} /> {more} more {more === 1 ? "exercise" : "exercises"}
+                <Plus size={12} strokeWidth={2.4} /> {tn(more, "{n} more exercise", "{n} more exercises")}
               </button>
             )}
           </div>

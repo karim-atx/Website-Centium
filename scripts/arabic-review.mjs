@@ -37,6 +37,9 @@ const AREAS = [
   ["community", "Community, forum, courses, client forms and appointments"],
   ["findpros", "Finding professionals, their profiles and public pages"],
   ["misc", "Other member screens (hire, folders, music, reminders, outbox)"],
+  ["food", "Food: logging, meal prep, goals and nutrients"],
+  ["workout", "Workout: routines, sessions, history and metrics"],
+  ["mind", "Mind: meditation, journal, habits and achievements"],
 ];
 
 const rows = [];

@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { MeditationSummary } from "./logic";
+import { tk } from "../../i18n/core";
 
 // The meditation log (Database 20261006000000..40000).
 //
@@ -45,11 +46,12 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
     if (!error) return { ok: true };
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     // ATX02: 20 sessions an hour. Real use does not reach it.
-    if (error.code === "ATX02") return { ok: false, message: "That's a lot of sessions in an hour. Try again a little later." };
+    // Messages stay English here (the runners compare them); the screen shows them through t().
+    if (error.code === "ATX02") return { ok: false, message: tk("That's a lot of sessions in an hour. Try again a little later.") };
     console.error("[meditation] Could not save a session:", error.code, error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   } catch (e) {
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't save. Try again." };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't save. Try again.") };
   }
 }
 

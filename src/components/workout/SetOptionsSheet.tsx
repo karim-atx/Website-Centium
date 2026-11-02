@@ -10,6 +10,7 @@ import { rpeOptions } from "../../services/workout";
 import { HANDOVER_SET_TYPES, setKind, type HandoverSetType } from "../../services/workout/stats";
 import { SET_TARGET_NOTE_MAX, TARGET_RPE_CHOICES } from "../../services/workout/setTargets";
 import { textPx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 
 /** What the popup hands back; the logger applies the type through its own rules. */
 export interface SetOptionsResult {
@@ -26,10 +27,10 @@ export interface SetOptionsResult {
 // (WO10 a.); Warm up and Drop set keep the repo's existing lines. The
 // handover gives none for Failed or Skipped, so they show nothing.
 const TYPE_BLURB: Partial<Record<HandoverSetType, string>> = {
-  normal: "A working set.",
-  pr: "A new best for this exercise.",
-  warmup: "Building up, not counted as work.",
-  drop: "Straight into a lighter load.",
+  normal: tk("A working set."),
+  pr: tk("A new best for this exercise."),
+  warmup: tk("Building up, not counted as work."),
+  drop: tk("Straight into a lighter load."),
 };
 
 // RPE runs 6 → 10 in one row (WO10), scrollable if needed.
@@ -208,7 +209,7 @@ export const SetOptionsSheet: React.FC<{
             onClose();
           }}
         >
-          Save set options
+          {t("Save set options")}
         </Button>
       }
     >
@@ -218,15 +219,15 @@ export const SetOptionsSheet: React.FC<{
       )}
       <div className="flex flex-col" style={{ gap: 12 }}>
         <div>
-          <p style={sectionLabel}>Type</p>
+          <p style={sectionLabel}>{t("Type")}</p>
           <div className="grid grid-cols-3" style={{ gap: 6 }}>
-            {HANDOVER_SET_TYPES.filter((t) => (coach ? COACH_TYPES.includes(t.value) : t.value !== "normal")).map((t) => {
-              const on = kind === t.value;
-              const color = typeStyles(dark)[t.value as Exclude<HandoverSetType, "normal">].dot;
+            {HANDOVER_SET_TYPES.filter((ty) => (coach ? COACH_TYPES.includes(ty.value) : ty.value !== "normal")).map((ty) => {
+              const on = kind === ty.value;
+              const color = typeStyles(dark)[ty.value as Exclude<HandoverSetType, "normal">].dot;
               return (
                 <button
-                  key={t.value}
-                  onClick={() => setKindState(on ? "normal" : t.value)}
+                  key={ty.value}
+                  onClick={() => setKindState(on ? "normal" : ty.value)}
                   aria-pressed={on}
                   className="tap transition-colors"
                   style={{
@@ -239,31 +240,31 @@ export const SetOptionsSheet: React.FC<{
                     fontWeight: on ? 600 : 500,
                   }}
                 >
-                  {t.label}
+                  {t(ty.label)}
                 </button>
               );
             })}
           </div>
-          {TYPE_BLURB[kind] && <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{TYPE_BLURB[kind]}</p>}
+          {TYPE_BLURB[kind] && <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t(TYPE_BLURB[kind] ?? "")}</p>}
         </div>
 
         {coach && (
           <div>
             <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
-              <p style={{ ...sectionLabel, margin: 0 }}>Target RPE</p>
+              <p style={{ ...sectionLabel, margin: 0 }}>{t("Target RPE")}</p>
               <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
                 {pickedRpe != null
-                  ? "Set by you"
+                  ? t("Set by you")
                   : kind === "warmup"
-                    ? `Warm-up RPE ${WARMUP_RPE}`
+                    ? t("Warm-up RPE {rpe}", { rpe: WARMUP_RPE })
                     : coach.coachRpe != null
-                      ? "Same as the exercise"
-                      : "Optional"}
+                      ? t("Same as the exercise")
+                      : t("Optional")}
               </span>
             </div>
             {/* Round D (TR11): one target per set, 1 to 10 in halves. Tap the
                 chosen one again to go back to the exercise's RPE. */}
-            <div ref={rpeRowRef} className="flex scroll-row no-scrollbar" style={{ gap: 6 }} role="group" aria-label="Target RPE">
+            <div ref={rpeRowRef} className="flex scroll-row no-scrollbar" style={{ gap: 6 }} role="group" aria-label={t("Target RPE")}>
               {TARGET_RPE_CHOICES.map((r) => (
                 <button
                   key={r}
@@ -281,7 +282,7 @@ export const SetOptionsSheet: React.FC<{
             {pickedRpe == null && kind === "warmup" && coach.coachRpe != null && coach.coachRpe !== WARMUP_RPE && (
               <p className="flex items-start" style={{ gap: 6, margin: "8px 0 0", fontSize: textPx(11.5), color: "rgb(var(--c-charcoal-muted))" }}>
                 <Info size={13} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />
-                {`Switched to the warm-up RPE automatically. Clear Warm up to restore your RPE ${coach.coachRpe}.`}
+                {t("Switched to the warm-up RPE automatically. Clear Warm up to restore your RPE {rpe}.", { rpe: coach.coachRpe })}
               </p>
             )}
           </div>
@@ -293,7 +294,7 @@ export const SetOptionsSheet: React.FC<{
           <div style={{ background: optionsColor("notesBox", dark), borderRadius: 14, padding: "10px 12px" }}>
             <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
               <label htmlFor="set-target-note" style={{ fontSize: textPx(13), fontWeight: 500, color: optionsColor("notesLabel", dark) }}>
-                Notes
+                {t("Notes")}
               </label>
               <span className="tabular-nums" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
                 {notes.length}/{SET_TARGET_NOTE_MAX}
@@ -304,18 +305,18 @@ export const SetOptionsSheet: React.FC<{
               value={notes}
               onChange={(e) => setNotes(e.target.value.slice(0, SET_TARGET_NOTE_MAX))}
               maxLength={SET_TARGET_NOTE_MAX}
-              placeholder="e.g. keep the back flat"
+              placeholder={t("e.g. keep the back flat")}
               className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "9px 12px", fontSize: textPx(14) }}
             />
-            <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>Your client sees this under the set.</p>
+            <p style={{ margin: "6px 0 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t("Your client sees this under the set.")}</p>
           </div>
         )}
 
         {!coach && (
         <>
         <div>
-          <p style={sectionLabel}>RPE</p>
+          <p style={sectionLabel}>{t("RPE")}</p>
           <div className="flex scroll-row no-scrollbar" style={{ gap: 6 }}>
             {RPE_ASCENDING.map((r) => (
               <button
@@ -340,7 +341,7 @@ export const SetOptionsSheet: React.FC<{
           </div>
           {target?.rpe != null && (
             <p id="rpe-target-note" style={{ margin: "6px 0 0", fontSize: textPx(11), color: optionsColor("targetInk", dark) }}>
-              Teal outline: {target.coachName}'s target.
+              {t("Teal outline: {name}'s target.", { name: target.coachName })}
             </p>
           )}
         </div>
@@ -348,7 +349,7 @@ export const SetOptionsSheet: React.FC<{
         <div>
           {/* V9 (QA 9.0): Pain level above Mood, starting at zero. */}
           <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
-            <p style={{ ...sectionLabel, margin: 0 }}>Pain level</p>
+            <p style={{ ...sectionLabel, margin: 0 }}>{t("Pain level")}</p>
             <span className="tabular-nums" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{pain} / 10</span>
           </div>
           <input
@@ -358,19 +359,19 @@ export const SetOptionsSheet: React.FC<{
             step={1}
             value={pain}
             onChange={(e) => setPain(Number(e.target.value))}
-            aria-label="Pain level"
+            aria-label={t("Pain level")}
             className="set-slider w-full"
             style={sliderStyle(pain, 0, 10, painColor, painColor, dark)}
           />
           <div className="flex items-center justify-between" style={{ fontSize: textPx(10), color: optionsColor("caption", dark), marginTop: 2 }}>
-            <span>No injury</span>
-            <span>Severe pain</span>
+            <span>{t("No injury")}</span>
+            <span>{t("Severe pain")}</span>
           </div>
         </div>
 
         <div>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
-            <p style={{ ...sectionLabel, margin: 0 }}>Mood</p>
+            <p style={{ ...sectionLabel, margin: 0 }}>{t("Mood")}</p>
             <span className="tabular-nums" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{mood} / 10</span>
           </div>
           {/* WO10: matches Pain level, with a pink fill (frame #D987AC thumb). */}
@@ -381,26 +382,26 @@ export const SetOptionsSheet: React.FC<{
             step={1}
             value={mood}
             onChange={(e) => setMood(Number(e.target.value))}
-            aria-label="Mood"
+            aria-label={t("Mood")}
             className="set-slider w-full"
             style={sliderStyle(mood, 1, 10, "#E8A3C0", "#D987AC", dark)}
           />
           <div className="flex items-center justify-between" style={{ fontSize: textPx(10), color: optionsColor("caption", dark), marginTop: 2 }}>
-            <span>Bad mood</span>
-            <span>Very good</span>
+            <span>{t("Bad mood")}</span>
+            <span>{t("Very good")}</span>
           </div>
         </div>
 
         <div style={{ background: optionsColor("notesBox", dark), borderRadius: 14, padding: "10px 12px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
             <label htmlFor="set-notes" style={{ fontSize: textPx(13), fontWeight: 500, color: optionsColor("notesLabel", dark) }}>
-              Notes
+              {t("Notes")}
             </label>
             <button
               onClick={() => setPinned((p) => !p)}
               disabled={!hasNote}
               aria-pressed={pinned && hasNote}
-              aria-label={pinned && hasNote ? "Unpin this note from the exercise" : "Pin this note to the exercise"}
+              aria-label={pinned && hasNote ? t("Unpin this note from the exercise") : t("Pin this note to the exercise")}
               className="tap relative flex items-center justify-center disabled:opacity-40 before:absolute before:-inset-[12px] before:content-['']"
               style={{ width: 20, height: 20, color: pinned && hasNote ? optionsColor("pinned", dark) : optionsColor("pinIdle", dark) }}
             >
@@ -411,13 +412,13 @@ export const SetOptionsSheet: React.FC<{
             id="set-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="e.g. felt heavy, elbow twinge…"
+            placeholder={t("e.g. felt heavy, elbow twinge…")}
             className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "9px 12px", fontSize: textPx(14) }}
           />
           {pinned && hasNote && (
             <p style={{ margin: "8px 0 0", fontSize: textPx(11), fontWeight: 600, color: optionsColor("pinned", dark) }}>
-              Pinned to this exercise in {routineName}
+              {t("Pinned to this exercise in {routine}", { routine: routineName })}
             </p>
           )}
         </div>

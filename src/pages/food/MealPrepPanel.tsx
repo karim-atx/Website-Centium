@@ -20,6 +20,7 @@ import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
 import { brandServing } from "../../services/food/onlineSearchModel";
 import { textPx } from "../../theme/textSize";
+import { t, tn, tk } from "../../i18n/core";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
 // load-error lines ask the user to "Pull to retry" (Part 4 Q7).
@@ -32,9 +33,9 @@ export type SubTab = "meals" | "recipes" | "foods";
 // `ink` is the text on `color`: white, or on-primary-fill (white in light
 // mode) on the primary fill, which dark mode makes the light lavender.
 const SUB: Record<SubTab, { label: string; color: string; ink: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
-  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "rgb(var(--th-4f7f78))", create: "Create Meal", empty: "No meal prep yet", emptyText: "rgb(var(--th-5f8681))" },
-  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "rgb(var(--th-f0eef9))", icon: "rgb(var(--th-816fb7))", create: "Create Recipe", empty: "No recipes yet", emptyText: "rgb(var(--th-7a6db0))" },
-  foods: { label: "Custom Foods", color: "rgb(var(--c-fill-foods))", ink: "rgb(var(--c-on-primary-fill))", row: "rgb(var(--th-f1eefb))", icon: "rgb(var(--th-7d67d9))", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "rgb(var(--th-7d67d9))" },
+  meals: { label: tk("Meal Prep"), color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "rgb(var(--th-4f7f78))", create: tk("Create Meal"), empty: tk("No meal prep yet"), emptyText: "rgb(var(--th-5f8681))" },
+  recipes: { label: tk("Recipes"), color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "rgb(var(--th-f0eef9))", icon: "rgb(var(--th-816fb7))", create: tk("Create Recipe"), empty: tk("No recipes yet"), emptyText: "rgb(var(--th-7a6db0))" },
+  foods: { label: tk("Custom Foods"), color: "rgb(var(--c-fill-foods))", ink: "rgb(var(--c-on-primary-fill))", row: "rgb(var(--th-f1eefb))", icon: "rgb(var(--th-7d67d9))", create: tk("Create Custom Food"), empty: tk("No custom foods yet"), emptyText: "rgb(var(--th-7d67d9))" },
 };
 // Mobile v5.1 R3, dark mode (no light islands): the rows' tints are
 // secondary.tint (meals) and primary.tint (recipes, foods) dark; the icons and
@@ -68,7 +69,7 @@ type Opened =
 export function MealPrepSubTabs({ sub, onChange }: { sub: SubTab; onChange: (s: SubTab) => void }) {
   const dark = useIsDark();
   return (
-    <div role="tablist" aria-label="Custom" className="flex" style={{ background: TABS_CONTAINER[dark ? 1 : 0], borderRadius: 12, padding: 4, gap: 4 }}>
+    <div role="tablist" aria-label={t("Custom")} className="flex" style={{ background: TABS_CONTAINER[dark ? 1 : 0], borderRadius: 12, padding: 4, gap: 4 }}>
       {SUB_ORDER.map((k) => (
         <button
           key={k}
@@ -85,7 +86,7 @@ export function MealPrepSubTabs({ sub, onChange }: { sub: SubTab; onChange: (s: 
             fontWeight: sub === k ? 700 : 600,
           }}
         >
-          {SUB[k].label}
+          {t(SUB[k].label)}
         </button>
       ))}
     </div>
@@ -169,7 +170,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
     const target = deleting.open;
     if (target.kind === "foods") {
       const result = await deleteCustomFood(target.food.id);
-      if (!result.ok) setDeleteError(result.message ?? "Couldn't delete that food.");
+      if (!result.ok) setDeleteError(result.message ?? t("Couldn't delete that food."));
       else {
         forgetCustomFood(target.food.id);
         setFoods((prev) => prev.filter((f) => f.id !== target.food.id));
@@ -180,7 +181,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
     setDeleting(null);
   };
 
-  const t = dark ? { ...SUB[sub], ...SUB_DARK[sub] } : SUB[sub];
+  const st = dark ? { ...SUB[sub], ...SUB_DARK[sub] } : SUB[sub];
   // Newest first: recipes already arrive that way (getRecipes orders
   // descending); custom meals keep their ascending query and are reversed.
   const mealsNewest = customMeals.slice().reverse();
@@ -191,7 +192,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
           open: { kind: "meals", id: m.id, edit: false },
           name: m.title,
           // Decision 12: "N ingredients · kcal"; there is no servings column.
-          detail: `${m.items.length} ingredient${m.items.length === 1 ? "" : "s"}${kcalPart(`${Math.round(sumItems(m.items as PrepItem[]).kcal)} kcal`)}`,
+          detail: `${tn(m.items.length, "{n} ingredient", "{n} ingredients")}${kcalPart(t("{n} kcal", { n: Math.round(sumItems(m.items as PrepItem[]).kcal) }))}`,
           icon: <Package size={16} />,
           iconBg: "rgb(var(--c-cream-card))",
         }))
@@ -199,7 +200,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
         ? recipes.map((r) => ({
             open: { kind: "recipes", id: r.id, edit: false },
             name: r.title,
-            detail: `${r.items.length} ingredient${r.items.length === 1 ? "" : "s"}${kcalPart(`${Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal)} kcal / serving`)}`,
+            detail: `${tn(r.items.length, "{n} ingredient", "{n} ingredients")}${kcalPart(t("{n} kcal / serving", { n: Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal) }))}`,
             icon: <Soup size={16} />,
             iconBg: "rgb(var(--c-cream-card))",
           }))
@@ -209,7 +210,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
             return {
               open: { kind: "foods", food: f, edit: false },
               name: f.name,
-              detail: `${brandServing(f.brand, f.servingLabel)}${kcalPart(`${Math.round(f.calories)} kcal`)}`,
+              detail: `${brandServing(f.brand, f.servingLabel)}${kcalPart(t("{n} kcal", { n: Math.round(f.calories) }))}`,
               icon: <Icon size={16} style={tone ? { color: tone.fg } : undefined} />,
               iconBg: tone ? tone.bg : "rgb(var(--c-cream-card))",
             };
@@ -217,10 +218,10 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
   const error = sub === "meals" ? customMealsError : sub === "recipes" ? recipesError : foodsError;
   const errorText =
     sub === "meals"
-      ? "Couldn't load your meals. Pull to retry."
+      ? t("Couldn't load your meals. Pull to retry.")
       : sub === "recipes"
-        ? "Couldn't load your recipes. Pull to retry."
-        : "Couldn't load your custom foods. Pull to retry.";
+        ? t("Couldn't load your recipes. Pull to retry.")
+        : t("Couldn't load your custom foods. Pull to retry.");
 
   return (
     <div
@@ -236,7 +237,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
       {(pullY > 0 || refreshing) && (
         <div className="flex items-center justify-center overflow-hidden" style={{ height: refreshing ? 28 : pullY }}>
           <p className="text-[10px] font-semibold text-charcoal-faint">
-            {refreshing ? "Refreshing…" : pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+            {refreshing ? t("Refreshing…") : pullY >= PULL_THRESHOLD ? t("Release to refresh") : t("Pull to refresh")}
           </p>
         </div>
       )}
@@ -250,12 +251,12 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
         {error ? (
           <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
         ) : rows.length === 0 ? (
-          <div className="flex items-center justify-center" style={{ height: 76, borderRadius: 16, background: t.row }}>
-            <p style={{ margin: 0, fontSize: textPx(13), color: t.emptyText }}>{t.empty}</p>
+          <div className="flex items-center justify-center" style={{ height: 76, borderRadius: 16, background: st.row }}>
+            <p style={{ margin: 0, fontSize: textPx(13), color: st.emptyText }}>{t(st.empty)}</p>
           </div>
         ) : (
           rows.map((r) => (
-            <div key={r.open.kind === "foods" ? r.open.food.id : r.open.id} className="flex items-center" style={{ background: t.row, borderRadius: 12 }}>
+            <div key={r.open.kind === "foods" ? r.open.food.id : r.open.id} className="flex items-center" style={{ background: st.row, borderRadius: 12 }}>
               <button
                 onClick={() => setOpened(r.open)}
                 className="tap flex-1 min-w-0 flex items-center text-start"
@@ -263,7 +264,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
               >
                 <span
                   className="flex items-center justify-center flex-none"
-                  style={{ width: 34, height: 34, borderRadius: 10, background: r.iconBg, color: t.icon }}
+                  style={{ width: 34, height: 34, borderRadius: 10, background: r.iconBg, color: st.icon }}
                 >
                   {r.icon}
                 </span>
@@ -278,7 +279,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
               </button>
               <button
                 onClick={(e) => setMenu({ anchor: e.currentTarget, open: r.open })}
-                aria-label={`${r.name} options`}
+                aria-label={t("{name} options", { name: r.name })}
                 className="tap flex items-center justify-center flex-none"
                 style={{ width: 40, height: 44, color: "rgb(var(--c-charcoal-muted))" }}
               >
@@ -287,7 +288,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
             </div>
           ))
         )}
-        {deleteError && <p className="text-xs font-semibold text-status-high">{deleteError}</p>}
+        {deleteError && <p className="text-xs font-semibold text-status-high">{t(deleteError)}</p>}
       </div>
 
       {/* The create button, pinned above the nav bar. Portaled: the tab's
@@ -304,13 +305,13 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
           height: 44,
           gap: 7,
           borderRadius: 12,
-          background: t.color,
-          color: t.ink,
+          background: st.color,
+          color: st.ink,
           fontSize: textPx(13.5),
           fontWeight: 700,
         }}
       >
-        <Plus size={15} /> {t.create}
+        <Plus size={15} /> {t(st.create)}
       </button>,
         document.body
       )}
@@ -322,8 +323,8 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
           onClose={() => setMenu(null)}
           width={132}
           options={[
-            { value: "edit", label: "Edit", icon: <Pencil size={14} /> },
-            { value: "delete", label: "Delete", icon: <Trash2 size={14} />, destructive: true },
+            { value: "edit", label: t("Edit"), icon: <Pencil size={14} /> },
+            { value: "delete", label: t("Delete"), icon: <Trash2 size={14} />, destructive: true },
           ]}
           onSelect={(v) => {
             const target = menu.open;
@@ -342,13 +343,13 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
 
       <ConfirmCard
         open={!!deleting}
-        title={`Delete ${deleting?.name || "this item"}?`}
+        title={deleting?.name ? t("Delete {name}?", { name: deleting.name }) : t("Delete this item?")}
         subtitle={
           deleting?.open.kind === "foods"
-            ? "It's removed from your foods and from any recipes and meals that use it. Past diary entries stay."
+            ? t("It's removed from your foods and from any recipes and meals that use it. Past diary entries stay.")
             : deleting?.open.kind === "recipes"
-              ? "The recipe is removed. Past diary entries stay."
-              : "The meal is removed. Past diary entries stay."
+              ? t("The recipe is removed. Past diary entries stay.")
+              : t("The meal is removed. Past diary entries stay.")
         }
         busy={busy}
         onCancel={() => setDeleting(null)}
@@ -383,7 +384,7 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
       {creating === "foods" && (
         <CustomFoodForm
           open
-          title="Create Custom Food"
+          title={t("Create Custom Food")}
           onClose={() => setCreating(null)}
           onSaved={() => {
             setCreating(null);

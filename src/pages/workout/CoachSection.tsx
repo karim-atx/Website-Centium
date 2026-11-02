@@ -7,6 +7,7 @@ import { COACH_FOLDER_COLORS, coachColor, coachTone } from "./coachColors";
 import { FOLDER_FAMILIES, type FolderFamily } from "../../data/folderColors";
 import { pastProgrammesLine } from "../../services/routines/programmeLogic";
 import { textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 import type { CoachProgrammes } from "./useCoachProgrammes";
 
 /**
@@ -43,7 +44,7 @@ export const CoachSection: React.FC<{
   // The Folders label's style (9.5/700, .2em caps, #9A94B3).
   const label = (
     <p className="mb-2.5 text-[9.5px] leading-[14.3px] font-bold tracking-[1.9px] uppercase" style={{ color: capsInk }}>
-      From your coach
+      {t("From your coach")}
     </p>
   );
 
@@ -51,7 +52,7 @@ export const CoachSection: React.FC<{
   // list's own skeleton (WO1 O1 shade and radius), so nothing jumps after.
   if (status === "loading") {
     return (
-      <section aria-label="From your coach" aria-busy style={{ marginBottom: 22 }}>
+      <section aria-label={t("From your coach")} aria-busy style={{ marginBottom: 22 }}>
         {label}
         <div aria-hidden className="flex flex-col" style={{ gap: 6 }}>
           {[54, 54].map((h, i) => (
@@ -64,11 +65,11 @@ export const CoachSection: React.FC<{
 
   if (status === "error") {
     return (
-      <section aria-label="From your coach" style={{ marginBottom: 22 }}>
+      <section aria-label={t("From your coach")} style={{ marginBottom: 22 }}>
         {label}
         <div role="alert" className="flex items-center justify-between" style={{ gap: 12, padding: "12px 14px", borderRadius: 14, background: coachColor("soft", dark) }}>
           <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-            {coach.message ?? "Couldn't load your coach's programmes."}
+            {coach.message ?? t("Couldn't load your coach's programmes.")}
           </p>
           <button
             type="button"
@@ -76,7 +77,7 @@ export const CoachSection: React.FC<{
             className="tap relative shrink-0 before:absolute before:-inset-[12px] before:content-['']"
             style={{ fontSize: textPx(12), fontWeight: 700, color: dark ? "#C3B3FB" : "rgb(var(--thi-7d6bb5))" }}
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       </section>
@@ -90,20 +91,20 @@ export const CoachSection: React.FC<{
     .flatMap((g) => g.programmes.map((p) => ({ p, pro: g.professionalId })))
     .filter(({ p }) => isUnseen(p))
     .sort((a, b) => b.p.assignment.assignedAt.localeCompare(a.p.assignment.assignedAt))[0];
-  const nameOf = (pro: string) => coaches[pro]?.name ?? "Your coach";
+  const nameOf = (pro: string) => coaches[pro]?.name ?? t("Your coach");
 
   return (
-    <section aria-label="From your coach" style={{ marginBottom: 22 }}>
+    <section aria-label={t("From your coach")} style={{ marginBottom: 22 }}>
       {updated && (
         <div role="status" className="flex items-start" style={{ gap: 10, borderRadius: 14, background: coachColor("pale", dark), padding: "10px 12px", marginBottom: 12 }}>
           <RefreshCw size={15} strokeWidth={2.2} className="shrink-0" style={{ color: coachColor("deep", dark), marginTop: 2 }} aria-hidden />
           <span className="flex-1 min-w-0" style={{ fontSize: textPx(12.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal))" }}>
-            <b>Updated by your coach</b> · {nameOf(updated.pro)} updated {updated.p.name}.
+            <b>{t("Updated by your coach")}</b> · {t("{coach} updated {programme}.", { coach: nameOf(updated.pro), programme: updated.p.name })}
           </span>
           <button
             type="button"
             onClick={() => onSeen(updated.p.assignment)}
-            aria-label="Close"
+            aria-label={t("Close")}
             className="tap relative shrink-0 flex before:absolute before:-inset-[15px] before:content-['']"
             style={{ color: coachColor("faint", dark), marginTop: 2 }}
           >
@@ -114,7 +115,7 @@ export const CoachSection: React.FC<{
       {label}
       {groups.map((g, gi) => {
         const info = coaches[g.professionalId];
-        const name = info?.name ?? "Your coach";
+        const name = info?.name ?? t("Your coach");
         return (
           <div key={g.professionalId || gi} style={{ marginTop: gi > 0 ? 14 : 0 }}>
             <div className="flex items-center" style={{ gap: 10, marginBottom: 10 }}>
@@ -134,7 +135,7 @@ export const CoachSection: React.FC<{
                   className="inline-flex items-center shrink-0 whitespace-nowrap"
                   style={{ gap: 4, fontSize: textPx(11), fontWeight: 700, color: coachColor("deep", dark), background: coachColor("pale", dark), borderRadius: 8, padding: "3px 8px" }}
                 >
-                  <RefreshCw size={11} strokeWidth={2.4} aria-hidden /> Updated
+                  <RefreshCw size={11} strokeWidth={2.4} aria-hidden /> {t("Updated")}
                 </span>
               )}
             </div>
@@ -175,13 +176,13 @@ export const CoachSection: React.FC<{
         >
           <span className="min-w-0">
             <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
-              Past programmes · {past.length}
+              {t("Past programmes · {n}", { n: past.length })}
             </span>
             <span className="block truncate" style={{ fontSize: textPx(11.5), color: coachColor("faint", dark) }}>
               {pastProgrammesLine(past.slice(0, 2))}
             </span>
           </span>
-          <ChevronRight size={15} strokeWidth={2} className="shrink-0" style={{ color: coachColor("faint", dark) }} aria-hidden />
+          <ChevronRight size={15} strokeWidth={2} className="shrink-0 rtl:-scale-x-100" style={{ color: coachColor("faint", dark) }} aria-hidden />
         </button>
       )}
     </section>

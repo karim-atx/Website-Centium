@@ -33,6 +33,7 @@ import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "..
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tk, tn, tx } from "../../i18n/core";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -62,13 +63,15 @@ const dateLabel = (iso: string) => {
 /** MO1.1.2 S9: the virtual "Recently" tab's key (never a folder id: those are uuids). */
 const RECENT = "recently";
 /** MO1.1.2 O3: the handover's write-failure toast copy. */
-const SAVE_FAILED = "Couldn't save. Try again.";
+const SAVE_FAILED = tk("Couldn't save. Try again.");
+/** K8: the quick first folders (a tap makes one, named in the app's language). */
+const QUICK_FOLDERS = [tk("Personal"), tk("Training"), tk("Nutrition")];
 
 /** A card tap that ends a swipe (or lands on a row left open) is not a tap. */
 const rowIsShifted = (el: HTMLElement) => {
   const row = el.closest<HTMLElement>("[role='group']");
-  const t = row ? getComputedStyle(row).transform : "none";
-  return t !== "none" && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(t);
+  const tf = row ? getComputedStyle(row).transform : "none";
+  return tf !== "none" && !/^matrix\(1, 0, 0, 1, 0, 0\)$/.test(tf);
 };
 
 // The Journal tab, mobile v5.1 MO1.1.2 (list), MO1.1.2.1 (folder options),
@@ -403,7 +406,7 @@ export default function JournalTab() {
         <MindHeader section="journal">
           <div aria-hidden className="h-14 rounded-2xl bg-[rgb(var(--c-seg-track))] dark:bg-th-303141" />
         </MindHeader>
-        <span className="sr-only" role="status">Loading your journal…</span>
+        <span className="sr-only" role="status">{t("Loading your journal…")}</span>
         <div aria-hidden className="space-y-2.5">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
@@ -454,13 +457,13 @@ export default function JournalTab() {
               label: f.name,
               icon: f.locked ? (
                 openNow(f, journalUnlockedUntil) ? (
-                  <LockOpen size={12} strokeWidth={1.75} role="img" aria-label="Unlocked" />
+                  <LockOpen size={12} strokeWidth={1.75} role="img" aria-label={t("Unlocked")} />
                 ) : (
-                  <Lock size={12} strokeWidth={1.75} role="img" aria-label="Locked" />
+                  <Lock size={12} strokeWidth={1.75} role="img" aria-label={t("Locked")} />
                 )
               ) : undefined,
             })),
-            { key: RECENT, label: "Recently" },
+            { key: RECENT, label: t("Recently") },
           ]}
           activeKey={selected}
           onChange={onTab}
@@ -495,7 +498,7 @@ export default function JournalTab() {
       {journalError && (
         <div role="alert" className="mb-2.5 flex items-center gap-3 rounded-xl bg-status-high-bg p-3">
           <p className="flex-1 min-w-0 text-[12px] leading-4 font-semibold text-status-high">
-            Couldn't load. Check your connection.
+            {t("Couldn't load. Check your connection.")}
           </p>
           <button
             type="button"
@@ -503,7 +506,7 @@ export default function JournalTab() {
             disabled={retrying}
             className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
           >
-            {retrying ? <Loader2 size={14} className="animate-spin" aria-label="Retrying" /> : "Retry"}
+            {retrying ? <Loader2 size={14} className="animate-spin" aria-label={t("Retrying")} /> : t("Retry")}
           </button>
         </div>
       )}
@@ -516,12 +519,12 @@ export default function JournalTab() {
       {journalFolders.length === 0 && !journalError && (
         <div className="flex flex-col items-center text-center py-8 mb-4">
           <BookOpen size={28} strokeWidth={1.5} className="text-primary" aria-hidden />
-          <p className="text-[15px] font-bold text-charcoal mt-3">No folders yet</p>
+          <p className="text-[15px] font-bold text-charcoal mt-3">{t("No folders yet")}</p>
           <p className="text-[12px] font-medium text-charcoal-faint mt-1 mb-2 leading-relaxed max-w-[260px]">
-            Entries live in folders. Make the first one to start writing.
+            {t("Entries live in folders. Make the first one to start writing.")}
           </p>
           <div className="flex flex-wrap gap-x-2 justify-center">
-            {["Personal", "Training", "Nutrition"].map((name) => (
+            {QUICK_FOLDERS.map((key) => t(key)).map((name) => (
               <button
                 key={name}
                 onClick={() => void addJournalFolder(name).then(fail)}
@@ -544,7 +547,7 @@ export default function JournalTab() {
       <div className="flex items-center justify-end gap-2 h-[22px] mb-2.5">
         {moving && selectedFolder && (
           <p role="status" className="flex-1 min-w-0 truncate text-[11.5px] leading-4 font-medium text-charcoal-muted">
-            Tap where {selectedFolder.name} should go
+            {t("Tap where {folder} should go", { folder: selectedFolder.name })}
           </p>
         )}
         <button
@@ -552,7 +555,7 @@ export default function JournalTab() {
             setFolderName("");
             setNaming((v) => (v === "new" ? null : "new"));
           }}
-          aria-label="New folder"
+          aria-label={t("New folder")}
           aria-expanded={naming === "new"}
           className="tap relative w-[30px] h-[30px] -my-1 -me-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark after:absolute after:-inset-[7px] after:content-['']"
         >
@@ -573,15 +576,15 @@ export default function JournalTab() {
               if (e.key === "Enter" && folderName.trim()) submitName();
               if (e.key === "Escape") setNaming(null);
             }}
-            placeholder="Folder name…"
-            aria-label={naming === "rename" ? "Rename folder" : "New folder name"}
+            placeholder={t("Folder name…")}
+            aria-label={naming === "rename" ? t("Rename folder") : t("New folder name")}
             className={`flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint ${FOCUS_RING}`}
           />
           <button
             onClick={submitName}
             className="tap h-11 px-4 rounded-xl bg-primary-fill text-on-primary-fill text-[13.5px] font-bold"
           >
-            {naming === "rename" ? "Save" : "Add"}
+            {naming === "rename" ? t("Save") : t("Add")}
           </button>
         </div>
       )}
@@ -614,17 +617,17 @@ export default function JournalTab() {
               <SwipeActions
                 radius={24}
                 actions={[
-                  { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => startEdit(e) },
-                  { key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: () => setConfirmDelete(e), destructive: true },
+                  { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => startEdit(e) },
+                  { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, onClick: () => setConfirmDelete(e), destructive: true },
                 ]}
-                keyboardLabel={`${dateLabel(e.date)}, ${e.title}. Arrow left for Edit and Delete`}
+                keyboardLabel={t("{date}, {title}. Arrow left for Edit and Delete", { date: dateLabel(e.date), title: e.title })}
                 onLongPress={(anchor) => setEntryMenu({ entry: e, anchor })}
               >
                 <Card
                   // #10: 1 px #241F1B@11% / #F5F3FA@11%.
                   className="px-5 py-[19px] cursor-pointer dark:!border-charcoal/[0.11]"
                   role="button"
-                  aria-label={`${dateLabel(e.date)}, ${e.title}. Open`}
+                  aria-label={t("{date}, {title}. Open", { date: dateLabel(e.date), title: e.title })}
                   onPointerDown={(ev) => {
                     downAt.current = { x: ev.clientX, y: ev.clientY };
                   }}
@@ -641,7 +644,7 @@ export default function JournalTab() {
                         ev.stopPropagation();
                         setEntryMenu({ entry: e, anchor: ev.currentTarget });
                       }}
-                      aria-label={`${e.title}, more options`}
+                      aria-label={t("{title}, more options", { title: e.title })}
                       aria-haspopup="menu"
                       aria-expanded={entryMenu?.entry.id === e.id}
                       className="tap relative -me-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
@@ -666,11 +669,11 @@ export default function JournalTab() {
             <div className="flex flex-col items-center text-center py-8">
               <BookOpen size={28} strokeWidth={1.5} className="text-primary" aria-hidden />
               {recent ? (
-                <p className="mt-3 text-[15px] font-bold text-charcoal">Nothing in the last 30 days</p>
+                <p className="mt-3 text-[15px] font-bold text-charcoal">{t("Nothing in the last 30 days")}</p>
               ) : (
                 <>
-                  <p className="mt-3 text-[15px] font-bold text-charcoal">No entries in {selectedFolder?.name} yet</p>
-                  <p className="mt-1 text-[12px] font-medium text-charcoal-faint">Write your first one</p>
+                  <p className="mt-3 text-[15px] font-bold text-charcoal">{t("No entries in {folder} yet", { folder: selectedFolder?.name ?? "" })}</p>
+                  <p className="mt-1 text-[12px] font-medium text-charcoal-faint">{t("Write your first one")}</p>
                 </>
               )}
             </div>
@@ -691,7 +694,7 @@ export default function JournalTab() {
             // Foundations › Pinned CTA; C-01 no longer applies).
             size="base"
             primary={{
-              label: "New entry",
+              label: t("New entry"),
               icon: <Plus size={15} />,
               // #25 / #26: New entry #A198DF / #A991FE, 13.5/20.3 700.
               className: "!text-[13.5px] !leading-[20.3px] !bg-[rgb(var(--c-fill-cta))]",
@@ -702,7 +705,7 @@ export default function JournalTab() {
               // Recently is not a folder (S9): its options are off.
               icon: <FolderCog size={18} strokeWidth={1.75} />,
               className: "!bg-th-efeefd !text-primary-accent dark:!bg-primary-pale",
-              label: "Folder options",
+              label: t("Folder options"),
               onClick: () => setMenu("options"),
               onAnchor: setCogEl,
               disabled: recent,
@@ -723,14 +726,14 @@ export default function JournalTab() {
         anchor={cogEl}
         rowLineHeight={MENU_ROW_LINE}
         options={[
-          { value: "rename", label: "Rename", icon: <Pencil size={15} strokeWidth={1.75} /> },
-          { value: "move", label: "Move", icon: <ArrowUpDown size={15} strokeWidth={1.75} />, disabled: journalFolders.length < 2 },
+          { value: "rename", label: t("Rename"), icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "move", label: tx("Move", "reorder"), icon: <ArrowUpDown size={15} strokeWidth={1.75} />, disabled: journalFolders.length < 2 },
           ...(selectedFolder?.locked
-            ? [{ value: "unlock" as const, label: "Remove lock", icon: <LockOpen size={15} strokeWidth={1.75} /> }]
+            ? [{ value: "unlock" as const, label: t("Remove lock"), icon: <LockOpen size={15} strokeWidth={1.75} /> }]
             : canLock
-              ? [{ value: "lock" as const, label: "Lock", icon: <Lock size={15} strokeWidth={1.75} /> }]
+              ? [{ value: "lock" as const, label: t("Lock"), icon: <Lock size={15} strokeWidth={1.75} /> }]
               : []),
-          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+          { value: "delete", label: t("Delete"), icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
         ]}
         onSelect={onFolderOption}
       />
@@ -746,8 +749,8 @@ export default function JournalTab() {
         anchor={entryMenu?.anchor ?? null}
         rowLineHeight={MENU_ROW_LINE}
         options={[
-          { value: "edit", label: "Edit", icon: <Pencil size={15} strokeWidth={1.75} /> },
-          { value: "delete", label: "Delete", icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
+          { value: "edit", label: t("Edit"), icon: <Pencil size={15} strokeWidth={1.75} /> },
+          { value: "delete", label: t("Delete"), icon: <Trash2 size={15} strokeWidth={1.75} />, destructive: true },
         ]}
         onSelect={(v) => {
           if (!entryMenuEntry) return;
@@ -761,7 +764,7 @@ export default function JournalTab() {
           and the server delete runs when the toast expires. */}
       <ConfirmCard
         open={!!confirmDelete}
-        title="Delete this entry?"
+        title={t("Delete this entry?")}
         subtitle={confirmDelete?.title}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={() => {
@@ -772,7 +775,7 @@ export default function JournalTab() {
       <Toast
         key={pendingDelete?.id ?? "none"}
         open={!!pendingDelete}
-        message="Entry deleted."
+        message={t("Entry deleted.")}
         icon={<Trash2 size={15} className="shrink-0 text-[#A2C8C2]" aria-hidden />}
         onUndo={() => {
           pendingRef.current = null;
@@ -783,7 +786,7 @@ export default function JournalTab() {
       {/* O3: a failed write (folder add / rename / move / delete, entry delete). */}
       <Toast
         open={!!failToast && !pendingDelete}
-        message={SAVE_FAILED}
+        message={t(SAVE_FAILED)}
         tone="error"
         onExpire={() => setFailToast(0)}
       />
@@ -792,10 +795,10 @@ export default function JournalTab() {
           entries, so the shared confirmation asks first (data safety). */}
       <ConfirmCard
         open={deletingFolder && !!selectedFolder}
-        title="Delete this folder?"
+        title={t("Delete this folder?")}
         subtitle={
           selectedFolder
-            ? `${selectedFolder.name} and its ${entries.length} ${entries.length === 1 ? "entry" : "entries"}`
+            ? tn(entries.length, "{folder} and its {n} entry", "{folder} and its {n} entries", { folder: selectedFolder.name })
             : undefined
         }
         onCancel={() => setDeletingFolder(false)}
@@ -810,7 +813,7 @@ export default function JournalTab() {
       <BottomSheet
         open={composing}
         onClose={resetCompose}
-        title={editingEntry ? "Edit entry" : "New entry"}
+        title={editingEntry ? t("Edit entry") : t("New entry")}
         // MO1.1.2.3: Save sits 30 above the sheet's bottom (Foundations ›
         // Lavender-header sheet, footer padding 12 × 20 × 30).
         footerBottom={30}
@@ -818,7 +821,7 @@ export default function JournalTab() {
           <>
             {/* Saving: Pinned CTA loading (spinner for the icon, label kept). */}
             <CtaButton
-              label={editingEntry ? "Save changes" : "Save entry"}
+              label={editingEntry ? t("Save changes") : t("Save entry")}
               onClick={() => void save()}
               loading={saving}
             />
@@ -833,7 +836,7 @@ export default function JournalTab() {
       >
         <div className="flex gap-2.5">
           <div className="flex-1 min-w-0">
-            <span className={fieldLabel}>Folder</span>
+            <span className={fieldLabel}>{t("Folder")}</span>
             <button
               ref={setPickerEl}
               type="button"
@@ -851,7 +854,7 @@ export default function JournalTab() {
             </button>
           </div>
           <div className="flex-1 min-w-0">
-            <span className={fieldLabel}>Date</span>
+            <span className={fieldLabel}>{t("Date")}</span>
             {/* Read-only: the value 14/400 in #5B5349 (text.secondary),
                 measured. */}
             <div className={`flex items-center gap-2 px-3 ${field} !text-charcoal-soft`}>
@@ -862,7 +865,7 @@ export default function JournalTab() {
         </div>
 
         <label className="block mt-4">
-          <span className={fieldLabel}>Title</span>
+          <span className={fieldLabel}>{t("Title")}</span>
           {/* Foundations › Inputs: 14/600, placeholder text.muted (the frame's
               "Entry title…" is the 600 weight, measured). */}
           <input
@@ -870,17 +873,17 @@ export default function JournalTab() {
             value={title}
             maxLength={JOURNAL_LIMITS.titleMax}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Entry title…"
+            placeholder={t("Entry title…")}
             aria-invalid={titleMissing || undefined}
             className={`${field} px-3.5 font-semibold placeholder:text-charcoal-faint ${FOCUS_RING} ${titleMissing ? FIELD_ERROR : ""}`}
           />
-          {titleMissing && <span role="alert" className={errorLine}>Add a title.</span>}
+          {titleMissing && <span role="alert" className={errorLine}>{t("Add a title.")}</span>}
         </label>
 
         {/* The frame leaves 24 between the Entry field and Save (measured);
             the sheet's body (20) and footer (12) paddings give 32. */}
         <label className="block mt-4 -mb-2">
-          <span className={fieldLabel}>Entry</span>
+          <span className={fieldLabel}>{t("Entry")}</span>
           {/* The frame's two-line placeholder, the Arabic line set right-to-left.
               A native placeholder can't give one line its own direction, so
               this sits over the empty field instead. */}
@@ -897,14 +900,17 @@ export default function JournalTab() {
             />
             {!text && (
               <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 px-[17px] py-[15px] text-sm text-charcoal-faint">
-                <span className="block">How was your day?</span>
-                <span className="block mt-1.5 text-end" dir="rtl">
-                  شو صار معك اليوم؟
-                </span>
+                <span className="block">{t("How was your day?")}</span>
+                {/* The frame's second, Arabic line; in Arabic the first line already is. */}
+                {getLanguage() === "en" && (
+                  <span className="block mt-1.5 text-end" dir="rtl">
+                    شو صار معك اليوم؟
+                  </span>
+                )}
               </div>
             )}
           </div>
-          {textMissing && <span role="alert" className={errorLine}>Write something first.</span>}
+          {textMissing && <span role="alert" className={errorLine}>{t("Write something first.")}</span>}
         </label>
       </BottomSheet>
 
