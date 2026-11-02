@@ -13,6 +13,7 @@ import {
 } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // Timing contractions.
 //
@@ -55,8 +56,8 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
 
   useEffect(() => {
     if (!runningId) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, [runningId]);
 
   const start = async () => {
@@ -97,7 +98,7 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
 
   return (
     <CycleCard style={{ marginBottom: 12 }}>
-      <CapsLabel>{G.CONTRACTIONS_TITLE}</CapsLabel>
+      <CapsLabel>{t(G.CONTRACTIONS_TITLE)}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">
         {G.CONTRACTIONS_EXPLAINER}
       </p>
@@ -113,16 +114,16 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
                 {formatDuration(running)}
               </span>
               <span className="mt-1.5 block text-[11px] font-semibold text-charcoal-soft">
-                Contraction in progress
+                {t("Contraction in progress")}
               </span>
             </div>
             <Button fullWidth className="mt-2.5" disabled={busy} onClick={() => void stop()}>
-              Stop
+              {t("Stop")}
             </Button>
           </>
         ) : (
           <Button fullWidth variant="secondary" disabled={busy || !authUserId} onClick={() => void start()}>
-            Start a contraction
+            {t("Start a contraction")}
           </Button>
         )}
       </div>
@@ -131,14 +132,14 @@ export const ContractionTimer: React.FC<{ pregnancyId: string }> = ({ pregnancyI
         {G.CONTRACTIONS_NO_RULE}
       </p>
 
-      {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{error}</p>}
+      {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{t(error)}</p>}
 
       {finished.length > 0 && (
         <div className="mt-3.5 border-t border-charcoal/8 pt-3">
           <div className="flex text-[9.5px] font-semibold text-charcoal-faint pb-1.5">
-            <span className="flex-1">Started</span>
-            <span className="w-[74px] text-end">Lasted</span>
-            <span className="w-[86px] text-end">Apart</span>
+            <span className="flex-1">{t("Started")}</span>
+            <span className="w-[74px] text-end">{t("Lasted")}</span>
+            <span className="w-[86px] text-end">{t("Apart")}</span>
           </div>
           {finished.slice(0, 8).map((c, i) => {
             // The rows are newest first, so the PREVIOUS contraction is the

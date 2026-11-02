@@ -1,5 +1,6 @@
 import type { ScreeningRow } from "./screening";
 import { formatShortDate } from "../../utils/date";
+import { tk } from "../../i18n/core";
 
 /**
  * HE1.8 row status, Last and Next (PB-HB-01): worked out on the device from
@@ -91,23 +92,23 @@ export type CheckState = {
 export function checkState(cadence: CheckCadence, lastDay: string | null | undefined, today: string, reviewed = STATUS_REVIEWED): CheckState {
   if (lastDay === undefined) {
     // Nothing the app could know: no claim either way.
-    return { word: "Ask your doctor", tone: "neutral", last: null, next: null };
+    return { word: tk("Ask your doctor"), tone: "neutral", last: null, next: null };
   }
   if (lastDay === null) {
-    if (cadence.kind === "doctor") return { word: "Ask your doctor", tone: "neutral", last: "not yet", next: "as advised" };
-    if (reviewed && cadence.kind === "interval") return { word: "Due now", tone: "due", last: "not yet", next: "ask now" };
-    return { word: "Not yet", tone: "neutral", last: "not yet", next: "ask your doctor" };
+    if (cadence.kind === "doctor") return { word: tk("Ask your doctor"), tone: "neutral", last: tk("not yet"), next: tk("as advised") };
+    if (reviewed && cadence.kind === "interval") return { word: tk("Due now"), tone: "due", last: tk("not yet"), next: tk("ask now") };
+    return { word: tk("Not yet"), tone: "neutral", last: tk("not yet"), next: tk("ask your doctor") };
   }
   const last = shortDate(lastDay);
-  if (cadence.kind === "once") return { word: "Done", tone: "good", last, next: null };
-  if (cadence.kind === "doctor") return { word: "Done", tone: "good", last, next: "as advised" };
+  if (cadence.kind === "once") return { word: tk("Done"), tone: "good", last, next: null };
+  if (cadence.kind === "doctor") return { word: tk("Done"), tone: "good", last, next: tk("as advised") };
   const nextDate = addMonths(lastDay, cadence.months);
   const next = monthYear(nextDate);
-  if (!reviewed) return { word: "Done", tone: "good", last, next };
+  if (!reviewed) return { word: tk("Done"), tone: "good", last, next };
   const now = new Date(+today.slice(0, 4), +today.slice(5, 7) - 1, 1);
-  if (nextDate > now) return { word: "Up to date", tone: "good", last, next };
-  if (nextDate.getTime() === now.getTime()) return { word: "Due now", tone: "due", last, next };
-  return { word: "Overdue", tone: "due", last, next };
+  if (nextDate > now) return { word: tk("Up to date"), tone: "good", last, next };
+  if (nextDate.getTime() === now.getTime()) return { word: tk("Due now"), tone: "due", last, next };
+  return { word: tk("Overdue"), tone: "due", last, next };
 }
 
 /** The Mark as done popup's line (HE1.8.1 #51). */

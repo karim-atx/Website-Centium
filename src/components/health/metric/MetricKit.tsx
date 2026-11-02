@@ -13,6 +13,7 @@ import { heroPatternGenericUrl } from "../../../utils/assetUrls";
 import { syncState, useHealthSources, whenText } from "../../../services/health-metrics/b1";
 import type { MetricKey } from "../MetricWidget";
 import { RANGE_TABS, type MetricRange } from "./periods";
+import { t, tk } from "../../../i18n/core";
 
 // The shared metric-page kit (health-handover.md "Shared rules (all metric
 // pages)" and the HE1.1-HE1.7 layout tables). Every value below is the
@@ -111,11 +112,11 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
           <button
             type="button"
             onClick={back}
-            aria-label="Back"
+            aria-label={t("Back")}
             className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
             style={{ width: 36, height: 36 }}
           >
-            <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
           <h1
             className="flex-1 min-w-0 line-clamp-2"
@@ -140,7 +141,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
               ref={setMenuBtn}
               type="button"
               onClick={() => setMenuOpen(true)}
-              aria-label="More options"
+              aria-label={t("More options")}
               aria-haspopup="menu"
               className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
               style={{ width: 36, height: 36, marginInlineEnd: -8 }}
@@ -151,7 +152,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
         </div>
         <SegmentedTabs
           className="mt-3"
-          items={RANGE_TABS}
+          items={RANGE_TABS.map((r) => ({ ...r, label: t(r.label) }))}
           activeKey={range}
           onChange={(k) => onRangeChange(k as MetricRange)}
           size="compact"
@@ -334,12 +335,14 @@ export const FreshnessLine: React.FC<{ children: React.ReactNode; offline?: bool
   </p>
 );
 
+// Catalogue keys: t() them where they are shown.
+// Catalogue keys: every screen shows them through t().
 export const OFFLINE_CACHED = "You're offline. Showing your last saved data.";
 export const OFFLINE_ACTION = "You're offline. Try again when you're connected.";
 export const SAVE_FAILED = "Couldn't save. Try again.";
 
 /** Error card in place of the chart (no cache): 12/18 600 #C0392B (dark #F09A8E), Retry 700. */
-export const ErrorCard: React.FC<{ onRetry: () => void; message?: string }> = ({ onRetry, message = "Couldn't load your data." }) => {
+export const ErrorCard: React.FC<{ onRetry: () => void; message?: string }> = ({ onRetry, message = tk("Couldn't load your data.") }) => {
   const { dark, hc } = useHealthMode();
   return (
     <div
@@ -347,14 +350,14 @@ export const ErrorCard: React.FC<{ onRetry: () => void; message?: string }> = ({
       className="flex items-center justify-between"
       style={{ marginTop: 12, borderRadius: 18, padding: 14, background: dark ? "#1C1F28" : "#FFFFFF", border: `0.5px solid ${hairline(dark, hc)}` }}
     >
-      <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>{message}</span>
+      <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>{t(message)}</span>
       <button
         type="button"
         onClick={onRetry}
         className="tap min-h-[44px] px-2"
         style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#F09A8E" : "#C0392B" }}
       >
-        Retry
+        {t("Retry")}
       </button>
     </div>
   );
@@ -415,11 +418,11 @@ export const ChartCard: React.FC<{
         type="button"
         onClick={dir === "prev" ? onPrev : onNext}
         disabled={disabled}
-        aria-label={dir === "prev" ? "Previous period" : "Next period"}
+        aria-label={dir === "prev" ? t("Previous period") : t("Next period")}
         className="tap relative grid place-items-center rounded-full before:absolute before:-inset-[10px] before:content-[''] disabled:opacity-35"
         style={{ width: 24, height: 24 }}
       >
-        <Icon size={14} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+        <Icon size={14} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
       </button>
     );
   };
@@ -578,8 +581,8 @@ export const HistoryCard: React.FC<{
             </div>
           );
           const actions: SwipeAction[] = [];
-          if (it.onEdit) actions.push({ key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: it.onEdit });
-          if (it.onDelete) actions.push({ key: "delete", label: "Delete", icon: <Trash2 size={16} />, onClick: it.onDelete, destructive: true });
+          if (it.onEdit) actions.push({ key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: it.onEdit });
+          if (it.onDelete) actions.push({ key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, onClick: it.onDelete, destructive: true });
           return (
             <div key={it.key} style={{ borderTop: i ? `0.5px solid ${sep}` : undefined }}>
               {actions.length ? (
@@ -600,8 +603,9 @@ export const HistoryCard: React.FC<{
 // ---------------------------------------------------------------------------
 // Web no-device state (OURS-health-no-device-web, HE1.2.e #8-#12)
 
+/** `what` is a translated plural noun ("Steps", "Sleep data"); called at render time. */
 export const noDeviceBody = (what: string) =>
-  `${what} come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming. Centium only reads the data types you allow.`;
+  t("{what} come from Apple Health or Health Connect on your phone. Syncing from the Centium phone app is coming. Centium only reads the data types you allow.", { what });
 
 /**
  * HE1.2.e #8-#12: metric tint card, icon disc #FFFFFF@80%, title 17/25.5 800
@@ -620,7 +624,7 @@ export const NoDeviceCard: React.FC<{
    * disc, icon 22, body m-top 4) for existing callers.
    */
   literal?: boolean;
-}> = ({ metric, icon: Icon, title = "No device connected", body, style, literal }) => {
+}> = ({ metric, icon: Icon, title = t("No device connected"), body, style, literal }) => {
   const { dark } = useHealthMode();
   return (
     <section className="flex flex-col items-center text-center" style={{ borderRadius: 22, padding: literal ? "22px 18px" : 20, background: mc(metric, "tint"), ...style }}>
@@ -658,7 +662,7 @@ export function useMetricRangeState(defaultRange: MetricRange) {
 }
 
 /** OURS-health-empty-water #5: an empty stat value, 13/15 800 (HE1.6 #36), "No data yet". */
-export const StatEmpty: React.FC<{ children?: React.ReactNode }> = ({ children = "No data yet" }) => (
+export const StatEmpty: React.FC<{ children?: React.ReactNode }> = ({ children = t("No data yet") }) => (
   <span data-stat-empty style={{ fontSize: textPx(13), lineHeight: linePx(15), fontWeight: 800, letterSpacing: 0 }}>
     {children}
   </span>
@@ -683,13 +687,13 @@ export function useMetricSource() {
   const state = syncState(s);
   const freshness =
     state === "access_off" ? (
-      <FreshnessLine>{`${s.name} access is off. Turn it on`}</FreshnessLine>
+      <FreshnessLine>{t("{name} access is off. Turn it on", { name: s.name })}</FreshnessLine>
     ) : state === "error" ? (
       <p style={{ marginTop: 8, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>
-        Couldn't sync. <strong style={{ fontWeight: 700 }}>Try again</strong>
+        {t("Couldn't sync.")} <strong style={{ fontWeight: 700 }}>{t("Try again")}</strong>
       </p>
     ) : s.lastSyncedAt ? (
-      <FreshnessLine>{`Last synced ${whenText(s.lastSyncedAt, today)}`}</FreshnessLine>
+      <FreshnessLine>{t("Last synced {when}", { when: whenText(s.lastSyncedAt, today) })}</FreshnessLine>
     ) : null;
   return { tag: s.name, freshness };
 }

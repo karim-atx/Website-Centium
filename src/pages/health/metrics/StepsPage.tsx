@@ -26,7 +26,10 @@ import {
   daysInMonth,
   daysOf,
   dayLabel,
+  dayWord,
   isCurrentPeriod,
+  longDate,
+  monthLong,
   monthShort,
   periodLabel,
   periodOf,
@@ -49,6 +52,7 @@ import { useClientShare } from "../../../components/share/client/useClientShare"
 import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
 import { stepsCard } from "../../../components/share/client/clientCardModel";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn } from "../../../i18n/core";
 
 // HE1.2 Steps (Week), HE1.2.s, HE1.2.e, HE1.2.1, HE1.2.d, HE1.2.m, HE1.2.y.
 //
@@ -63,13 +67,13 @@ import { appLocale } from "../../../i18n/format";
 // HA-01 / HA-12, B1; V6-169), so none of them shows on the web. The goal
 // is B1's metric_goals (V6-59).
 
-const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const n = (v: number) => Math.round(v).toLocaleString(appLocale("en-GB"));
-const abbrev = (v: number) => (v >= 1_000_000 ? `${(v / 1_000_000).toFixed(2)}M` : n(v));
+const abbrev = (v: number) => (v >= 1_000_000 ? t("{n}M", { n: (v / 1_000_000).toFixed(2) }) : n(v));
+/** `what` is translated ("last Mon,", a month name, a year). */
 const change = (now: number | null, before: number | null, what: string) => {
   if (now === null || before === null || before <= 0) return null;
   const pc = Math.round(((now - before) / before) * 100);
-  return pc === 0 ? `Same as ${what}` : `${pc > 0 ? "↑" : "↓"} ${Math.abs(pc)}% vs ${what}`;
+  return pc === 0 ? t("Same as {what}", { what }) : t("{arrow} {pc}% vs {what}", { arrow: pc > 0 ? "↑" : "↓", pc: Math.abs(pc), what });
 };
 const iconInk = { color: "rgb(var(--th-7d6bb5))" };
 
@@ -112,8 +116,8 @@ export default function StepsPage() {
   const stepsToday = byDay[today] ?? null;
   const shareButton = (
     <ShareEntryButton
-      label="Share your steps"
-      disabledHint={stepsToday === null ? "Nothing to share yet. Sync your steps first." : stepsToday < goalOn(today) ? "Nothing to share yet. Reach your step goal first." : null}
+      label={t("Share your steps")}
+      disabledHint={stepsToday === null ? t("Nothing to share yet. Sync your steps first.") : stepsToday < goalOn(today) ? t("Nothing to share yet. Reach your step goal first.") : null}
       onPress={() =>
         stepsToday !== null &&
         share.open(stepsCard({ date: today, steps: stepsToday, goal: goalOn(today), distanceM: activity[today]?.distanceM ?? null, activeMin: activity[today]?.activeMinutes ?? null }))
@@ -129,11 +133,11 @@ export default function StepsPage() {
   const allRows = valuesIn(byDay, { range: "year", start: "0000-01-01", end: today });
 
   const menu = [
-    { value: "goal", label: "Edit goal", icon: <Target size={17} style={iconInk} />, onSelect: () => setGoalOpen(true) },
+    { value: "goal", label: t("Edit goal"), icon: <Target size={17} style={iconInk} />, onSelect: () => setGoalOpen(true) },
     hasAny
-      ? { value: "sources", label: "Sources", icon: <RefreshCw size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") }
-      : { value: "connect", label: "Connect a source", icon: <Link2 size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") },
-    { value: "date", label: "Go to date", icon: <CalendarDays size={17} style={iconInk} />, onSelect: () => setDateOpen(true) },
+      ? { value: "sources", label: t("Sources"), icon: <RefreshCw size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") }
+      : { value: "connect", label: t("Connect a source"), icon: <Link2 size={17} style={iconInk} />, onSelect: () => navigate("/app/settings/devices") },
+    { value: "date", label: t("Go to date"), icon: <CalendarDays size={17} style={iconInk} />, onSelect: () => setDateOpen(true) },
   ];
   const sheets = (
     <>
@@ -146,7 +150,7 @@ export default function StepsPage() {
         onSave={(g) => {
           setStepsGoal(g);
           setGoalOpen(false);
-          setToast("Step goal saved");
+          setToast(tk("Step goal saved"));
         }}
       />
       <CalendarPickerSheet
@@ -155,7 +159,7 @@ export default function StepsPage() {
         selectedDate={anchor}
         today={today}
         maxDate={today}
-        title="Go to date"
+        title={t("Go to date")}
         variant="partB"
         markers={Object.keys(byDay)}
         onSelect={(d) => {
@@ -164,7 +168,7 @@ export default function StepsPage() {
         }}
       />
       {syncedRemove.popup}
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </>
   );
 
@@ -173,12 +177,12 @@ export default function StepsPage() {
     return (
       <MetricPage
         metric="steps"
-        title="Steps"
+        title={t("Steps")}
         range={range}
         onRangeChange={setRange}
         menu={menu}
         headerAction={shareButton}
-        cta={{ label: "Connect a source", icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
+        cta={{ label: t("Connect a source"), icon: <Link2 size={16} />, onClick: () => navigate("/app/settings/devices") }}
       >
         {metricsError ? <ErrorCard onRetry={retryMetrics} /> : <SyncedNoDevice metric="steps" icon={Footprints} bodyName="Steps" footName="steps" range={range} today={today} />}
         {sheets}
@@ -191,10 +195,10 @@ export default function StepsPage() {
     const v = byDay[day] ?? 0;
     const goal = goalOn(day);
     const lastWeekSame = byDay[stepAnchor("week", day, -1)] ?? null;
-    const pills = [`${Math.round((v / goal) * 100)}% of goal`];
-    const c = change(v || null, lastWeekSame, `last ${dayLabel(day).split(" ")[0]}`);
+    const pills = [t("{pct}% of goal", { pct: Math.round((v / goal) * 100) })];
+    const c = change(v || null, lastWeekSame, t("last {day}", { day: dayWord(day) }));
     if (c) pills.push(c);
-    return { pct: v / goal, value: n(v), sub: `of ${n(goal)} steps`, pills };
+    return { pct: v / goal, value: n(v), sub: t("of {n} steps", { n: n(goal) }), pills };
   };
   const hero = (() => {
     if (range === "day") return dayHero(anchor);
@@ -204,17 +208,17 @@ export default function StepsPage() {
     if (range === "month") {
       const m = Number(p.start.slice(5, 7));
       const k = rows.filter((r) => r.value >= goalOn(r.date)).length;
-      const pills = [`${k} ${k === 1 ? "day" : "days"} at goal`];
-      const c = change(mean, prevMean, MONTH_LONG[(m + 10) % 12]);
+      const pills = [tn(k, "{n} day at goal", "{n} days at goal")];
+      const c = change(mean, prevMean, monthLong(((m + 10) % 12) + 1));
       if (c) pills.push(c);
-      return { pct: (mean ?? 0) / goal, value: n(mean ?? 0), sub: `avg a day in ${MONTH_LONG[m - 1]}`, pills };
+      return { pct: (mean ?? 0) / goal, value: n(mean ?? 0), sub: t("avg a day in {month}", { month: monthLong(m) }), pills };
     }
     const y = Number(p.start.slice(0, 4));
     const total = rows.reduce((s, r) => s + r.value, 0);
-    const pills = [`avg ${n(mean ?? 0)} a day`];
+    const pills = [t("avg {n} a day", { n: n(mean ?? 0) })];
     const c = change(mean, prevMean, String(y - 1));
     if (c) pills.push(c);
-    return { pct: (mean ?? 0) / goal, value: abbrev(total), sub: `steps in ${y}`, pills };
+    return { pct: (mean ?? 0) / goal, value: abbrev(total), sub: t("steps in {year}", { year: y }), pills };
   })();
 
   // ---- tiles: distance / active time / floors (B1 activity_daily, HA-05)
@@ -225,15 +229,15 @@ export default function StepsPage() {
       const a = activity[day];
       if (a && (a.distanceM !== null || a.activeMinutes !== null || a.floors !== null))
         return [
-          { icon: Route, value: a.distanceM === null ? "—" : `${(a.distanceM / 1000).toFixed(1)} km`, label: "Distance" },
-          { icon: Timer, value: a.activeMinutes === null ? "—" : `${Math.round(a.activeMinutes)} min`, label: "Active time" },
-          { icon: Building2, value: a.floors === null ? "—" : String(Math.round(a.floors)), label: "Floors" },
+          { icon: Route, value: a.distanceM === null ? "—" : t("{n} km", { n: (a.distanceM / 1000).toFixed(1) }), label: t("Distance") },
+          { icon: Timer, value: a.activeMinutes === null ? "—" : t("{n} min", { n: Math.round(a.activeMinutes) }), label: t("Active time") },
+          { icon: Building2, value: a.floors === null ? "—" : String(Math.round(a.floors)), label: t("Floors") },
         ];
       const b = best(allRows);
       return [
-        { icon: Target, value: n(goal), label: "Goal" },
-        { icon: Footprints, value: byDay[day] !== undefined ? n(Math.max(0, goal - byDay[day])) : "—", label: "To go" },
-        { icon: Award, value: b ? n(b.value) : "—", label: "Best day" },
+        { icon: Target, value: n(goal), label: t("Goal") },
+        { icon: Footprints, value: byDay[day] !== undefined ? n(Math.max(0, goal - byDay[day])) : "—", label: t("To go") },
+        { icon: Award, value: b ? n(b.value) : "—", label: t("Best day") },
       ];
     }
     const total = rows.reduce((s, r) => s + r.value, 0);
@@ -241,9 +245,9 @@ export default function StepsPage() {
     if (range === "month") {
       const b = best(rows);
       return [
-        { icon: Sigma, value: empty ? "—" : n(total), label: "Total steps" },
-        { icon: Award, value: b ? n(b.value) : "—", label: b ? `Best day · ${shortDate(b.date)}` : "Best day" },
-        { icon: Target, value: empty ? "—" : String(k), label: "Days at goal" },
+        { icon: Sigma, value: empty ? "—" : n(total), label: t("Total steps") },
+        { icon: Award, value: b ? n(b.value) : "—", label: b ? t("Best day · {date}", { date: shortDate(b.date) }) : t("Best day") },
+        { icon: Target, value: empty ? "—" : String(k), label: t("Days at goal") },
       ];
     }
     const y = Number(p.start.slice(0, 4));
@@ -253,29 +257,39 @@ export default function StepsPage() {
       if (v !== null && (bi < 0 || v > (monthAvgs[bi] as number))) bi = i;
     });
     return [
-      { icon: Sigma, value: empty ? "—" : abbrev(total), label: `Total in ${y}` },
-      { icon: Award, value: bi < 0 ? "—" : n(monthAvgs[bi] as number), label: bi < 0 ? "Best month" : `Best month · ${monthShort(bi + 1)}` },
-      { icon: Target, value: empty ? "—" : String(k), label: "Days at goal" },
+      { icon: Sigma, value: empty ? "—" : abbrev(total), label: t("Total in {year}", { year: y }) },
+      { icon: Award, value: bi < 0 ? "—" : n(monthAvgs[bi] as number), label: bi < 0 ? t("Best month") : t("Best month · {month}", { month: monthShort(bi + 1) }) },
+      { icon: Target, value: empty ? "—" : String(k), label: t("Days at goal") },
     ];
   })();
 
   // ---- chart --------------------------------------------------------------
   const ink = mc("steps", "ink");
-  const title = range === "day" ? (anchor === today ? "Today by hour" : `${dayLabel(anchor)} by hour`) : current ? periodTitle(p, today) : range === "month" ? MONTH_LONG[Number(p.start.slice(5, 7)) - 1] : periodLabel(p);
+  const title = range === "day" ? (anchor === today ? t("Today by hour") : t("{day} by hour", { day: dayLabel(anchor) })) : current ? periodTitle(p, today) : range === "month" ? monthLong(Number(p.start.slice(5, 7))) : periodLabel(p);
   let foot: string | undefined;
   let summary: string;
   let legend: { label: string; swatch: React.ReactNode }[] | undefined;
   if (range === "day") {
     const v = byDay[anchor];
-    summary = `Steps ${anchor === today ? "today" : `on ${dayLabel(anchor)}`}. ${v !== undefined ? `${n(v)} steps.` : "Nothing synced."} Hourly detail comes from your connected source.`;
+    // Screen-reader summaries: whole sentences, joined by a space.
+    summary = [
+      anchor === today ? t("Steps today.") : t("Steps on {day}.", { day: dayLabel(anchor) }),
+      v !== undefined ? t("{n} steps.", { n: n(v) }) : t("Nothing synced."),
+      t("Hourly detail comes from your connected source."),
+    ].join(" ");
   } else if (range === "week") {
     const ahead = daysOf(p).filter((d) => d > today).length;
-    foot = empty ? "No steps this week" : `${rows.length} of 7 days logged · average ${n(mean ?? 0)} a day`;
-    summary = `Steps ${current ? "this week" : `in ${periodLabel(p)}`}. ${empty ? "Nothing synced." : rows.map((r) => `${dayLabel(r.date).split(" ")[0]} ${n(r.value)}`).join(", ") + "."} Goal ${n(goal)}.${ahead ? ` ${ahead} ${ahead === 1 ? "day" : "days"} ahead.` : ""}`;
+    foot = empty ? t("No steps this week") : t("{n} of 7 days logged · average {avg} a day", { n: rows.length, avg: n(mean ?? 0) });
+    summary = [
+      current ? t("Steps this week.") : t("Steps in {period}.", { period: periodLabel(p) }),
+      empty ? t("Nothing synced.") : rows.map((r) => `${dayWord(r.date)} ${n(r.value)}`).join(", ") + ".",
+      t("Goal {n}.", { n: n(goal) }),
+      ...(ahead ? [tn(ahead, "{n} day ahead.", "{n} days ahead.")] : []),
+    ].join(" ");
     legend = [
-      { label: "Steps", swatch: <LegendDot color={mc("steps", "main")} /> },
-      { label: "Days ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Steps"), swatch: <LegendDot color={mc("steps", "main")} /> },
+      { label: t("Days ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   } else if (range === "month") {
     const y = Number(p.start.slice(0, 4));
@@ -284,13 +298,20 @@ export default function StepsPage() {
     const total = rows.reduce((s, r) => s + r.value, 0);
     const k = rows.filter((r) => r.value >= goalOn(r.date)).length;
     const b = best(rows);
-    foot = empty ? "No steps this month" : `${rows.length} of ${span} days logged · total ${n(total)}`;
-    summary = empty
-      ? `Steps in ${MONTH_LONG[m - 1]}. Nothing synced.`
-      : `Steps in ${MONTH_LONG[m - 1]}. Average ${n(mean ?? 0)} a day. Goal reached on ${k} ${k === 1 ? "day" : "days"}. Best day ${MONTH_LONG[m - 1]} ${Number(b!.date.slice(8))}, ${n(b!.value)}.`;
+    foot = empty ? t("No steps this month") : t("{n} of {span} days logged · total {total}", { n: rows.length, span, total: n(total) });
+    summary = (
+      empty
+        ? [t("Steps in {month}.", { month: monthLong(m) }), t("Nothing synced.")]
+        : [
+            t("Steps in {month}.", { month: monthLong(m) }),
+            t("Average {n} a day.", { n: n(mean ?? 0) }),
+            tn(k, "Goal reached on {n} day.", "Goal reached on {n} days."),
+            t("Best day {date}, {n}.", { date: longDate(b!.date), n: n(b!.value) }),
+          ]
+    ).join(" ");
     legend = [
-      { label: "Steps a day", swatch: <LegendDot color={mc("steps", "main", 0.75)} /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Steps a day"), swatch: <LegendDot color={mc("steps", "main", 0.75)} /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   } else {
     const y = Number(p.start.slice(0, 4));
@@ -298,13 +319,13 @@ export default function StepsPage() {
     const curM = Number(today.slice(5, 7));
     const total = rows.reduce((s, r) => s + r.value, 0);
     foot = empty
-      ? "No steps this year"
-      : `${months.length === 1 ? monthShort(months[0]) : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])}`}${current && months.includes(curM) ? ` · ${MONTH_LONG[curM - 1]} so far` : ""}`;
-    summary = empty ? `Steps in ${y}. Nothing synced.` : `Steps in ${y}. ${n(total)} so far, average ${n(mean ?? 0)} a day.`;
+      ? t("No steps this year")
+      : `${months.length === 1 ? monthShort(months[0]) : t("{start} to {end}", { start: monthShort(months[0]), end: monthShort(months[months.length - 1]) })}${current && months.includes(curM) ? ` · ${t("{month} so far", { month: monthLong(curM) })}` : ""}`;
+    summary = (empty ? [t("Steps in {year}.", { year: y }), t("Nothing synced.")] : [t("Steps in {year}.", { year: y }), t("{n} so far, average {avg} a day.", { n: n(total), avg: n(mean ?? 0) })]).join(" ");
     legend = [
-      { label: "Average a day", swatch: <LegendDot color={mc("steps", "main")} /> },
-      { label: "Months ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={ink} /> },
+      { label: t("Average a day"), swatch: <LegendDot color={mc("steps", "main")} /> },
+      { label: t("Months ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={ink} /> },
     ];
   }
 
@@ -320,9 +341,9 @@ export default function StepsPage() {
       return {
         key: d,
         title: rel,
-        meta: [rel === dayLabel(d) ? "Day total" : dayLabel(d), activity[d] ? sourceName(activity[d].source) : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
+        meta: [rel === dayLabel(d) ? t("Day total") : dayLabel(d), activity[d] ? sourceName(activity[d].source) : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
         value: n(v),
-        sub: v >= goal ? "Goal" : `${Math.round((v / goal) * 100)}%`,
+        sub: v >= goal ? t("Goal") : `${Math.round((v / goal) * 100)}%`,
         onClick: () => openDay(d),
         onDelete: syncedRemove.onDelete(d),
       };
@@ -331,12 +352,12 @@ export default function StepsPage() {
   return (
     <MetricPage sourceTag={metricSource.tag} onSourceTag={() => navigate("/app/settings/devices")}
       metric="steps"
-      title="Steps"
+      title={t("Steps")}
       range={range}
       onRangeChange={setRange}
       menu={menu}
       headerAction={shareButton}
-      cta={{ label: "Set step goal", icon: <Target size={16} />, onClick: () => setGoalOpen(true) }}
+      cta={{ label: t("Set step goal"), icon: <Target size={16} />, onClick: () => setGoalOpen(true) }}
     >
       <StepsHero
         pct={hero.pct}
@@ -347,7 +368,7 @@ export default function StepsPage() {
         loading={loading}
         ariaLabel={`${hero.value} ${hero.sub}. ${hero.pills.join(". ")}`}
       />
-      {!online && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
+      {!online && <FreshnessLine offline>{t(OFFLINE_CACHED)}</FreshnessLine>}
       {metricSource.freshness}
       {metricsError && !hasAny ? (
         <ErrorCard onRetry={retryMetrics} />
@@ -369,14 +390,14 @@ export default function StepsPage() {
               metric="steps"
               values={Array.from({ length: 24 }, (_, h) => hourly.find((x) => x.hour === h)?.steps ?? null)}
               nowHour={anchor === today ? new Date().getHours() : null}
-              label={(h, v) => `${hourLabel12(h)}, ${v === null ? "nothing synced" : `${n(v)} steps`}`}
+              label={(h, v) => (v === null ? t("{hour}, nothing synced", { hour: hourLabel12(h) }) : t("{hour}, {n} steps", { hour: hourLabel12(h), n: n(v) }))}
             />
           ) : range === "day" ? (
             <div className="flex flex-col items-center justify-center text-center" style={{ minHeight: 120, gap: 4 }}>
               <span style={{ fontSize: textPx(15), lineHeight: linePx(17.3), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>
-                {byDay[anchor] !== undefined ? `${n(byDay[anchor])} steps` : "No steps synced"}
+                {byDay[anchor] !== undefined ? t("{n} steps", { n: n(byDay[anchor]) }) : t("No steps synced")}
               </span>
-              <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Hourly detail comes from your connected source.</span>
+              <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Hourly detail comes from your connected source.")}</span>
             </div>
           ) : (
             <GoalBarChart
@@ -384,15 +405,15 @@ export default function StepsPage() {
               mode={range}
               bars={buildGoalBars(p, byDay, today)}
               goal={goal}
-              goalLabel={`Goal ${n(goal)}`}
+              goalLabel={t("Goal {n}", { n: n(goal) })}
               onBarTap={range === "month" ? openDay : undefined}
-              barLabel={(b) => (b.value === null ? `${b.key}, nothing synced` : `${b.key}, ${n(b.value)} steps`)}
+              barLabel={(b) => (b.value === null ? t("{date}, nothing synced", { date: b.key }) : t("{date}, {n} steps", { date: b.key, n: n(b.value) }))}
             />
           )}
         </ChartCard>
       )}
-      <CapsLabel>History</CapsLabel>
-      <HistoryCard metric="steps" icon={Footprints} items={items} loading={loading} empty="No steps synced yet" />
+      <CapsLabel>{t("History")}</CapsLabel>
+      <HistoryCard metric="steps" icon={Footprints} items={items} loading={loading} empty={t("No steps synced yet")} />
       {sheets}
     </MetricPage>
   );

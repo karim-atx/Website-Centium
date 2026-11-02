@@ -23,6 +23,7 @@ import { initials } from "../professionals/typeColour";
 import { textPx, linePx } from "../../theme/textSize";
 import type { LabResult } from "../../services/labs/results";
 import { useHealthMode, fieldStyle, FieldLabel, Skel, ConfirmPopup, ErrorLine, INK, INK_FAINT } from "./records/kit";
+import { t, tn, tx } from "../../i18n/core";
 
 // Release 3 · CU18–CU21 (Karim answer 3): share ONE lab result, or every
 // result of its test, with one connected professional, as an explicit grant
@@ -66,7 +67,7 @@ export const ShareResultSheet: React.FC<{
 }> = ({ open, onClose, result, panelCount = 0, onToast, onChanged }) => {
   const { authUserId } = useApp();
   const { dark, hc } = useHealthMode();
-  const t = tok(dark);
+  const tc = tok(dark);
   const [step, setStep] = useState<"who" | "confirm">("who");
   const [targets, setTargets] = useState<ShareTarget[] | null>(null);
   const [shares, setShares] = useState<ResultShare[]>([]);
@@ -119,60 +120,62 @@ export const ShareResultSheet: React.FC<{
   const target = targets?.find((x) => x.professionalId === who) ?? null;
   const already = who ? existingShare(shares, who, scope, subject) : null;
   const resultLine = `${result.name}, ${formatDisplayDate(result.date)}`;
-  const panelLine = `${panelCount} result${panelCount === 1 ? "" : "s"}, ${formatDisplayDate(result.date)}`;
+  const panelLine = tn(panelCount, "{n} result, {date}", "{n} results, {date}", { date: formatDisplayDate(result.date) });
   const nameFor = (id: string) => targets?.find((x) => x.professionalId === id) ?? null;
   const offline = () => typeof navigator !== "undefined" && navigator.onLine === false;
 
   const doShare = async () => {
     if (!who || !target || busy) return;
-    if (offline()) return setError("You're offline. Try again when you're connected.");
+    if (offline()) return setError(t("You're offline. Try again when you're connected."));
     setBusy(true);
     setError(null);
     const r = await shareResult(who, scope, subject, note);
     setBusy(false);
     if (!r.ok) return setError(r.message);
-    onToast?.(`Shared with ${target.firstName}`);
+    onToast?.(t("Shared with {name}", { name: target.firstName }));
     onChanged?.();
     onClose();
   };
   const doStop = async () => {
     if (!stopFor) return;
-    if (offline()) return setStopError("You're offline. Try again when you're connected.");
+    if (offline()) return setStopError(t("You're offline. Try again when you're connected."));
     setStopBusy(true);
     setStopError(null);
     const r = await stopSharingResult(stopFor.id);
     setStopBusy(false);
     if (!r.ok) return setStopError(r.message);
     const p = nameFor(stopFor.professionalId);
-    onToast?.(`Stopped sharing with ${p?.firstName ?? "them"}.`);
+    onToast?.(p ? t("Stopped sharing with {name}.", { name: p.firstName }) : t("Stopped sharing with them."));
     setStopFor(null);
     onChanged?.();
     setTick((x) => x + 1);
   };
 
-  const label: React.CSSProperties = { fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: t.chS };
-  const stopFirst = stopFor ? nameFor(stopFor.professionalId)?.firstName ?? "They" : "";
+  const label: React.CSSProperties = { fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: tc.chS };
+  const stopFirst = stopFor ? nameFor(stopFor.professionalId)?.firstName ?? tx("They", "a professional") : "";
 
   const whoStep = (
     <>
       {/* CU21: what already makes this result visible, with Stop. */}
       {covering.length > 0 && (
         <div data-share-existing style={{ marginBottom: 14 }}>
-          <p style={{ ...label, marginBottom: 8 }}>Shared</p>
-          <div style={{ background: t.card, border: `1px solid ${t.b10}`, borderRadius: 20, padding: "2px 14px" }}>
+          <p style={{ ...label, marginBottom: 8 }}>{t("Shared")}</p>
+          <div style={{ background: tc.card, border: `1px solid ${tc.b10}`, borderRadius: 20, padding: "2px 14px" }}>
             {covering.map((s, i) => {
               const p = nameFor(s.professionalId);
               return (
-                <div key={s.id} className="flex items-center" style={{ gap: 12, padding: "12px 0", borderBottom: i < covering.length - 1 ? `1px solid ${t.b06}` : "none" }}>
-                  <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: t.flaskTile }}>
-                    <FlaskConical size={16} strokeWidth={1.75} style={{ color: t.flaskInk }} />
+                <div key={s.id} className="flex items-center" style={{ gap: 12, padding: "12px 0", borderBottom: i < covering.length - 1 ? `1px solid ${tc.b06}` : "none" }}>
+                  <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: tc.flaskTile }}>
+                    <FlaskConical size={16} strokeWidth={1.75} style={{ color: tc.flaskInk }} />
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(20), color: INK }}>
-                      {s.bloodMarkerId ? "This result only" : "All results from this test"}
+                      {s.bloodMarkerId ? t("This result only") : t("All results from this test")}
                     </span>
                     <span className="block" style={{ fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>
-                      {`With ${p?.line ?? "a professional"} · shared ${shortDay(localIsoDay(s.sharedAt))}`}
+                      {p
+                        ? t("With {name} · shared {date}", { name: p.line, date: shortDay(localIsoDay(s.sharedAt)) })
+                        : t("With a professional · shared {date}", { date: shortDay(localIsoDay(s.sharedAt)) })}
                     </span>
                   </span>
                   <button
@@ -182,9 +185,9 @@ export const ShareResultSheet: React.FC<{
                       setStopFor(s);
                     }}
                     className="tap min-h-[44px] min-w-[44px] shrink-0"
-                    style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: t.red }}
+                    style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: tc.red }}
                   >
-                    Stop
+                    {t("Stop")}
                   </button>
                 </div>
               );
@@ -200,7 +203,7 @@ export const ShareResultSheet: React.FC<{
         </div>
       )}
 
-      <p style={{ ...label, marginBottom: 8 }}>Who</p>
+      <p style={{ ...label, marginBottom: 8 }}>{t("Who")}</p>
       {targets === null ? (
         [0, 1].map((i) => (
           <div key={i} className="flex items-center" style={{ gap: 12, padding: "10px 12px", marginBottom: 6 }}>
@@ -210,10 +213,10 @@ export const ShareResultSheet: React.FC<{
         ))
       ) : targets.length === 0 ? (
         <p style={{ padding: "4px 2px 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>
-          {loadError ?? "No professionals connected yet."}
+          {loadError ?? t("No professionals connected yet.")}
         </p>
       ) : (
-        <div role="radiogroup" aria-label="Who">
+        <div role="radiogroup" aria-label={t("Who")}>
           {targets.map((p) => {
             const on = p.professionalId === who;
             return (
@@ -224,31 +227,31 @@ export const ShareResultSheet: React.FC<{
                 aria-checked={on}
                 onClick={() => setWho(p.professionalId)}
                 className="tap w-full flex items-center text-start"
-                style={{ gap: 12, padding: "10px 12px", minHeight: 52, borderRadius: 14, marginBottom: 6, border: `1px solid ${on ? t.pr : t.b10}`, background: on ? t.prPale : t.card }}
+                style={{ gap: 12, padding: "10px 12px", minHeight: 52, borderRadius: 14, marginBottom: 6, border: `1px solid ${on ? tc.pr : tc.b10}`, background: on ? tc.prPale : tc.card }}
               >
                 {p.avatarUrl ? (
                   <img src={p.avatarUrl} alt="" className="shrink-0 object-cover" style={{ width: 32, height: 32, borderRadius: 9999 }} />
                 ) : (
-                  <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 32, height: 32, borderRadius: 9999, background: t.tealTint, color: t.tealInk, fontSize: textPx(11), fontWeight: 800 }}>
+                  <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 32, height: 32, borderRadius: 9999, background: tc.tealTint, color: tc.tealInk, fontSize: textPx(11), fontWeight: 800 }}>
                     {initials(p.name)}
                   </span>
                 )}
                 <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 600, color: INK }}>
                   {p.line}
                 </span>
-                {on && <Check size={16} strokeWidth={2.6} style={{ color: t.prDeep }} aria-hidden />}
+                {on && <Check size={16} strokeWidth={2.6} style={{ color: tc.prDeep }} aria-hidden />}
               </button>
             );
           })}
         </div>
       )}
 
-      <p style={{ ...label, margin: "14px 0 8px" }}>What</p>
-      <div role="radiogroup" aria-label="What">
+      <p style={{ ...label, margin: "14px 0 8px" }}>{t("What")}</p>
+      <div role="radiogroup" aria-label={t("What")}>
         {(
           [
-            ["result", "This result only", resultLine],
-            ...(result.panelId ? ([["panel", "All results from this test", panelLine]] as const) : []),
+            ["result", t("This result only"), resultLine],
+            ...(result.panelId ? ([["panel", t("All results from this test"), panelLine]] as const) : []),
           ] as const
         ).map(([key, title, sub]) => {
           const on = scope === key;
@@ -260,7 +263,7 @@ export const ShareResultSheet: React.FC<{
               aria-checked={on}
               onClick={() => setScope(key)}
               className="tap w-full block text-start"
-              style={{ padding: "10px 12px", minHeight: 44, borderRadius: 12, marginBottom: 6, border: `1px solid ${on ? t.optOn : t.optOff}`, background: on ? t.optOnBg : t.optOffBg }}
+              style={{ padding: "10px 12px", minHeight: 44, borderRadius: 12, marginBottom: 6, border: `1px solid ${on ? tc.optOn : tc.optOff}`, background: on ? tc.optOnBg : tc.optOffBg }}
             >
               <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(20), fontWeight: on ? 700 : 600, color: INK }}>
                 {title}
@@ -274,35 +277,35 @@ export const ShareResultSheet: React.FC<{
       </div>
       {already && target ? (
         <p data-share-already style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: 1.5, color: INK_FAINT }}>
-          {`Already shared with ${target.firstName}.`}
+          {t("Already shared with {name}.", { name: target.firstName })}
         </p>
       ) : (
-        <p style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: 1.5, color: INK_FAINT }}>Your other results stay private. You can stop sharing any time.</p>
+        <p style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: 1.5, color: INK_FAINT }}>{t("Your other results stay private. You can stop sharing any time.")}</p>
       )}
     </>
   );
 
   const confirmStep = target && (
     <>
-      <div style={{ borderRadius: 14, background: t.soft, padding: 12, marginBottom: 12 }}>
+      <div style={{ borderRadius: 14, background: tc.soft, padding: 12, marginBottom: 12 }}>
         <p style={{ fontSize: textPx(13), lineHeight: linePx(19), fontWeight: 700, color: INK }}>{scope === "result" ? resultLine : panelLine}</p>
-        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: t.chS }}>
-          {`With ${target.line} · ${scope === "result" ? "this result only" : "all results from this test"}`}
+        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: tc.chS }}>
+          {scope === "result" ? t("With {name} · this result only", { name: target.line }) : t("With {name} · all results from this test", { name: target.line })}
         </p>
       </div>
-      <FieldLabel htmlFor="share-result-note">Note (optional)</FieldLabel>
+      <FieldLabel htmlFor="share-result-note">{t("Note (optional)")}</FieldLabel>
       <input
         id="share-result-note"
         value={note}
         maxLength={280}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Can we talk about this at my next visit?"
+        placeholder={t("Can we talk about this at my next visit?")}
         className="outline-none placeholder:text-charcoal-faint"
         style={fieldStyle(dark, hc)}
       />
       <p className="flex items-start" style={{ gap: 6, marginTop: 12, fontSize: textPx(11), lineHeight: linePx(16), color: INK_FAINT }}>
         <Info size={12} strokeWidth={2} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />
-        {`${target.firstName} sees it straight away and gets a notification.`}
+        {t("{name} sees it straight away and gets a notification.", { name: target.firstName })}
       </p>
       {error && <ErrorLine style={{ marginTop: 10 }}>{error}</ErrorLine>}
     </>
@@ -314,15 +317,15 @@ export const ShareResultSheet: React.FC<{
         open={open}
         onClose={onClose}
         onBack={step === "confirm" ? () => setStep("who") : undefined}
-        title={step === "who" ? "Share with…" : "Confirm sharing"}
+        title={step === "who" ? t("Share with…") : t("Confirm sharing")}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
         footer={
           step === "who" ? (
-            <CtaButton label="Continue" onClick={() => setStep("confirm")} disabled={!target || !!already} />
+            <CtaButton label={t("Continue")} onClick={() => setStep("confirm")} disabled={!target || !!already} />
           ) : (
-            <CtaButton label="Share result" icon={<Check size={16} />} onClick={() => void doShare()} loading={busy} disabled={!target} />
+            <CtaButton label={t("Share result")} icon={<Check size={16} />} onClick={() => void doShare()} loading={busy} disabled={!target} />
           )
         }
       >
@@ -331,9 +334,15 @@ export const ShareResultSheet: React.FC<{
       <ConfirmPopup
         open={stopFor !== null}
         geometry="ours"
-        title="Stop sharing this result?"
-        body={stopFor ? `${stopFirst} can no longer see ${stopFor.bloodMarkerId ? resultLine : "the results from this test"}.` : ""}
-        confirmLabel="Stop sharing"
+        title={t("Stop sharing this result?")}
+        body={
+          stopFor
+            ? stopFor.bloodMarkerId
+              ? t("{name} can no longer see {result}.", { name: stopFirst, result: resultLine })
+              : t("{name} can no longer see the results from this test.", { name: stopFirst })
+            : ""
+        }
+        confirmLabel={t("Stop sharing")}
         busy={stopBusy}
         error={stopError}
         onCancel={() => setStopFor(null)}

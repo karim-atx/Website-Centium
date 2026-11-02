@@ -14,6 +14,7 @@ import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
 import type { BloodMarker } from "../../types";
 import { useHealthMode, hairline, statusColor, StatusWord, fmtDate, rangeText, deepInk, REPORT_NAME_DEFAULT, INK, INK_SOFT, INK_FAINT } from "./records/kit";
+import { t, tn } from "../../i18n/core";
 
 // HE1.9.3 · Biomarker popup (replaces the old bottom sheet, its trend colour
 // and its legend "Blue = stable, red = decreasing, green = increasing": V6-11).
@@ -29,7 +30,7 @@ import { useHealthMode, hairline, statusColor, StatusWord, fmtDate, rangeText, d
 
 /** Where a result's report came from, for the row text. */
 export const reportLabel = (r: Pick<LabResult, "filePath" | "reportName" | "panelId">) =>
-  r.reportName ?? (r.filePath ? REPORT_NAME_DEFAULT : r.panelId ? REPORT_NAME_DEFAULT : "Typed");
+  r.reportName ?? (r.filePath ? t(REPORT_NAME_DEFAULT) : r.panelId ? t(REPORT_NAME_DEFAULT) : t("Typed"));
 
 /** HE1.9.3 #46-#51 / HE1.9.1 #10-#15: the range bar. */
 export const RangeBar: React.FC<{ value: number; low: number | null; high: number | null; status: BloodMarker["status"]; width: number; height: number; dot: number; border: number; labels: "ends" | "inrange"; trackFill?: string }> = ({
@@ -69,10 +70,11 @@ export const RangeBar: React.FC<{ value: number; low: number | null; high: numbe
         />
       </div>
       <div style={{ position: "relative", height: 14.3, marginTop: 4 }}>
-        {labels === "ends" && <span style={{ ...label, insetInlineStart: 0, transform: "none" }}>0</span>}
+        {/* The bar is drawn left to right in both directions (a number line), so its "0" sits on the left too. */}
+        {labels === "ends" && <span style={{ ...label, left: 0, transform: "none" }}>0</span>}
         {low !== null && <span style={{ ...label, left: bandL }}>{low}</span>}
         {labels === "inrange" && (
-          <span style={{ ...label, left: (bandL + bandR) / 2, color: dark ? "#7FC79C" : "#357A4D" }}>In range</span>
+          <span style={{ ...label, left: (bandL + bandR) / 2, color: dark ? "#7FC79C" : "#357A4D" }}>{t("In range")}</span>
         )}
         {high !== null && <span style={{ ...label, left: bandR }}>{high}</span>}
       </div>
@@ -140,7 +142,7 @@ export const BiomarkerDetailSheet: React.FC<{
       geometry="partB"
       align="start"
       swipeToClose
-      titleClass={`text-[17px] leading-[25.5px] tracking-[-0.3px] ${onShareWithProfessional ? "pr-[108px]" : "pr-[72px]"}`}
+      titleClass={`text-[17px] leading-[25.5px] tracking-[-0.3px] ${onShareWithProfessional ? "pe-[108px]" : "pe-[72px]"}`}
       titleAside={
         onShareWithProfessional ? (
           <span className="flex items-center" style={{ gap: 2, marginTop: -9, marginInlineEnd: -10 }}>
@@ -149,7 +151,7 @@ export const BiomarkerDetailSheet: React.FC<{
               ref={menuBtn}
               type="button"
               onClick={() => setMenuOpen(true)}
-              aria-label="More options"
+              aria-label={t("More options")}
               aria-haspopup="menu"
               className="tap shrink-0 grid place-items-center rounded-full"
               style={{ width: 36, height: 36 }}
@@ -171,7 +173,7 @@ export const BiomarkerDetailSheet: React.FC<{
         </p>
         {hasRange && (
           <p style={{ marginTop: 5, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_SOFT }}>
-            {`Reference range ${rangeText(latest.rangeLow, latest.rangeHigh)} ${latest.unit}`}
+            {t("Reference range {range} {unit}", { range: rangeText(latest.rangeLow, latest.rangeHigh), unit: latest.unit })}
           </p>
         )}
         {remark && <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>{remark}</p>}
@@ -188,7 +190,7 @@ export const BiomarkerDetailSheet: React.FC<{
         )}
         {list.length > 1 && (
           <>
-            <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>History</p>
+            <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>{t("History")}</p>
             <div style={{ marginTop: 4 }}>
               <BiomarkerLineChart
                 points={list.map((r) => ({ date: r.date, value: r.value }))}
@@ -196,12 +198,12 @@ export const BiomarkerDetailSheet: React.FC<{
                 high={threshold ? null : latest.rangeHigh}
                 width={310}
                 height={96}
-                label={`${marker.name}, ${list.length} results`}
+                label={tn(list.length, "{marker}, {n} result", "{marker}, {n} results", { marker: marker.name })}
               />
             </div>
           </>
         )}
-        <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>{list.length > 1 ? "Last 3 results" : "Last result"}</p>
+        <p style={{ marginTop: 12, fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: INK_SOFT }}>{list.length > 1 ? t("Last 3 results") : t("Last result")}</p>
         <div style={{ marginTop: 4 }}>
           {last3.map((r) => (
             <div key={r.id} className="flex items-center" style={{ minHeight: 40, gap: 10, borderTop: rule }}>
@@ -223,7 +225,7 @@ export const BiomarkerDetailSheet: React.FC<{
             className="tap w-full flex items-center justify-center min-h-[44px]"
             style={{ marginTop: 4, gap: 3, fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}
           >
-            View full history <ChevronRight size={15} aria-hidden />
+            {t("View full history")} <ChevronRight size={15} className="rtl:-scale-x-100" aria-hidden />
           </button>
         )}
         {/* Release 3 CU18 v2 (r28.js bio28: 11.5 #8C8378, centred). */}
@@ -240,7 +242,7 @@ export const BiomarkerDetailSheet: React.FC<{
           open={menuOpen}
           onClose={() => setMenuOpen(false)}
           anchor={menuBtn.current}
-          options={[{ value: "share-pro", label: "Share with a professional", icon: <UserRoundCheck size={15} /> }]}
+          options={[{ value: "share-pro", label: t("Share with a professional"), icon: <UserRoundCheck size={15} /> }]}
           onSelect={() => onShareWithProfessional()}
           width={220}
           align="right"

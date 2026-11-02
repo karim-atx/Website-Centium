@@ -4,6 +4,7 @@ import { FixedHeader } from "../../ui/FixedHeader";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { textPx, linePx } from "../../../theme/textSize";
 import { INK, useHealthMode } from "./kit";
+import { t } from "../../../i18n/core";
 
 export interface HeaderMenuItem {
   key: string;
@@ -45,11 +46,11 @@ export const RecordsHeader: React.FC<{
         <button
           type="button"
           onClick={onBack}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
         >
-          <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+          <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
         </button>
         <h1 className="flex-1 min-w-0 line-clamp-2" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5, color: INK }}>
           {title}
@@ -59,7 +60,7 @@ export const RecordsHeader: React.FC<{
             ref={menuBtn}
             type="button"
             onClick={() => setOpen(true)}
-            aria-label="More options"
+            aria-label={t("More options")}
             aria-haspopup="menu"
             className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
             style={{ width: 36, height: 36, marginInlineEnd: -8 }}
@@ -85,7 +86,7 @@ export const RecordsHeader: React.FC<{
             className="tap shrink-0 min-h-[44px]"
             style={{ padding: "0 12px", fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#C3B3FB" : "#5F5093" }}
           >
-            Manage
+            {t("Manage")}
           </button>
         </div>
       )}

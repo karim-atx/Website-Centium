@@ -5,6 +5,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { textPx, linePx } from "../../../theme/textSize";
 import { acceptFor } from "../../../services/storage";
 import { useHealthMode, rowRule, tileFill, deepInk, HelpLine, INK, INK_FAINT } from "./kit";
+import { t } from "../../../i18n/core";
 
 // OURS-upload-choice: "camera or files" for Labs "Upload a report", Imaging
 // "Add imaging", the web "Scan a report" (HE1.9.2 is NATIVE: the live camera
@@ -36,18 +37,18 @@ export const UploadChoiceSheet: React.FC<{
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!TYPES.includes(file.type)) return setError("That type isn't supported. Use PDF, JPG or PNG.");
-    if (file.size > mb * 1024 * 1024) return setError(`That file is too big. The limit is ${mb} MB.`);
-    if (file.size === 0) return setError("That type isn't supported. Use PDF, JPG or PNG.");
+    if (!TYPES.includes(file.type)) return setError(t("That type isn't supported. Use PDF, JPG or PNG."));
+    if (file.size > mb * 1024 * 1024) return setError(t("That file is too big. The limit is {mb} MB.", { mb }));
+    if (file.size === 0) return setError(t("That type isn't supported. Use PDF, JPG or PNG."));
     setError(null);
     onFile(file);
   };
 
   const rows: { key: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; title: string; sub: string; onClick: () => void }[] = [
-    { key: "photo", icon: Camera, title: "Take a photo", sub: "Use your camera", onClick: () => camera.current?.click() },
-    { key: "file", icon: FileText, title: "Choose a file", sub: "PDF, JPG or PNG", onClick: () => picker.current?.click() },
+    { key: "photo", icon: Camera, title: t("Take a photo"), sub: t("Use your camera"), onClick: () => camera.current?.click() },
+    { key: "file", icon: FileText, title: t("Choose a file"), sub: t("PDF, JPG or PNG"), onClick: () => picker.current?.click() },
   ];
-  if (onTypeIt) rows.push({ key: "type", icon: PenLine, title: "Type it in", sub: "No file, just the details", onClick: onTypeIt });
+  if (onTypeIt) rows.push({ key: "type", icon: PenLine, title: t("Type it in"), sub: t("No file, just the details"), onClick: onTypeIt });
 
   return (
     <BottomSheet
@@ -89,7 +90,7 @@ export const UploadChoiceSheet: React.FC<{
           <span>{note}</span>
         </p>
       )}
-      <HelpLine style={{ marginTop: note ? 4 : 10 }}>{`Files up to ${mb} MB.`}</HelpLine>
+      <HelpLine style={{ marginTop: note ? 4 : 10 }}>{t("Files up to {mb} MB.", { mb })}</HelpLine>
       {error && <HelpLine error>{error}</HelpLine>}
     </BottomSheet>
   );

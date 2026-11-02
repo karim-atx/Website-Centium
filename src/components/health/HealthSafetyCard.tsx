@@ -2,6 +2,7 @@ import React from "react";
 import { AlertCircle } from "lucide-react";
 import { textPx, linePx } from "../../theme/textSize";
 import { useHealthMode, hairline } from "./metric/MetricKit";
+import { t } from "../../i18n/core";
 
 /**
  * OURS-health-he1-safety-card (KEEP-SAFETY K1-K3): the full-width card under
@@ -55,7 +56,7 @@ export const HealthSafetyCard: React.FC<{
           className="uppercase"
           style={{ fontSize: textPx(9), lineHeight: linePx(13.5), fontWeight: 700, letterSpacing: 1.4, color: dark ? "#B8B3C7" : "rgb(var(--metric-blood-pressure-ink))" }}
         >
-          Blood pressure
+          {t("Blood pressure")}
         </span>
       </div>
       {title && (
@@ -69,7 +70,7 @@ export const HealthSafetyCard: React.FC<{
           className="tap relative block before:absolute before:-inset-y-[13px] before:-inset-x-2 before:content-['']"
           style={{ marginTop: 8, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: hc && !dark ? "#4B3BA0" : dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))" }}
         >
-          See readings
+          {t("See readings")}
         </button>
       )}
     </div>

@@ -35,6 +35,8 @@ import { localIsoDay, shortDay } from "../../services/care-plan/logic";
 import type { LabResult } from "../../services/labs/results";
 import { textPx, linePx } from "../../theme/textSize";
 import { useShareLocks } from "../../components/share/client/useShareLocks";
+import { imagingTypeLabel } from "../../components/health/imagingTypes";
+import { t, tn, tx } from "../../i18n/core";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
 // HE1.9 · Biomarkers & imaging (docs/health-b-handover.md 614-2863): one full
@@ -51,22 +53,24 @@ import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from 
 // reminder sweep) show their pending states in place.
 
 type Tab = "biomarkers" | "labs" | "imaging" | "history";
-const TABS: { key: Tab; label: string }[] = [
-  { key: "biomarkers", label: "Biomarkers" },
-  { key: "labs", label: "Labs" },
-  { key: "imaging", label: "Imaging" },
-  { key: "history", label: "History" },
+// The labels are read at display; "Labs" and "Imaging" carry a context key
+// (health records), since the bare words read differently on the pro side.
+const TABS: { key: Tab; label: () => string }[] = [
+  { key: "biomarkers", label: () => t("Biomarkers") },
+  { key: "labs", label: () => tx("Labs", "health records") },
+  { key: "imaging", label: () => tx("Imaging", "health records") },
+  { key: "history", label: () => t("History") },
 ];
 const tabFromHash = (hash: string): Tab => {
   const h = hash.replace(/^#/, "");
-  return (TABS.find((t) => t.key === h)?.key ?? "biomarkers") as Tab;
+  return (TABS.find((x) => x.key === h)?.key ?? "biomarkers") as Tab;
 };
 
 /** "12 Aug 2026 · PDF, 4 pages" (pages from B2 file_pages when known). */
 const fileSubtitle = (f: { date: string; filePath?: string | null; filePages?: number | null }) => {
   const pdf = !!f.filePath?.toLowerCase().endsWith(".pdf");
-  const pages = pdf && f.filePages ? `, ${f.filePages} page${f.filePages === 1 ? "" : "s"}` : "";
-  return `${fmtDate(f.date)} · ${pdf ? "PDF" : "Photo"}${pages}`;
+  if (pdf && f.filePages) return `${fmtDate(f.date)} · ${tn(f.filePages, "PDF, {n} page", "PDF, {n} pages")}`;
+  return `${fmtDate(f.date)} · ${pdf ? "PDF" : t("Photo")}`;
 };
 
 type Viewing =
@@ -94,7 +98,7 @@ export default function HealthRecords() {
   const lab = useLabCatalogue();
   const labResults = useLabResults();
   const tab = tabFromHash(location.hash);
-  const setTab = (t: Tab) => navigate({ hash: t }, { replace: true });
+  const setTab = (next: Tab) => navigate({ hash: next }, { replace: true });
 
   const [fresh, setFresh] = useState(false);
   useEffect(() => {
@@ -203,7 +207,7 @@ export default function HealthRecords() {
       .slice()
       .sort((a, b) => a.sharedAt.localeCompare(b.sharedAt))[0];
     const p = s && shareTargets.find((x) => x.professionalId === s.professionalId);
-    return s && p ? `Shared with ${p.line} since ${shortDay(localIsoDay(s.sharedAt))}` : null;
+    return s && p ? t("Shared with {name} since {date}", { name: p.line, date: shortDay(localIsoDay(s.sharedAt)) }) : null;
   };
 
   const resultsByKey = useMemo(() => {
@@ -242,16 +246,16 @@ export default function HealthRecords() {
     const files = imagingRecords.filter((r) => r.filePath);
     let failed = false;
     for (const r of files) if (!(await exportStoredFile("medical-imaging", r.filePath!)).ok) failed = true;
-    if (failed) setToast("Couldn't share. Try again.");
+    if (failed) setToast(t("Couldn't share. Try again."));
   };
   const menu: HeaderMenuItem[] | undefined =
     tab === "biomarkers" || tab === "labs"
       ? [
-          ...(bioCardsLocked ? [] : [{ key: "share", label: "Share all", icon: <Share2 size={15} />, onSelect: () => setShareMarkers({ marker: null }) }]),
-          { key: "manual", label: "Add manually", icon: <PenLine size={15} />, onSelect: () => setScan({ file: null }) },
+          ...(bioCardsLocked ? [] : [{ key: "share", label: t("Share all"), icon: <Share2 size={15} />, onSelect: () => setShareMarkers({ marker: null }) }]),
+          { key: "manual", label: t("Add manually"), icon: <PenLine size={15} />, onSelect: () => setScan({ file: null }) },
         ]
       : tab === "imaging" && imagingRecords.some((r) => r.filePath)
-        ? [{ key: "export", label: "Export all", icon: <Download size={15} />, onSelect: () => void exportAll() }]
+        ? [{ key: "export", label: t("Export all"), icon: <Download size={15} />, onSelect: () => void exportAll() }]
         : undefined;
 
   const marker = markerFor(markerKey);
@@ -261,23 +265,23 @@ export default function HealthRecords() {
     ? undefined
     : viewing.kind === "imaging"
       ? [
-          { key: "share", label: "Share", icon: <Share2 size={15} />, onSelect: () => { const r = viewing.record; setViewing(null); setShareImaging(r); } },
-          { key: "edit", label: "Edit", icon: <Pencil size={15} />, onSelect: () => { const r = viewing.record; setViewing(null); setImagingForm({ record: r, file: null }); } },
-          { key: "delete", label: "Delete", icon: <Trash2 size={15} />, destructive: true, onSelect: () => { const r = viewing.record; setViewing(null); setDeleteImaging(r); } },
+          { key: "share", label: t("Share"), icon: <Share2 size={15} />, onSelect: () => { const r = viewing.record; setViewing(null); setShareImaging(r); } },
+          { key: "edit", label: t("Edit"), icon: <Pencil size={15} />, onSelect: () => { const r = viewing.record; setViewing(null); setImagingForm({ record: r, file: null }); } },
+          { key: "delete", label: t("Delete"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => { const r = viewing.record; setViewing(null); setDeleteImaging(r); } },
         ]
       : [
-          { key: "edit", label: "Edit", icon: <Pencil size={15} />, onSelect: () => { const r = viewing.report; setViewing(null); setEditReport(r); } },
-          { key: "delete", label: "Delete", icon: <Trash2 size={15} />, destructive: true, onSelect: () => { const r = viewing.report; setViewing(null); setRemoveReport(r); } },
+          { key: "edit", label: t("Edit"), icon: <Pencil size={15} />, onSelect: () => { const r = viewing.report; setViewing(null); setEditReport(r); } },
+          { key: "delete", label: t("Delete"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => { const r = viewing.report; setViewing(null); setRemoveReport(r); } },
         ];
 
   const cta =
     tab === "biomarkers"
-      ? { label: "Scan a report", icon: <Camera size={16} />, onClick: () => setChoice("scan") }
+      ? { label: t("Scan a report"), icon: <Camera size={16} />, onClick: () => setChoice("scan") }
       : tab === "labs"
-        ? { label: "Upload a report", icon: <Camera size={16} />, onClick: () => setChoice("report") }
+        ? { label: t("Upload a report"), icon: <Camera size={16} />, onClick: () => setChoice("report") }
         : tab === "imaging"
-          ? { label: "Add imaging", icon: <Camera size={16} />, onClick: () => setChoice("imaging") }
-          : { label: "Add to history", icon: <Plus size={16} />, onClick: (e: React.MouseEvent<HTMLButtonElement>) => setHistoryMenu(e.currentTarget) };
+          ? { label: t("Add imaging"), icon: <Camera size={16} />, onClick: () => setChoice("imaging") }
+          : { label: t("Add to history"), icon: <Plus size={16} />, onClick: (e: React.MouseEvent<HTMLButtonElement>) => setHistoryMenu(e.currentTarget) };
 
   const scanSaved = (s: ScanSaved) => {
     setConfirmation({ count: s.count, name: s.name });
@@ -322,9 +326,9 @@ export default function HealthRecords() {
       <UploadChoiceSheet
         open={choice !== null}
         onClose={() => setChoice(null)}
-        title={choice === "imaging" ? "Add imaging" : choice === "scan" ? "Scan a report" : "Add a report"}
+        title={choice === "imaging" ? t("Add imaging") : choice === "scan" ? t("Scan a report") : t("Add a report")}
         bucket={choice === "imaging" ? "medical-imaging" : "lab-reports"}
-        note={choice === "scan" ? "Read on your phone. The photo and its text never leave it." : undefined}
+        note={choice === "scan" ? t("Read on your phone. The photo and its text never leave it.") : undefined}
         onFile={(file) => {
           const c = choice;
           setChoice(null);
@@ -342,15 +346,15 @@ export default function HealthRecords() {
       <ShareImagingSheet open={!!shareImaging} onClose={() => setShareImaging(null)} record={shareImaging} onToast={setToast} />
       <ConfirmPopup
         open={!!deleteImaging}
-        title="Delete this record?"
+        title={t("Delete this record?")}
         body={
           deleteImaging
             ? deleteImaging.filePath
-              ? `${deleteImaging.type}, ${fmtDate(deleteImaging.date)}. The attached file is removed too. This can't be undone.`
-              : `${deleteImaging.type}, ${fmtDate(deleteImaging.date)}. This can't be undone.`
+              ? t("{name}, {date}. The attached file is removed too. This can't be undone.", { name: imagingTypeLabel(deleteImaging.type), date: fmtDate(deleteImaging.date) })
+              : t("{name}, {date}. This can't be undone.", { name: imagingTypeLabel(deleteImaging.type), date: fmtDate(deleteImaging.date) })
             : ""
         }
-        confirmLabel="Delete"
+        confirmLabel={t("Delete")}
         busy={deleteBusy}
         error={deleteError}
         onCancel={() => {
@@ -360,14 +364,14 @@ export default function HealthRecords() {
         onConfirm={() => {
           const r = deleteImaging;
           if (!r) return;
-          if (!online) return setDeleteError("You're offline. Try again when you're connected.");
+          if (!online) return setDeleteError(t("You're offline. Try again when you're connected."));
           setDeleteBusy(true);
           setDeleteError(null);
           void removeImagingRecord(r.id).then((res) => {
             setDeleteBusy(false);
-            if (!res.ok) return setDeleteError("Couldn't delete. Try again.");
+            if (!res.ok) return setDeleteError(t("Couldn't delete. Try again."));
             setDeleteImaging(null);
-            setToast("Record deleted.");
+            setToast(t("Record deleted."));
           });
         }}
       />
@@ -379,9 +383,9 @@ export default function HealthRecords() {
         title={
           viewing?.kind === "imaging"
             ? viewing.record.note
-              ? `${viewing.record.type} · ${viewing.record.note}`
-              : viewing.record.type
-            : viewing?.report.name ?? REPORT_NAME_DEFAULT
+              ? `${imagingTypeLabel(viewing.record.type)} · ${viewing.record.note}`
+              : imagingTypeLabel(viewing.record.type)
+            : viewing?.report.name ?? t(REPORT_NAME_DEFAULT)
         }
         subtitle={
           viewing
@@ -391,16 +395,16 @@ export default function HealthRecords() {
         menu={viewerMenu}
       />
       <LabReportEditSheet report={editReport} onClose={() => setEditReport(null)} onSaved={setToast} />
-      <RemoveReportPopup report={removeReport} onClose={() => setRemoveReport(null)} onRemoved={() => setToast("Lab report removed.")} />
+      <RemoveReportPopup report={removeReport} onClose={() => setRemoveReport(null)} onRemoved={() => setToast(t("Lab report removed."))} />
       <PopupMenu
         open={!!historyMenu}
         onClose={() => setHistoryMenu(null)}
         anchor={historyMenu}
         options={[
-          { value: "condition", label: "Condition", icon: <Stethoscope size={15} /> },
-          { value: "surgery", label: "Surgery", icon: <Scissors size={15} /> },
-          { value: "medication", label: "Medication", icon: <Pill size={15} /> },
-          { value: "injury", label: "Injury", icon: <Bandage size={15} /> },
+          { value: "condition", label: tx("Condition", "health"), icon: <Stethoscope size={15} /> },
+          { value: "surgery", label: t("Surgery"), icon: <Scissors size={15} /> },
+          { value: "medication", label: t("Medication"), icon: <Pill size={15} /> },
+          { value: "injury", label: t("Injury"), icon: <Bandage size={15} /> },
         ]}
         onSelect={(v) => {
           if (v === "condition") setConditionOpen(true);
@@ -452,10 +456,10 @@ export default function HealthRecords() {
 
   return (
     <div style={{ paddingBottom: 176 }}>
-      <RecordsHeader title="Biomarkers & imaging" onBack={back} menu={menu} shared={recordsShared}>
+      <RecordsHeader title={t("Biomarkers & imaging")} onBack={back} menu={menu} shared={recordsShared}>
         <SegmentedTabs
           className="mt-3"
-          items={TABS}
+          items={TABS.map((x) => ({ key: x.key, label: x.label() }))}
           activeKey={tab}
           onChange={(k) => setTab(k as Tab)}
           size="compact"
@@ -472,8 +476,8 @@ export default function HealthRecords() {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search markers"
-              aria-label="Search markers"
+              placeholder={t("Search markers")}
+              aria-label={t("Search markers")}
               className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
               style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), color: INK }}
             />

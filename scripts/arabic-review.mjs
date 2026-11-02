@@ -59,6 +59,8 @@ const AREAS = [
   ["bizops", "Business operations: schedule, classes, appointments, front desk"],
   ["bizmarket", "Business marketplace: listing, offers, promotions, photos, hiring"],
   ["bizteam", "Business team, membership plans, store orders and the store"],
+  ["health", "Health: metrics, records, labs and health checks"],
+  ["cycle", "Cycle, pregnancy and contraception"],
 ];
 
 const rows = [];

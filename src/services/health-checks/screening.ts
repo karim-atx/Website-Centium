@@ -1,4 +1,5 @@
 import type { BloodMarker } from "../../types";
+import { tk } from "../../i18n/core";
 
 /**
  * Health checks for everyone (Task Y): the checks worth asking a doctor about,
@@ -17,11 +18,11 @@ import type { BloodMarker } from "../../types";
  */
 
 export const SCREENING_COPY = {
-  cardTitle: "Your health checks",
+  cardTitle: tk("Your health checks"),
   cardSubtitle: "Checks worth asking your doctor about",
   heading: "Checks worth asking your doctor about",
   intro: "Based on your age and profile. Your doctor may suggest a different schedule, and theirs comes first.",
-  notYet: "Not yet",
+  notYet: tk("Not yet"),
   lastChecked: (date: string) => `Last checked ${date}`,
 } as const;
 
