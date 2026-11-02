@@ -549,7 +549,7 @@ const food: Catalogue = {
   "Desired weight must be lower than your current weight ({kg} kg) to lose weight.": "يجب أن يكون الوزن المرغوب أقل من وزنك الحالي ({kg} كغ) لخسارة الوزن.",
   "Desired weight must be higher than the current weight ({kg} kg) to gain weight.": "يجب أن يكون الوزن المرغوب أعلى من الوزن الحالي ({kg} كغ) لزيادة الوزن.",
   "Desired weight must be higher than your current weight ({kg} kg) to gain weight.": "يجب أن يكون الوزن المرغوب أعلى من وزنك الحالي ({kg} كغ) لزيادة الوزن.",
-  "Locked: only your dietitian can edit this plan.": "مقفلة: أخصائي التغذية وحده يمكنه تعديل هذه الخطة.",
+  "Locked: only your dietitian can edit this plan.": "مقفلة: أخصائي التغذية العلاجية وحده يمكنه تعديل هذه الخطة.",
   "Current weight": "الوزن الحالي",
   "Last logged": "آخر تسجيل",
   "No weigh-ins yet": "لا قياسات وزن بعد",
