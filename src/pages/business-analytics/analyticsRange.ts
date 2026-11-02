@@ -4,7 +4,8 @@
 // ISO "YYYY-MM-DD" on this device's calendar; the readers that take a range
 // (BU5-13 p_from / p_to / p_compare) get exactly these.
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 export type RangeKey = "week" | "4w" | "12w" | "custom";
 
@@ -73,8 +74,8 @@ export function businessRange(r: AnalyticsRange, timeZone: string | null, now: D
 /** "Sep 8", or "Sep 8, 2025" when the year differs from `today`'s. */
 export function dayMonth(iso: string, today: string = isoOf(new Date())): string {
   const d = dateOf(iso);
-  const mon = MON[d.getMonth()];
-  return d.getFullYear() === dateOf(today).getFullYear() ? `${mon} ${d.getDate()}` : `${mon} ${d.getDate()}, ${d.getFullYear()}`;
+  const sameYear = d.getFullYear() === dateOf(today).getFullYear();
+  return d.toLocaleDateString(appLocale("en-US"), sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** The previous period: the same number of days immediately before. */
@@ -85,21 +86,21 @@ export function previousOf(r: AnalyticsRange): { from: string; to: string } {
 
 /** The line under the range tabs. */
 export function rangeLine(r: AnalyticsRange, today: string = isoOf(new Date())): string {
-  const span = `${dayMonth(r.from, today)} to ${dayMonth(r.to, today)}`;
+  const span = t("{from} to {to}", { from: dayMonth(r.from, today), to: dayMonth(r.to, today) });
   if (!r.compare) return span;
-  if (r.key === "week") return `${span}, compared with the week before`;
-  if (r.key === "4w") return `${span}, compared with the 4 weeks before`;
-  if (r.key === "12w") return `${span}, compared with the 12 weeks before`;
+  if (r.key === "week") return t("{span}, compared with the week before", { span });
+  if (r.key === "4w") return t("{span}, compared with the 4 weeks before", { span });
+  if (r.key === "12w") return t("{span}, compared with the 12 weeks before", { span });
   const p = previousOf(r);
-  return `${span}, compared with ${dayMonth(p.from, today)} to ${dayMonth(p.to, today)}`;
+  return t("{span}, compared with {from} to {to}", { span, from: dayMonth(p.from, today), to: dayMonth(p.to, today) });
 }
 
 /** Words for the range inside a sentence ("the last 4 weeks"). */
 export function rangeWords(r: AnalyticsRange, today: string = isoOf(new Date())): string {
-  if (r.key === "week") return "this week";
-  if (r.key === "4w") return "the last 4 weeks";
-  if (r.key === "12w") return "the last 12 weeks";
-  return `${dayMonth(r.from, today)} to ${dayMonth(r.to, today)}`;
+  if (r.key === "week") return t("this week");
+  if (r.key === "4w") return t("the last 4 weeks");
+  if (r.key === "12w") return t("the last 12 weeks");
+  return t("{from} to {to}", { from: dayMonth(r.from, today), to: dayMonth(r.to, today) });
 }
 
 /** The Custom sheet's selection: the two ends and which one the next tap sets. */

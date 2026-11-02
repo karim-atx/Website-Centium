@@ -3,6 +3,7 @@ import { photoRect, toExport, type OverlayTransform, type PhotoCrop, type Size }
 import { CARD_W, EXPORT_K, exportSize, type ClientFormat, type IdentityKey } from "./clientCardModel";
 import { baselineY, clampRadius, cssGradientLine, hexAlpha, lineHeightPx, parseShadows, wrapWords, type PaintShadow } from "./paintMath";
 import { loadArabicForCanvas } from "../../../i18n/fonts";
+import { BADGE_STOPS, BOLD_ACCENT, BOLD_BG, GRAD_STOPS, isPremiumBackground, type PremiumBackground } from "./premiumDesigns";
 
 // Market + Share 3.0 · C-SH.3 / C-SH.4 / C-SH.5: the client card as a PNG,
 // following the repo's drawShareCard rules (HANDOVER §12): drawn on the
@@ -254,6 +255,22 @@ function paintBrand(ctx: CanvasRenderingContext2D, W: number, H: number) {
   ctx.fillRect(0, 0, W, H);
 }
 
+/** Round G4: a Premium design's background (premiumDesigns.ts), in card px, as paintBrand. */
+function paintPremium(ctx: CanvasRenderingContext2D, bg: PremiumBackground, W: number, H: number) {
+  if (bg === "BOLD") {
+    ctx.fillStyle = BOLD_BG;
+    ctx.fillRect(0, 0, W, H);
+    // The gold band along the top edge, 6 card px (the DOM card's gradient).
+    ctx.fillStyle = BOLD_ACCENT;
+    ctx.fillRect(0, 0, W, 6);
+    return;
+  }
+  const g = ctx.createLinearGradient(...cssGradientLine(150, W, H));
+  for (const [at, c] of bg === "GRAD" ? GRAD_STOPS : BADGE_STOPS) g.addColorStop(at, c);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
 /** idPal(): radial-gradient(85% 55% at 100% 0%, ink 0x2E 0%, transparent 62%), repeating-linear-gradient(135deg, ink 0x0F 0 2px, transparent 2px 13px), tint. In card px. */
 function paintIdentity(ctx: CanvasRenderingContext2D, id: IdentityKey, W: number, H: number) {
   const [tint, ink] = METRIC_IDENTITY[id];
@@ -315,7 +332,9 @@ export async function drawClientCard(canvas: HTMLCanvasElement, source: HTMLElem
   const H = h / EXPORT_K;
   const bg = source.getAttribute("data-bg");
   if (format !== "sticker") {
-    if (bg === "I") paintIdentity(ctx, (source.getAttribute("data-id") as IdentityKey) || "workout", CARD_W, H);
+    // Round G4: a Premium design paints its own background.
+    if (isPremiumBackground(bg)) paintPremium(ctx, bg, CARD_W, H);
+    else if (bg === "I") paintIdentity(ctx, (source.getAttribute("data-id") as IdentityKey) || "workout", CARD_W, H);
     else paintBrand(ctx, CARD_W, H);
   }
   await paintDom(ctx, source, EXPORT_K);

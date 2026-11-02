@@ -28,14 +28,13 @@ import {
   type MemberCode,
   type Membership,
 } from "../../../services/business-members";
-import { t } from "../../../i18n/core";
-import { KIND_LABEL } from "../../business-ops/plans/planModel";
+import { t, tk, tn, tx } from "../../../i18n/core";
+import { kindLabel } from "../../business-ops/plans/planModel";
 import { AnAvatar, AnCard, AnCountLine, AnHeaderRow, AnLead, AnListRow, AnNoneRow, AnNumberBoxes, AnRowButton, AnSeeAll, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
 import { liveCodes, type MembersData } from "./useMembersData";
 import { appLocale } from "../../../i18n/format";
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Analytics › Members › Member codes (OURS-AN4-member-codes, with the
 // OURS-OP1-member-codes differences: the End pop-up is OP1-019's K16,
@@ -68,30 +67,26 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 const BASE = "/app/business/analytics/members";
 
 // The app's "Oct 14" convention.
-const dMMM = (iso: string) => {
-  const d = new Date(iso);
-  return `${MON[d.getMonth()]} ${d.getDate()}`;
-};
-const dMMMyyyy = (iso: string) => {
-  const d = new Date(iso);
-  return `${MON[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-};
+const dMMM = (iso: string) => new Date(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
+const dMMMyyyy = (iso: string) => new Date(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
+/** The plan kind inside a sentence ("this membership"), from services' KIND_WORD. */
+const kindWord = (k: keyof typeof KIND_WORD) => tx(KIND_WORD[k], "plan kind");
 
 const STATUS: Record<Membership["status"], { label: string; tone: "member" | "pending" | "muted" }> = {
-  active: { label: "Active", tone: "member" },
-  pending: { label: "Pending", tone: "pending" },
-  declined: { label: "Declined", tone: "muted" },
-  ended: { label: "Ended", tone: "muted" },
+  active: { label: tk("Active"), tone: "member" },
+  pending: { label: tk("Pending"), tone: "pending" },
+  declined: { label: tk("Declined"), tone: "muted" },
+  ended: { label: tk("Ended"), tone: "muted" },
 };
 
 const memberFact = (m: Membership) =>
   m.status === "ended" && m.endedAt
-    ? `Ended ${dMMMyyyy(m.endedAt)}`
+    ? t("Ended {date}", { date: dMMMyyyy(m.endedAt) })
     : m.status === "pending"
-      ? `Invited ${dMMMyyyy(m.invitedAt)}`
+      ? t("Invited {date}", { date: dMMMyyyy(m.invitedAt) })
       : m.respondedAt
-        ? `Since ${dMMMyyyy(m.respondedAt)}`
-        : `Invited ${dMMMyyyy(m.invitedAt)}`;
+        ? t("Since {date}", { date: dMMMyyyy(m.respondedAt) })
+        : t("Invited {date}", { date: dMMMyyyy(m.invitedAt) });
 
 export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: MembersVocab }) {
   const navigate = useNavigate();
@@ -115,7 +110,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   const members = data.members ?? [];
   const memberCount = Math.max(data.memberTotal, members.length);
   const memberName = (m: Membership) => m.label ?? maskedMemberLabel(m.id);
-  const memberCountLabel = `${memberCount} ${memberCount === 1 ? "member" : "members"}`;
+  const memberCountLabel = tn(memberCount, "1 member", "{n} members");
   // AB6: a code with uses left counts once it has been used at all.
   const redeemed = codes.filter((c) => c.uses > 0).length;
   const pct = codes.length > 0 ? Math.round((redeemed / codes.length) * 100) : null;
@@ -125,7 +120,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
     if (await copyText(code)) {
       setCopied(code);
       window.setTimeout(() => setCopied((c) => (c === code ? null : c)), 1600);
-    } else showToast("Couldn't copy. Select the code and copy it yourself.");
+    } else showToast(t("Couldn't copy. Select the code and copy it yourself."));
   };
 
   const confirmEnd = async () => {
@@ -139,7 +134,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       return;
     }
     setEnding(null);
-    showToast("Membership ended.");
+    showToast(t("Membership ended."));
     data.reload();
   };
 
@@ -169,13 +164,13 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
       mono
       avatar={<AnAvatar icon={Ticket} tone="caution" />}
       name={c.code}
-      fact={`Expires ${dMMM(c.expiresAt)} · ${usesLine(c.uses, c.maxUses)} · ${grantsLine(c, data.plans, gyms)}`}
+      fact={`${t("Expires {date}", { date: dMMM(c.expiresAt) })} · ${usesLine(c.uses, c.maxUses)} · ${grantsLine(c, data.plans, gyms)}`}
       trailing={
         <span className="flex items-center gap-[6px]">
           <AnRowButton
             icon={copied === c.code ? Check : Copy}
-            label={copied === c.code ? "Copied" : "Copy"}
-            ariaLabel={`Copy ${c.code}`}
+            label={copied === c.code ? t("Copied") : t("Copy")}
+            ariaLabel={t("Copy {code}", { code: c.code })}
             onClick={() => void copy(c.code)}
           />
           <button
@@ -241,17 +236,17 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         first={i === 0}
         avatar={m.label && !isMaskedLabel(m.label) ? <AnAvatar initial={m.label.charAt(0).toUpperCase()} index={i} /> : <AnAvatar masked />}
         name={memberName(m)}
-        nameExtra={m.isMinor ? <MemberTag label="Under 18" tone="muted" /> : undefined}
-        fact={`${m.planName ?? "No plan"} · ${memberFact(m)}`}
+        nameExtra={m.isMinor ? <MemberTag label={t("Under 18")} tone="muted" /> : undefined}
+        fact={`${m.planName ?? t("No plan")} · ${memberFact(m)}`}
         trailing={
           <span className="flex items-center gap-[8px]">
-            <MemberTag label={st.label} tone={st.tone} />
+            <MemberTag label={st.label === "Active" ? tx("Active", "members chart") : t(st.label)} tone={st.tone} />
             {(m.status === "active" || m.status === "pending") && (
               <AnRowButton
                 icon={UserMinus}
-                label="End"
+                label={tx("End", "membership")}
                 tone="high"
-                ariaLabel={`End ${memberName(m)}'s membership`}
+                ariaLabel={t("End {name}'s membership", { name: memberName(m) })}
                 onClick={() => {
                   setEndError(null);
                   setEnding(m);
@@ -266,10 +261,10 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
 
   const header = (
     <AnHeaderRow
-      crumb={list ? "Member codes" : vocab.label}
-      backLabel={list ? "Back to Member codes" : `Back to ${vocab.label}`}
+      crumb={list ? t("Member codes") : t(vocab.label)}
+      backLabel={list ? t("Back to Member codes") : vocab.label === "Clients" ? t("Back to Clients") : t("Back to Members")}
       onBack={() => (list ? setParams({}, { replace: false }) : navigate(BASE))}
-      title={list === "codes" ? "Waiting to be used" : list === "members" ? memberCountLabel : "Member codes"}
+      title={list === "codes" ? t("Waiting to be used") : list === "members" ? memberCountLabel : t("Member codes")}
     />
   );
 
@@ -282,12 +277,12 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
           <div style={{ padding: "4px 16px 4px" }}>
             {list === "codes" ? (
               <>
-                <AnCountLine count={`${waiting.length} ${waiting.length === 1 ? "code" : "codes"}`} order="Newest first" />
+                <AnCountLine count={tn(waiting.length, "1 code", "{n} codes")} order={t("Newest first")} />
                 {waiting.map(codeRow)}
               </>
             ) : (
               <>
-                <AnCountLine count={memberCountLabel} order="Waiting first, then newest" />
+                <AnCountLine count={memberCountLabel} order={t("Waiting first, then newest")} />
                 {members.map(memberRow)}
               </>
             )}
@@ -295,12 +290,12 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         </AnCard>
         {list === "members" && members.length < memberCount && (
           <div className="text-center mt-[12px]">
-            <AnRowButton icon={Users} label={data.loadingMore ? "Loading…" : `Show more (${memberCount - members.length})`} onClick={data.loadMoreMembers} disabled={data.loadingMore || !online} />
+            <AnRowButton icon={Users} label={data.loadingMore ? t("Loading…") : t("Show more ({n})", { n: memberCount - members.length })} onClick={data.loadMoreMembers} disabled={data.loadingMore || !online} />
           </div>
         )}
         {list === "members" && (
           <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-            First names only. Members under 18 are marked.
+            {t("First names only. Members under 18 are marked.")}
           </p>
         )}
         {endPopup()}
@@ -318,18 +313,18 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         frame="kit"
         tone="destructive"
         icon={<XCircle size={20} strokeWidth={2.2} />}
-        title="End this membership?"
+        title={t("End this membership?")}
         subtitle={
           [
-            "They stop being a member today. You can invite them again with a new code.",
-            !online ? "You're offline." : null,
+            t("They stop being a member today. You can invite them again with a new code."),
+            !online ? t("You're offline.") : null,
             endError,
           ]
             .filter(Boolean)
             .join(" ")
         }
-        confirmLabel="End membership"
-        cancelLabel="Keep it"
+        confirmLabel={tx("End membership", "business")}
+        cancelLabel={t("Keep it")}
         busy={endBusy || !online}
         onCancel={() => !endBusy && setEnding(null)}
         onConfirm={() => void confirmEnd()}
@@ -340,17 +335,17 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
   return (
     <div>
       {header}
-      {data.error && <AnStrip offline={!online} text={online ? "Couldn't load your codes. Check your connection and try again." : "You're offline. Showing what was loaded last."} onRetry={data.reload} />}
+      {data.error && <AnStrip offline={!online} text={online ? t("Couldn't load your codes. Check your connection and try again.") : t("You're offline. Showing what was loaded last.")} onRetry={data.reload} />}
 
-      <AnCard label="Member codes">
+      <AnCard label={t("Member codes")}>
         <AnNumberBoxes
           boxes={[
-            { label: "Codes redeemed", value: data.codes === null ? null : pct === null ? null : `${pct}%` },
-            { label: "Waiting to be used", value: data.codes === null ? null : waiting.length.toLocaleString(appLocale()) },
+            { label: t("Codes redeemed"), value: data.codes === null ? null : pct === null ? null : `${pct}%` },
+            { label: t("Waiting to be used"), value: data.codes === null ? null : waiting.length.toLocaleString(appLocale()) },
           ]}
         />
         <AnLead>
-          {redeemed} of {codes.length} {codes.length === 1 ? "code has" : "codes have"} been used. Unused codes stop working after 7 days.
+          {tn(codes.length, "{redeemed} of 1 code has been used. Unused codes stop working after 7 days.", "{redeemed} of {n} codes have been used. Unused codes stop working after 7 days.", { redeemed })}
         </AnLead>
         <div style={{ padding: "0 20px 16px" }}>
           <button
@@ -359,21 +354,21 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
             disabled={!data.businessId || !online}
             className="tap w-full h-[44px] px-[18px] rounded-[14px] bg-primary-fill text-on-primary-fill inline-flex items-center justify-center gap-[8px] text-[13px] font-bold disabled:opacity-60"
           >
-            <Plus size={15} aria-hidden /> Create code
+            <Plus size={15} aria-hidden /> {t("Create code")}
           </button>
-          {!online && <p className="text-[11px] leading-[15px] text-charcoal-faint mt-[8px] text-center">Connect to create a code.</p>}
+          {!online && <p className="text-[11px] leading-[15px] text-charcoal-faint mt-[8px] text-center">{t("Connect to create a code.")}</p>}
           {!data.businessId && !data.loading && (
-            <p className="text-[11px] leading-[15px] text-charcoal-faint mt-[8px] text-center">Save your business profile first. Members belong to it.</p>
+            <p className="text-[11px] leading-[15px] text-charcoal-faint mt-[8px] text-center">{t("Save your business profile first. Members belong to it.")}</p>
           )}
         </div>
       </AnCard>
 
-      <AnCard className="mt-[12px]" label="Codes waiting to be used">
+      <AnCard className="mt-[12px]" label={t("Codes waiting to be used")}>
         <div style={{ padding: "4px 16px 4px" }}>
-          <AnCountLine count={`${waiting.length} ${waiting.length === 1 ? "code" : "codes"}`} order="Newest first" />
+          <AnCountLine count={tn(waiting.length, "1 code", "{n} codes")} order={t("Newest first")} />
           {waiting.length === 0 ? (
             <AnNoneRow icon={Ticket} tone="caution">
-              No codes waiting. Create one when someone joins at the desk.
+              {t("No codes waiting. Create one when someone joins at the desk.")}
             </AnNoneRow>
           ) : (
             waiting.slice(0, 3).map(codeRow)
@@ -382,12 +377,12 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         {waiting.length > 3 && <AnSeeAll n={waiting.length} onClick={() => setParams({ list: "codes" })} />}
       </AnCard>
 
-      <AnCard className="mt-[12px]" label="Members">
+      <AnCard className="mt-[12px]" label={t("Members")}>
         <div style={{ padding: "4px 16px 4px" }}>
-          <AnCountLine count={memberCountLabel} order="Waiting first, then newest" />
+          <AnCountLine count={memberCountLabel} order={t("Waiting first, then newest")} />
           {members.length === 0 ? (
             <AnNoneRow icon={Users} tone="pale">
-              {data.businessId ? "No members yet. Create a member code and hand it over at the desk." : "Save your business profile first. Members belong to it."}
+              {data.businessId ? t("No members yet. Create a member code and hand it over at the desk.") : t("Save your business profile first. Members belong to it.")}
             </AnNoneRow>
           ) : (
             members.slice(0, 3).map(memberRow)
@@ -396,7 +391,7 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         {memberCount > 3 && <AnSeeAll n={memberCount} onClick={() => setParams({ list: "members" })} />}
       </AnCard>
       <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">
-        First names only. Members under 18 are marked.
+        {t("First names only. Members under 18 are marked.")}
       </p>
 
       <CreateCodeSheet
@@ -409,9 +404,9 @@ export function MemberCodesPage({ data, vocab }: { data: MembersData; vocab: Mem
         vocab={vocab}
         onCreated={(c) => {
           data.setCodes((prev) => [c, ...prev]);
-          showToast("Code created.");
+          showToast(t("Code created."));
         }}
-        onCopyFailed={() => showToast("Couldn't copy. Select the code and copy it yourself.")}
+        onCopyFailed={() => showToast(t("Couldn't copy. Select the code and copy it yourself."))}
       />
       {endPopup()}
       {codePopups()}
@@ -505,7 +500,7 @@ function CreateCodeSheet({
   const createdPlan = created?.membershipPlanId ? data.plans.find((p) => p.id === created.membershipPlanId) : undefined;
   const createdGym = created?.gymId ? gyms.find((g) => g.gymId === created.gymId) : undefined;
   const createdGrant = created?.membershipPlanId
-    ? `${createdPlan ? `${createdPlan.name} (${KIND_LABEL[createdPlan.kind]})` : "A plan"}${createdGym ? ` at ${createdGym.name}` : ""}`
+    ? ((what: string) => (createdGym ? t("{plan} at {gym}", { plan: what, gym: createdGym.name }) : what))(createdPlan ? `${createdPlan.name} (${kindLabel(createdPlan.kind)})` : t("A plan"))
     : null;
 
   const footer = (
@@ -515,35 +510,35 @@ function CreateCodeSheet({
           {error}
         </p>
       )}
-      {!created && !online && <p className="text-[12px] leading-[17px] text-charcoal-faint mb-[8px]">You're offline. Connect to create a code.</p>}
+      {!created && !online && <p className="text-[12px] leading-[17px] text-charcoal-faint mb-[8px]">{t("You're offline. Connect to create a code.")}</p>}
       <button
         type="button"
         onClick={() => (created ? onClose() : void create())}
         disabled={!created && (creating || !online || !data.businessId || block !== null)}
         className="tap w-full h-[50px] rounded-[16px] bg-primary-fill text-on-primary-fill text-[14px] font-extrabold disabled:opacity-60"
       >
-        {created ? "Done" : creating ? "Creating…" : "Create code"}
+        {created ? t("Done") : creating ? t("Creating…") : t("Create code")}
       </button>
     </div>
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Create a member code" tone="business" footer={footer}>
+    <BottomSheet open={open} onClose={onClose} title={t("Create a member code")} tone="business" footer={footer}>
       {created ? (
         <div className="text-center py-[8px]">
           <p className="text-[24px] font-extrabold tabular-nums tracking-[0.12em] text-charcoal">{created.code}</p>
-          <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[4px]">Expires {dMMMyyyy(created.expiresAt)}.</p>
+          <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[4px]">{t("Expires {date}.", { date: dMMMyyyy(created.expiresAt) })}</p>
           <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[2px]">
             {t(CODE_COPY.usesLabel)}: {usesValue(created.maxUses)}
           </p>
           <p className="text-[12.5px] leading-[18px] text-charcoal-soft mt-[2px]">
-            {createdGrant ? `Comes with ${createdGrant}.` : "A member code only. It doesn't come with a membership or pass."}
+            {createdGrant ? t("Comes with {grant}.", { grant: createdGrant }) : t("A member code only. It doesn't come with a membership or pass.")}
           </p>
           <div className="flex justify-center gap-[10px] mt-[16px]">
             <AnRowButton
               icon={copied ? Check : Copy}
-              label={copied ? "Copied" : "Copy"}
-              ariaLabel={`Copy ${created.code}`}
+              label={copied ? t("Copied") : t("Copy")}
+              ariaLabel={t("Copy {code}", { code: created.code })}
               onClick={() =>
                 void copyText(created.code).then((ok) => {
                   if (!ok) return onCopyFailed();
@@ -555,11 +550,13 @@ function CreateCodeSheet({
             {canShare && (
               <AnRowButton
                 icon={Share2}
-                label="Share"
+                label={t("Share")}
                 onClick={() =>
                   void shareOrCopy({
-                    title: "Centium member code",
-                    text: `Your Centium member code is ${created.code}.${createdGrant ? ` It comes with ${createdGrant}.` : ""} Redeem it from your Centium profile before ${dMMMyyyy(created.expiresAt)}.`,
+                    title: t("Centium member code"),
+                    text: createdGrant
+                      ? t("Your Centium member code is {code}. It comes with {grant}. Redeem it from your Centium profile before {date}.", { code: created.code, grant: createdGrant, date: dMMMyyyy(created.expiresAt) })
+                      : t("Your Centium member code is {code}. Redeem it from your Centium profile before {date}.", { code: created.code, date: dMMMyyyy(created.expiresAt) }),
                     copy: created.code,
                   })
                 }
@@ -570,19 +567,21 @@ function CreateCodeSheet({
       ) : (
         <div className="space-y-[14px]">
           <p className="text-[13px] leading-[19px] text-charcoal-soft">
-            Give the code to the {vocab.one === "client" ? "client" : "person"} at the desk. They redeem it in their own Centium app and become a member straight away.
+            {vocab.one === "client"
+              ? t("Give the code to the client at the desk. They redeem it in their own Centium app and become a member straight away.")
+              : t("Give the code to the person at the desk. They redeem it in their own Centium app and become a member straight away.")}
           </p>
           {data.plansLoading && offered.length === 0 ? (
             <div>
-              <p className={FIELD_LABEL}>What the code comes with</p>
+              <p className={FIELD_LABEL}>{t("What the code comes with")}</p>
               <button type="button" disabled className={FIELD} style={{ padding: "0 12px" }}>
-                <span className="truncate text-charcoal-faint">Loading plans…</span>
+                <span className="truncate text-charcoal-faint">{t("Loading plans…")}</span>
               </button>
             </div>
           ) : (
             offered.length > 0 && (
               <div>
-                <p className={FIELD_LABEL}>What the code comes with</p>
+                <p className={FIELD_LABEL}>{t("What the code comes with")}</p>
                 <button
                   ref={setFieldEl}
                   type="button"
@@ -592,7 +591,7 @@ function CreateCodeSheet({
                   className={FIELD}
                   style={{ padding: "0 12px" }}
                 >
-                  <span className="truncate">{plan ? `${plan.name} · ${KIND_LABEL[plan.kind]} · ${plan.price}` : "No plan (member code only)"}</span>
+                  <span className="truncate">{plan ? `${plan.name} · ${kindLabel(plan.kind)} · ${plan.price}` : t("No plan (member code only)")}</span>
                   <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
                 </button>
                 <PopupMenu
@@ -602,8 +601,8 @@ function CreateCodeSheet({
                   matchWidth={fieldEl}
                   variant="field"
                   options={[
-                    { value: "", label: "No plan (member code only)" },
-                    ...offered.map((p) => ({ value: p.id, label: `${p.name} · ${KIND_LABEL[p.kind]} · ${p.price}` })),
+                    { value: "", label: t("No plan (member code only)") },
+                    ...offered.map((p) => ({ value: p.id, label: `${p.name} · ${kindLabel(p.kind)} · ${p.price}` })),
                   ]}
                   selected={planId}
                   onSelect={(v) => {
@@ -619,35 +618,35 @@ function CreateCodeSheet({
           {plan && (
             <>
               <p className={HINT}>
-                When they redeem the code they get this {KIND_WORD[plan.kind]} at no charge. It isn't counted as revenue.
+                {t("When they redeem the code they get this {what} at no charge. It isn't counted as revenue.", { what: kindWord(plan.kind) })}
               </p>
-              {block === "gyms-loading" && <p className={HINT}>Loading your gyms…</p>}
+              {block === "gyms-loading" && <p className={HINT}>{t("Loading your gyms…")}</p>}
               {block === "gyms-error" && (
                 <div className="flex items-center justify-between gap-[10px]">
-                  <p className="text-[12px] leading-[17px] text-status-high">Couldn't load your gyms.</p>
+                  <p className="text-[12px] leading-[17px] text-status-high">{t("Couldn't load your gyms.")}</p>
                   <button
                     type="button"
                     onClick={data.reloadVenues}
                     disabled={!online}
                     className="tap min-h-[44px] px-[14px] rounded-[12px] text-[13px] font-bold text-primary-dark disabled:opacity-60"
                   >
-                    Try again
+                    {t("Try again")}
                   </button>
                 </div>
               )}
               {block === "no-gym" && (
                 <p className="text-[12px] leading-[17px] text-status-high">
-                  A membership or pass needs a gym, and your business has none yet. Add a gym first, or choose No plan.
+                  {t("A membership or pass needs a gym, and your business has none yet. Add a gym first, or choose No plan.")}
                 </p>
               )}
               {!block && gyms.length === 1 && (
                 <p className={HINT}>
-                  The {KIND_WORD[plan.kind]} is for {gyms[0].name}.
+                  {t("The {what} is for {gym}.", { what: kindWord(plan.kind), gym: gyms[0].name })}
                 </p>
               )}
               {gyms.length > 1 && !data.venuesError && (
                 <div>
-                  <p className={FIELD_LABEL}>Which gym is it for?</p>
+                  <p className={FIELD_LABEL}>{t("Which gym is it for?")}</p>
                   <button
                     ref={setGymEl}
                     type="button"
@@ -657,7 +656,7 @@ function CreateCodeSheet({
                     className={FIELD}
                     style={{ padding: "0 12px" }}
                   >
-                    <span className={gym ? "truncate" : "truncate text-charcoal-faint"}>{gym ? gym.name : `Choose one of your ${gyms.length} gyms`}</span>
+                    <span className={gym ? "truncate" : "truncate text-charcoal-faint"}>{gym ? gym.name : t("Choose one of your {n} gyms", { n: gyms.length })}</span>
                     <ChevronDown size={16} aria-hidden className="text-charcoal-faint shrink-0" />
                   </button>
                   <PopupMenu
@@ -706,7 +705,7 @@ function CreateCodeSheet({
             </div>
             <p className={`${HINT} mt-[6px]`}>{t(CODE_COPY.usesHint)}</p>
           </div>
-          <p className={HINT}>The code works for 7 days.</p>
+          <p className={HINT}>{t("The code works for 7 days.")}</p>
         </div>
       )}
     </BottomSheet>

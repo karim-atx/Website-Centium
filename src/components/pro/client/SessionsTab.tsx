@@ -9,6 +9,7 @@ import type { ClientPageData } from "./useClientPage";
 import { fetchEventOutcomes } from "../../../services/pro/clientPage";
 import { range12, time12 } from "../../../utils/time12";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · CL2 v3 Tab 4 Sessions / Tab 5 Appointments (source gen/r6b.js
@@ -35,20 +36,20 @@ export const SessionsTab: React.FC<{ data: ClientPageData; patient: boolean; onS
   }, [ids]);
 
   if (!sessions) return <ProCardSkeleton lines={4} height={220} />;
-  const word = patient ? "appointment" : "session";
+
   const count = (o: string) => past.filter((s) => outcomes?.[s.id] === o).length;
   const when = (date: string, start?: string, end?: string) => {
-    const d = date === today ? "Today" : new Date(`${date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
+    const d = date === today ? t("Today") : new Date(`${date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
     return `${d} ${end ? range12(start, end) : time12(start)}`;
   };
-  const place = (s: { location?: string; url?: string }) => (s.location ? s.location : s.url ? "Online" : "");
+  const place = (s: { location?: string; url?: string }) => (s.location ? s.location : s.url ? t("Online") : "");
 
   const upRows: ListRow[] = upcoming.slice(0, 5).map((s, i) => ({
     key: `${s.key}`,
     icon: CalendarDays,
     title: when(s.date, s.startTime, s.endTime),
     meta: [s.title, place(s)].filter(Boolean).join(" · "),
-    trailing: i === 0 ? <Chip label="Next" tone="pr" /> : undefined,
+    trailing: i === 0 ? <Chip label={t("Next")} tone="pr" /> : undefined,
   }));
   const pastRows: ListRow[] = past.slice(0, 10).map((s) => {
     const o = outcomes?.[s.id] ?? null;
@@ -58,24 +59,24 @@ export const SessionsTab: React.FC<{ data: ClientPageData; patient: boolean; onS
       tone: o === "no_show" ? "att" : o === "late_cancel" ? "req" : o === "completed" ? "done" : undefined,
       title: when(s.date, s.startTime, s.endTime),
       meta: [s.title, place(s)].filter(Boolean).join(" · "),
-      trailing: o === "completed" ? <Chip label="Completed" tone="done" /> : o === "no_show" ? <Chip label="No-show" tone="att" /> : o === "late_cancel" ? <Chip label="Late cancel" tone="req" /> : undefined,
+      trailing: o === "completed" ? <Chip label={t("Completed")} tone="done" /> : o === "no_show" ? <Chip label={t("No-show")} tone="att" /> : o === "late_cancel" ? <Chip label={t("Late cancel")} tone="req" /> : undefined,
     };
   });
 
   return (
     <>
       <div className="flex" style={{ gap: 8, marginBottom: 14 }}>
-        <NumBox label="Completed" value={outcomes ? `${count("completed")}` : "–"} />
-        <NumBox label="No-show" value={outcomes ? `${count("no_show")}` : "–"} />
-        <NumBox label="Late cancel" value={outcomes ? `${count("late_cancel")}` : "–"} />
+        <NumBox label={t("Completed")} value={outcomes ? `${count("completed")}` : "–"} />
+        <NumBox label={t("No-show")} value={outcomes ? `${count("no_show")}` : "–"} />
+        <NumBox label={t("Late cancel")} value={outcomes ? `${count("late_cancel")}` : "–"} />
       </div>
-      <SectionHead label="Upcoming" />
-      {upRows.length ? <ListCard rows={upRows} /> : <SoftLine icon={CalendarDays}>{`No ${word}s booked.`}</SoftLine>}
+      <SectionHead label={t("Upcoming")} />
+      {upRows.length ? <ListCard rows={upRows} /> : <SoftLine icon={CalendarDays}>{patient ? t("No appointments booked.") : t("No sessions booked.")}</SoftLine>}
       <div className="flex" style={{ marginBottom: 14 }}>
-        <CtaButton size="base" variant="secondary" icon={<CalendarPlus size={15} />} label={`Schedule ${patient ? "an appointment" : "a session"}`} onClick={onSchedule} />
+        <CtaButton size="base" variant="secondary" icon={<CalendarPlus size={15} />} label={patient ? t("Schedule an appointment") : t("Schedule a session")} onClick={onSchedule} />
       </div>
-      <SectionHead label="Past" />
-      {pastRows.length ? <ListCard rows={pastRows} /> : <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>{`No past ${word}s in the last 90 days.`}</p>}
+      <SectionHead label={t("Past")} />
+      {pastRows.length ? <ListCard rows={pastRows} /> : <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 12 }}>{patient ? t("No past appointments in the last 90 days.") : t("No past sessions in the last 90 days.")}</p>}
     </>
   );
 };

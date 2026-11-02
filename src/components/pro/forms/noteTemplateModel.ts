@@ -6,6 +6,8 @@
 // text. Section types (short text, exercise list, scale) and "used n times"
 // have no column, so they aren't shown. Pure.
 
+import { t, tn } from "../../../i18n/core";
+
 export const NOTE_TITLE_MAX = 80;
 export const NOTE_BODY_MAX = 10000;
 export const SECTION_MAX = 80;
@@ -29,6 +31,6 @@ export function bodyOf(sections: string[]): string {
 
 export function templateMeta(body: string): string {
   const s = sectionsOf(body);
-  if (s === null) return "Free text";
-  return `${s.length} section${s.length === 1 ? "" : "s"}`;
+  if (s === null) return t("Free text");
+  return tn(s.length, "{n} section", "{n} sections");
 }

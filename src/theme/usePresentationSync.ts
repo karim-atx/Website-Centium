@@ -10,6 +10,7 @@ import {
 } from "../services/presentation";
 import { afterFailure, afterOnline, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
 import { t } from "../i18n/core";
+import { askPremium } from "../services/premium/asks";
 
 // Keeps this device's presentation settings (light / dark / auto, colour
 // theme, the four accessibility switches) in step with this account's 'web'
@@ -131,6 +132,17 @@ export function usePresentationSync({
         if (base && samePresentation(base, want)) break;
         const result = await savePresentation(id, base ? changedColumns(base, want) : {}, presentationToRow(want));
         if (owner.current !== id) return;
+        // Round G4: a Premium colour theme refused (ATXQ1 without Premium,
+        // ATXQ0 with the switch off). The saved theme goes back on this
+        // device, the prompt is asked for (the host decides whether it
+        // opens), and anything else that changed is still saved.
+        if (result.status === "error" && result.premium && want.colorTheme !== (base?.colorTheme ?? APP_DEFAULT.colorTheme)) {
+          const back = { ...want, colorTheme: base?.colorTheme ?? APP_DEFAULT.colorTheme };
+          latest.current = back;
+          applyQuietly(back);
+          askPremium("premium_themes", "refusal");
+          continue;
+        }
         if (result.status === "error") {
           setPending(true);
           setSaveError({ owner: id, message: result.message });
@@ -152,7 +164,7 @@ export function usePresentationSync({
     } finally {
       saving.current = false;
     }
-  }, [setPending]);
+  }, [setPending, applyQuietly]);
 
   const sync = useCallback(async () => {
     const id = owner.current;

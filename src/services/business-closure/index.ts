@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { businessStatusOf, closureReason, type BusinessStatus } from "./logic";
+import { t, tk } from "../../i18n/core";
 
 export * from "./logic";
 
@@ -17,7 +18,7 @@ const db = supabase as any;
 export type CloseResult = { ok: true; closedAt: string } | { ok: false; message: string };
 
 /** Only the owner may close (42501 "only the owner can close the business"). */
-export const CLOSE_OWNER_ONLY = "Only the owner can close the business.";
+export const CLOSE_OWNER_ONLY = tk("Only the owner can close the business.");
 
 /**
  * close_business(): owner only, idempotent (closing twice returns the first
@@ -28,8 +29,8 @@ export async function closeBusiness(businessId: string, reason: string): Promise
   if (error || !data) {
     if (error) console.error("[business-closure] Could not close the business:", error.code, error.message);
     if (error && isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-    if (error?.code === "42501") return { ok: false, message: CLOSE_OWNER_ONLY };
-    return { ok: false, message: "Couldn't close your business. Nothing changed. Try again." };
+    if (error?.code === "42501") return { ok: false, message: t(CLOSE_OWNER_ONLY) };
+    return { ok: false, message: t("Couldn't close your business. Nothing changed. Try again.") };
   }
   return { ok: true, closedAt: data };
 }

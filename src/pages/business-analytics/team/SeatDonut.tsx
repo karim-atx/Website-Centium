@@ -1,4 +1,5 @@
 import React from "react";
+import { t } from "../../../i18n/core";
 
 // AN5-001 row 14 · donut of seats: box 168, grid ring r79, segments rO 74 /
 // rI 54, 7° between blocks, 4° between seats (2.5° when more than 10 seats),
@@ -50,7 +51,7 @@ export const SeatDonut: React.FC<{
 
   return (
     <div className="an5-donut">
-      <svg width="168" height="168" viewBox="0 0 168 168" role="group" aria-label="Seats">
+      <svg width="168" height="168" viewBox="0 0 168 168" role="group" aria-label={t("Seats")}>
         <circle cx={C} cy={C} r={79} fill="none" stroke="var(--an-grid)" strokeWidth={1} />
         {segs.map(({ s, i, d }) => {
           const on = i === selected;

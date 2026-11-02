@@ -9,6 +9,7 @@ import { fmtDay, ALLERGEN_LABEL } from "./clientFormat";
 import { fetchDietaryNeeds, type DietaryNeeds } from "../../../services/pro/clientPage";
 import { dietLabel } from "../../../utils/dietaryRestrictions";
 import type { UseClientAccess } from "../../../hooks/useClientAccess";
+import { t, tk } from "../../../i18n/core";
 
 /**
  * Release 3 · DietaryNeedsCard (CL2 v3, source gen/r7.js dietCard7), on
@@ -31,7 +32,7 @@ import type { UseClientAccess } from "../../../hooks/useClientAccess";
  * that or Food diary (phase one of the consent move, DB-3).
  */
 
-const SEVERITY: Record<string, string> = { mild: "Mild", moderate: "Moderate", severe: "Severe" };
+const SEVERITY: Record<string, string> = { mild: tk("Mild"), moderate: tk("Moderate"), severe: tk("Severe") };
 const restrictionLabel = dietLabel;
 
 export const DietaryNeedsCard: React.FC<{
@@ -59,9 +60,7 @@ export const DietaryNeedsCard: React.FC<{
 
   const title = (
     <p className="flex items-center" style={{ gap: 6, fontSize: textPx(13), fontWeight: 800, color: INK.ch }}>
-      <UtensilsCrossed size={14} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
-      Dietary needs
-    </p>
+      <UtensilsCrossed size={14} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />{t("Dietary needs")}</p>
   );
 
   if (access.loading) return null;
@@ -72,9 +71,9 @@ export const DietaryNeedsCard: React.FC<{
           {title}
           <Lock size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
         </div>
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginTop: 6 }}>{`${firstName} hasn't shared allergies or dietary needs with you.`}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginTop: 6 }}>{t("{name} hasn't shared allergies or dietary needs with you.", { name: firstName })}</p>
         <div className="flex" style={{ marginTop: 10 }}>
-          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={asked ? "Asked" : `Ask ${firstName} to share`} disabled={asked} onClick={onAsk} />
+          <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={asked ? t("Asked") : t("Ask {name} to share", { name: firstName })} disabled={asked} onClick={onAsk} />
         </div>
       </div>
     );
@@ -91,7 +90,7 @@ export const DietaryNeedsCard: React.FC<{
   return (
     <div
       role="region"
-      aria-label="Dietary needs"
+      aria-label={t("Dietary needs")}
       style={{
         background: INK.card,
         border: `1px solid ${none ? INK.bCard : dark ? "rgba(240,154,142,0.28)" : "rgba(192,57,43,0.22)"}`,
@@ -105,22 +104,22 @@ export const DietaryNeedsCard: React.FC<{
         {title}
         <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, fontSize: textPx(10.5), fontWeight: 700, color: teal }}>
           <ShieldCheck size={11} strokeWidth={2} aria-hidden />
-          {updated ? `Shared · updated ${fmtDay(updated)}` : "Shared"}
+          {updated ? t("Shared · updated {date}", { date: fmtDay(updated) }) : t("Shared")}
         </span>
       </div>
       {!needs ? (
         <div aria-hidden style={{ height: 26, marginTop: 10, borderRadius: 8, background: INK.soft, width: "60%" }} />
       ) : needs.error ? (
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>Couldn't load dietary needs.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{t("Couldn't load dietary needs.")}</p>
       ) : none ? (
-        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginTop: 6 }}>{`${firstName} has no allergies or dietary needs recorded.`}</p>
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginTop: 6 }}>{t("{name} has no allergies or dietary needs recorded.", { name: firstName })}</p>
       ) : (
         <>
           <div className="flex flex-wrap" style={{ gap: 6, marginTop: 10 }}>
             {allergies.map((a) => (
               <span key={a.allergen} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, borderRadius: 8, padding: "4px 8px", fontSize: textPx(11.5), fontWeight: 800, background: INK.hiBg, color: INK.hi }}>
                 <AlertTriangle size={12} strokeWidth={2.4} aria-hidden />
-                {`Allergy: ${ALLERGEN_LABEL[a.allergen] ?? a.allergen}`}
+                {t("Allergy: {name}", { name: t(ALLERGEN_LABEL[a.allergen] ?? a.allergen) })}
               </span>
             ))}
             {restrictions.map((r) => (
@@ -139,17 +138,15 @@ export const DietaryNeedsCard: React.FC<{
             <div className="flex flex-col" style={{ marginTop: 10, borderTop: `1px solid ${INK.b06}`, paddingTop: 8, gap: 4 }}>
               {allergies.map((a) => (
                 <p key={a.allergen} style={{ fontSize: textPx(12), color: INK.ch }}>
-                  <b style={{ color: INK.hi }}>{ALLERGEN_LABEL[a.allergen] ?? a.allergen}</b>
-                  {` · ${SEVERITY[a.severity] ?? a.severity}${a.note ? `, ${a.note}` : ""}`}
+                  <b style={{ color: INK.hi }}>{t(ALLERGEN_LABEL[a.allergen] ?? a.allergen)}</b>
+                  {` · ${t(SEVERITY[a.severity] ?? a.severity)}${a.note ? `${t(", ")}${a.note}` : ""}`}
                 </p>
               ))}
             </div>
           )}
           {!allergiesShared && (
             <p className="flex items-center" style={{ gap: 6, marginTop: 8, fontSize: textPx(11), color: INK.chF }}>
-              <Lock size={11} strokeWidth={2} aria-hidden />
-              Allergies aren't shared, so only dietary restrictions show.
-            </p>
+              <Lock size={11} strokeWidth={2} aria-hidden />{t("Allergies aren't shared, so only dietary restrictions show.")}</p>
           )}
         </>
       )}

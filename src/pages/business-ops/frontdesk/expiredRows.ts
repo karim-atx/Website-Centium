@@ -7,6 +7,7 @@
 // CUT-OFF UNSPECIFIED (the handover draws one "Expired yesterday" row): 7
 // days back, the same window as the tab's "Renewals due" (7 days ahead).
 
+import { t, tn } from "../../../i18n/core";
 import type { FrontDeskMember } from "../../../services/front-desk/frontDeskLogic";
 
 export const EXPIRED_DAYS = 7;
@@ -25,13 +26,13 @@ export interface ExpiredRow {
 const dayNumber = (iso: string) => Math.round(new Date(`${iso}T00:00:00Z`).getTime() / 86_400_000);
 
 export function expiredRows(members: FrontDeskMember[], today: string, days = EXPIRED_DAYS): ExpiredRow[] {
-  const t = dayNumber(today);
+  const today0 = dayNumber(today);
   const current = new Set(
     members.filter((m) => m.personId && (m.status === "active" || m.status === "upcoming")).map((m) => `${m.gymId}:${m.personId}`)
   );
   return members
     .filter((m) => m.status === "expired" && !!m.expiresOn)
-    .map((m) => ({ m, ago: t - dayNumber(m.expiresOn as string) }))
+    .map((m) => ({ m, ago: today0 - dayNumber(m.expiresOn as string) }))
     .filter(({ m, ago }) => ago >= 0 && ago <= days && !(m.personId && current.has(`${m.gymId}:${m.personId}`)))
     .sort((a, b) => a.ago - b.ago || a.m.label.localeCompare(b.m.label))
     .map(({ m, ago }) => ({ membershipId: m.membershipId, gymId: m.gymId, personId: m.personId, label: m.label, planName: m.planName, expiresOn: m.expiresOn as string, daysAgo: ago }));
@@ -39,7 +40,7 @@ export function expiredRows(members: FrontDeskMember[], today: string, days = EX
 
 /** "Expired yesterday" (drawn, BizTypeKit l.95); "Expired today", "Expired {n} days ago" (OURS). */
 export function expiredSub(daysAgo: number): string {
-  if (daysAgo <= 0) return "Expired today";
-  if (daysAgo === 1) return "Expired yesterday";
-  return `Expired ${daysAgo} days ago`;
+  if (daysAgo <= 0) return t("Expired today");
+  if (daysAgo === 1) return t("Expired yesterday");
+  return tn(daysAgo, "Expired {n} day ago", "Expired {n} days ago");
 }

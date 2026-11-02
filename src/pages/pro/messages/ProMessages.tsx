@@ -49,7 +49,7 @@ import {
 } from "../../../services/messaging/chatFeatures";
 import { fetchClientStages, STAGE_LABEL, type ClientStage } from "../../../services/pro/clients";
 import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/messages";
-import { t, tk } from "../../../i18n/core";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · Messages for professionals (MO22 v5 lists, MO22 v2 chats, MO27
@@ -292,8 +292,8 @@ export default function ProMessages() {
       const { pinned, rest } = pinnedFirst(rows);
       if (activeTab === "businesses") return [{ label: null, items: asItems([...pinned, ...rest]) }];
       return [
-        { label: "Pinned", items: asItems(pinned) },
-        { label: "Recent", items: asItems(rest) },
+        { label: t("Pinned"), items: asItems(pinned) },
+        { label: t("Recent"), items: asItems(rest) },
       ];
     }
     if (activeTab === "enquiries") {
@@ -302,8 +302,8 @@ export default function ProMessages() {
       const w = pinnedFirst(waiting);
       const e = pinnedFirst(earlier);
       return [
-        { label: "Waiting for you", items: asItems([...w.pinned, ...w.rest]) },
-        { label: "Earlier", items: asItems([...e.pinned, ...e.rest]) },
+        { label: t("Waiting for you"), items: asItems([...w.pinned, ...w.rest]) },
+        { label: t("Earlier"), items: asItems([...e.pinned, ...e.rest]) },
       ];
     }
     const invites: ChatListItem[] = invitations.filter((i) => !q || i.groupName.toLowerCase().includes(q)).map((invitation) => ({ type: "invite", invitation }));
@@ -313,8 +313,8 @@ export default function ProMessages() {
       .sort((a, b) => (b.lastSentAt ?? b.createdAt).localeCompare(a.lastSentAt ?? a.createdAt))
       .map((list) => ({ type: "broadcast", list, lastSentCount: lastSent[list.id] ?? null }));
     return [
-      { label: "Groups", items: [...invites, ...asItems([...g.pinned, ...g.rest])] },
-      { label: "Broadcasts", items: bc },
+      { label: t("Groups"), items: [...invites, ...asItems([...g.pinned, ...g.rest])] },
+      { label: t("Broadcasts"), items: bc },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, archived, byTab, activeTab, q, settings, invitations, lists, lastSent, authUserId]);
@@ -323,19 +323,20 @@ export default function ProMessages() {
 
   const proRows: ProRowOptions = {
     toneFor: (t) => toneOf(t.participantId ?? t.id),
-    statusFor: (t) => {
-      const kind = tabOf(t, clientIds);
+    statusFor: (th) => {
+      const kind = tabOf(th, clientIds);
       if (kind === "groups") {
-        const n = memberCounts[t.id];
-        return n ? { label: `${n} ${n === 1 ? "member" : "members"}`, color: INK.chF } : null;
+        const n = memberCounts[th.id];
+        return n ? { label: tn(n, "{n} member", "{n} members"), color: INK.chF } : null;
       }
       if (kind === "enquiries") {
-        const s = enquiryStatus(t, authUserId, cardKinds);
+        const s = enquiryStatus(th, authUserId, cardKinds);
         return s ? { label: s.label, color: DOT_COLOUR[s.dot] } : null;
       }
-      if (kind === "clients" && t.participantId && stages[t.participantId]) {
-        const label = STAGE_LABEL[stages[t.participantId]];
-        return { label, color: DOT_COLOUR[dotFor(label)] };
+      if (kind === "clients" && th.participantId && stages[th.participantId]) {
+        const stage = stages[th.participantId];
+        // The dot follows the stage (dotFor reads the English names), the label the app's language.
+        return { label: STAGE_LABEL[stage], color: DOT_COLOUR[dotFor(stage === "active" ? "Active" : stage === "paused" ? "Paused" : stage)] };
       }
       return null;
     },
@@ -401,10 +402,10 @@ export default function ProMessages() {
     setDeleteBusy(false);
     setDeleteTarget(null);
     if (!r.ok) {
-      setToast(r.message === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : "Couldn't delete. Try again.");
+      setToast(r.message === OFFLINE_MESSAGE ? t(OFFLINE_TOAST) : t("Couldn't delete. Try again."));
       return;
     }
-    setAnnounce("Conversation deleted.");
+    setAnnounce(t("Conversation deleted."));
     setThreads((all) => all.filter((x) => x.id !== target.id));
     unread.refresh();
     if (open?.id === target.id) {
@@ -433,13 +434,13 @@ export default function ProMessages() {
 
   if (open) {
     const kind = tabOf(open, clientIds);
-    const firstName = open.participantName.trim().split(/\s+/)[0] || "They";
+    const firstName = open.participantName.trim().split(/\s+/)[0] || t("They");
     const stage = open.participantId ? stages[open.participantId] : undefined;
     const pro: ThreadViewPro =
       kind === "groups"
         ? { kind: "group", onShare: () => setShareOpen(true) }
         : kind === "enquiries"
-          ? { kind: "enquiry", subtitle: "Enquiry", onOfferPlans: () => setOfferOpen(true) }
+          ? { kind: "enquiry", subtitle: t("Enquiry"), onOfferPlans: () => setOfferOpen(true) }
           : kind === "businesses"
             ? { kind: "business" }
             : { kind: "client", subtitle: stage ? STAGE_LABEL[stage] : undefined, onSharePlaylist: () => setPlaylistOpen(true) };
@@ -456,10 +457,10 @@ export default function ProMessages() {
           pro={pro}
         />
         {authUserId && kind === "enquiries" && (
-          <OfferPlansSheet open={offerOpen} onClose={() => setOfferOpen(false)} threadId={open.id} userId={authUserId} firstName={firstName} onSent={() => setAnnounce("Plans sent.")} />
+          <OfferPlansSheet open={offerOpen} onClose={() => setOfferOpen(false)} threadId={open.id} userId={authUserId} firstName={firstName} onSent={() => setAnnounce(t("Plans sent."))} />
         )}
         {authUserId && kind === "clients" && (
-          <SharePlaylistSheet open={playlistOpen} onClose={() => setPlaylistOpen(false)} threadId={open.id} onShared={() => setAnnounce("Playlist shared.")} />
+          <SharePlaylistSheet open={playlistOpen} onClose={() => setPlaylistOpen(false)} threadId={open.id} onShared={() => setAnnounce(t("Playlist shared."))} />
         )}
         {authUserId && kind === "groups" && (
           <ShareToGroupSheet
@@ -468,7 +469,7 @@ export default function ProMessages() {
             threadId={open.id}
             userId={authUserId}
             coachesNutrition={lane !== "clinical_overview"}
-            onShared={() => setAnnounce("Shared to the group.")}
+            onShared={() => setAnnounce(t("Shared to the group."))}
           />
         )}
       </div>
@@ -511,7 +512,7 @@ export default function ProMessages() {
   if (view === "starred")
     return live(
       <div>
-        <MessagesHead title="Starred messages" onBack={() => setView("list")} />
+        <MessagesHead title={t("Starred messages")} onBack={() => setView("list")} />
         <StarredMessages
           threads={threads}
           authUserId={authUserId}
@@ -530,25 +531,25 @@ export default function ProMessages() {
   const showOffline = !online && threads.length > 0;
 
   const empty = (() => {
-    if (q) return <EmptyState icon={Search} title="No chats match your search" />;
-    if (view === "archived") return <EmptyState icon={Archive} title="No archived chats" />;
-    if (activeTab === "groups") return <EmptyState icon={Users} title="No groups yet" line="Start a group for clients on the same programme." />;
-    if (activeTab === "enquiries") return <EmptyState icon={Inbox} title="No enquiries yet" line="People who message you from your profile appear here until they hire you." />;
-    if (activeTab === "businesses") return <EmptyState icon={Store} title="No business chats" />;
-    if (noConversations || byTab.clients.length === 0) return <EmptyState icon={MessagesSquare} title="No client chats yet" line="Chats with hired clients appear here, with voice and video calls." />;
-    return <EmptyState icon={CheckCheck} title="No chats here" />;
+    if (q) return <EmptyState icon={Search} title={t("No chats match your search")} />;
+    if (view === "archived") return <EmptyState icon={Archive} title={t("No archived chats")} />;
+    if (activeTab === "groups") return <EmptyState icon={Users} title={t("No groups yet")} line={t("Start a group for clients on the same programme.")} />;
+    if (activeTab === "enquiries") return <EmptyState icon={Inbox} title={t("No enquiries yet")} line={t("People who message you from your profile appear here until they hire you.")} />;
+    if (activeTab === "businesses") return <EmptyState icon={Store} title={t("No business chats")} />;
+    if (noConversations || byTab.clients.length === 0) return <EmptyState icon={MessagesSquare} title={t("No client chats yet")} line={t("Chats with hired clients appear here, with voice and video calls.")} />;
+    return <EmptyState icon={CheckCheck} title={t("No chats here")} />;
   })();
 
   return live(
     <div data-pro-messages="">
       <MessagesHead
-        title={view === "archived" ? "Archived" : "Messages"}
+        title={view === "archived" ? t("Archived") : t("Messages")}
         onBack={view === "archived" ? () => setView("list") : back}
         right={
           view === "list" ? (
             <>
-              <RoundBtn icon={Star} label="Starred messages" onClick={() => setView("starred")} />
-              <RoundBtn icon={SquarePen} label="New message" onClick={() => setNewOpen("all")} />
+              <RoundBtn icon={Star} label={t("Starred messages")} onClick={() => setView("starred")} />
+              <RoundBtn icon={SquarePen} label={t("New message")} onClick={() => setNewOpen("all")} />
             </>
           ) : undefined
         }
@@ -561,7 +562,7 @@ export default function ProMessages() {
       {showOffline && <OfflineLine />}
       {error && !showOffline && (
         <ProError
-          message={error === OFFLINE_MESSAGE ? OFFLINE_TOAST : "Couldn't load messages."}
+          message={error === OFFLINE_MESSAGE ? OFFLINE_TOAST : t("Couldn't load messages.")}
           onRetry={() => {
             setLoading(true);
             setError(null);
@@ -577,16 +578,14 @@ export default function ProMessages() {
           <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 36, height: 36, background: INK.prPale }}>
             <Archive size={17} style={{ color: INK.prDeep }} aria-hidden />
           </span>
-          <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
-            Archived
-          </span>
+          <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Archived")}</span>
           <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{archived.length}</span>
         </button>
       )}
 
       {!loading && !error && (searchingMessages ? shown.length > 0 : true) && (
         <>
-          {searchingMessages && shown.length > 0 && <SecLabel first>Chats</SecLabel>}
+          {searchingMessages && shown.length > 0 && <SecLabel first>{t("Chats")}</SecLabel>}
           {!searchingMessages && tabEmpty && empty}
           {shown.map((s, i) => (
             <section key={s.label ?? "all"} aria-label={s.label ?? undefined}>
@@ -611,26 +610,24 @@ export default function ProMessages() {
               />
             </section>
           ))}
-          {view === "list" && !searchingMessages && activeTab === "groups" && <Footnote>Members see each other's first name and photo, never health data.</Footnote>}
-          {view === "list" && !searchingMessages && activeTab === "enquiries" && !tabEmpty && <Footnote>Enquiries move to Clients when the person hires you.</Footnote>}
+          {view === "list" && !searchingMessages && activeTab === "groups" && <Footnote>{t("Members see each other's first name and photo, never health data.")}</Footnote>}
+          {view === "list" && !searchingMessages && activeTab === "enquiries" && !tabEmpty && <Footnote>{t("Enquiries move to Clients when the person hires you.")}</Footnote>}
         </>
       )}
 
       {searchingMessages && (
-        <section aria-label="Messages">
-          <SecLabel first={shown.length === 0}>Messages</SecLabel>
+        <section aria-label={t("Messages")}>
+          <SecLabel first={shown.length === 0}>{t("Messages")}</SecLabel>
           {searchError && <p style={{ fontSize: textPx(12.5), color: INK.hi, padding: "8px 0" }}>{searchError}</p>}
           {!searching && !searchError && hits.length === 0 && (
-            <p className="text-center" style={{ fontSize: textPx(13), color: INK.chS, padding: "24px 0" }}>
-              No messages match "{term}".
-            </p>
+            <p className="text-center" style={{ fontSize: textPx(13), color: INK.chS, padding: "24px 0" }}>{t("No messages match \"{term}\".", { term })}</p>
           )}
           <SearchResults
             hits={hits}
             query={term}
             titleFor={(h) => {
-              const name = threads.find((t) => t.id === h.threadId)?.participantName ?? "Conversation";
-              return h.senderId === authUserId ? `You → ${name}` : name;
+              const name = threads.find((t) => t.id === h.threadId)?.participantName ?? t("Conversation");
+              return h.senderId === authUserId ? t("You → {name}", { name }) : name;
             }}
             onOpen={(h) => {
               const t = threads.find((x) => x.id === h.threadId);
@@ -650,7 +647,7 @@ export default function ProMessages() {
         <button
           type="button"
           onClick={() => setNewOpen("groups")}
-          aria-label="New group"
+          aria-label={t("New group")}
           data-fab=""
           className="tap fixed z-30 rounded-full flex items-center justify-center bg-primary-fill text-on-primary-fill dark:shadow-none lg:bottom-8"
           style={{ width: 52, height: 52, insetInlineEnd: 18, bottom: "calc(env(safe-area-inset-bottom) + 104px)", boxShadow: "0 8px 22px rgba(95,80,147,0.28)" }}
@@ -659,15 +656,15 @@ export default function ProMessages() {
         </button>
       )}
 
-      <BottomSheet open={!!newOpen} onClose={() => setNewOpen(null)} title="New">
+      <BottomSheet open={!!newOpen} onClose={() => setNewOpen(null)} title={t("New")}>
         <div className="flex flex-col">
           {[
-            ...(newOpen === "all" ? [{ icon: MessageSquarePlus, label: "New chat", sub: "Message one of your clients", go: () => setNewChatOpen(true) }] : []),
-            { icon: Users, label: "New group", sub: "Invite clients to a group chat", go: () => setView("newGroup") },
+            ...(newOpen === "all" ? [{ icon: MessageSquarePlus, label: t("New chat"), sub: t("Message one of your clients"), go: () => setNewChatOpen(true) }] : []),
+            { icon: Users, label: t("New group"), sub: t("Invite clients to a group chat"), go: () => setView("newGroup") },
             {
               icon: Megaphone,
-              label: "New broadcast",
-              sub: "One message to several clients, each privately",
+              label: t("New broadcast"),
+              sub: t("One message to several clients, each privately"),
               go: () => {
                 setOpenList(null);
                 setView("broadcast");
@@ -700,7 +697,7 @@ export default function ProMessages() {
         </div>
       </BottomSheet>
 
-      <BottomSheet open={newChatOpen} onClose={() => setNewChatOpen(false)} title="New chat">
+      <BottomSheet open={newChatOpen} onClose={() => setNewChatOpen(false)} title={t("New chat")}>
         {newChatError && (
           <p role="alert" style={{ fontSize: textPx(12), color: INK.hi, background: INK.hiBg, borderRadius: 12, padding: "8px 12px", marginBottom: 8 }}>
             {newChatError}

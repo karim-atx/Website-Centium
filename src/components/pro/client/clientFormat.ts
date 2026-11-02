@@ -3,6 +3,7 @@
 
 import { INK } from "../proInk";
 import { appLocale } from "../../../i18n/format";
+import { tk } from "../../../i18n/core";
 
 export type Tone = "req" | "onb" | "act" | "att" | "pau" | "done" | "pr";
 
@@ -39,19 +40,19 @@ export function fmtDay(iso: string | null | undefined, withYear = false): string
 }
 
 export const ALLERGEN_LABEL: Record<string, string> = {
-  celery: "Celery",
-  cereals_gluten: "Gluten (cereals)",
-  crustaceans: "Crustaceans",
-  eggs: "Eggs",
-  fish: "Fish",
-  lupin: "Lupin",
-  milk: "Milk",
-  molluscs: "Molluscs",
-  mustard: "Mustard",
-  tree_nuts: "Tree nuts",
-  peanuts: "Peanuts",
-  sesame: "Sesame",
-  soya: "Soya",
-  sulphites: "Sulphites",
+  celery: tk("Celery"),
+  cereals_gluten: tk("Gluten (cereals)"),
+  crustaceans: tk("Crustaceans"),
+  eggs: tk("Eggs"),
+  fish: tk("Fish"),
+  lupin: tk("Lupin"),
+  milk: tk("Milk"),
+  molluscs: tk("Molluscs"),
+  mustard: tk("Mustard"),
+  tree_nuts: tk("Tree nuts"),
+  peanuts: tk("Peanuts"),
+  sesame: tk("Sesame"),
+  soya: tk("Soya"),
+  sulphites: tk("Sulphites"),
 };
 

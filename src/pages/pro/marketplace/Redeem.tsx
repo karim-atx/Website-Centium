@@ -1,5 +1,6 @@
 import { useBack } from "../../../hooks/useBack";
 import { RedeemScreen } from "../../../components/market/redeem/RedeemScreen";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · P-MA.4 Redeem a voucher
 // (/app/pro/marketplace/redeem; the Overview's Redeem tile), back header
@@ -10,5 +11,5 @@ import { RedeemScreen } from "../../../components/market/redeem/RedeemScreen";
 
 export default function RedeemPage() {
   const back = useBack("/app/pro/marketplace/overview");
-  return <RedeemScreen variant="professional" onBack={back} backLabel="Back to Marketplace" />;
+  return <RedeemScreen variant="professional" onBack={back} backLabel={t("Back to Marketplace")} />;
 }

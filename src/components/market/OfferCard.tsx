@@ -6,6 +6,7 @@ import { statusChip, type OfferStatus } from "./marketColor";
 import { PointsFigure } from "./PointsFigure";
 import { formatPoints, offerProgress } from "./pointsModel";
 import { FOCUS_CSS, usePress } from "./usePress";
+import { PremiumLabel } from "../premium/PremiumAskHost";
 
 // Market + Share 3.0 · OfferCard (HANDOVER §4 C-MO.4 "Rewards", B-MA.3, §5).
 //
@@ -55,6 +56,8 @@ export interface ClientOfferCardProps extends Common {
    * (--pale in dark). Unset keeps the business tile (radius 12, --pale).
    */
   ownerRound?: boolean;
+  /** Round G2: offer_catalogue premium_only (only true while the Premium switch is on for the member): a "Premium" label. */
+  premiumOnly?: boolean;
   /** The client's points balance. */
   balance: number;
 }
@@ -156,6 +159,7 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: "block", fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{p.owner}</span>
           <span style={{ display: "block", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, marginTop: 1 }}>{p.headline}</span>
+          {p.premiumOnly ? <PremiumLabel className="mt-1" /> : null}
         </span>
         <span style={{ alignSelf: "flex-end", textAlign: "end", flexShrink: 0, paddingTop: 16, display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
           <PointsFigure value={p.cost} mark="leaf" size={17} />

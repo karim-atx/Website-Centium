@@ -52,7 +52,9 @@ tk("Breathe in");
 tk("Breathe out");
 tk("Hold");
 
-export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) => {
+// Round G3: a library session (mind_library) passes its content id and kind, so the
+// log links to it; today's patterns pass neither and log exactly as before.
+export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: string; kind?: string }> = ({ pattern, contentId, kind }) => {
   const { authUserId, refreshMeditationSummary, refreshAchievements } = useApp();
   const reduced = useReducedMotion();
   const [running, setRunning] = useState(false);
@@ -73,7 +75,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
   // Stop, switching pattern or tab, and leaving the page (K6) all follow that
   // rule; Reset discards the run and never saves. Anything shorter is not
   // written at all.
-  const sessionRef = useRef<{ startedAtMs: number; kind: string } | null>(null);
+  const sessionRef = useRef<{ startedAtMs: number; kind: string; contentId?: string } | null>(null);
   const cyclesRef = useRef(0);
   const live = useRef({ authUserId, refreshMeditationSummary, refreshAchievements });
 
@@ -98,6 +100,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
       completed: true,
       // B3 (PB-O-21): the full cycles of this run.
       cyclesCompleted: cyclesRef.current,
+      contentId: session.contentId,
     }).then((r) => {
       if (!r.ok) {
         // O3 / K7 keep their own text; anything else is the shared one.
@@ -189,7 +192,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ patte
       setRunning(false);
       endSession(true);
     } else {
-      sessionRef.current = { startedAtMs: Date.now(), kind: meditationKind(pattern.id) };
+      sessionRef.current = { startedAtMs: Date.now(), kind: kind ?? meditationKind(pattern.id), contentId };
       setNote(null);
       setRunning(true);
     }

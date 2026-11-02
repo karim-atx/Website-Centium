@@ -30,6 +30,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { parseConfirmedAnswers, type ConfirmedAnswer } from "../client-forms/proposals";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { tk } from "../../i18n/core";
 import type { Read, Write } from "./clients";
 import { parseResponseNotes, type ResponseNote } from "../../components/pro/forms/reviewModel";
 import { parseTrend, type TrendWeek } from "../../components/pro/forms/nutritionTrendModel";
@@ -40,13 +41,14 @@ export type { FormAssignment, FormSummary, FormTemplate };
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
 
+/** The English message (a catalogue key: the screens show it with t()). */
 function message(error: unknown, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const code = (error as { code?: string } | null)?.code;
-  if (code === "ATX12") return "That person isn't your client any more.";
-  if (code === "ATX09") return "Only professionals can send forms.";
-  if (code === "ATX08") return "This form isn't available any more.";
-  if (code === "ATXG9") return "This form has already been sent.";
+  if (code === "ATX12") return tk("That person isn't your client any more.");
+  if (code === "ATX09") return tk("Only professionals can send forms.");
+  if (code === "ATX08") return tk("This form isn't available any more.");
+  if (code === "ATXG9") return tk("This form has already been sent.");
   return fallback;
 }
 
@@ -134,10 +136,10 @@ export interface FormFields {
   sendOnHire: boolean;
 }
 
-const QUESTIONS_FAILED = "Couldn't save the questions. Try again.";
+const QUESTIONS_FAILED = tk("Couldn't save the questions. Try again.");
 /** 22023 from the questions guard: a condition or profile field that doesn't fit. */
 const questionsMessage = (error: unknown) =>
-  (error as { code?: string } | null)?.code === "22023" ? "A condition or profile field doesn't fit its question. Check the questions and try again." : message(error, QUESTIONS_FAILED);
+  (error as { code?: string } | null)?.code === "22023" ? tk("A condition or profile field doesn't fit its question. Check the questions and try again.") : message(error, QUESTIONS_FAILED);
 
 /**
  * Saves a form: a new one is inserted first; then its questions are brought
@@ -150,11 +152,11 @@ export async function saveForm(me: string, formId: string | null, fields: FormFi
   const columns = { title: fields.title.trim(), description: fields.description.trim() || null, send_on_hire: fields.sendOnHire };
   if (!id) {
     const { data, error } = await from("forms").insert({ professional_id: me, kind: fields.kind, ...columns } as never).select("id").single();
-    if (error) return { ok: false, message: message(error, "Couldn't save the form. Try again.") };
+    if (error) return { ok: false, message: message(error, tk("Couldn't save the form. Try again.")) };
     id = (data as unknown as { id: string }).id;
   } else {
     const { error } = await from("forms").update(columns as never).eq("id", id);
-    if (error) return { ok: false, message: message(error, "Couldn't save the form. Try again.") };
+    if (error) return { ok: false, message: message(error, tk("Couldn't save the form. Try again.")) };
   }
   const d = diffQuestions(saved, draft);
   if (d.remove.length) {
@@ -189,13 +191,13 @@ export async function saveForm(me: string, formId: string | null, fields: FormFi
 /** "Automatically when someone hires you" (forms.send_on_hire), written at once from the Sending sheet. */
 export async function setSendOnHire(formId: string, on: boolean): Promise<Write> {
   const { error } = await from("forms").update({ send_on_hire: on } as never).eq("id", formId);
-  return error ? { ok: false, message: message(error, "Couldn't change when it's sent. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, tk("Couldn't change when it's sent. Try again.")) } : { ok: true };
 }
 
 /** A form leaves the lists (archived_at); answers already sent stay readable. */
 export async function archiveForm(formId: string): Promise<Write> {
   const { error } = await from("forms").update({ archived_at: new Date().toISOString() } as never).eq("id", formId);
-  return error ? { ok: false, message: message(error, "Couldn't remove the form. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, tk("Couldn't remove the form. Try again.")) } : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -235,9 +237,9 @@ export async function copyFormTemplate(key: string): Promise<{ ok: true; id: str
   const { data, error } = await rpc("use_form_template", { p_key: key });
   if (error || typeof data !== "string") {
     const code = (error as { code?: string } | null)?.code;
-    if (code === "ATX08") return { ok: false, message: "This template isn't available yet." };
-    if (code === "ATX09") return { ok: false, message: "This template isn't for your practice." };
-    return { ok: false, message: message(error, "Couldn't add the template. Try again.") };
+    if (code === "ATX08") return { ok: false, message: tk("This template isn't available yet.") };
+    if (code === "ATX09") return { ok: false, message: tk("This template isn't for your practice.") };
+    return { ok: false, message: message(error, tk("Couldn't add the template. Try again.")) };
   }
   return { ok: true, id: data };
 }
@@ -249,12 +251,12 @@ export async function copyFormTemplate(key: string): Promise<{ ok: true; id: str
 /** One form sent now (dueAt), or a schedule started (schedule). */
 export async function assignForm(formId: string, clientId: string, dueAt: string | null, schedule: string | null): Promise<Write> {
   const { error } = await rpc("assign_form", { p_form_id: formId, p_client_id: clientId, p_due_at: dueAt, p_schedule: schedule });
-  return error ? { ok: false, message: message(error, "Couldn't send the form. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, tk("Couldn't send the form. Try again.")) } : { ok: true };
 }
 
 export async function cancelAssignment(assignmentId: string): Promise<Write> {
   const { error } = await rpc("cancel_form_assignment", { p_assignment_id: assignmentId });
-  return error ? { ok: false, message: message(error, "Couldn't stop it. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, tk("Couldn't stop it. Try again.")) } : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +300,7 @@ const mapResponse = (r: ResponseRow): FormResponse => ({
   id: r.id,
   assignmentId: r.assignment_id,
   formId: r.form_assignments?.form_id ?? "",
-  formTitle: r.form_assignments?.forms?.title ?? "Form",
+  formTitle: r.form_assignments?.forms?.title ?? tk("Form"),
   formKind: r.form_assignments?.forms?.kind ?? "check_in",
   clientId: r.client_id,
   answers: r.answers && typeof r.answers === "object" && !Array.isArray(r.answers) ? (r.answers as Record<string, unknown>) : {},
@@ -344,7 +346,7 @@ export async function fetchQuestions(formIds: string[]): Promise<Read<Record<str
 
 export async function reviewResponse(responseId: string, reply: string): Promise<Write> {
   const { error } = await rpc("review_form_response", { p_response_id: responseId, p_reply: reply.trim() || null });
-  return error ? { ok: false, message: message(error, "Couldn't mark it as reviewed. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, tk("Couldn't mark it as reviewed. Try again.")) } : { ok: true };
 }
 
 /** Signed URLs for photo answers (form-uploads, the assigning professional may read them). */

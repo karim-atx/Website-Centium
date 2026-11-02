@@ -7,6 +7,8 @@ import { Toast } from "../../components/ui/Toast";
 import { MindHeader } from "../../components/mind/MindHeader";
 import { CentiumMark, EntiumWordmark } from "../../components/icons/CentiumMark";
 import { useApp } from "../../context/AppContext";
+import { useFreeLimit } from "../../components/premium/useFreeLimit";
+import { limitReachedText, ownHabitCount } from "../../services/premium/g2";
 import { Archive, Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
@@ -35,7 +37,9 @@ const COL = 28; // one day column, centre to centre (MO1.1.1 #18: x 172.2 → 20
 /** OURS: the toast after Archive (the menu's B3 action), with Undo. */
 const ARCHIVED = tk("Habit archived. Its history is kept.");
 /** The panel's rule lines (O3, O4); anything else is the O5 / O4 copy. */
-const PANEL_RULES = new Set([DUPLICATE_HABIT, TOO_MANY_HABITS]);
+const PANEL_RULES = {
+  has: (error: string) => error === DUPLICATE_HABIT || error === TOO_MANY_HABITS || error === limitReachedText("habits"),
+};
 
 /** A habit colour's name, for the tile's accessible name. */
 const COLOUR_NAME: Record<HabitColour, string> = {
@@ -129,6 +133,7 @@ export default function HabitsTab() {
     };
   }, [authUserId, habits.length]);
   const fromCoach = (h: HabitItem) => !!coachOf[h.id];
+  const { blocked } = useFreeLimit();
   // The tile and icon of a habit colour; null = lavender, the theme classes.
   const shadeOf = (c: HabitColour | undefined) => habitShade(c, dark, !!accessibility.highContrast);
   // The panel (MO1.1.1.1): closed, adding, or editing one habit (S5).
@@ -158,6 +163,9 @@ export default function HabitsTab() {
   };
 
   const openAdd = () => {
+    // Round G2: past the free plan's habits, the prompt instead of the panel
+    // (active habits; a professional's never count; nothing while off).
+    if (blocked("habits", ownHabitCount(habits, (id) => !!coachOf[id]))) return;
     setNewLabel("");
     setNewIcon(habitIconOptions[0].key);
     setNewColour("lavender");

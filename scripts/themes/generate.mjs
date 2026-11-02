@@ -37,6 +37,12 @@ export const THEMES = {
   rose: { name: "Rose & Blush", light: ["#E24D7F", "#F0A7B8"], dark: ["#C81E5D", "#9F475F"], ink: "white" },
   gold: { name: "Gold & Amber", light: ["#F6C445", "#8B5A2B"], dark: ["#D99706", "#5A3A17"], ink: "dark" },
   coral: { name: "Coral & Terracotta", light: ["#FF7A45", "#B94A2E"], dark: ["#E85D2E", "#7A2F1F"], ink: "white" },
+  // Round G4: the three Premium themes (color_theme forest_sage, midnight_indigo,
+  // plum_lilac; Premium in color_theme_access). Palettes are the Website's own,
+  // drawn like the four above: a primary and a secondary for light and dark.
+  forest: { name: "Forest & Sage", light: ["#2F7D5B", "#8FB59A"], dark: ["#3FA372", "#4E6B57"], ink: "white" },
+  midnight: { name: "Midnight & Indigo", light: ["#4146C8", "#56607F"], dark: ["#6F75F2", "#343D5C"], ink: "white" },
+  plum: { name: "Plum & Lilac", light: ["#8C3A87", "#C7A6DE"], dark: ["#B25FAE", "#6E5487"], ink: "white" },
 };
 // Centium's anchors: the light pair from the board; the dark primary is the one
 // Centium dark actually uses (#A991FE, kept by D4), so dark shades map from it.

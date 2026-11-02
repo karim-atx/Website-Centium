@@ -7,6 +7,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { DECLINE_MESSAGE_MAX, DECLINE_REASONS, type DeclineReason } from "../../../services/pro/requests";
 import { ProField } from "./fields";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · HO11 "Accept request" (CentredPopup). Accepting is
@@ -26,9 +27,9 @@ export const AcceptRequestPopup: React.FC<{ name: string | null; plan?: string |
   <CentredPopup
     open={!!name}
     onClose={onClose}
-    title={`Accept ${name ?? ""}?`}
+    title={t("Accept {name}?", { name: name ?? "" })}
     icon={<UserCheck size={22} strokeWidth={2} aria-hidden />}
-    body={plan ? `${plan}. They move to Onboarding.` : "They move to Onboarding."}
+    body={plan ? t("{plan}. They move to Onboarding.", { plan }) : t("They move to Onboarding.")}
   >
     {error && (
       <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 4 }}>
@@ -36,8 +37,8 @@ export const AcceptRequestPopup: React.FC<{ name: string | null; plan?: string |
       </p>
     )}
     <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-      <CtaButton size="page" label="Accept" loading={busy} onClick={onAccept} />
-      <CtaButton size="page" variant="secondary" label="Not now" onClick={onClose} disabled={busy} />
+      <CtaButton size="page" label={t("Accept")} loading={busy} onClick={onAccept} />
+      <CtaButton size="page" variant="secondary" label={t("Not now")} onClick={onClose} disabled={busy} />
     </div>
   </CentredPopup>
 );
@@ -72,14 +73,12 @@ export const DeclineRequestPopup: React.FC<{
     <CentredPopup
       open={!!name}
       onClose={close}
-      title={`Decline ${name ?? ""}'s request?`}
+      title={t("Decline {name}'s request?", { name: name ?? "" })}
       icon={<UserX size={22} strokeWidth={2} aria-hidden />}
-      body={`${first} sees the reason you choose with the decline.`}
+      body={t("{first} sees the reason you choose with the decline.", { first })}
     >
       <div className="text-start">
-        <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-          Reason (optional)
-        </span>
+        <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>{t("Reason (optional)")}</span>
         <button
           ref={setTrigger}
           type="button"
@@ -98,7 +97,7 @@ export const DeclineRequestPopup: React.FC<{
             color: reason ? INK.ch : INK.chF,
           }}
         >
-          <span>{reason ? DECLINE_REASONS.find((r) => r.value === reason)?.label : "Choose a reason"}</span>
+          <span>{reason ? t(DECLINE_REASONS.find((r) => r.value === reason)?.label ?? "") : t("Choose a reason")}</span>
           {menu ? <ChevronUp size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} /> : <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />}
         </button>
         <PopupMenu
@@ -106,8 +105,8 @@ export const DeclineRequestPopup: React.FC<{
           onClose={() => setMenu(false)}
           anchor={trigger}
           matchWidth={trigger}
-          heading="Reason"
-          options={DECLINE_REASONS}
+          heading={t("Reason")}
+          options={DECLINE_REASONS.map((r) => ({ ...r, label: t(r.label) }))}
           selected={reason}
           onSelect={(v) => {
             setReason(v);
@@ -117,11 +116,11 @@ export const DeclineRequestPopup: React.FC<{
         {reason === "other" && (
           <div style={{ marginTop: 12 }}>
             <ProField
-              label={`Tell ${first} why`}
+              label={t("Tell {first} why", { first })}
               value={message}
               onChange={setMessage}
               maxLength={DECLINE_MESSAGE_MAX}
-              note={`Short and kind. ${first} sees this with the decline.`}
+              note={t("Short and kind. {first} sees this with the decline.", { first })}
               autoFocus
             />
           </div>
@@ -133,8 +132,8 @@ export const DeclineRequestPopup: React.FC<{
         )}
       </div>
       <div className="flex flex-col" style={{ gap: 8, marginTop: 20 }}>
-        <CtaButton size="page" label="Decline request" loading={busy} disabled={needsMessage} onClick={() => onDecline(reason, message)} />
-        <CtaButton size="page" variant="secondary" label="Keep request" onClick={close} disabled={busy} />
+        <CtaButton size="page" label={t("Decline request")} loading={busy} disabled={needsMessage} onClick={() => onDecline(reason, message)} />
+        <CtaButton size="page" variant="secondary" label={t("Keep request")} onClick={close} disabled={busy} />
       </div>
     </CentredPopup>
   );

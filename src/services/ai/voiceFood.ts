@@ -3,6 +3,9 @@ import { matchFoodByName } from "../food";
 import type { FoodSearchResult } from "../food";
 import type { ServingUnit } from "../../types";
 import { MAX_VOICE_ITEMS, MAX_VOICE_NAME_LENGTH, rateLimitedText } from "./voiceLimits";
+import { askPremium } from "../premium/asks";
+import { edgeRefusalOf } from "../premium/g2";
+import { t } from "../../i18n/core";
 
 // Real voice food logging: a recorded clip in, candidate foods out.
 //
@@ -163,6 +166,12 @@ const GENERIC_FAILURE = "Couldn't process that recording. Try again, or add the 
 function describeRefusal(status: number, body: FnBody): VoiceFoodOutcome {
   const code = typeof body.code === "string" ? body.code : "";
   const fnMessage = typeof body.message === "string" ? body.message : "";
+
+  // Round G2: 403 premium_required (AI voice food logging is Premium while the free limits apply).
+  if (edgeRefusalOf(status, code)) {
+    askPremium("ai_voice_food_logging", "refusal");
+    return { ok: false, kind: "failed", message: t("That's part of Centium Premium.") };
+  }
 
   if (status === 429 || code === "rate_limited") {
     const retryAfterSeconds =

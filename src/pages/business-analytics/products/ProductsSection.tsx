@@ -27,7 +27,7 @@ import {
 } from "../../../components/charts/ScrubChart";
 import { Toggle } from "../../../components/ui/Toggle";
 import { useOnline } from "../../../hooks/useOnline";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 import { clock12 } from "../../../utils/time12";
 import {
   fetchBusinessTimezone,
@@ -115,8 +115,9 @@ const BASE = "/app/business/analytics/products";
 // placed, not-cancelled store_orders line, paid or not; AN11 / BU6-03 feed
 // them from orders), not recorded payments. The drawn words stay; this line
 // says what they count (OURS).
-const ORDER_VALUE_NOTE =
-  "Sales here are the value of orders placed and not cancelled, paid or not.";
+const ORDER_VALUE_NOTE = tk(
+  "Sales here are the value of orders placed and not cancelled, paid or not.",
+);
 
 /** B11 store_sales_summary (range + the period before) and store_top_products for the index. */
 async function loadServerSales(
@@ -167,7 +168,9 @@ interface DiscountsData {
   windowFrom: string;
 }
 
-const STATUS_WORD: Record<PromoStatus, string> = { live: "Active", scheduled: "Scheduled", paused: "Paused", ended: "Ended" };
+const STATUS_WORD: Record<PromoStatus, string> = { live: tk("Active"), scheduled: tk("Scheduled"), paused: tk("Paused"), ended: tk("Ended") };
+/** A discount's status word: "Active" and "Ended" read here as a discount's (masculine in Arabic). */
+const statusWord = (s: PromoStatus) => (s === "live" ? tx("Active", "discount") : s === "ended" ? tx("Ended", "discount") : t(STATUS_WORD[s]));
 
 /** B13 promotions (any insider reads them) with promotion_stats and promotion_redemptions: the AN11 discounts. */
 async function fetchDiscounts(
@@ -212,7 +215,7 @@ async function fetchDiscounts(
 const StatusPill: React.FC<{ s: PromoStatus }> = ({ s }) => (
   <span className={"pa-status is-" + s}>
     <i aria-hidden />
-    {STATUS_WORD[s]}
+    {statusWord(s)}
   </span>
 );
 
@@ -293,11 +296,11 @@ export default function ProductsSection() {
       return;
     }
     setExport("centium-products.csv", [
-      ["Product", "Price", "Visible", "Units sold", "Sales"],
+      [t("Product"), t("Price"), t("Visible"), t("Units sold"), t("Sales")],
       ...h.rows.map((r) => [
         r.product.name,
         r.product.price,
-        r.product.visible ? "Yes" : "No",
+        r.product.visible ? t("Yes") : t("No"),
         orderList ? r.units : null,
         orderList ? Math.round(r.revenue * 100) / 100 : null,
       ]),
@@ -317,13 +320,13 @@ export default function ProductsSection() {
 
   const offline =
     !online && loadedAt
-      ? `Offline. Showing what was loaded at ${clock12(loadedAt)}.`
+      ? t("Offline. Showing what was loaded at {time}.", { time: clock12(loadedAt) })
       : null;
   let body: React.ReactNode;
   if (loadError || p.status === "error") {
     body = (
       <ErrorCard
-        text="Couldn't load your products."
+        text={t("Couldn't load your products.")}
         onRetry={() => (loadError ? reloadBiz() : products.reload())}
       />
     );
@@ -346,7 +349,7 @@ export default function ProductsSection() {
           onDiscounts={() => undefined}
         />
         <p className="pa-note">
-          Save your business profile first. Products are published under it.
+          {t("Save your business profile first. Products are published under it.")}
         </p>
       </>
     );
@@ -391,7 +394,7 @@ export default function ProductsSection() {
         <IndexSkeleton />
       ) : ds.status !== "ok" ? (
         <ErrorCard
-          text="Couldn't load discounts."
+          text={t("Couldn't load discounts.")}
           onRetry={() => discounts.reload()}
         />
       ) : sub === "discounts" ? (
@@ -432,33 +435,33 @@ export default function ProductsSection() {
   const header =
     sub === "all" ? (
       <AnHeaderRow
-        crumb="Products"
-        backLabel="Back to Products"
-        title="All products"
+        crumb={t("Products")}
+        backLabel={t("Back to Products")}
+        title={t("All products")}
         onBack={() => navigate(BASE)}
       />
     ) : sub.startsWith("item/") ? (
       <AnHeaderRow
-        crumb="Products"
-        backLabel="Back to Products"
+        crumb={t("Products")}
+        backLabel={t("Back to Products")}
         title={
           h?.rows.find((r) => r.product.id === sub.slice(5))?.product.name ??
-          "Product"
+          t("Product")
         }
         onBack={() => navigate(-1)}
       />
     ) : sub === "discounts" ? (
       <AnHeaderRow
-        crumb="Products"
-        backLabel="Back to Products"
-        title="Discounts"
+        crumb={t("Products")}
+        backLabel={t("Back to Products")}
+        title={t("Discounts")}
         onBack={() => navigate(BASE)}
       />
     ) : sub.startsWith("discounts/") ? (
       <AnHeaderRow
-        crumb="Discounts"
-        backLabel="Back to Discounts"
-        title="Discount"
+        crumb={t("Discounts")}
+        backLabel={t("Back to Discounts")}
+        title={t("Discount")}
         onBack={() => navigate(`${BASE}/discounts`)}
       />
     ) : null;
@@ -472,7 +475,7 @@ export default function ProductsSection() {
         <>
           <CtaSpacer />
           <FixedCta
-            label="Add product"
+            label={t("Add product")}
             plus
             onClick={() => openEditor(null)}
             disabled={!online || !businessId || !data}
@@ -506,14 +509,14 @@ const ErrorCard: React.FC<{ text: string; onRetry: () => void }> = ({
     <div className="pa-err" role="alert">
       <p>{text}</p>
       <button type="button" className="tap" onClick={onRetry}>
-        Retry
+        {t("Retry")}
       </button>
     </div>
   </div>
 );
 
 const IndexSkeleton: React.FC = () => (
-  <div role="status" aria-label="Loading your products">
+  <div role="status" aria-label={t("Loading your products")}>
     <div className="pa-card" style={{ padding: "18px 16px" }}>
       <span className="flex gap-[16px]">
         <span className="flex-1 flex flex-col items-center gap-[8px]">
@@ -595,14 +598,14 @@ const IndexView: React.FC<{
   const noProducts = h.rows.length === 0;
   const best = h.top[0];
   const lead = noProducts
-    ? "Publish your first product and its sales show up here."
+    ? t("Publish your first product and its sales show up here.")
     : h.sold === null
-      ? "Sales show here once orders are on Centium."
+      ? t("Sales show here once orders are on Centium.")
       : h.early
-        ? "Your first sales came in less than 4 weeks ago. Comparisons start after a full period."
+        ? t("Your first sales came in less than 4 weeks ago. Comparisons start after a full period.")
         : best
-          ? `${best.product.name} is your best seller, with ${best.units} sold this period.`
-          : "No sales yet this period. Your best seller shows here once orders come in.";
+          ? t("{name} is your best seller, with {n} sold this period.", { name: best.product.name, n: best.units })
+          : t("No sales yet this period. Your best seller shows here once orders come in.");
   // Top 3 by units sold, newest first while nothing has sold (index row 6).
   const top3 = [...h.rows]
     .filter((r) => r.product.visible)
@@ -618,18 +621,18 @@ const IndexView: React.FC<{
     <>
       {h.early && (
         <p className="pa-early">
-          Early data: your first sales were less than 4 weeks ago.
+          {t("Early data: your first sales were less than 4 weeks ago.")}
         </p>
       )}
-      <section className="pa-card" aria-label="Products this period">
+      <section className="pa-card" aria-label={t("Products this period")}>
         <AnNumberBoxes
           boxes={[
             {
-              label: "Live products",
+              label: t("Live products"),
               value: noProducts ? "0" : String(h.live),
             },
             {
-              label: "Items sold",
+              label: t("Items sold"),
               value: h.sold === null || noProducts ? null : String(h.sold),
               delta: delta(h.soldDelta),
             },
@@ -652,22 +655,22 @@ const IndexView: React.FC<{
               </span>
             )}
           </p>
-          <p className="pa-numl">Sales this period</p>
+          <p className="pa-numl">{t("Sales this period")}</p>
         </div>
         <p className="pa-lead">{lead}</p>
-        <p className="pa-ordernote">{ORDER_VALUE_NOTE}</p>
+        <p className="pa-ordernote">{t(ORDER_VALUE_NOTE)}</p>
       </section>
 
-      <section className="pa-card pa-hero" aria-label="What's selling?">
-        <p className="pa-hero-t">What's selling?</p>
+      <section className="pa-card pa-hero" aria-label={t("What's selling?")}>
+        <p className="pa-hero-t">{t("What's selling?")}</p>
         <p className="pa-hero-s">
           {h.top.length
-            ? "Your top 5 items by units sold this period."
-            : "Your top sellers will rank here."}
+            ? t("Your top 5 items by units sold this period.")
+            : t("Your top sellers will rank here.")}
         </p>
         {h.top.length ? (
           <>
-            <div role="list" aria-label="Top sellers" className="pa-top">
+            <div role="list" aria-label={t("Top sellers")} className="pa-top">
               {h.top.map((r, i) => {
                 const d = r.prevUnits === null ? null : r.units - r.prevUnits;
                 return (
@@ -676,7 +679,7 @@ const IndexView: React.FC<{
                     type="button"
                     role="listitem"
                     className="pa-top-row tap"
-                    aria-label={`${i + 1}. ${r.product.name}, ${r.units} sold`}
+                    aria-label={`${i + 1}. ${r.product.name}, ${tn(r.units, "1 sold", "{n} sold")}`}
                     onClick={() => onOpen(r.product.id)}
                   >
                     <span className={"pa-rank" + (i === 0 ? " is-first" : "")}>
@@ -694,7 +697,7 @@ const IndexView: React.FC<{
                         {r.prevUnits !== null && (
                           <i
                             style={{
-                              left: `calc(${((r.prevUnits / mx) * 100).toFixed(1)}% - 1px)`,
+                              insetInlineStart: `calc(${((r.prevUnits / mx) * 100).toFixed(1)}% - 1px)`,
                             }}
                           />
                         )}
@@ -712,12 +715,12 @@ const IndexView: React.FC<{
                         }
                       >
                         {d === null
-                          ? "sold"
+                          ? t("sold")
                           : d > 0
-                            ? `↑ +${d} vs last`
+                            ? `↑ ${t("{delta} vs last", { delta: `+${d}` })}`
                             : d < 0
-                              ? `↓ −${Math.abs(d)} vs last`
-                              : "same as last"}
+                              ? `↓ ${t("{delta} vs last", { delta: `−${Math.abs(d)}` })}`
+                              : t("same as last")}
                       </span>
                     </span>
                   </button>
@@ -734,7 +737,7 @@ const IndexView: React.FC<{
                     background: "var(--an-primary)",
                   }}
                 />
-                Sold this period
+                {t("Sold this period")}
               </span>
               <span>
                 <span
@@ -745,12 +748,11 @@ const IndexView: React.FC<{
                     background: "var(--an-tert)",
                   }}
                 />
-                Previous period
+                {t("Previous period")}
               </span>
             </div>
             <p className="pa-cap">
-              Ranked by units sold. The grey mark shows last period, so you can
-              see who's rising.
+              {t("Ranked by units sold. The grey mark shows last period, so you can see who's rising.")}
             </p>
           </>
         ) : (
@@ -763,23 +765,23 @@ const IndexView: React.FC<{
               <span />
             </span>
             <p>
-              No sales yet. Publish a product and your best sellers appear here.
+              {t("No sales yet. Publish a product and your best sellers appear here.")}
             </p>
           </div>
         )}
       </section>
 
-      <p className="pa-label">Your products</p>
-      <section className="pa-card" aria-label="Your products">
+      <p className="pa-label">{t("Your products")}</p>
+      <section className="pa-card" aria-label={t("Your products")}>
         {noProducts ? (
           <div className="pa-ix">
             <span className="pa-tile is-faint">
               <Package size={17} strokeWidth={2.2} aria-hidden />
             </span>
             <span className="min-w-0">
-              <span className="pa-ix-t">No products yet</span>
+              <span className="pa-ix-t">{t("No products yet")}</span>
               <span className="pa-ix-l">
-                Publish your first product and it shows here.
+                {t("Publish your first product and it shows here.")}
               </span>
             </span>
             <span />
@@ -792,7 +794,7 @@ const IndexView: React.FC<{
                 key={r.product.id}
                 type="button"
                 className="pa-ix tap"
-                aria-label={`${r.product.name}, ${salesPending ? "sales not known yet" : `${r.units} sold`}`}
+                aria-label={`${r.product.name}, ${salesPending ? t("sales not known yet") : tn(r.units, "1 sold", "{n} sold")}`}
                 onClick={() => onOpen(r.product.id)}
               >
                 <span className="pa-tile">
@@ -800,13 +802,13 @@ const IndexView: React.FC<{
                 </span>
                 <span className="min-w-0">
                   <span className="pa-ix-t">{r.product.name}</span>
-                  <span className="pa-ix-l">{`${price(r.product.price)} · Active`}</span>
+                  <span className="pa-ix-l">{`${price(r.product.price)} · ${tx("Active", "product")}`}</span>
                 </span>
                 <span className="pa-ix-v">
                   <b className={salesPending ? "is-none" : undefined}>
                     {salesPending ? "–" : r.units}
                   </b>
-                  <span>sold</span>
+                  <span>{t("sold")}</span>
                 </span>
                 <span className="pa-chev">
                   <ChevronRight size={16} aria-hidden />
@@ -818,8 +820,8 @@ const IndexView: React.FC<{
                 <List size={17} strokeWidth={2.2} aria-hidden />
               </span>
               <span className="min-w-0">
-                <span className="pa-ix-t">{`See all ${h.rows.length} ${h.rows.length === 1 ? "product" : "products"}`}</span>
-                <span className="pa-ix-l">Search and sort every product.</span>
+                <span className="pa-ix-t">{tn(h.rows.length, "See all 1 product", "See all {n} products")}</span>
+                <span className="pa-ix-l">{t("Search and sort every product.")}</span>
               </span>
               <span />
               <span className="pa-chev">
@@ -834,25 +836,25 @@ const IndexView: React.FC<{
         type="button"
         className="pa-card pa-ix tap"
         style={{ marginTop: 12 }}
-        aria-label={`Discounts: ${liveN} live`}
+        aria-label={t("Discounts: {n} live", { n: liveN })}
         onClick={onDiscounts}
       >
         <span className="pa-tile">
           <BadgePercent size={17} strokeWidth={2.2} aria-hidden />
         </span>
         <span className="min-w-0">
-          <span className="pa-ix-t">Discounts</span>
+          <span className="pa-ix-t">{t("Discounts")}</span>
           <span className="pa-ix-l">
             {liveN
               ? usesN
-                ? `Used ${usesN} ${usesN === 1 ? "time" : "times"} so far.`
-                : "No uses recorded yet."
-              : "Deals shown on your listing."}
+                ? tn(usesN, "Used 1 time so far.", "Used {n} times so far.")
+                : t("No uses recorded yet.")
+              : t("Deals shown on your listing.")}
           </span>
         </span>
         <span className="pa-ix-v">
           <b className={liveN ? undefined : "is-none"}>{liveN}</b>
-          <span>live</span>
+          <span>{t("live")}</span>
         </span>
         <span className="pa-chev">
           <ChevronRight size={16} aria-hidden />
@@ -865,9 +867,9 @@ const IndexView: React.FC<{
 /** Stock line / pill (OURS-AN11-all-listings row 6, OP1 tones). */
 const StockPill: React.FC<{ p: Product }> = ({ p }) =>
   p.stock === null ? null : p.stock <= 0 ? (
-    <span className="pa-pill is-out">Out of stock</span>
+    <span className="pa-pill is-out">{t("Out of stock")}</span>
   ) : p.stock < 5 ? (
-    <span className="pa-pill is-low">Low stock</span>
+    <span className="pa-pill is-low">{t("Low stock")}</span>
   ) : null;
 
 const AllProducts: React.FC<{
@@ -895,14 +897,14 @@ const AllProducts: React.FC<{
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search products"
-          aria-label="Search products"
+          placeholder={t("Search products")}
+          aria-label={t("Search products")}
         />
         {q && (
           <button
             type="button"
             className="pa-clear tap"
-            aria-label="Clear the search"
+            aria-label={t("Clear the search")}
             onClick={() => setQ("")}
           >
             <X size={15} aria-hidden />
@@ -922,13 +924,13 @@ const AllProducts: React.FC<{
             aria-hidden
             style={{ color: "var(--an-faint)" }}
           />
-          <span>Sort: {SORTS.find((s) => s.key === sort)?.label}</span>
+          <span>{t("Sort: {order}", { order: t(SORTS.find((s) => s.key === sort)?.label ?? "Most sold") })}</span>
           <ChevronDown size={14} aria-hidden />
         </button>
       </div>
       {open && (
-        <div role="listbox" aria-label="Sort by" className="pa-list">
-          <p className="pa-list-l">Sort by</p>
+        <div role="listbox" aria-label={t("Sort by")} className="pa-list">
+          <p className="pa-list-l">{t("Sort by")}</p>
           {SORTS.map((s) => (
             <button
               key={s.key}
@@ -941,7 +943,7 @@ const AllProducts: React.FC<{
                 setOpen(false);
               }}
             >
-              <span>{s.label}</span>
+              <span>{t(s.label)}</span>
               {s.key === sort && (
                 <Check size={15} strokeWidth={2.6} aria-hidden />
               )}
@@ -951,18 +953,18 @@ const AllProducts: React.FC<{
       )}
       {h.rows.length === 0 ? (
         <div className="pa-none">
-          <b>No products yet</b>
-          <p>Create your first product to start selling on Explore.</p>
+          <b>{t("No products yet")}</b>
+          <p>{t("Create your first product to start selling on Explore.")}</p>
         </div>
       ) : rows.length === 0 ? (
         <div className="pa-none">
-          <b>No products match "{q.trim()}"</b>
-          <p>Try a shorter name or clear the search.</p>
+          <b>{t("No products match «{q}»", { q: q.trim() })}</b>
+          <p>{t("Try a shorter name or clear the search.")}</p>
         </div>
       ) : (
         <>
           <p className="pa-group-l">
-            {(q.trim() ? "Results · " : "All products · ") + rows.length}
+            {`${q.trim() ? t("Results") : t("All products")} · ${rows.length}`}
           </p>
           <div className="pa-items">
             {rows.map((r) => (
@@ -991,7 +993,7 @@ const ProductCard: React.FC<{
     <button
       type="button"
       className={"pa-pcard tap" + (p.visible ? "" : " is-hidden")}
-      aria-label={`${p.name}, ${price(p.price)}, ${p.visible ? "Active" : "Hidden"}`}
+      aria-label={`${p.name}, ${price(p.price)}, ${p.visible ? tx("Active", "product") : t("Hidden")}`}
       onClick={onOpen}
     >
       <span className="pa-ptile">
@@ -1001,14 +1003,14 @@ const ProductCard: React.FC<{
         <span className="pa-pname">
           <b>{p.name}</b>
           <span className={"pa-pill " + (p.visible ? "is-good" : "is-soft")}>
-            {p.visible ? "Active" : "Hidden"}
+            {p.visible ? tx("Active", "product") : t("Hidden")}
           </span>
           <StockPill p={p} />
         </span>
         <span className="pa-price">{price(p.price)}</span>
         {(p.description || p.stock !== null) && (
           <span className="pa-desc">
-            {[p.description, p.stock !== null ? `${p.stock} in stock` : ""]
+            {[p.description, p.stock !== null ? t("{n} in stock", { n: p.stock }) : ""]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -1018,20 +1020,20 @@ const ProductCard: React.FC<{
             <b className={known ? undefined : "is-none"}>
               {known ? r.units : "–"}
             </b>
-            <i>sold this period</i>
+            <i>{t("sold this period")}</i>
           </span>
           <span>
             <b className={known ? undefined : "is-none"}>
               {known ? money(r.revenue) : "–"}
             </b>
-            <i>sales</i>
+            <i>{t("sales")}</i>
           </span>
           {known && d !== null && (
             <span>
               <b className={d > 0 ? "is-up" : d < 0 ? "is-down" : undefined}>
                 {d > 0 ? `+${d}` : d < 0 ? `−${Math.abs(d)}` : "0"}
               </b>
-              <i>vs last</i>
+              <i>{t("vs last")}</i>
             </span>
           )}
         </span>
@@ -1069,38 +1071,38 @@ const ProductDetail: React.FC<{
     !known || !b ? "" : a > b ? "+" + f(a - b) : a < b ? "−" + f(b - a) : "";
   const sum: [string, string, string][] = [
     [
-      "Total units",
+      t("Total units"),
       known && s!.totU ? String(s!.totU) : "–",
       known ? dl(s!.totU, s!.prevTotU, String) : "",
     ],
     [
-      "Total revenue",
+      t("Total revenue"),
       known && s!.totU ? money(s!.totR) : "–",
       known ? dl(s!.totR, s!.prevTotR, (v) => money(v)) : "",
     ],
     [
-      "Average price",
+      t("Average price"),
       known && s!.totU ? "$" + (s!.totR / s!.totU).toFixed(2) : "–",
       "",
     ],
     [
-      "Best week",
-      known && s!.totU ? s!.labels[s!.bestIdx].replace("Week of ", "") : "–",
-      known && s!.totU ? `${s!.units[s!.bestIdx]} sold` : "",
+      t("Best week"),
+      known && s!.totU ? s!.labels[s!.bestIdx].replace(t("Week of {date}", { date: "" }), "") : "–",
+      known && s!.totU ? tn(s!.units[s!.bestIdx], "1 sold", "{n} sold") : "",
     ],
   ];
   const tipFor = (i: number, rev: boolean) =>
     !s
       ? []
       : [
-          { l: "Units", v: String(s.units[i]) },
-          { l: "Revenue", v: money(s.revenue[i]) },
+          { l: t("Units"), v: String(s.units[i]) },
+          { l: t("Revenue"), v: money(s.revenue[i]) },
           {
-            l: "Avg price",
+            l: t("Avg price"),
             v: s.units[i] ? "$" + (s.revenue[i] / s.units[i]).toFixed(2) : "–",
           },
           {
-            l: "Last period",
+            l: t("Last period"),
             v: rev ? money(s.prevRevenue[i]) : String(s.prevUnits[i]),
             prev: true,
           },
@@ -1109,17 +1111,17 @@ const ProductDetail: React.FC<{
     vh: 140,
     labels: s?.labels ?? [],
     xl: s?.xl ?? [],
-    aria: `Sales by week for ${p.name}`,
-    curLabel: "This period",
-    prevLabel: "Previous period",
+    aria: t("Sales by week for {name}", { name: p.name }),
+    curLabel: t("This period"),
+    prevLabel: t("Previous period"),
     caption:
-      "Is it selling more or less than before? Drag across the chart to read each week, tap to pin one.",
-    earlyText: "The trend starts after 2 weeks of sales.",
-    emptyText: "Sales show here once it starts selling.",
+      t("Is it selling more or less than before? Drag across the chart to read each week, tap to pin one."),
+    earlyText: t("The trend starts after 2 weeks of sales."),
+    emptyText: t("Sales show here once it starts selling."),
     modes: [
       {
-        t: "Revenue",
-        unit: "$ per week",
+        t: t("Revenue"),
+        unit: t("$ per week"),
         cur: s?.revenue ?? [],
         prev: s?.prevRevenue,
         fmt: (v) => "$" + Math.round(v),
@@ -1127,8 +1129,8 @@ const ProductDetail: React.FC<{
         step: 50,
       },
       {
-        t: "Units sold",
-        unit: "units per week",
+        t: t("Units sold"),
+        unit: t("units per week"),
         cur: s?.units ?? [],
         prev: s?.prevUnits,
         fmt: (v) => String(Math.round(v)),
@@ -1143,26 +1145,26 @@ const ProductDetail: React.FC<{
     showToast(
       r.ok
         ? p.visible
-          ? "Hidden from Explore."
-          : "Back on Explore."
+          ? t("Hidden from Explore.")
+          : t("Back on Explore.")
         : r.pending
-          ? "Hiding products is coming soon."
-          : "Couldn't save. Try again.",
+          ? t("Hiding products is coming soon.")
+          : t("Couldn't save. Try again."),
       false,
     );
   };
   const acts = [
-    { icon: Pencil, t: "Edit", onClick: onEdit, disabled: !online },
-    { icon: Copy, t: "Duplicate", onClick: onDuplicate, disabled: !online },
+    { icon: Pencil, t: t("Edit"), onClick: onEdit, disabled: !online },
+    { icon: Copy, t: t("Duplicate"), onClick: onDuplicate, disabled: !online },
     {
       icon: p.visible ? EyeOff : Eye,
-      t: p.visible ? "Hide" : "Show",
+      t: p.visible ? t("Hide") : t("Show"),
       onClick: hideShow,
       disabled: !online || !writable,
     },
     {
       icon: Trash2,
-      t: "Delete",
+      t: t("Delete"),
       onClick: () => setConfirm(true),
       disabled: !online,
       high: true,
@@ -1181,13 +1183,13 @@ const ProductDetail: React.FC<{
               <b>{price(p.price)}</b>
               <span>
                 {known
-                  ? `${row.units} sold this period`
-                  : "Sales show here once orders are on Centium."}
+                  ? t("{n} sold this period", { n: row.units })
+                  : t("Sales show here once orders are on Centium.")}
               </span>
             </p>
             <p className="pa-sum-m">
               <i className={p.visible ? undefined : "is-hidden"} aria-hidden />
-              {p.visible ? "Listed on Explore" : "Hidden from Explore"}
+              {p.visible ? t("Listed on Explore") : t("Hidden from Explore")}
             </p>
           </div>
         </div>
@@ -1207,14 +1209,14 @@ const ProductDetail: React.FC<{
         </div>
         {!writable && (
           <p className="pa-note" style={{ marginTop: 0, marginBottom: 8 }}>
-            Hide and show are coming soon.
+            {t("Hide and show are coming soon.")}
           </p>
         )}
       </section>
 
-      <section className="pa-card pa-sales" aria-label="Sales">
+      <section className="pa-card pa-sales" aria-label={t("Sales")}>
         <div className="pa-sales-in">
-          <p className="pa-sales-t">Sales</p>
+          <p className="pa-sales-t">{t("Sales")}</p>
           <ScrubChart
             cfg={cfg}
             empty={!s || s.totU === 0}
@@ -1247,20 +1249,20 @@ const ProductDetail: React.FC<{
         <p className="pa-lead" style={{ padding: "12px 16px" }}>
           {known
             ? detailLead(p.visible, s)
-            : "Sales show here once orders are on Centium."}
+            : t("Sales show here once orders are on Centium.")}
         </p>
         <p className="pa-ordernote" style={{ padding: "0 16px 12px" }}>
-          {ORDER_VALUE_NOTE}
+          {t(ORDER_VALUE_NOTE)}
         </p>
       </section>
 
-      <section className="pa-card pa-details" aria-label="Details">
-        <p className="pa-details-l">Details</p>
+      <section className="pa-card pa-details" aria-label={t("Details")}>
+        <p className="pa-details-l">{t("Details")}</p>
         {p.description && <p className="pa-details-d">{p.description}</p>}
         {p.stock !== null && (
           <div className="pa-drow">
             <span className="flex-1 min-w-0">
-              <span className="pa-drow-t">In stock</span>
+              <span className="pa-drow-t">{t("In stock")}</span>
             </span>
             <span className="pa-drow-v">
               {p.stock}
@@ -1271,14 +1273,14 @@ const ProductDetail: React.FC<{
         <div className="pa-drow">
           <span className="flex-1 min-w-0">
             <span className="pa-drow-t">
-              {p.visible ? "Visible on Explore" : "Hidden from Explore"}
+              {p.visible ? t("Visible on Explore") : t("Hidden from Explore")}
             </span>
             <span className="pa-drow-s">
               {writable
                 ? p.visible
-                  ? "Clients can find and buy it."
-                  : "Only you can see it."
-                : "Coming soon"}
+                  ? t("Clients can find and buy it.")
+                  : t("Only you can see it.")
+                : t("Coming soon")}
             </span>
           </span>
           <Toggle
@@ -1286,7 +1288,7 @@ const ProductDetail: React.FC<{
             checked={p.visible}
             onChange={() => void hideShow()}
             disabled={!writable || !online}
-            label="Visible on Explore"
+            label={t("Visible on Explore")}
           />
         </div>
       </section>
@@ -1294,10 +1296,10 @@ const ProductDetail: React.FC<{
       <KitPop
         open={confirm}
         icon={Trash2}
-        title={`Delete ${p.name}?`}
-        body="It comes off Explore. Past sales stay in your numbers."
-        action="Delete"
-        keep="Keep it"
+        title={t("Delete {name}?", { name: p.name })}
+        body={t("It comes off Explore. Past sales stay in your numbers.")}
+        action={t("Delete")}
+        keep={t("Keep it")}
         busy={busy}
         error={err}
         onKeep={() => {
@@ -1310,11 +1312,11 @@ const ProductDetail: React.FC<{
           const r = await deleteProduct(p.id);
           setBusy(false);
           if (!r.ok) {
-            setErr("Couldn't delete the product. Try again.");
+            setErr(t("Couldn't delete the product. Try again."));
             return;
           }
           setConfirm(false);
-          onDeleted(`${p.name} deleted.`);
+          onDeleted(t("{name} deleted.", { name: p.name }));
         }}
       />
       {toast}
@@ -1344,13 +1346,13 @@ const amountOf = (p: Promotion, kind: BizKind) => promoText(kind, p.type, p.valu
 function appliesOf(p: Promotion, ctx: DiscountCtx): string {
   const what =
     p.targetKind === "any" || !p.targetId
-      ? "Any item"
+      ? t("Any item")
       : p.targetKind === "day_pass"
-        ? "Day pass"
+        ? t("Day pass")
         : p.targetKind === "product"
           ? ctx.products.get(p.targetId) ?? nameTitle(p.name)
           : nameTitle(p.name);
-  return `${what}, ${p.audience === "new" ? ctx.audienceNew.toLowerCase() : "everyone"}`;
+  return `${what}${t(", ")}${p.audience === "new" ? ctx.audienceNew.toLowerCase() : t("everyone")}`;
 }
 
 const DL_CLASS: Record<DiscountView["dlTone"], string> = { soon: "is-soon", normal: "is-normal", scheduled: "is-scheduled", ended: "is-ended" };
@@ -1386,11 +1388,11 @@ const WeekChart: React.FC<{ vals: number[]; prev: number[]; aria: string }> = ({
       <div className="pa-wk-leg" aria-hidden>
         <span>
           <i className="pa-wk-sq" />
-          This period
+          {t("This period")}
         </span>
         <span>
           <i className="pa-wk-dash" />
-          Previous period
+          {t("Previous period")}
         </span>
       </div>
       <div className="relative">
@@ -1414,8 +1416,8 @@ const WeekChart: React.FC<{ vals: number[]; prev: number[]; aria: string }> = ({
         </span>
       </div>
       <div className="pa-wk-x" aria-hidden style={rtl ? { paddingLeft: 0, paddingRight: 24 } : undefined}>
-        <span>{vals.length} weeks ago</span>
-        <span>This week</span>
+        <span>{tn(vals.length, "1 week ago", "{n} weeks ago")}</span>
+        <span>{t("This week")}</span>
       </div>
     </div>
   );
@@ -1433,7 +1435,7 @@ const UsesBar: React.FC<{ v: DiscountView }> = ({ v }) =>
   v.use === null ? null : (
     <div className="pa-uses">
       <div className="pa-uses-h">
-        <span>Uses</span>
+        <span>{t("Uses")}</span>
         <b>{v.use}</b>
       </div>
       <div className="pa-uses-t">
@@ -1461,14 +1463,14 @@ const DiscountsView: React.FC<{
   // O5: the first discount went live less than 4 weeks ago.
   const started = list.filter((d) => d.status !== "scheduled").map((d) => d.f.startsOn).sort()[0];
   const early = !!started && daysSince(started, today) < 28;
-  const recorded = " Discounts are recorded on payments, so the amount given isn't counted.";
+  const recorded = ` ${t("Discounts are recorded on payments, so the amount given isn't counted.")}`;
   const lead = !n
-    ? "Add a discount and it shows on your listing."
+    ? t("Add a discount and it shows on your listing.")
     : early
-      ? "Your first discount went live less than 4 weeks ago. Comparisons start after a full period."
+      ? t("Your first discount went live less than 4 weeks ago. Comparisons start after a full period.")
       : top
-        ? `${top.label} is used the most.${recorded}`
-        : `No uses recorded yet.${recorded}`;
+        ? `${t("{name} is used the most.", { name: top.label })}${recorded}`
+        : `${t("No uses recorded yet.")}${recorded}`;
   const flags: { col: string; n: number; t: string; s: string }[] = [];
   if (soon.length) {
     const f = soon[0];
@@ -1476,13 +1478,13 @@ const DiscountsView: React.FC<{
     flags.push({
       col: "var(--an-caution)",
       n: soon.length,
-      t: "Ends soon",
+      t: t("Ends soon"),
       s:
         soon.length === 1
           ? left <= 0
-            ? `${f.d.label} ends today.`
-            : `${f.d.label} ends on ${f.v.to}, in ${left} ${left === 1 ? "day" : "days"}.`
-          : `${f.d.label} and ${soon.length - 1} more end in the next 7 days.`,
+            ? t("{name} ends today.", { name: f.d.label })
+            : tn(left, "{name} ends on {date}, in 1 day.", "{name} ends on {date}, in {n} days.", { name: f.d.label, date: f.v.to })
+          : tn(soon.length - 1, "{name} and 1 more end in the next 7 days.", "{name} and {n} more end in the next 7 days.", { name: f.d.label }),
     });
   }
   if (unused.length) {
@@ -1490,22 +1492,24 @@ const DiscountsView: React.FC<{
     flags.push({
       col: "var(--an-pdark)",
       n: unused.length,
-      t: "Unused",
+      t: t("Unused"),
       s:
         unused.length === 1
-          ? `${f.d.label} has had no uses in ${f.v.idleDays !== null ? `${f.v.idleDays} days` : "the last 30 days"}. Check it shows on the right items.`
-          : `${f.d.label} and ${unused.length - 1} more have had no uses in 30 days. Check they show on the right items.`,
+          ? f.v.idleDays !== null
+            ? tn(f.v.idleDays, "{name} has had no uses in 1 day. Check it shows on the right items.", "{name} has had no uses in {n} days. Check it shows on the right items.", { name: f.d.label })
+            : t("{name} has had no uses in the last 30 days. Check it shows on the right items.", { name: f.d.label })
+          : tn(unused.length - 1, "{name} and 1 more have had no uses in 30 days. Check they show on the right items.", "{name} and {n} more have had no uses in 30 days. Check they show on the right items.", { name: f.d.label }),
     });
   }
   const ch = data.days ? weekSeries(data.days, today) : null;
   const rows = views.slice(0, shown);
   return (
     <>
-      <section className="pa-card" aria-label="Discounts this period">
+      <section className="pa-card" aria-label={t("Discounts this period")}>
         <DHead
           cells={[
-            { v: String(live), l: "Live discounts" },
-            { v: "–", l: "Discount given" },
+            { v: String(live), l: t("Live discounts") },
+            { v: "–", l: t("Discount given") },
           ]}
         />
         <p className="pa-lead">{lead}</p>
@@ -1516,33 +1520,33 @@ const DiscountsView: React.FC<{
             onClick={() => navigate("/app/business/products?tab=promotions")}
           >
             <BadgePercent size={14} aria-hidden />
-            Add a discount
+            {t("Add a discount")}
           </button>
         )}
       </section>
-      <section className="pa-card pa-dchart" aria-label="Discount use">
-        <p className="pa-dchart-t">Discount use</p>
+      <section className="pa-card pa-dchart" aria-label={t("Discount use")}>
+        <p className="pa-dchart-t">{t("Discount use")}</p>
         <p className="pa-dchart-c">
-          How often are discounts used? Redemptions each week; the dashed line is the previous 8 weeks.
+          {t("How often are discounts used? Redemptions each week; the dashed line is the previous 8 weeks.")}
         </p>
         {n && ch ? (
-          <WeekChart vals={ch.vals} prev={ch.prev} aria="Discount redemptions per week" />
+          <WeekChart vals={ch.vals} prev={ch.prev} aria={t("Discount redemptions per week")} />
         ) : (
           <div className="pa-dempty">
             <span className="pa-dempty-tile">
               <BadgePercent size={22} aria-hidden />
             </span>
-            <b>{n ? "Uses not shown" : "No discounts yet"}</b>
+            <b>{n ? t("Uses not shown") : t("No discounts yet")}</b>
             <p>
               {n
-                ? "Uses show here for people with the Marketing or Revenue permission."
-                : "Add one in Products, Promotions and its uses show here."}
+                ? t("Uses show here for people with the Marketing or Revenue permission.")
+                : t("Add one in Products, Promotions and its uses show here.")}
             </p>
           </div>
         )}
       </section>
       {flags.length > 0 && (
-        <section className="pa-card pa-flags" aria-label="Flags">
+        <section className="pa-card pa-flags" aria-label={t("Flags")}>
           {flags.map((fl, i) => (
             <div key={fl.t} className="pa-flag-row" style={{ borderTop: i ? "1px solid var(--an-divider)" : "none" }}>
               <span className="pa-flag-rail" style={{ background: fl.col }} aria-hidden />
@@ -1560,18 +1564,18 @@ const DiscountsView: React.FC<{
       {n > 0 && (
         <>
           <p className="pa-label" style={{ margin: "16px 4px 8px" }}>
-            All discounts · {n}
+            {t("All discounts · {n}", { n })}
           </p>
           <div className="pa-items" style={{ gap: 8 }}>
             {rows.map(({ d, v }) => {
               const amt = amountOf(d.promo, ctx.kind);
-              const fl = [v.soon && "Ends soon", v.unused && "Unused"].filter(Boolean) as string[];
+              const fl = [v.soon && t("Ends soon"), v.unused && t("Unused")].filter(Boolean) as string[];
               return (
                 <button
                   key={d.id}
                   type="button"
                   className={"pa-drowcard tap" + (v.soon ? " is-soon" : "") + (d.status === "ended" ? " is-ended" : "")}
-                  aria-label={[d.label, amt, STATUS_WORD[d.status], v.daysLeft, v.use, "Discount given not known", ...fl].filter(Boolean).join(", ")}
+                  aria-label={[d.label, amt, statusWord(d.status), v.daysLeft, v.use, t("Discount given not known"), ...fl].filter(Boolean).join(t(", "))}
                   onClick={() => onOpen(d.id)}
                 >
                   <div className="pa-drow-in">
@@ -1600,19 +1604,19 @@ const DiscountsView: React.FC<{
                     <UsesBar v={v} />
                   </div>
                   <div className="pa-dfoot">
-                    <span>Discount given</span>
+                    <span>{t("Discount given")}</span>
                     <b>–</b>
                     <span className="flex-1" />
                     {v.soon && (
                       <span className="pa-fpill is-soon">
                         <Clock size={11} strokeWidth={2.4} aria-hidden />
-                        Ends soon
+                        {t("Ends soon")}
                       </span>
                     )}
                     {v.unused && (
                       <span className="pa-fpill is-unused">
                         <CircleDashed size={11} strokeWidth={2.4} aria-hidden />
-                        Unused
+                        {t("Unused")}
                       </span>
                     )}
                     <span className="pa-chev">
@@ -1629,7 +1633,7 @@ const DiscountsView: React.FC<{
               className="pa-more tap"
               onClick={() => setShown((s) => (s < 20 ? 20 : s + 20))}
             >
-              {shown < 20 ? `See all ${n}` : "Show more"}
+              {shown < 20 ? t("See all {n}", { n }) : t("Show more")}
               <ChevronRight size={14} aria-hidden />
             </button>
           )}
@@ -1664,12 +1668,12 @@ const DiscountDetail: React.FC<{
   const ch = d.days ? weekSeries(d.days, today) : null;
   const acts = ended
     ? [
-        { k: "dup", t: "Duplicate", I: Copy, on: promos },
-        { k: "edit", t: "Edit", I: Pencil, on: promos },
+        { k: "dup", t: t("Duplicate"), I: Copy, on: promos },
+        { k: "edit", t: t("Edit"), I: Pencil, on: promos },
       ]
     : [
-        { k: "edit", t: "Edit", I: Pencil, on: promos },
-        { k: "dup", t: "Duplicate", I: Copy, on: promos },
+        { k: "edit", t: t("Edit"), I: Pencil, on: promos },
+        { k: "dup", t: t("Duplicate"), I: Copy, on: promos },
       ];
   return (
     <>
@@ -1698,25 +1702,25 @@ const DiscountDetail: React.FC<{
               onClick={() => setConfirm(true)}
             >
               <CircleStop size={14} aria-hidden />
-              {scheduled ? "Cancel" : "End now"}
+              {scheduled ? t("Cancel") : t("End now")}
             </button>
           )}
         </div>
       </section>
-      <section className="pa-card" style={{ marginTop: 12 }} aria-label="Uses">
+      <section className="pa-card" style={{ marginTop: 12 }} aria-label={t("Uses")}>
         <DHead
           cells={[
-            { v: uses === null ? "–" : String(uses), d: lim ? `of ${lim}` : undefined, l: "Uses" },
-            { v: "–", l: "Discount given" },
+            { v: uses === null ? "–" : String(uses), d: lim ? t("of {n}", { n: lim }) : undefined, l: t("Uses") },
+            { v: "–", l: t("Discount given") },
           ]}
         />
         <p className="pa-lead">{discountLead(d.f, v, today, ctx.audienceNew)}</p>
       </section>
-      <section className="pa-card pa-valid" aria-label="Validity">
-        <p className="pa-valid-t">Validity</p>
+      <section className="pa-card pa-valid" aria-label={t("Validity")}>
+        <p className="pa-valid-t">{t("Validity")}</p>
         <div className="pa-vbar" aria-hidden>
           {v.elapsed > 0 && <div className="pa-vbar-f" style={{ width: `${v.elapsed.toFixed(1)}%` }} />}
-          {v.marker && <span className="pa-vbar-m" style={{ left: `${v.elapsed.toFixed(1)}%` }} />}
+          {v.marker && <span className="pa-vbar-m" style={{ insetInlineStart: `${v.elapsed.toFixed(1)}%` }} />}
         </div>
         <p className="pa-vdates">
           <span>{v.from}</span>
@@ -1732,21 +1736,21 @@ const DiscountDetail: React.FC<{
         <UsesBar v={v} />
       </section>
       {!scheduled && ch && (
-        <section className="pa-card pa-dchart" aria-label="Uses by week">
-          <p className="pa-dchart-t">Uses by week</p>
+        <section className="pa-card pa-dchart" aria-label={t("Uses by week")}>
+          <p className="pa-dchart-t">{t("Uses by week")}</p>
           <p className="pa-dchart-c">
-            Is it being used more or less over time? Bars show this period; the dashed line is the previous 8 weeks.
+            {t("Is it being used more or less over time? Bars show this period; the dashed line is the previous 8 weeks.")}
           </p>
-          <WeekChart vals={ch.vals} prev={ch.prev} aria={`${d.label} uses per week`} />
+          <WeekChart vals={ch.vals} prev={ch.prev} aria={t("{name} uses per week", { name: d.label })} />
         </section>
       )}
       <KitPop
         open={confirm}
         icon={CircleStop}
-        title={scheduled ? "Cancel this discount?" : "End this discount now?"}
-        body={scheduled ? "It won't go live. You can duplicate it later." : "It comes off your listing today. Past uses stay in your numbers."}
-        action={scheduled ? "Cancel discount" : "End now"}
-        keep="Keep it"
+        title={scheduled ? t("Cancel this discount?") : t("End this discount now?")}
+        body={scheduled ? t("It won't go live. You can duplicate it later.") : t("It comes off your listing today. Past uses stay in your numbers.")}
+        action={scheduled ? t("Cancel discount") : t("End now")}
+        keep={t("Keep it")}
         busy={busy}
         error={err}
         onKeep={() => {
@@ -1761,11 +1765,11 @@ const DiscountDetail: React.FC<{
           const r = scheduled ? await cancelPromotion(d.id) : await endPromotion(d.id);
           setBusy(false);
           if (!r.ok) {
-            setErr(scheduled ? "Couldn't cancel the discount. Try again." : "Couldn't end the discount. Try again.");
+            setErr(scheduled ? t("Couldn't cancel the discount. Try again.") : t("Couldn't end the discount. Try again."));
             return;
           }
           setConfirm(false);
-          onEnded(scheduled ? "Discount cancelled." : "Discount ended.");
+          onEnded(scheduled ? t("Discount cancelled.") : t("Discount ended."));
         }}
       />
     </>

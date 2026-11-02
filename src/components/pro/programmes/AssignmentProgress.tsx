@@ -5,7 +5,9 @@ import { ConfirmCard } from "../../ui/ConfirmCard";
 import { CtaButton } from "../../ui/PinnedCta";
 import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
-import { DAY_SHORT } from "../../../utils/week";
+import { t } from "../../../i18n/core";
+import { weekdayShort } from "../proDates";
+import { doneText, statusText } from "./programmeText";
 import { INK } from "../proInk";
 import { LockLine } from "../LockLine";
 import { ProCardSkeleton, ProError } from "../states";
@@ -16,8 +18,6 @@ import { Toast } from "../../ui/Toast";
 import { endProgrammeAssignment, fetchProgrammeProgress, fetchProgrammeSchedule, skipProgrammeSessions, unskipProgrammeSession } from "../../../services/programmes";
 import {
   addDays,
-  assignmentStatus,
-  doneLine,
   groupSchedule,
   isOpen,
   isoDay,
@@ -95,16 +95,16 @@ export const AssignmentProgress: React.FC<{
   if (!a || !programme) {
     return (
       <>
-        <DetailHeader title="Programme" onBack={onBack} />
-        {state.status === "error" ? <ProError onRetry={() => void state.reload()} /> : <p style={{ fontSize: textPx(13), color: INK.chF }}>This programme isn't available any more.</p>}
+        <DetailHeader title={t("Programme")} onBack={onBack} />
+        {state.status === "error" ? <ProError onRetry={() => void state.reload()} /> : <p style={{ fontSize: textPx(13), color: INK.chF }}>{t("This programme isn't available any more.")}</p>}
       </>
     );
   }
 
   const client = professionalClients.find((c) => c.clientId === a.clientId);
-  const name = client?.name ?? "A former client";
+  const name = client?.name ?? t("A former client");
   const firstName = name.split(" ")[0] || name;
-  const status = assignmentStatus(a, programme.durationWeeks, today, (d) => fmtDay(d));
+  const status = statusText(a, programme.durationWeeks, today, (d) => fmtDay(d));
   const hidden = (schedule ?? []).some((r) => r.done === null) || (progress ?? []).some((w) => w.done === null);
   const total = progress ? totalSoFar(progress, today) : null;
   const now = weekDayOn(a, today);
@@ -145,37 +145,37 @@ export const AssignmentProgress: React.FC<{
     // Round F: a week of only skipped sessions planned nothing: grey, never missed.
     if (wp.planned === 0) return wp.skipped > 0 ? { label: skippedLabel(), tone: "pau" } : null;
     if (wp.done === null) return null;
-    if (wp.done >= wp.planned) return { label: "Done", tone: "done" };
+    if (wp.done >= wp.planned) return { label: t("Done"), tone: "done" };
     const ended = today > addDays(wp.weekStartsOn, 6);
-    if (wp.done > 0) return { label: "Partly", tone: "req" };
-    return ended ? { label: "Missed", tone: "att" } : { label: "This week", tone: "pr" };
+    if (wp.done > 0) return { label: t("Partly"), tone: "req" };
+    return ended ? { label: t("Missed"), tone: "att" } : { label: t("This week"), tone: "pr" };
   };
 
   return (
     <div style={{ paddingBottom: 32 }}>
-      <DetailHeader title={`${name} · ${programme.name}`} eyebrow="Programme progress" onBack={onBack} />
+      <DetailHeader title={`${name} · ${programme.name}`} eyebrow={t("Programme progress")} onBack={onBack} />
       <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>
-        {[status, `${fmtDay(a.startsOn, true)} to ${fmtDay(a.endsOn, true)}`, a.joinWeek > 1 ? `joined at week ${a.joinWeek}` : null].filter(Boolean).join(" · ")}
+        {[status, t("{from} to {to}", { from: fmtDay(a.startsOn, true), to: fmtDay(a.endsOn, true) }), a.joinWeek > 1 ? t("joined at week {n}", { n: a.joinWeek }) : null].filter(Boolean).join(" · ")}
       </p>
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {error && <ErrorLine>{t(error)}</ErrorLine>}
 
       {failed && !schedule ? (
-        <ProError onRetry={() => setNonce((n) => n + 1)} message={failed.offline ? "You're offline. Progress needs a connection." : undefined} />
+        <ProError onRetry={() => setNonce((n) => n + 1)} message={failed.offline ? t("You're offline. Progress needs a connection.") : undefined} />
       ) : !schedule || !progress ? (
         <ProCardSkeleton lines={3} height={160} />
       ) : (
         <>
-          {hidden && <LockLine className="mb-3" what="Workout activity" clientFirstName={firstName} />}
+          {hidden && <LockLine className="mb-3" what={t("Workout activity")} clientFirstName={firstName} />}
           <Card>
-            <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>So far</p>
+            <p style={{ fontSize: textPx(10.5), fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("So far")}</p>
             <p style={{ fontSize: textPx(16), fontWeight: 800, color: INK.ch, marginTop: 2 }}>
-              {total && total.planned > 0 ? doneLine(total.planned, total.done) : "Nothing planned yet"}
+              {total && total.planned > 0 ? doneText(total.planned, total.done) : t("Nothing planned yet")}
             </p>
           </Card>
 
-          <SectionHead label="By week" />
+          <SectionHead label={t("By week")} />
           {progress.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>Nothing is planned for these weeks.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{t("Nothing is planned for these weeks.")}</p>
           ) : (
             <ListCard
               rows={progress.map((wp) => {
@@ -183,10 +183,10 @@ export const AssignmentProgress: React.FC<{
                 return {
                   key: String(wp.week),
                   icon: Dumbbell,
-                  title: `Week ${wp.week} · ${fmtDay(wp.weekStartsOn)}`,
+                  title: t("Week {n} · {date}", { n: wp.week, date: fmtDay(wp.weekStartsOn) }),
                   meta: (
                     <>
-                      {wp.weekStartsOn > today ? `${wp.planned} planned` : doneLine(wp.planned, wp.done)}
+                      {wp.weekStartsOn > today ? t("{n} planned", { n: wp.planned }) : doneText(wp.planned, wp.done)}
                       {wp.skipped > 0 && ` · ${skippedCount(wp.skipped)}`}
                       {wp.byWorkout.length > 1 && (
                         <span className="block">
@@ -197,17 +197,17 @@ export const AssignmentProgress: React.FC<{
                   ),
                   trailing: c ? <Chip label={c.label} tone={c.tone} /> : undefined,
                   onClick: () => setWeek(wp.week),
-                  ariaLabel: `Show week ${wp.week}'s schedule`,
+                  ariaLabel: t("Show week {n}'s schedule", { n: wp.week }),
                 };
               })}
             />
           )}
 
-          <SectionHead label="Schedule" />
+          <SectionHead label={t("Schedule")} />
           {weeks.length > 1 && (
             <div className="flex scroll-row no-scrollbar" style={{ gap: 6, marginBottom: 12 }}>
               {weeks.map((x) => (
-                <FilterChip key={x.week} label={`Week ${x.week}`} on={x.week === shownWeek} onClick={() => setWeek(x.week)} />
+                <FilterChip key={x.week} label={t("Week {n}", { n: x.week })} on={x.week === shownWeek} onClick={() => setWeek(x.week)} />
               ))}
             </div>
           )}
@@ -218,15 +218,15 @@ export const AssignmentProgress: React.FC<{
             </div>
           )}
           {!shown ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>Nothing scheduled.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{t("Nothing scheduled.")}</p>
           ) : (
             <Card pad="4px 14px">
               {shown.days.map((d, i) => (
                 <div key={d.onDate} className="flex items-start" style={{ gap: 10, padding: "10px 0", borderBottom: i < shown.days.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                   <span style={{ minWidth: 64 }}>
-                    <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch }}>{DAY_SHORT[d.day - 1]}</span>
+                    <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch }}>{weekdayShort(d.day - 1)}</span>
                     <span className="block" style={{ fontSize: textPx(11), color: d.onDate === today ? INK.prDeep : INK.chF, fontWeight: d.onDate === today ? 700 : 400 }}>
-                      {d.onDate === today ? "Today" : fmtDay(d.onDate)}
+                      {d.onDate === today ? t("Today") : fmtDay(d.onDate)}
                     </span>
                     {/* Round F (DW2): the professional may skip any day of a running programme. */}
                     {!a.endedAt && d.sessions.some(isOpen) && (
@@ -268,14 +268,14 @@ export const AssignmentProgress: React.FC<{
                             )}
                           </span>
                         ) : s.done === null ? (
-                          <span style={{ fontSize: textPx(11), color: INK.chF }}>Not shared</span>
+                          <span style={{ fontSize: textPx(11), color: INK.chF }}>{t("Not shared")}</span>
                         ) : s.done ? (
                           <span className="flex items-center" style={{ gap: 3, fontSize: textPx(11), fontWeight: 700, color: INK.good }}>
-                            <Check size={13} strokeWidth={2.6} aria-hidden /> Done
+                            <Check size={13} strokeWidth={2.6} aria-hidden /> {t("Done")}
                           </span>
                         ) : (
                           <span className="flex items-center" style={{ gap: 3, fontSize: textPx(11), color: INK.chF }}>
-                            <Circle size={11} strokeWidth={2} aria-hidden /> {s.onDate < today ? "Not done" : "Planned"}
+                            <Circle size={11} strokeWidth={2} aria-hidden /> {s.onDate < today ? t("Not done") : t("Planned")}
                           </span>
                         )}
                       </span>
@@ -290,16 +290,16 @@ export const AssignmentProgress: React.FC<{
 
       {!a.endedAt && (
         <div className="flex" style={{ marginTop: 8 }}>
-          <CtaButton size="base" variant="outline" icon={<StopCircle size={15} />} label="End programme" onClick={() => setConfirmEnd(true)} />
+          <CtaButton size="base" variant="outline" icon={<StopCircle size={15} />} label={t("End programme")} onClick={() => setConfirmEnd(true)} />
         </div>
       )}
-      {a.endedAt && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{`Ended ${fmtDay(a.endedAt, true)}.`}</p>}
+      {a.endedAt && <p style={{ fontSize: textPx(12), color: INK.chF, marginTop: 8 }}>{t("Ended {date}.", { date: fmtDay(a.endedAt, true) })}</p>}
 
       <ConfirmCard
         open={confirmEnd}
-        title={`End ${firstName}'s programme?`}
-        subtitle="The sessions after today leave their calendar. The routines stay theirs."
-        confirmLabel="End programme"
+        title={t("End {name}'s programme?", { name: firstName })}
+        subtitle={t("The sessions after today leave their calendar. The routines stay theirs.")}
+        confirmLabel={t("End programme")}
         busy={busy}
         onCancel={() => setConfirmEnd(false)}
         onConfirm={async () => {

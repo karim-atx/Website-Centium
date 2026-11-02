@@ -9,6 +9,7 @@ import { ClientOutcomesPage } from "./overview/ClientOutcomesPage";
 import ReputationPage from "./reputation/ReputationPage";
 import ProductsSection from "./products/ProductsSection";
 import RevenuePage from "./revenue/RevenuePage";
+import { t, tk } from "../../i18n/core";
 
 // The Analytics sections per type (AN5-001 row 5, AN4-045 row 5a, COPY.md
 // l.481): Gym Overview · Classes · Members · Team; Classes Overview · Classes
@@ -41,15 +42,15 @@ export const FULL_PAGE_SECTIONS: SectionKey[] = ["reputation", "revenue"];
 export function sectionTabs(kind: BizKind): { key: SectionKey; label: string }[] {
   if (kind === "store")
     return [
-      { key: "overview", label: "Overview" },
-      { key: "members", label: "Customers" },
-      { key: "products", label: "Products" },
+      { key: "overview", label: t("Overview") },
+      { key: "members", label: t("Customers") },
+      { key: "products", label: t("Products") },
     ];
   return [
-    { key: "overview", label: "Overview" },
-    { key: "classes", label: "Classes" },
-    { key: "members", label: kind === "classes" ? "Clients" : "Members" },
-    { key: "team", label: kind === "classes" ? "Instructors" : "Team" },
+    { key: "overview", label: t("Overview") },
+    { key: "classes", label: t("Classes") },
+    { key: "members", label: kind === "classes" ? t("Clients") : t("Members") },
+    { key: "team", label: kind === "classes" ? t("Instructors") : t("Team") },
   ];
 }
 
@@ -74,7 +75,7 @@ export interface PushedView {
 }
 
 export const PUSHED_VIEWS: Record<string, PushedView> = {
-  outcomes: { View: ClientOutcomesPage, title: "Client outcomes", sub: "Only from clients who share with you", kinds: ["classes", "gym"] },
+  outcomes: { View: ClientOutcomesPage, title: tk("Client outcomes"), sub: tk("Only from clients who share with you"), kinds: ["classes", "gym"] },
 };
 
 /**

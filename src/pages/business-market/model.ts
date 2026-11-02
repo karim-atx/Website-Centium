@@ -5,6 +5,8 @@
 import { hoursLines, type HoursRow } from "../../services/venues/hours";
 import type { GymHoursTableRow } from "../../services/venues/consoleLogic";
 import { time12 } from "../../utils/time12";
+import { t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 export type StrengthKey =
   | "logo"
@@ -52,31 +54,31 @@ export interface StrengthInput {
 /** The 11 items in the board's order (source `CK`, lines 440-442), with live subs. */
 export function strengthItems(i: StrengthInput): StrengthItem[] {
   const photosDone = i.photosDone ?? i.photos >= 6;
-  const photoSub = photosDone ? "" : i.photos === 0 ? "0 of 6" : i.photos >= 6 ? `${i.photos} of 6` : `${i.photos} of 6 · add ${6 - i.photos} more`;
-  const reviewsSub = i.reviews.count > 0 && i.reviews.average !== null ? `${i.reviews.average.toFixed(1)} · ${i.reviews.count} review${i.reviews.count === 1 ? "" : "s"}` : "None yet";
+  const photoSub = photosDone ? "" : i.photos >= 6 || i.photos === 0 ? t("{n} of 6", { n: i.photos }) : t("{n} of 6 · add {more} more", { n: i.photos, more: 6 - i.photos });
+  const reviewsSub = i.reviews.count > 0 && i.reviews.average !== null ? `${i.reviews.average.toFixed(1)} · ${tn(i.reviews.count, "{n} review", "{n} reviews")}` : t("None yet");
   const common = {
-    logo: { key: "logo", title: "Logo", done: i.logo, sub: "" },
-    cover: { key: "cover", title: "Cover photo", done: i.cover, sub: "" },
-    photos: { key: "photos", title: "Photos", done: photosDone, sub: photoSub },
-    description: { key: "description", title: "Description", done: i.description, sub: "" },
-    address: { key: "address", title: "Address and map pin", done: !!i.address?.trim(), sub: i.address?.trim() || "Not set" },
-    hours: { key: "hours", title: "Opening hours", done: !!i.hoursSummary, sub: i.hoursSummary ?? "Not set" },
-    contact: { key: "contact", title: "Contact and social links", done: i.contact, sub: "" },
-    reviews: { key: "reviews", title: "Reviews", done: i.reviews.count > 0, sub: reviewsSub },
+    logo: { key: "logo", title: t("Logo"), done: i.logo, sub: "" },
+    cover: { key: "cover", title: t("Cover photo"), done: i.cover, sub: "" },
+    photos: { key: "photos", title: t("Photos"), done: photosDone, sub: photoSub },
+    description: { key: "description", title: t("Description"), done: i.description, sub: "" },
+    address: { key: "address", title: t("Address and map pin"), done: !!i.address?.trim(), sub: i.address?.trim() || t("Not set") },
+    hours: { key: "hours", title: t("Opening hours"), done: !!i.hoursSummary, sub: i.hoursSummary ?? t("Not set") },
+    contact: { key: "contact", title: t("Contact and social links"), done: i.contact, sub: "" },
+    reviews: { key: "reviews", title: t("Reviews"), done: i.reviews.count > 0, sub: reviewsSub },
   } satisfies Record<string, StrengthItem>;
-  const cats = i.categories.join(", ");
+  const cats = i.categories.join(t(", "));
   if (i.store)
     return [
       common.logo,
       common.cover,
       common.photos,
       common.description,
-      { key: "categories", title: "Category", done: i.categories.length > 0, sub: cats || "Not set" },
+      { key: "categories", title: t("Category"), done: i.categories.length > 0, sub: cats || t("Not set") },
       common.address,
       common.hours,
-      { key: "delivery", title: "Delivery and pickup", done: i.delivery, sub: i.delivery ? "" : "Not set" },
+      { key: "delivery", title: t("Delivery and pickup"), done: i.delivery, sub: i.delivery ? "" : t("Not set") },
       common.contact,
-      { key: "returns", title: "Returns and first-order info", done: i.returns, sub: i.returns ? "" : "Not set" },
+      { key: "returns", title: t("Returns and first-order info"), done: i.returns, sub: i.returns ? "" : t("Not set") },
       common.reviews,
     ];
   return [
@@ -84,12 +86,12 @@ export function strengthItems(i: StrengthInput): StrengthItem[] {
     common.cover,
     common.photos,
     common.description,
-    { key: "categories", title: "Activities", done: i.categories.length > 0, sub: cats || "Not set" },
+    { key: "categories", title: t("Activities"), done: i.categories.length > 0, sub: cats || t("Not set") },
     common.address,
     common.hours,
-    { key: "amenities", title: "Amenities", done: i.amenitiesDone ?? i.amenities.length > 0, sub: i.amenities.join(", ") || "Not set" },
+    { key: "amenities", title: t("Amenities"), done: i.amenitiesDone ?? i.amenities.length > 0, sub: i.amenities.join(t(", ")) || t("Not set") },
     common.contact,
-    { key: "firstVisit", title: "What to bring, first visit", done: i.firstVisit, sub: i.firstVisit ? "" : "Not set" },
+    { key: "firstVisit", title: t("What to bring, first visit"), done: i.firstVisit, sub: i.firstVisit ? "" : t("Not set") },
     common.reviews,
   ];
 }
@@ -106,9 +108,9 @@ export function checklistOrder(items: StrengthItem[]): StrengthItem[] {
 export function strengthLine(items: StrengthItem[], emptyLine: string): string {
   const done = items.filter((x) => x.done).length;
   const missing = items.length - done;
-  if (missing === 0) return "Your listing is complete.";
+  if (missing === 0) return t("Your listing is complete.");
   if (done === 0) return emptyLine;
-  return `Add ${missing === 1 ? "1 more item" : `${missing} more items`}. Complete listings get more profile opens.`;
+  return tn(missing, "Add 1 more item. Complete listings get more profile opens.", "Add {n} more items. Complete listings get more profile opens.");
 }
 
 export const strengthPct = (items: StrengthItem[]): number => Math.round((items.filter((x) => x.done).length / Math.max(1, items.length)) * 100);
@@ -131,8 +133,8 @@ export function hoursSummary(rows: GymHoursTableRow[] | null): string | null {
   const days = new Set(rows.map((r) => Number(r.weekday)));
   if (![1, 2, 3, 4, 5, 6, 7].every((d) => days.has(d))) return null;
   return hoursLines(rows.map(toHoursRow), null)
-    .map((l) => `${l.label === "Sat to Sun" ? "weekends" : l.label} ${l.value}`)
-    .join(", ");
+    .map((l) => `${l.label === "Sat to Sun" ? t("weekends") : l.label} ${l.value}`)
+    .join(t(", "));
 }
 
 // ---------------------------------------------------------------------------
@@ -172,8 +174,6 @@ export function tabKeyOf(raw: string | null | undefined, fallback: MarketTabKey)
 // ---------------------------------------------------------------------------
 // Dates
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 export const isoOf = (d: Date): string => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 export const dateOf = (iso: string): Date => {
   const [y, m, d] = iso.split("-").map(Number);
@@ -184,19 +184,16 @@ export const addDays = (iso: string, n: number): string => {
   d.setDate(d.getDate() + n);
   return isoOf(d);
 };
-/** "Oct 6" */
-export const dayMonth = (iso: string): string => {
-  const d = dateOf(iso);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-};
+/** "Oct 6" (Arabic month names in Arabic). */
+export const dayMonth = (iso: string): string => dateOf(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 /** Inclusive day count from a to b. */
 export const daysBetween = (a: string, b: string): number => Math.round((dateOf(b).getTime() - dateOf(a).getTime()) / 86_400_000) + 1;
 
 /** MA1-118 row 1: days left counts today; the last day reads "Last day". */
 export function daysLeft(today: string, end: string): string {
   const n = daysBetween(today, end);
-  if (n <= 1) return "Last day";
-  return `${n} days left`;
+  if (n <= 1) return t("Last day");
+  return tn(n, "{n} day left", "{n} days left");
 }
 
 /** MA1-005 row 6e: one decimal under 10%, whole above. */
@@ -209,7 +206,7 @@ export function pct(n: number, d: number): string {
 /** "Mon 7:30 PM" (12-hour, X-14). */
 export function dowTime(iso: string, hhmm: string): string {
   const d = dateOf(iso);
-  return `${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]} ${time12(hhmm)}`;
+  return `${d.toLocaleDateString(appLocale("en-US"), { weekday: "short" })} ${time12(hhmm)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -227,8 +224,8 @@ export function classFlag(booked: number, capacity: number, startMs: number, end
 /** "in 4 hours" / "tomorrow" / "today" for the suggestion sub. */
 export function whenFromNow(startMs: number, nowMs: number, todayIso: string, dateIso: string): string {
   const h = Math.round((startMs - nowMs) / 3_600_000);
-  if (dateIso === todayIso) return h <= 1 ? "within the hour" : `in ${h} hours`;
-  if (dateIso === addDays(todayIso, 1)) return "tomorrow";
+  if (dateIso === todayIso) return h <= 1 ? t("within the hour") : tn(h, "in {n} hour", "in {n} hours");
+  if (dateIso === addDays(todayIso, 1)) return t("tomorrow");
   return dayMonth(dateIso);
 }
 

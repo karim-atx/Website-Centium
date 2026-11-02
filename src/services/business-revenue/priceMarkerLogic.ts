@@ -4,6 +4,8 @@
 // plan_price_tracking_since(), read there and passed in here as a day.
 
 import { formatPrice } from "../../utils/price";
+import { getLanguage, t, tn } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
 
 /** plan_price_markers(p_business_id, p_from, p_to) row, as PostgREST returns it (numeric as text). */
 export interface PriceMarkerRow {
@@ -39,14 +41,14 @@ export function toPriceChange(r: PriceMarkerRow): PriceChange {
 
 /** "$40 to $45" (the handoff's price tag, AnInsightsV3 chA; the app's plan price format). */
 export const priceStep = (c: Pick<PriceChange, "oldPrice" | "newPrice">) =>
-  `${formatPrice(c.oldPrice)} to ${formatPrice(c.newPrice)}`;
+  t("{from} to {to}", { from: formatPrice(c.oldPrice), to: formatPrice(c.newPrice) });
 
 const NAME_MAX = 22;
 /** The plan as the tooltip names it; a deleted plan gets a neutral name. */
 export function planLabel(name: string | null): string {
-  if (!name) return "A removed plan's price";
+  if (!name) return t("A removed plan's price");
   const short = name.length > NAME_MAX ? name.slice(0, NAME_MAX - 1).trimEnd() + "…" : name;
-  return `${short} price`;
+  return t("{plan} price", { plan: short });
 }
 
 export interface PriceBucket {
@@ -86,7 +88,7 @@ export function priceBuckets(
       const sorted = [...list].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
       return {
         i,
-        t: sorted.length === 1 ? priceStep(sorted[0]) : `${sorted.length} price changes`,
+        t: sorted.length === 1 ? priceStep(sorted[0]) : tn(sorted.length, "{n} price change", "{n} price changes"),
         rows: sorted.map((c) => ({ l: planLabel(c.planName), v: priceStep(c) })),
       };
     });
@@ -113,8 +115,11 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 /** "Oct 21", or "Oct 21, 2026" when the year differs from today's. */
 export function monDay(iso: string, today: string): string {
   const [y, m, d] = iso.split("-").map(Number);
+  const sameYear = today.slice(0, 4) === String(y);
+  if (getLanguage() === "ar")
+    return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(ARABIC_LOCALE, { day: "numeric", month: "long", year: sameYear ? undefined : "numeric", timeZone: "UTC" });
   const base = `${MON[m - 1]} ${d}`;
-  return today.slice(0, 4) === String(y) ? base : `${base}, ${y}`;
+  return sameYear ? base : `${base}, ${y}`;
 }
 
 /**
@@ -136,6 +141,6 @@ export function sinceDay(ts: string | null | undefined): string | null {
  * "no price changed".
  */
 export function priceSinceLine(from: string, since: string, today: string): string {
-  const head = `Plan price changes are marked since ${monDay(since, today)}.`;
-  return from < since ? `${head} Earlier changes weren't recorded.` : head;
+  const head = t("Plan price changes are marked since {date}.", { date: monDay(since, today) });
+  return from < since ? `${head} ${t("Earlier changes weren't recorded.")}` : head;
 }

@@ -12,6 +12,7 @@ import { sortMembers, untilLabel } from "./planModel";
 import { PlanSheet } from "./PlanSheet";
 import { PlansProvider, usePlansCtx, type PlanAction } from "./PlansContext";
 import { MemberNote, MemberRows, PlanCard, PlanFocusCss, SeeAllRow, usePlanColors } from "./ui";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.5 Memberships (Business Marketplace Screens
 // lines 302–335; frame-check B-MA.5 memberships / planSaved / planListNew,
@@ -67,7 +68,7 @@ export const PlansStrip: React.FC<{ style?: React.CSSProperties; onView?: (planI
         text={s.text}
         tone={s.tone}
         still={reduce}
-        action={stub}
+        action={stub ? t(stub) : undefined}
         onAction={() => {
           if (s.stub === "Undo") s.undo?.();
           else if (s.stub === "View" && s.planId) onView?.(s.planId);
@@ -112,7 +113,7 @@ const MembershipsList: React.FC = () => {
       key={p.id}
       plan={p}
       figures={{ ...ctx.figuresOf(p), isNew: added.has(p.id) }}
-      highlighted={!!ctx.strip && ctx.strip.tone !== "error" && ctx.strip.planId === p.id && (ctx.strip.text === "Plan added" || ctx.strip.text === "Plan updated")}
+      highlighted={!!ctx.strip && ctx.strip.tone !== "error" && ctx.strip.planId === p.id && (ctx.strip.text === t("Plan added") || ctx.strip.text === t("Plan updated"))}
       offline={!online}
       onOpen={() => {
         ctx.clearStrip();
@@ -128,15 +129,15 @@ const MembershipsList: React.FC = () => {
 
   let body: React.ReactNode;
   if (loading && plans.length === 0) {
-    body = <MarketSkeleton radius={20} rows={3} count={3} label="Loading plans" style={{ marginTop: 10 }} />;
+    body = <MarketSkeleton radius={20} rows={3} count={3} label={t("Loading plans")} style={{ marginTop: 10 }} />;
   } else if (error && plans.length === 0) {
-    body = <MarketError thing="your plans" onRetry={ctx.reload} style={{ marginTop: 10 }} />;
+    body = <MarketError thing={tk("your plans")} onRetry={ctx.reload} style={{ marginTop: 10 }} />;
   } else if (guard || live.length === 0) {
     body = (
       <MarketEmptyCard
         style={{ marginTop: 10 }}
-        title="No plans yet"
-        body={guard ? "Save your business profile first to start adding plans." : "Add a plan or a day pass and members can buy it on Explore. Each buyer gets their own QR code."}
+        title={t("No plans yet")}
+        body={guard ? t("Save your business profile first to start adding plans.") : t("Add a plan or a day pass and members can buy it on Explore. Each buyer gets their own QR code.")}
       />
     );
   } else {
@@ -148,25 +149,25 @@ const MembershipsList: React.FC = () => {
       <PlanFocusCss />
       <PlansStrip onView={view} />
       <MarketOffline loaded={plans.length > 0} onRetry={ctx.reload} style={{ marginBottom: 12 }} />
-      {error && plans.length > 0 ? <MarketError thing="your plans" onRetry={ctx.reload} style={{ marginBottom: 12 }} /> : null}
+      {error && plans.length > 0 ? <MarketError thing={tk("your plans")} onRetry={ctx.reload} style={{ marginBottom: 12 }} /> : null}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <CapsLabel>Plans and day passes</CapsLabel>
+        <CapsLabel>{t("Plans and day passes")}</CapsLabel>
         {guard ? (
           <OutlineButton onClick={() => navigate("/app/business/profile")} disabled={!online}>
-            Set up profile
+            {t("Set up profile")}
           </OutlineButton>
         ) : (
           <OutlineButton onClick={() => setSheet({ open: true, editing: null })} disabled={!businessId || !online}>
             <Plus size={15} strokeWidth={2.4} aria-hidden />
-            Add plan
+            {t("Add plan")}
           </OutlineButton>
         )}
       </div>
       {body}
 
       {archived.length > 0 ? (
-        <section aria-label="Archived plans">
+        <section aria-label={t("Archived plans")}>
           <button
             type="button"
             aria-expanded={archivedOpen}
@@ -174,8 +175,8 @@ const MembershipsList: React.FC = () => {
             className="tap market-focus"
             style={{ marginTop: 18, minHeight: 44, width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", background: "transparent", border: 0, padding: 0, fontFamily: "inherit", cursor: "pointer" }}
           >
-            <CapsLabel as="span">{`Archived · ${archived.length}`}</CapsLabel>
-            <span style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{archivedOpen ? "Hide" : "Show"}</span>
+            <CapsLabel as="span">{t("Archived · {n}", { n: archived.length })}</CapsLabel>
+            <span style={{ fontSize: textPx(12), fontWeight: 800, color: m.pdark }}>{archivedOpen ? t("Hide") : t("Show")}</span>
           </button>
           {archivedOpen ? <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>{archived.map(card)}</div> : null}
         </section>
@@ -183,20 +184,20 @@ const MembershipsList: React.FC = () => {
 
       {businessId && live.length + archived.length > 0 ? (
         <>
-          <CapsLabel style={{ marginTop: 18 }}>{members ? `Active members · ${members.length}` : "Active members"}</CapsLabel>
+          <CapsLabel style={{ marginTop: 18 }}>{members ? t("Active members · {n}", { n: members.length }) : t("Active members")}</CapsLabel>
           <div style={{ marginTop: 8 }}>
             {!ctx.membersLoaded ? (
-              <MarketSkeleton radius={24} rows={2} count={1} label="Loading members" />
+              <MarketSkeleton radius={24} rows={2} count={1} label={t("Loading members")} />
             ) : !members ? (
-              <MarketError thing="your members" onRetry={ctx.reload} />
+              <MarketError thing={tk("your members")} onRetry={ctx.reload} />
             ) : (
               <MemberRows
                 rows={shownMembers.map((x) => ({ id: x.membershipId, label: x.label, plan: x.planName, until: untilLabel(x.expiresOn), minor: x.isMinor }))}
                 footer={
                   members.length === 0 ? (
-                    <MemberNote>No active members yet. Members show here once someone buys a plan.</MemberNote>
+                    <MemberNote>{t("No active members yet. Members show here once someone buys a plan.")}</MemberNote>
                   ) : members.length > MEMBERS_SHOWN ? (
-                    <SeeAllRow label={allMembers ? "Show fewer" : `See all ${members.length}`} onClick={() => setAllMembers((x) => !x)} />
+                    <SeeAllRow label={allMembers ? t("Show fewer") : t("See all {n}", { n: members.length })} onClick={() => setAllMembers((x) => !x)} />
                   ) : null
                 }
               />
@@ -217,7 +218,7 @@ const MembershipsList: React.FC = () => {
         save={(draft) => (sheet.editing ? ctx.edit(sheet.editing.id, draft) : ctx.add(draft))}
         onSaved={(plan, isNew) => {
           if (isNew) setAdded((s) => new Set(s).add(plan.id));
-          ctx.say(isNew ? "Plan added" : "Plan updated", { planId: plan.id });
+          ctx.say(isNew ? t("Plan added") : t("Plan updated"), { planId: plan.id });
           window.scrollTo({ top: 0, behavior: "smooth" });
         }}
         onDelete={(plan) => ctx.act("delete", plan, () => setSheet((s) => ({ ...s, open: false })), false)}

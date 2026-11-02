@@ -9,6 +9,7 @@ import { Buttons, LeadRow, RowsCard, Sheet } from "./parts";
 import { moveClassSession } from "../../../services/business-classes/schedule";
 import type { ClassRow, TeamPerson } from "./teamData";
 import { dayDate, hhmmOf } from "./fmt";
+import { t, tn } from "../../../i18n/core";
 
 // AN5-033 (both sessions + choices), AN5-033 O2 (already sorted), AN5-036
 // (move time, 12-hour wheel), AN5-038 (confirm), OURS availability A7/A8.
@@ -79,9 +80,9 @@ export function FixSheet({
   const now = new Date();
   const past = target.date === todayLocal() && start <= now.getHours() * 60 + now.getMinutes();
   const problem =
-    end <= start ? "Ends must be after it starts." : past ? "Choose a time later than now." : clash ? `Still overlaps ${clash.title} until ${time12(clash.end)}.` : null;
+    end <= start ? t("Ends must be after it starts.") : past ? t("Choose a time later than now.") : clash ? t("Still overlaps {class} until {time}.", { class: clash.title, time: time12(clash.end) }) : null;
   const prevEnding = [...others].filter((c) => minutesOf(c.end) <= start).sort((x, y) => minutesOf(y.end) - minutesOf(x.end))[0];
-  const okLine = prevEnding ? `No overlap: ${prevEnding.title} ends at ${time12(prevEnding.end)}.` : "No overlap with their other classes that day.";
+  const okLine = prevEnding ? t("No overlap: {class} ends at {time}.", { class: prevEnding.title, time: time12(prevEnding.end) }) : t("No overlap with their other classes that day.");
 
   // 12-hour wheel: hour 1-12, minutes 00/15/30/45, AM/PM (DECIDED, AN5-036 row 8).
   const value = editing === "start" ? start : end;
@@ -102,7 +103,7 @@ export function FixSheet({
     setBusy(false);
     if (r.ok) {
       const told = r.value;
-      onDone(`${target.title} now runs ${rangeMinutes12(start, end)}.${told > 0 ? ` ${told} ${told === 1 ? "member was" : "members were"} told.` : ""}`);
+      onDone(t("{class} now runs {time}.", { class: target.title, time: rangeMinutes12(start, end) }) + (told > 0 ? " " + tn(told, "{n} member was told.", "{n} members were told.") : ""));
       return;
     }
     setFailure(r.refusal === "network" ? null : r.message);
@@ -111,22 +112,22 @@ export function FixSheet({
 
   if (step === "sorted") {
     return (
-      <Sheet open={open} onClose={onClose} title="Already sorted">
+      <Sheet open={open} onClose={onClose} title={t("Already sorted")}>
         <LeadRow icon={CircleCheck} tone="good">
-          These sessions no longer overlap.
+          {t("These sessions no longer overlap.")}
         </LeadRow>
-        <Buttons primary={{ label: "Back to coverage", onClick: onClose }} marginTop={16} />
+        <Buttons primary={{ label: t("Back to coverage"), onClick: onClose }} marginTop={16} />
       </Sheet>
     );
   }
 
   if (step === "failed") {
     return (
-      <Sheet open={open} onClose={onClose} title={`Couldn't move ${target.title}`}>
+      <Sheet open={open} onClose={onClose} title={t("Couldn't move {class}", { class: target.title })}>
         <LeadRow icon={WifiOff} tone="high">
-          {failure ?? "Check your connection and try again. Nothing was changed."}
+          {failure ? t(failure) : t("Check your connection and try again. Nothing was changed.")}
         </LeadRow>
-        <Buttons alt={{ label: "Cancel", onClick: onClose }} primary={{ label: "Try again", onClick: () => void save(), busy }} marginTop={16} />
+        <Buttons alt={{ label: t("Cancel"), onClick: onClose }} primary={{ label: t("Try again"), onClick: () => void save(), busy }} marginTop={16} />
       </Sheet>
     );
   }
@@ -134,23 +135,23 @@ export function FixSheet({
   if (step === "confirm") {
     const n = target.booked;
     return (
-      <Sheet open={open} onClose={onClose} title={`Move ${target.title} to ${formatMinutes12(start)}?`}>
+      <Sheet open={open} onClose={onClose} title={t("Move {class} to {time}?", { class: target.title, time: formatMinutes12(start) })}>
         <LeadRow>
           {n === 0
-            ? "Nobody is booked yet."
-            : `${n === 1 ? "1 member is" : `${n} members are`} booked. They'll get a message about the new time.`}
+            ? t("Nobody is booked yet.")
+            : tn(n, "1 member is booked. They'll get a message about the new time.", "{n} members are booked. They'll get a message about the new time.")}
         </LeadRow>
         <RowsCard
           rows={[
-            { l: "Was", v: range12(target.start, target.end) },
-            { l: "Now", v: rangeMinutes12(start, end), bold: true },
-            ...(who ? [{ l: "Instructor", v: who }] : []),
+            { l: t("Was"), v: range12(target.start, target.end) },
+            { l: t("Now"), v: rangeMinutes12(start, end), bold: true },
+            ...(who ? [{ l: t("Instructor"), v: who }] : []),
           ]}
         />
         <Buttons
-          alt={{ label: "Back", onClick: () => setStep("time"), disabled: busy }}
+          alt={{ label: t("Back"), onClick: () => setStep("time"), disabled: busy }}
           primary={{
-            label: busy ? "Moving…" : "Move class",
+            label: busy ? t("Moving…") : t("Move class"),
             onClick: () => void save(),
             busy,
             disabled: !online,
@@ -163,7 +164,7 @@ export function FixSheet({
 
   if (step === "time") {
     return (
-      <Sheet open={open} onClose={onClose} title={`Move ${target.title}`}>
+      <Sheet open={open} onClose={onClose} title={t("Move {class}", { class: target.title })}>
         <p className="an5-leadt" style={{ marginBottom: 14 }}>
           {dayDate(target.date)}
           {who ? ` · ${who}` : ""}
@@ -171,7 +172,7 @@ export function FixSheet({
         <div className="an5-times">
           {(["start", "end"] as const).map((k) => (
             <button key={k} type="button" className="an5-time tap" aria-pressed={editing === k} onClick={() => setEditing(k)}>
-              <span className="an5-time-l block">{k === "start" ? "Starts" : "Ends"}</span>
+              <span className="an5-time-l block">{k === "start" ? t("Starts") : t("Ends")}</span>
               <span className="an5-time-v block">{formatMinutes12(k === "start" ? start : end)}</span>
             </button>
           ))}
@@ -181,23 +182,23 @@ export function FixSheet({
             band="business"
             columns={[
               {
-                label: "Hour",
+                label: t("Hour"),
                 value: h12,
                 options: Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: String(i + 1) })),
                 onChange: (h) => setValue(compose(Number(h), min - (min % 15), mer)),
               },
               {
-                label: "Minutes",
+                label: t("Minutes"),
                 value: min - (min % 15),
                 options: [0, 15, 30, 45].map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
                 onChange: (m) => setValue(compose(h12, Number(m), mer)),
               },
               {
-                label: "AM or PM",
+                label: t("AM or PM"),
                 value: mer,
                 options: [
-                  { value: "AM", label: "AM" },
-                  { value: "PM", label: "PM" },
+                  { value: "AM", label: t("AM") },
+                  { value: "PM", label: t("PM") },
                 ],
                 onChange: (p) => setValue(compose(h12, min - (min % 15), String(p))),
               },
@@ -209,8 +210,8 @@ export function FixSheet({
           {problem ?? okLine}
         </p>
         <Buttons
-          alt={{ label: "Back", onClick: move ? onClose : () => setStep("pair") }}
-          primary={{ label: "Save new time", onClick: () => setStep("confirm"), disabled: !!problem || !online }}
+          alt={{ label: t("Back"), onClick: move ? onClose : () => setStep("pair") }}
+          primary={{ label: t("Save new time"), onClick: () => setStep("confirm"), disabled: !!problem || !online }}
           marginTop={16}
         />
       </Sheet>
@@ -222,49 +223,49 @@ export function FixSheet({
   const from = Math.max(minutesOf(p.a.start), minutesOf(p.b.start));
   const to = Math.min(minutesOf(p.a.end), minutesOf(p.b.end));
   return (
-    <Sheet open={open} onClose={onClose} title={`${who || "This instructor"} is booked twice`}>
+    <Sheet open={open} onClose={onClose} title={who ? t("{name} is booked twice", { name: who }) : t("This instructor is booked twice")}>
       <p className="an5-leadt" style={{ marginBottom: 14 }}>
         {dayDate(p.a.date)}
       </p>
       <div className="an5-pair">
         {[p.a, p.b].map((s, i) => (
           <div key={s.id} className="an5-sess">
-            <p className="an5-sess-k">Session {i + 1}</p>
+            <p className="an5-sess-k">{t("Session {n}", { n: i + 1 })}</p>
             <p className="an5-sess-t">{s.title}</p>
             <p className="an5-sess-time">{range12(s.start, s.end)}</p>
             <p className="an5-sess-s">
-              {who} · {s.booked} booked
+              {who} · {t("{n} booked", { n: s.booked })}
             </p>
           </div>
         ))}
       </div>
-      <p className="an5-overlap-t">They overlap from {rangeMinutes12(from, to)}. Change one of them:</p>
+      <p className="an5-overlap-t">{t("They overlap from {time}. Change one of them:", { time: rangeMinutes12(from, to) })}</p>
       <div className="an5-choices">
         <button type="button" className="an5-choice tap" disabled={!online} onClick={() => onReassign(p.b)}>
           <span className="an5-choice-tile">
             <UserRoundCog size={16} aria-hidden />
           </span>
           <span className="min-w-0">
-            <span className="an5-choice-t block">Give {p.b.title} to someone else</span>
-            <span className="an5-choice-s block">Pick a free instructor</span>
+            <span className="an5-choice-t block">{t("Give {class} to someone else", { class: p.b.title })}</span>
+            <span className="an5-choice-s block">{t("Pick a free instructor")}</span>
           </span>
-          <ChevronRight size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
+          <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
         </button>
         <button type="button" className="an5-choice tap" disabled={!online} onClick={() => setStep("time")}>
           <span className="an5-choice-tile">
             <Clock size={16} aria-hidden />
           </span>
           <span className="min-w-0">
-            <span className="an5-choice-t block">Move {p.b.title}</span>
-            <span className="an5-choice-s block">Change its start and end time</span>
+            <span className="an5-choice-t block">{t("Move {class}", { class: p.b.title })}</span>
+            <span className="an5-choice-s block">{t("Change its start and end time")}</span>
           </span>
-          <ChevronRight size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
+          <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
         </button>
       </div>
       {!online && (
         <p className="an5-err">
           <CalendarClock size={14} aria-hidden />
-          You're offline. Changes need a connection.
+          {t("You're offline. Changes need a connection.")}
         </p>
       )}
     </Sheet>
