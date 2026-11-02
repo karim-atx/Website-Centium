@@ -22,7 +22,7 @@ import { useImagePreview } from "./useImagePreview";
 import "../shell/onboarding.css";
 import { t, tk } from "../../../i18n/core";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
-import { mustChooseLevel, planPurchasePending } from "../../../services/premium/model";
+import { mustChooseLevel, awaitingPurchase } from "../../../services/premium/model";
 
 // /app/business/setup: where a business lands after Submit for review, and
 // what it sees until it is live: OB-238 Pending review; OB-240 You're live,
@@ -60,11 +60,11 @@ export default function BusinessSetupPage() {
   const [biz, setBizState] = useState<BusinessLaneDraft>(() => (uid ? readLocal(uid) : null) ?? emptyBusinessDraft());
   const [fix, setFix] = useState<BizFlowKey | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  // Round G1 fixes, G fixes 2: while the plan isn't bought in the Centium app
-  // yet, or its purchase isn't confirmed yet (business_plans_on only),
+  // Round G1 fixes, G fixes 2 and 3: while no plan level is chosen yet, or
+  // its purchase in the Centium app isn't confirmed yet (business_plans_on only),
   // Pending review says approval waits for it.
   const planLevel = usePlanLevel(biz.businessId);
-  const planWait = mustChooseLevel(planLevel.level) ? "choose" : planPurchasePending(planLevel.level) ? "pending" : null;
+  const planWait = mustChooseLevel(planLevel.level) ? "choose" : awaitingPurchase(planLevel.level) ? "pending" : null;
   const [toast, showToast] = useObToast();
   const loaded = useRef(false);
 

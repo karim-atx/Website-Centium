@@ -74,15 +74,17 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
   const onlineHook = useOnline();
   const online = flow ? flow.online : onlineHook;
   const [save, setSave] = useState<{ busy: boolean; error: string | null; offline: boolean }>({ busy: false, error: null, offline: false });
-  // Round G1 fixes, G fixes 2 (Karim): the plan step, in front of the venue
-  // step and every step after it while the business must choose a level (only
-  // with business_plans_on; otherwise today's steps), until the owner presses
-  // Continue. The plan is bought in the Centium app, so Continue is always
-  // there and never waits for the purchase.
+  // Round G1 fixes, G fixes 2 and 3 (Karim): the plan step, in front of the
+  // venue step and every step after it while the business must choose a level
+  // (only with business_plans_on; otherwise today's steps). "Choose this
+  // plan" records the level and the step stays, saying to buy it in the
+  // Centium app, until the owner presses Continue. Continue is always there
+  // and never waits for the purchase.
   const { switches } = useSwitches();
   const planLevel = usePlanLevel(biz.businessId);
+  const [planChosen, setPlanChosen] = useState(false);
   const [planCarriedOn, setPlanCarriedOn] = useState(false);
-  const planGate = onboardingPlanStep({ switches, businessId: biz.businessId, level: planLevel.level, levelLoading: planLevel.loading, carriedOn: planCarriedOn });
+  const planGate = onboardingPlanStep({ switches, businessId: biz.businessId, level: planLevel.level, levelLoading: planLevel.loading, chosen: planChosen, carriedOn: planCarriedOn });
   const bizRef = useRef(biz);
   useEffect(() => {
     bizRef.current = biz;
@@ -244,7 +246,20 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
 
   if (stepKey !== "bizBusiness" && planGate !== "skip" && biz.businessId) {
     return (
-      <PlanStep lane={biz.lane} loading={planGate === "loading"} onContinue={() => setPlanCarriedOn(true)} onBack={onBack} saveExit={mode !== "fix"} />
+      <PlanStep
+        lane={biz.lane}
+        businessId={biz.businessId}
+        loading={planGate === "loading"}
+        chosen={planChosen}
+        onChosen={() => {
+          setPlanChosen(true);
+          planLevel.reload();
+        }}
+        onContinue={() => setPlanCarriedOn(true)}
+        onBack={onBack}
+        saveExit={mode !== "fix"}
+        online={online}
+      />
     );
   }
 

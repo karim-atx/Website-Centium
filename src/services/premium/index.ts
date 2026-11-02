@@ -5,15 +5,17 @@
 // A failed read is "off" too: the switches decide whether anything new is
 // shown at all, and nothing new is ever shown on a guess.
 //
-// NEVER buy_hiring_credits or choose_business_plan_level from the web
-// (decision G10; G fixes 2): hiring credits and business plan levels are
-// bought in the Centium app only. Neither function has a caller here, on
-// purpose.
+// Hiring credits and business plan levels are bought in the Centium app
+// only (decision G10; G fixes 2). The web only records the level the owner
+// will buy there (choose_business_plan_level, G fixes 3), which opens no
+// charge.
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t } from "../../i18n/core";
 import {
+  choiceAlreadyMade,
+  choosePlanLevelArgs,
   parseCandidates,
   parseFreeLimits,
   parseGymPasses,
@@ -32,6 +34,7 @@ import {
   type PassCandidate,
   type PlanLevel,
   type PlanLevelPrice,
+  type PlanPeriod,
   type Switches,
 } from "./model";
 
@@ -103,6 +106,23 @@ export const fetchLevelPrices = (): Promise<Read<PlanLevelPrice[]>> => read(() =
 
 export const fetchPlanLevel = (businessId: string): Promise<Read<PlanLevel | null>> =>
   read(() => supabase.rpc("business_plan_level", { p_business_id: businessId }), parseLevel, t("Couldn't load your plan."));
+
+/**
+ * "Choose this plan" (G fixes 3): records the level the owner will buy in
+ * the Centium app and returns the choice id. It opens no charge; choosing
+ * again replaces the choice. ATXD7 (an older Database's "already chosen") and
+ * a repeat choice both read as chosen.
+ */
+export async function choosePlanLevel(businessId: string, seatBlocks: number, p: PlanPeriod): Promise<Write<string>> {
+  const r = await write(
+    () => supabase.rpc("choose_business_plan_level", choosePlanLevelArgs(businessId, seatBlocks, p)),
+    idOf,
+    t("Couldn't save your plan choice. Try again.")
+  );
+  if (!r.ok && choiceAlreadyMade(r.code)) return { ok: true, value: "" };
+  if (!r.ok && r.code === "ATX03") return { ...r, message: t("Only the business owner can choose the plan.") };
+  return r;
+}
 
 // ---- hiring credits ----
 

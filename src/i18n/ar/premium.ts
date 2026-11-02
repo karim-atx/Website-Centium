@@ -101,9 +101,9 @@ const premium: Catalogue = {
   // == The Round G1 refusals (services/premium/model premiumCodeMessage) ==
   "That isn't available yet.": "هذا غير متاح بعد.",
   "That's part of Centium Premium.": "هذا جزء من Centium Premium.",
-  "Choose your business plan in the Centium app first.": "اختر خطة نشاطك التجاري في تطبيق Centium أولًا.",
+  "Choose your business plan first.": "اختر خطة نشاطك التجاري أولًا.",
   "Your verification is approved once your plan purchase is confirmed.": "تتم الموافقة على التحقق بعد تأكيد شراء خطتك.",
-  "No hiring credit left. A role offer needs one.": "لم يبقَ لك رصيد توظيف. يحتاج عرض الوظيفة إلى رصيد واحد.",
+  "Buy a hiring credit in the Centium app to send this offer.": "اشترِ رصيد توظيف من تطبيق Centium لإرسال هذا العرض.",
 
   // == Premium passes, the professional's page (pages/pro/more/PremiumPasses) ==
   "Premium passes": "منح Premium",
@@ -148,7 +148,7 @@ const premium: Catalogue = {
   "Your members with an active membership get Centium Premium, up to your plan's limit.": "يحصل أعضاؤك ذوو الاشتراك النشط على Centium Premium، ضمن حدّ خطتك.",
   "Members with an active membership get Premium, up to your plan's limit. Turning this off ends theirs 7 days later, and they're told.": "يحصل الأعضاء ذوو الاشتراك النشط على Premium، ضمن حدّ خطتك. إيقاف هذا الخيار يُنهي Premium لديهم بعد 7 أيام، ويتم إبلاغهم.",
 
-  // == Business plan levels, bought in the Centium app only (components/premium/BusinessPlanLevels, BusinessPlanHomeCard) ==
+  // == Business plan levels, chosen here and bought in the Centium app only (components/premium/BusinessPlanLevels, BusinessPlanHomeCard) ==
   "Plan levels": "مستويات الخطة",
   Base: "Base", // note: plan name, kept Latin
   "Base + {n} seats": { zero: "Base + {n} مقعد", one: "Base + مقعد واحد", two: "Base + مقعدان", few: "Base + {n} مقاعد", many: "Base + {n} مقعدًا", other: "Base + {n} مقعد" },
@@ -157,12 +157,21 @@ const premium: Catalogue = {
   Current: "الحالية",
   "The business owner chooses the plan.": "صاحب النشاط التجاري هو من يختار الخطة.",
   "Choose your business plan": "اختر خطة نشاطك التجاري",
-  "Buy it in the Centium app. Your verification is approved once the purchase is confirmed.": "اشترِها من تطبيق Centium. تتم الموافقة على التحقق بعد تأكيد الشراء.",
   "Your verification is approved once your purchase is confirmed.": "تتم الموافقة على التحقق بعد تأكيد عملية الشراء.",
-  "Change your plan in the Centium app.": "غيّر خطتك من تطبيق Centium.",
+  "Choose this plan": "اختر هذه الخطة",
+  Chosen: "المختارة", // note: a plan level's tag, beside «الحالية»
+  "Plan chosen. Now buy it in the Centium app.": "تم اختيار الخطة. اشترِها الآن من تطبيق Centium.",
+  "Couldn't save your plan choice. Try again.": "تعذّر حفظ اختيار خطتك. حاول مرة أخرى.",
+  "Only the business owner can choose the plan.": "وحده صاحب النشاط التجاري يمكنه اختيار الخطة.",
+  "Buy your plan in the Centium app": "اشترِ خطتك من تطبيق Centium",
+  "Your verification is approved once the purchase is confirmed.": "تتم الموافقة على التحقق بعد تأكيد الشراء.",
+  "Bought in the Centium app": "تم شراؤها من تطبيق Centium",
 
   // == The plan step at the start of business onboarding (pages/onboarding/business/PlanStep; G1 fixes, G fixes 2) ==
   "Before step 2": "قبل الخطوة 2",
+  "You choose your plan here and buy it in the Centium app.": "تختار خطتك هنا وتشتريها من تطبيق Centium.",
+  "Now buy it in the Centium app": "اشترِها الآن من تطبيق Centium",
+  "You're offline. Connect to choose your plan.": "أنت غير متصل. اتصل بالإنترنت لاختيار خطتك.",
 
   // == Hiring credits (components/premium/HiringCreditsCard, pages/business-market/hiring/HireConfirmDialog) ==
   "Hiring credits": "أرصدة التوظيف",

@@ -492,8 +492,8 @@ export const HIRING_ERROR_TEXT: Record<HiringError, string> = {
   has_applicants: "People have applied to this opening, so it can't be deleted. Pause it instead.",
   no_seats: "All seats are in use. Buy a seat block or remove somebody first.",
   instructor_not_on_team: "Only your Team can be named. Add people through Hiring.",
-  // Round G1: the same words as premiumCodeMessage("ATXQ4").
-  no_hiring_credit: "No hiring credit left. A role offer needs one.",
+  // Round G1, G fixes 3: the same words as premiumCodeMessage("ATXQ4").
+  no_hiring_credit: "Buy a hiring credit in the Centium app to send this offer.",
 };
 
 /** The caution card under an applicant or a result after an offer (B-MA.8.6): their busy times. */

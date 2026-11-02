@@ -9,8 +9,8 @@ import { t, tn } from "../../i18n/core";
 // only when credits_on (the business plans switch, for the business's
 // owner). A role hire uses one credit in place of the percentage fee;
 // class-slot hires are billed as today. Credits are bought in the Centium app
-// only (decision G10): $39 for 1, $99 for 3, through "Buy in the Centium app"
-// (Coming soon). buy_hiring_credits is never called from the web.
+// only (decision G10): $39 for 1, $99 for 3 (HIRING_CREDIT_PRICES), through
+// "Buy in the Centium app" (Coming soon).
 export function HiringCreditsCard({ credits, className }: { credits: HiringCredits | null; className?: string }) {
   if (!credits?.creditsOn) return null;
   const packs = credits.packs.filter((p) => p.remaining > 0);
@@ -33,7 +33,7 @@ export function HiringCreditsCard({ credits, className }: { credits: HiringCredi
           ))}
         </ul>
       )}
-      <BuyInApp product="hiring_credits" price1={credits.price1} price3={credits.price3} compact className="mt-3 !shadow-none !bg-cream-soft" />
+      <BuyInApp product="hiring_credits" compact className="mt-3 !shadow-none !bg-cream-soft" />
     </section>
   );
 }
