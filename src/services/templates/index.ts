@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
+import { t } from "../../i18n/core";
 import type { PostgrestError } from "@supabase/supabase-js";
 import {
   createFolder,
@@ -70,21 +71,21 @@ function describe(error: PostgrestError): string {
   const playlist = playlistSaveError(code);
   if (playlist) return playlist;
   if (code === OVERWRITE_REFUSED) {
-    return "This client has changed their routine since you last assigned it.";
+    return t("This client has changed their routine since you last assigned it.");
   }
-  if (code === "ATX08") return "That template no longer exists.";
-  if (code === "ATX09") return "Only the template's owner can assign it.";
-  if (code === "ATX12") return "That person isn't one of your clients.";
+  if (code === "ATX08") return t("That template no longer exists.");
+  if (code === "ATX09") return t("Only the template's owner can assign it.");
+  if (code === "ATX12") return t("That person isn't one of your clients.");
   // Release 3: assign_template_to_client's join-week check (p_join_week must
   // be 1 to duration_weeks) raises 22023.
-  if (code === "22023") return "Pick a start week inside the programme.";
-  if (code === "42501") return "You don't have permission to do that.";
-  if (code === "23503") return "Something this refers to no longer exists. Try again.";
+  if (code === "22023") return t("Pick a start week inside the programme.");
+  if (code === "42501") return t("You don't have permission to do that.");
+  if (code === "23503") return t("Something this refers to no longer exists. Try again.");
   if (code === "23514" || code === "22003") {
-    return "One of those numbers is outside the range this can store.";
+    return t("One of those numbers is outside the range this can store.");
   }
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 export interface TemplatesResult {
@@ -483,7 +484,7 @@ async function writeBlocks(
     .select(BLOCK_COLUMNS);
   if (error || !data) {
     console.error("[templates] Could not write blocks:", error?.message);
-    return { message: error ? describe(error) : "Could not save the blocks in this template." };
+    return { message: error ? describe(error) : t("Could not save the blocks in this template.") };
   }
 
   const saved = (data as BlockRow[]).map(toBlock);
@@ -505,7 +506,7 @@ async function writeExercises(
   for (const [index, ex] of exercises.entries()) {
     const ref = resolveExerciseRef(ex, lookup);
     if (!ref) {
-      return `"${ex.name}" isn't in the exercise library, so this template can't be saved.`;
+      return t("\"{name}\" isn't in the exercise library, so this template can't be saved.", { name: ex.name });
     }
     const blockId = ex.blockId ? blockIdByLocalId.get(ex.blockId) ?? null : null;
     rows.push(prescriptionOf(ex, ref, templateId, index, blockId));
@@ -552,7 +553,7 @@ export async function createTemplate(
     console.error("[templates] Could not create template:", error?.message);
     return {
       ok: false,
-      message: error ? describe(error) : "Something went wrong. Please try again.",
+      message: error ? describe(error) : t("Something went wrong. Please try again."),
     };
   }
 
@@ -832,10 +833,10 @@ export interface AdoptResult {
  */
 function describeAdoption(error: PostgrestError): string {
   const code = error.code ?? "";
-  if (code === "ATX08") return "That program is no longer available.";
-  if (code === "ATX09") return "That program can't be added this way.";
+  if (code === "ATX08") return t("That program is no longer available.");
+  if (code === "ATX09") return t("That program can't be added this way.");
   if (code === "ATX10") {
-    return "This program can't be copied. One of its exercises isn't available.";
+    return t("This program can't be copied. One of its exercises isn't available.");
   }
   return describe(error);
 }
@@ -886,8 +887,8 @@ export async function endTemplateAssignment(assignmentId: string): Promise<Write
   }).rpc("end_template_assignment", { p_assignment_id: assignmentId });
   if (error) {
     console.error("[templates] Could not end the assignment:", error.message);
-    if (error.code === "ATX08") return { ok: false, message: "That programme has already ended." };
-    if (error.code === "ATX09") return { ok: false, message: "Only the professional who assigned it can end it." };
+    if (error.code === "ATX08") return { ok: false, message: t("That programme has already ended.") };
+    if (error.code === "ATX09") return { ok: false, message: t("Only the professional who assigned it can end it.") };
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

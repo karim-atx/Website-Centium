@@ -11,6 +11,7 @@
 //   allowance (10 an hour, shared with review reports).
 
 import { REVIEW_REPORT_REASONS, type ReviewReportReason } from "../professional-reviews/rules";
+import { t, tk } from "../../i18n/core";
 
 /** offer_reports_note_check. */
 export const OFFER_REPORT_NOTE_MAX = 300;
@@ -23,11 +24,11 @@ export type OfferReportReason = ReviewReportReason;
  */
 export const OFFER_REPORT_REASONS: { value: OfferReportReason; label: string; hint: string }[] = REVIEW_REPORT_REASONS.map((r) =>
   r.value === "spam"
-    ? { ...r, hint: "A scam, misleading, or not a real offer" }
+    ? { ...r, hint: tk("A scam, misleading, or not a real offer") }
     : r.value === "harmful_health_advice"
-      ? { ...r, hint: "A product or claim that could hurt someone" }
+      ? { ...r, hint: tk("A product or claim that could hurt someone") }
       : r.value === "impersonation"
-        ? { ...r, hint: "Pretending to be another business, or Centium" }
+        ? { ...r, hint: tk("Pretending to be another business, or Centium") }
         : r,
 );
 
@@ -42,16 +43,16 @@ export function offerReportError(e: { code?: string | null; message?: string | n
   const msg = e.message ?? "";
   switch (e.code) {
     case "ATX01":
-      return "Sign in to report this offer.";
+      return t("Sign in to report this offer.");
     case "ATX08":
-      return "This offer isn't available any more, so it can't be reported.";
+      return t("This offer isn't available any more, so it can't be reported.");
     case "ATX02":
-      return "You've sent a lot of reports in the last hour. Try again later.";
+      return t("You've sent a lot of reports in the last hour. Try again later.");
     case "22023":
-      if (/own offer/i.test(msg)) return "You can't report your own offer.";
-      if (/300/.test(msg)) return "Keep the note under 300 characters.";
-      return "Couldn't send the report. Try again.";
+      if (/own offer/i.test(msg)) return t("You can't report your own offer.");
+      if (/300/.test(msg)) return t("Keep the note under 300 characters.");
+      return t("Couldn't send the report. Try again.");
     default:
-      return "Couldn't send the report. Try again.";
+      return t("Couldn't send the report. Try again.");
   }
 }

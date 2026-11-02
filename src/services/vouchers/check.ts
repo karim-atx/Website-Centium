@@ -12,24 +12,25 @@
 
 import { marketRpcRaw } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { t, tk } from "../../i18n/core";
 import { markRefusal, mergeMark, notACode, parseCheck, scanInput, type VoucherCheck } from "./checkModel";
 
 export * from "./checkModel";
 
 export type CheckResult = { ok: true; check: VoucherCheck } | { ok: false; offline?: boolean; message: string };
 
-const RATE_LIMITED = "Too many checks in a short time. Try again in a few minutes.";
+const RATE_LIMITED = tk("Too many checks in a short time. Try again in a few minutes.");
 
 /** check_voucher(p_code). `raw` is a typed code or a camera read. */
 export async function checkVoucher(raw: string): Promise<CheckResult> {
-  const fallback = "Couldn't check this voucher. Try again.";
+  const fallback = t("Couldn't check this voucher. Try again.");
   const input = scanInput(raw);
   if (!input) return { ok: true, check: notACode() };
   const res = await marketRpcRaw("check_voucher", input);
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };
   if (res.error) {
     if (isOffline(res.error)) return { ok: false, offline: true, message: fallback };
-    if (res.error.code === "ATX02") return { ok: false, message: RATE_LIMITED };
+    if (res.error.code === "ATX02") return { ok: false, message: t(RATE_LIMITED) };
     console.error("[vouchers] check_voucher:", res.error.code, res.error.message);
     return { ok: false, message: fallback };
   }
@@ -44,7 +45,7 @@ export async function checkVoucher(raw: string): Promise<CheckResult> {
  * void, expired) shows that state instead.
  */
 export async function markVoucherUsed(prev: VoucherCheck): Promise<CheckResult> {
-  const fallback = "Couldn't mark this voucher as used. Try again.";
+  const fallback = t("Couldn't mark this voucher as used. Try again.");
   if (!prev.voucherId) return { ok: false, message: fallback };
   const res = await marketRpcRaw("mark_voucher_used", { p_voucher_id: prev.voucherId });
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };

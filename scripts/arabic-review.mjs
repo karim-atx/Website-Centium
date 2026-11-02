@@ -30,6 +30,10 @@ const AREAS = [
   ["safety", "Referrals, vouchers, reviews and first messages"],
   ["venues", "Class no-shows, gym pass and member codes"],
   ["certificates", "Your certificates (Courses)"],
+  ["sharedbiz", "Shared business service text (classes, listing, venues, store, team, hiring)"],
+  ["sharedmember", "Shared member service text (marketplace, offers, vouchers, reviews, utilities)"],
+  ["sharedfood", "Shared food and workout service text"],
+  ["sharedhealth", "Shared health service text (labs, blood pressure, cycle templates, metrics, health log)"],
 ];
 
 const rows = [];

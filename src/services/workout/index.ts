@@ -1,5 +1,6 @@
 import { countsTowardVolume } from "./session";
 import type { LoggedSet } from "../../types";
+import { t, tk } from "../../i18n/core";
 
 /** Epley formula — a standard, simple estimated-1RM calculation. */
 export function estimate1RM(weightKg: number, reps: number): number {
@@ -28,7 +29,7 @@ export const loadKg = (s: Pick<LoggedSet, "weightKg">): number => s.weightKg ?? 
  */
 export function formatSetWeight(weightKg: number | null, short = false): string | null {
   if (weightKg === null) return null;
-  if (weightKg === 0) return short ? "BW" : "Bodyweight";
+  if (weightKg === 0) return short ? t("BW") : t("Bodyweight");
   return `${weightKg} kg`;
 }
 
@@ -44,13 +45,15 @@ export function formatCompactDuration(totalSeconds: number): string {
   const minutes = Math.max(0, Math.floor(totalSeconds / 60));
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  const pair = (big: number, bigUnit: string, small: number, smallUnit: string) =>
-    small > 0 ? `${big}${bigUnit} ${small}${smallUnit}` : `${big}${bigUnit}`;
-  if (hours < 1) return `${minutes}m`;
-  if (days < 1) return pair(hours, "h", minutes % 60, "m");
-  if (days < 30) return pair(days, "d", hours % 24, "h");
-  if (days < 365) return pair(Math.floor(days / 30), "mo", days % 30, "d");
-  return pair(Math.floor(days / 365), "y", Math.floor((days % 365) / 30), "mo");
+  // Each unit is its own key ("{n}h"), so English reads "4h 50m" exactly as before.
+  const H = tk("{n}h"), M = tk("{n}m"), D = tk("{n}d"), MO = tk("{n}mo"), Y = tk("{n}y");
+  const pair = (big: number, bigKey: string, small: number, smallKey: string) =>
+    small > 0 ? `${t(bigKey, { n: big })} ${t(smallKey, { n: small })}` : t(bigKey, { n: big });
+  if (hours < 1) return t(M, { n: minutes });
+  if (days < 1) return pair(hours, H, minutes % 60, M);
+  if (days < 30) return pair(days, D, hours % 24, H);
+  if (days < 365) return pair(Math.floor(days / 30), MO, days % 30, D);
+  return pair(Math.floor(days / 365), Y, Math.floor((days % 365) / 30), MO);
 }
 
 export function formatDuration(totalSeconds: number): string {

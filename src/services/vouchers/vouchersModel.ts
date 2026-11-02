@@ -14,6 +14,7 @@
 
 import { formatShortDate } from "../../utils/date";
 import { rows, str } from "../market/parse";
+import { t, tk, tn } from "../../i18n/core";
 import { whereOf, type SubtypeLabel } from "../offers/offersModel";
 
 export type VoucherStatus = "issued" | "used" | "expired" | "void";
@@ -105,9 +106,9 @@ export function liveStatus(v: Pick<Voucher, "status" | "expiresAt">, now: Date =
 export type VoucherTab = "active" | "used" | "expired";
 
 export const VOUCHER_TABS: readonly { key: VoucherTab; label: string }[] = [
-  { key: "active", label: "Active" },
-  { key: "used", label: "Used" },
-  { key: "expired", label: "Expired" },
+  { key: "active", label: tk("Active") },
+  { key: "used", label: tk("Used") },
+  { key: "expired", label: tk("Expired") },
 ];
 
 /** A void voucher (cancelled and refunded by Centium) sits with the expired ones. */
@@ -132,13 +133,13 @@ export function daysLeft(iso: string, now: Date = new Date()): number {
  */
 export function voucherRow(v: Voucher, now: Date = new Date()): { meta: string; stub: string; tone: "teal" | "pale" | "muted" } {
   const s = liveStatus(v, now);
-  if (s === "used") return { meta: v.usedAt ? `Used on ${date(v.usedAt)}` : "Used", stub: "Used", tone: "muted" };
-  if (s === "void") return { meta: "Cancelled · points refunded", stub: "Void", tone: "muted" };
-  if (s === "expired") return { meta: `Expired on ${date(v.expiresAt)}`, stub: "Expired", tone: "muted" };
+  if (s === "used") return { meta: v.usedAt ? t("Used on {date}", { date: date(v.usedAt) }) : t("Used"), stub: t("Used"), tone: "muted" };
+  if (s === "void") return { meta: t("Cancelled · points refunded"), stub: t("Void"), tone: "muted" };
+  if (s === "expired") return { meta: t("Expired on {date}", { date: date(v.expiresAt) }), stub: t("Expired"), tone: "muted" };
   const left = daysLeft(v.expiresAt, now);
-  const meta = `Valid until ${date(v.expiresAt)}`;
-  if (left <= 7) return { meta, stub: left <= 0 ? "Today" : `${left} ${left === 1 ? "day" : "days"}`, tone: "pale" };
-  return { meta, stub: "Active", tone: "teal" };
+  const meta = t("Valid until {date}", { date: date(v.expiresAt) });
+  if (left <= 7) return { meta, stub: left <= 0 ? t("Today") : tn(left, "{n} day", "{n} days"), tone: "pale" };
+  return { meta, stub: t("Active"), tone: "teal" };
 }
 
 /**
@@ -148,9 +149,9 @@ export function voucherRow(v: Voucher, now: Date = new Date()): { meta: string; 
  */
 export function howToUse(where: string | null, onlineUrl: string | null): string[] {
   const site = onlineUrl ? onlineUrl.replace(/^https?:\/\//, "").replace(/\/$/, "") : null;
-  const online = site ? `Online: enter the code at checkout on ${site}.` : "Online: enter the code at checkout.";
-  if (where === "in_person") return ["Show this screen at your session."];
+  const online = site ? t("Online: enter the code at checkout on {site}.", { site }) : t("Online: enter the code at checkout.");
+  if (where === "in_person") return [t("Show this screen at your session.")];
   if (where === "online") return [online];
-  if (where === "in_store") return ["In store: show this screen at the counter."];
-  return ["In store: show this screen at the counter.", online];
+  if (where === "in_store") return [t("In store: show this screen at the counter.")];
+  return [t("In store: show this screen at the counter."), online];
 }

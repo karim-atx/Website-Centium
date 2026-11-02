@@ -4,6 +4,8 @@
 // the limit lives: "Add subfolder" is disabled at level 5, and a drag or move
 // that would put any folder below level 5 is refused.
 
+import { tk } from "../../i18n/core";
+
 export const MAX_FOLDER_DEPTH = 5;
 
 interface FolderLike {
@@ -56,4 +58,5 @@ export function canMoveFolder(folderId: string, newParentId: string | null, fold
 }
 
 /** The short reason shown on a disabled "Add subfolder". */
-export const MAX_DEPTH_NOTE = `Folders go ${MAX_FOLDER_DEPTH} levels deep at most`;
+// The English carries the number literally so tk() can mark it (MAX_FOLDER_DEPTH is 5).
+export const MAX_DEPTH_NOTE = tk("Folders go 5 levels deep at most");

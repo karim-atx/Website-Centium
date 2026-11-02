@@ -12,6 +12,7 @@ import { typeLabel } from "../../components/pro/profile/typeLabel";
 import type { ProfessionalSubtype } from "../../types";
 import { marketRpc, marketRpcRaw, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { t } from "../../i18n/core";
 import { parseVoucherRow, type Voucher } from "../vouchers/vouchersModel";
 import {
   REDEEM_ERROR_TEXT,
@@ -34,13 +35,13 @@ const subtypeLabel = (s: string): string => typeLabel(s as ProfessionalSubtype);
 
 /** The live offers for a chip, cheapest first (D-22's "redeemable first" is arrangeOffers'). */
 export function fetchRewardCatalog(category: RewardCategory): Promise<MarketResult<CatalogOffer[]>> {
-  return marketRpc("offer_catalogue", { p_category: categoryParam(category), p_limit: 200, p_offset: 0 }, "Couldn't load rewards.", (d) => parseCatalogue(d, subtypeLabel));
+  return marketRpc("offer_catalogue", { p_category: categoryParam(category), p_limit: 200, p_offset: 0 }, t("Couldn't load rewards."), (d) => parseCatalogue(d, subtypeLabel));
 }
 
 /** One offer for its detail page: null when offer_detail returns no row (gone, or not live). */
 export async function fetchOfferDetail(offerId: string): Promise<MarketResult<OfferDetail | null>> {
   if (!/^[0-9a-f-]{36}$/i.test(offerId)) return { ok: true, value: null };
-  return marketRpc("offer_detail", { p_offer_id: offerId }, "Couldn't load this offer.", (d) => parseOfferDetail(d, subtypeLabel));
+  return marketRpc("offer_detail", { p_offer_id: offerId }, t("Couldn't load this offer."), (d) => parseOfferDetail(d, subtypeLabel));
 }
 
 /**
@@ -53,7 +54,7 @@ export async function fetchOfferDetail(offerId: string): Promise<MarketResult<Of
  * anon). Not public_showcase: that returns the owner's shelf items.
  */
 export function fetchShowcaseOffers(ownerType: "business" | "professional", ownerId: string): Promise<MarketResult<CatalogOffer[]>> {
-  return marketRpc("public_offers", { p_owner_kind: ownerType, p_owner_id: ownerId }, "Couldn't load offers.", (d) => parsePublicOffers(d, ownerType, ownerId));
+  return marketRpc("public_offers", { p_owner_kind: ownerType, p_owner_id: ownerId }, t("Couldn't load offers."), (d) => parsePublicOffers(d, ownerType, ownerId));
 }
 
 /**
@@ -77,7 +78,7 @@ export type RedeemResult = { ok: true; voucher: Voucher } | { ok: false; offline
  * connection can't redeem twice.
  */
 export async function redeemOffer(offerId: string, requestId: string): Promise<RedeemResult> {
-  const fallback = "Couldn't redeem this offer. Try again.";
+  const fallback = t("Couldn't redeem this offer. Try again.");
   const res = await marketRpcRaw("redeem_offer", { p_offer_id: offerId, p_request_id: requestId });
   if ("thrown" in res) return { ok: false, offline: isOffline(res.thrown), message: fallback };
   if (res.error) {
@@ -86,7 +87,7 @@ export async function redeemOffer(offerId: string, requestId: string): Promise<R
     const f2 = voucherRefusalLine(res.error);
     if (f2) return { ok: false, message: f2 };
     const k = redeemErrorOf(res.error);
-    if (k) return { ok: false, error: k, message: REDEEM_ERROR_TEXT[k] };
+    if (k) return { ok: false, error: k, message: t(REDEEM_ERROR_TEXT[k]) };
     console.error("[offers] redeem_offer:", res.error.message);
     return { ok: false, message: fallback };
   }

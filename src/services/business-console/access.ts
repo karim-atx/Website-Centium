@@ -1,3 +1,4 @@
+import { tk } from "../../i18n/core";
 // Who may use which part of the business console (B6 roles, B7 enforcement).
 // Pure: no Supabase, so the node tests import it directly.
 //
@@ -43,14 +44,14 @@ export const NO_ACCESS: ConsoleAccess = { current: null, seats: [] };
 
 /** The Team page's names for each permission (PersonTerms PERMISSIONS titles), for "ask for access" lines. */
 export const PERMISSION_LABEL: Record<ConsolePermission, string> = {
-  schedule: "Edit the schedule",
-  front_desk: "Front desk",
-  members: "Members and team",
-  messages: "Message booked members",
-  revenue: "See Revenue",
-  store: "Store",
-  marketing: "Marketing",
-  venues: "Venues",
+  schedule: tk("Edit the schedule"),
+  front_desk: tk("Front desk"),
+  members: tk("Members and team"),
+  messages: tk("Message booked members"),
+  revenue: tk("See Revenue"),
+  store: tk("Store"),
+  marketing: tk("Marketing"),
+  venues: tk("Venues"),
 };
 
 export const isConsolePermission =(p: string): p is ConsolePermission => (CONSOLE_PERMISSIONS as readonly string[]).includes(p);
@@ -130,7 +131,7 @@ export function staffAreas(seat: ConsoleSeat, type: "gym" | "classes" | "store" 
   const out: StaffArea[] = [];
   const add = (a: StaffArea) => seatCan(seat, a.need) && out.push(a);
   add({ key: "members", label: type === "classes" ? "Clients" : type === "store" ? "Customers" : "Members", desc: "Members, member codes and plans", to: "/app/business/analytics/members", need: "members" });
-  if (type === "gym") add({ key: "frontdesk", label: "Front desk", desc: "Check members in and see passes", to: "/app/business/operations", need: "front_desk" });
+  if (type === "gym") add({ key: "frontdesk", label: tk("Front desk"), desc: "Check members in and see passes", to: "/app/business/operations", need: "front_desk" });
   if (type !== "store") add({ key: "schedule", label: "Schedule", desc: "Classes, times and instructors", to: "/app/business/classes", need: "schedule" });
   if (type === "store") add({ key: "store", label: "Products and orders", desc: "Your store's products and orders", to: "/app/business/products", need: "store" });
   add({ key: "marketing", label: "Marketplace", desc: "Offers, discounts and promotions", to: type === "store" ? "/app/business/products?tab=promotions" : "/app/business/marketplace", need: "marketing" });

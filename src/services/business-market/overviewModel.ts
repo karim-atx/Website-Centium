@@ -15,6 +15,7 @@
 
 import { num, rows, str } from "../market/parse";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 /** StatLedger's row (components/market/StatLedger), kept here so node:test needs no JSX. */
 export interface StatLedgerRow {
@@ -96,11 +97,11 @@ export function pctDelta(n: number | null | undefined): string {
 /** "+12% vs last month" for the hero, or null (left out) when there is no change to show. */
 export function heroDelta(pct: number | null | undefined): string | null {
   const d = pctDelta(pct);
-  return d === QUIET ? null : `${d} vs last month`;
+  return d === QUIET ? null : t("{delta} vs last month", { delta: d });
 }
 
 /** The hero's sub line on B-MA.1 and P-MA.1 (Karim, #40): clients_reached counts this month so far, not a rolling 30 days. */
-export const THIS_MONTH = "This month so far";
+export const THIS_MONTH = tk("This month so far");
 
 /**
  * B-MA.1 HeroStatCard "Clients reached" (Karim; the board drew "Members reached") from the measured
@@ -112,7 +113,7 @@ export const THIS_MONTH = "This month so far";
 export function heroView(ov: OverviewState): { value: string; delta: string | null; sub: string | null; series: number[] | null } {
   const v = ov.status === "ok" ? ov.value : null;
   if (!v) return { value: QUIET, delta: null, sub: null, series: null };
-  return { value: formatCount(v.clientsReached), delta: heroDelta(v.clientsReachedDeltaPct), sub: THIS_MONTH, series: v.sparkline };
+  return { value: formatCount(v.clientsReached), delta: heroDelta(v.clientsReachedDeltaPct), sub: t(THIS_MONTH), series: v.sparkline };
 }
 
 /** "none": not asked, because the caller lacks the `marketing` permission the reader requires (42501). */
@@ -136,31 +137,35 @@ export function ledgerRows(ov: OverviewState, gym: GymFigures | null): StatLedge
   const live = ov.status === "ok";
   const fig = (n: number | undefined) => (live ? formatCount(n ?? 0) : QUIET);
   const out: StatLedgerRow[] = [
-    { label: "Active offers", value: fig(v?.activeOffers), delta: live ? countDelta(v?.activeOffersDelta) : QUIET },
-    { label: "Redemptions this month", value: fig(v?.redemptionsThisMonth), delta: live ? pctDelta(v?.redemptionsDeltaPct) : QUIET },
-    { label: "Points redeemed", value: fig(v?.pointsRedeemed), delta: live ? pctDelta(v?.pointsRedeemedDeltaPct) : QUIET },
+    { label: t("Active offers"), value: fig(v?.activeOffers), delta: live ? countDelta(v?.activeOffersDelta) : QUIET },
+    { label: t("Redemptions this month"), value: fig(v?.redemptionsThisMonth), delta: live ? pctDelta(v?.redemptionsDeltaPct) : QUIET },
+    { label: t("Points redeemed"), value: fig(v?.pointsRedeemed), delta: live ? pctDelta(v?.pointsRedeemedDeltaPct) : QUIET },
   ];
   if (gym) {
     const g = (n: number | null) => (n === null ? QUIET : formatCount(n));
-    out.push({ label: "Active memberships", value: g(gym.activeMemberships), delta: QUIET });
-    out.push({ label: "Class bookings this week", value: g(gym.classBookingsThisWeek), delta: QUIET });
+    out.push({ label: t("Active memberships"), value: g(gym.activeMemberships), delta: QUIET });
+    out.push({ label: t("Class bookings this week"), value: g(gym.classBookingsThisWeek), delta: QUIET });
   }
   return out;
 }
 
-const plural = (n: number, one: string, many: string) => `${formatCount(n)} ${n === 1 ? one : many}`;
-
 /** "4 plans and passes · 182 active"; a part not known yet is left out. */
 export function membershipsLine(plans: number | null, active: number | null): string {
-  const parts = [plans === null ? null : plural(plans, "plan or pass", "plans and passes"), active === null ? null : `${formatCount(active)} active`].filter(Boolean);
+  const parts = [
+    plans === null ? null : tn(plans, "{n} plan or pass", "{n} plans and passes", { n: formatCount(plans) }),
+    active === null ? null : t("{n} active", { n: formatCount(active) }),
+  ].filter(Boolean);
   return parts.join(" · ");
 }
 
 /** "38 sessions this week · 264 booked"; a part not known yet is left out. */
 export function classesLine(sessions: number | null, booked: number | null): string {
-  const parts = [sessions === null ? null : `${plural(sessions, "session", "sessions")} this week`, booked === null ? null : `${formatCount(booked)} booked`].filter(Boolean);
+  const parts = [
+    sessions === null ? null : tn(sessions, "{n} session this week", "{n} sessions this week", { n: formatCount(sessions) }),
+    booked === null ? null : t("{n} booked", { n: formatCount(booked) }),
+  ].filter(Boolean);
   return parts.join(" · ");
 }
 
 /** reorder_showcase_items refused with ATX96: an id in the list isn't the caller's to move, so nothing moved. */
-export const REORDER_NOT_YOURS = "You can't change the order of these items.";
+export const REORDER_NOT_YOURS = tk("You can't change the order of these items.");

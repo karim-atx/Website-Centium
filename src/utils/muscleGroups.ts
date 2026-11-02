@@ -1,4 +1,5 @@
 import type { MuscleGroup } from "../types";
+import { tk } from "../i18n/core";
 
 // How each muscle group is written, in one place. Plural Biceps / Triceps
 // everywhere (v6 WO1.3 D12, the Body view and the frames).
@@ -10,20 +11,21 @@ import type { MuscleGroup } from "../types";
 // public.exercises settles it, because its category column is typed
 // public.muscle_group and nothing stores the old grouping any more.
 export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
+  // "Back" the muscle is tx("Back", "muscle") where shown (components/workout/muscleLabel), apart from the Back button.
   back: "Back",
-  bicep: "Biceps",
-  calves: "Calves",
-  cardio: "Cardio",
-  chest: "Chest",
-  core: "Core",
-  forearms: "Forearms",
-  glutes: "Glutes",
-  hamstrings: "Hamstrings",
-  olympic: "Olympic",
-  other: "Other",
-  quads: "Quads",
-  shoulders: "Shoulders",
-  tricep: "Triceps",
+  bicep: tk("Biceps"),
+  calves: tk("Calves"),
+  cardio: tk("Cardio"),
+  chest: tk("Chest"),
+  core: tk("Core"),
+  forearms: tk("Forearms"),
+  glutes: tk("Glutes"),
+  hamstrings: tk("Hamstrings"),
+  olympic: tk("Olympic"),
+  other: tk("Other"),
+  quads: tk("Quads"),
+  shoulders: tk("Shoulders"),
+  tricep: tk("Triceps"),
 };
 
 /**

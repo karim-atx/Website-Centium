@@ -16,7 +16,7 @@
 // drawn again under it). "Today" is the venue's own day (gyms.timezone).
 
 import { range12, time12 } from "../../utils/time12";
-import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 export interface HoursRow {
   /** 1 = Monday … 7 = Sunday (extract(isodow)). */
@@ -41,19 +41,23 @@ const FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 const SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** The value a day with no row shows: not published, never "Closed". */
-export const NOT_PUBLISHED = "Not published";
+export const NOT_PUBLISHED = tk("Not published");
 
-/** One day's hours as the right-hand column reads them. */
+/**
+ * One day's hours as the right-hand column reads them. "Not published",
+ * "Closed" and "Open 24 hours" stay English here (screens compare them);
+ * the screens translate them with t() where they show them.
+ */
 export function dayValue(row: HoursRow | undefined): string {
   if (!row) return NOT_PUBLISHED;
-  if (row.closed) return "Closed";
-  if (row.open24h) return "Open 24 hours";
+  if (row.closed) return tk("Closed");
+  if (row.open24h) return tk("Open 24 hours");
   // A range with a missing end can't be drawn honestly; say nothing about it.
   if (!row.opensAt || !row.closesAt) return NOT_PUBLISHED;
   // 12-hour (X-14): "6:00 AM to 11:00 PM".
   // An overnight range keeps both meridiems: "6:00 to 2:00 AM" would read as
   // four hours in one morning, not 6:00 AM to 2:00 AM the next day.
-  if (row.wrapsMidnight) return `${time12(row.opensAt)} to ${time12(row.closesAt)} (next day)`;
+  if (row.wrapsMidnight) return t("{start} to {end} (next day)", { start: time12(row.opensAt), end: time12(row.closesAt) });
   return range12(row.opensAt, row.closesAt);
 }
 
@@ -77,10 +81,10 @@ export function hoursLines(rows: HoursRow[], today: number | null): HoursLine[] 
     const value = values[start];
     const hasToday = today !== null && today >= first && today <= last;
     if (first === last) {
-      lines.push({ key: `d${first}`, label: hasToday ? `${FULL[first - 1]} (today)` : FULL[first - 1], value, today: hasToday });
+      lines.push({ key: `d${first}`, label: hasToday ? t("{day} (today)", { day: t(FULL[first - 1]) }) : t(FULL[first - 1]), value, today: hasToday });
     } else {
-      lines.push({ key: `d${first}-${last}`, label: `${SHORT[first - 1]} to ${SHORT[last - 1]}`, value, today: false });
-      if (hasToday) lines.push({ key: `today${today}`, label: `${FULL[today - 1]} (today)`, value, today: true });
+      lines.push({ key: `d${first}-${last}`, label: t("{first} to {last}", { first: t(SHORT[first - 1]), last: t(SHORT[last - 1]) }), value, today: false });
+      if (hasToday) lines.push({ key: `today${today}`, label: t("{day} (today)", { day: t(FULL[today - 1]) }), value, today: true });
     }
     start = i;
   }
@@ -96,7 +100,8 @@ const WEEKDAY: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5
  */
 export function isoWeekdayIn(timeZone: string, now: Date = new Date()): number | null {
   try {
-    const w = new Intl.DateTimeFormat(appLocale("en-US"), { timeZone, weekday: "short" }).format(now);
+    // English on purpose: the short name is read back through WEEKDAY, never shown.
+    const w = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(now);
     return WEEKDAY[w] ?? null;
   } catch {
     return null;
@@ -109,5 +114,5 @@ export function isoWeekdayIn(timeZone: string, now: Date = new Date()): number |
  */
 export function openNowTag(open: boolean | null): { label: string; tone: "member" | "muted" } | null {
   if (open === null) return null;
-  return open ? { label: "Open now", tone: "member" } : { label: "Closed now", tone: "muted" };
+  return open ? { label: tk("Open now"), tone: "member" } : { label: tk("Closed now"), tone: "muted" };
 }

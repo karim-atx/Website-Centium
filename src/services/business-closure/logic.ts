@@ -15,7 +15,10 @@
 // The words below are that message, worded for each screen; the check-in and
 // staff-invite words exist for the closed state only. Reviews are not gated.
 //
-// Pure, so node:test loads it.
+// Pure, so node:test loads it. Each sentence is written out whole (tk) so the
+// Arabic catalogue holds it; closureMessage translates the one it picks.
+
+import { t, tk } from "../../i18n/core";
 
 export const BUSINESS_CLOSED_CODE = "ATXAB";
 
@@ -38,61 +41,79 @@ export interface ClosureWords {
 
 /** The screen's sentence for an ATXAB refusal. */
 export function closureMessage(words: ClosureWords, serverMessage: string | null | undefined): string {
-  return words[closureStateOf(serverMessage)];
+  return t(words[closureStateOf(serverMessage)]);
 }
 
-/** The console's words: the business's own people, owner or staff. */
-const consoleWords = (doing: string): ClosureWords => ({
-  closed: `This business is closed, so it can't ${doing}. Existing records are unaffected.`,
-  paused: `This business is deactivated, so it can't ${doing} until it's reactivated.`,
-});
+// The console's words (the business's own people, owner or staff): "This
+// business is closed, so it can't {doing}. Existing records are unaffected."
+// and "This business is deactivated, so it can't {doing} until it's reactivated."
 
 // The client's side: booking or buying from the business.
 export const CLOSED_BOOK_APPOINTMENT: ClosureWords = {
-  closed: "This business has closed and isn't taking new bookings.",
-  paused: "This business isn't taking bookings right now.",
+  closed: tk("This business has closed and isn't taking new bookings."),
+  paused: tk("This business isn't taking bookings right now."),
 };
 export const CLOSED_BUY_MEMBERSHIP: ClosureWords = {
-  closed: "This business has closed and isn't selling memberships.",
-  paused: "This business isn't selling memberships right now.",
+  closed: tk("This business has closed and isn't selling memberships."),
+  paused: tk("This business isn't selling memberships right now."),
 };
 // Class bookings and waitlists (gated through their class since Database
 // 91991e0; a closed or paused business is also unlisted, so this shows only
 // when the owner has re-listed a paused one).
 export const CLOSED_BOOK_CLASS: ClosureWords = {
-  closed: "This business has closed and isn't taking class bookings.",
-  paused: "This business isn't taking class bookings right now.",
+  closed: tk("This business has closed and isn't taking class bookings."),
+  paused: tk("This business isn't taking class bookings right now."),
 };
 export const CLOSED_PLACE_ORDER: ClosureWords = {
-  closed: "This store has closed and isn't taking new orders.",
-  paused: "This store isn't taking orders right now.",
+  closed: tk("This store has closed and isn't taking new orders."),
+  paused: tk("This store isn't taking orders right now."),
 };
 export const CLOSED_REDEEM_CODE: ClosureWords = {
-  closed: "This business has closed, so this code can't be used.",
-  paused: "This business isn't taking new members right now, so this code can't be used yet.",
+  closed: tk("This business has closed, so this code can't be used."),
+  paused: tk("This business isn't taking new members right now, so this code can't be used yet."),
 };
 
 // The console's side: 'new' activity, refused paused or closed.
-export const CLOSED_ADD_APPOINTMENT = consoleWords("take new appointments");
-export const CLOSED_SELL_DAY_PASS = consoleWords("sell day passes");
+export const CLOSED_ADD_APPOINTMENT: ClosureWords = {
+  closed: tk("This business is closed, so it can't take new appointments. Existing records are unaffected."),
+  paused: tk("This business is deactivated, so it can't take new appointments until it's reactivated."),
+};
+export const CLOSED_SELL_DAY_PASS: ClosureWords = {
+  closed: tk("This business is closed, so it can't sell day passes. Existing records are unaffected."),
+  paused: tk("This business is deactivated, so it can't sell day passes until it's reactivated."),
+};
 
-export const CLOSED_INVITE_MEMBER = consoleWords("invite members");
-export const CLOSED_MEMBER_CODE = consoleWords("create member codes");
+export const CLOSED_INVITE_MEMBER: ClosureWords = {
+  closed: tk("This business is closed, so it can't invite members. Existing records are unaffected."),
+  paused: tk("This business is deactivated, so it can't invite members until it's reactivated."),
+};
+export const CLOSED_MEMBER_CODE: ClosureWords = {
+  closed: tk("This business is closed, so it can't create member codes. Existing records are unaffected."),
+  paused: tk("This business is deactivated, so it can't create member codes until it's reactivated."),
+};
 
 // 'existing' activity, refused only when closed: a paused business still
 // checks its members in and still hires. The trigger never names "paused"
 // here, so both states read the closed words.
-const closedOnly = (doing: string): ClosureWords => {
-  const w = consoleWords(doing);
-  return { closed: w.closed, paused: w.closed };
-};
 // Renewing an existing member is not new business (Karim, 21 Oct; Database
 // db4c105 tells a renewal from a purchase by renewed_from_id): allowed while
 // paused, refused only when closed.
-export const CLOSED_RENEW_MEMBERSHIP = closedOnly("renew memberships");
-export const CLOSED_CHECK_IN = closedOnly("check people in");
-export const CLOSED_INVITE_STAFF = closedOnly("invite staff");
-export const CLOSED_APPROVE_JOIN = closedOnly("take on new staff");
+export const CLOSED_RENEW_MEMBERSHIP: ClosureWords = {
+  closed: tk("This business is closed, so it can't renew memberships. Existing records are unaffected."),
+  paused: tk("This business is closed, so it can't renew memberships. Existing records are unaffected."),
+};
+export const CLOSED_CHECK_IN: ClosureWords = {
+  closed: tk("This business is closed, so it can't check people in. Existing records are unaffected."),
+  paused: tk("This business is closed, so it can't check people in. Existing records are unaffected."),
+};
+export const CLOSED_INVITE_STAFF: ClosureWords = {
+  closed: tk("This business is closed, so it can't invite staff. Existing records are unaffected."),
+  paused: tk("This business is closed, so it can't invite staff. Existing records are unaffected."),
+};
+export const CLOSED_APPROVE_JOIN: ClosureWords = {
+  closed: tk("This business is closed, so it can't take on new staff. Existing records are unaffected."),
+  paused: tk("This business is closed, so it can't take on new staff. Existing records are unaffected."),
+};
 
 // ---------------------------------------------------------------------------
 // The public pages: whether a business takes NEW activity (bookings, sales,
@@ -127,8 +148,8 @@ export function takesNewActivity(status: BusinessStatus): boolean {
 /** The calm line a public page shows instead of buy and book. Null while it takes activity. */
 export function closedLine(status: BusinessStatus, what: "bookings" | "orders"): string | null {
   if (takesNewActivity(status)) return null;
-  if (status === "closed") return "This business has closed. Anything you've already booked or bought stays in your account.";
-  return what === "orders" ? "This store isn't taking orders right now." : "This business isn't taking bookings right now.";
+  if (status === "closed") return t("This business has closed. Anything you've already booked or bought stays in your account.");
+  return what === "orders" ? t("This store isn't taking orders right now.") : t("This business isn't taking bookings right now.");
 }
 
 /** close_business()'s optional reason, trimmed (the server also stores a blank as null). */

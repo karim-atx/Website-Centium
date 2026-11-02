@@ -29,6 +29,7 @@
 
 import { currentUserId, marketDb, marketRpcRaw, type MarketResult } from "../market/rpc";
 import { isOffline } from "../network-error";
+import { t } from "../../i18n/core";
 import {
   MANAGED_OFFER_SELECT,
   OFFER_ERROR_TEXT,
@@ -53,7 +54,7 @@ const ownerArgs = (o: OfferOwner): Record<string, unknown> => (o.variant === "bu
 
 /** The owner's offers, newest first (the list sorts them by status). */
 export async function fetchMyOffers(owner: OfferOwner): Promise<MarketResult<ManagedOffer[]>> {
-  const fallback = "Couldn't load your offers.";
+  const fallback = t("Couldn't load your offers.");
   const col = owner.variant === "business" ? "business_id" : "professional_id";
   const id = owner.variant === "business" ? owner.businessId : await currentUserId();
   if (!id) return { ok: false, message: fallback };
@@ -86,7 +87,7 @@ async function write(fn: string, args: Record<string, unknown>, fallback: string
   if (res.error) {
     if (isOffline(res.error)) return { ok: false, offline: true, message: fallback };
     const k = offerErrorOf(res.error);
-    if (k) return { ok: false, error: k, code: res.error.code, message: OFFER_ERROR_TEXT[k] };
+    if (k) return { ok: false, error: k, code: res.error.code, message: t(OFFER_ERROR_TEXT[k]) };
     const refusal = offerWriteRefusal(res.error);
     if (refusal) return { ok: false, code: res.error.code, message: refusal };
     console.error(`[offers] ${fn}:`, res.error.message);
@@ -108,7 +109,7 @@ export function createOffer(owner: OfferOwner, draft: OfferDraft, requestId: str
   return write(
     "create_offer",
     { ...offerArgs(draft, variant), ...ownerArgs(owner), p_funding_ack: draft.fundingAck, p_request_id: requestId },
-    "Couldn't publish this offer. Try again."
+    t("Couldn't publish this offer. Try again.")
   );
 }
 
@@ -116,10 +117,10 @@ export function createOffer(owner: OfferOwner, draft: OfferDraft, requestId: str
 export function updateOffer(owner: OfferOwner, offerId: string, draft: OfferDraft): Promise<OfferWrite> {
   const contact = contactRefusal(draft.headline, draft.terms);
   if (contact) return Promise.resolve({ ok: false, message: contact });
-  return write("update_offer", { p_offer_id: offerId, ...offerArgs(draft, owner.variant), p_funding_ack: draft.fundingAck }, "Couldn't save this offer. Try again.");
+  return write("update_offer", { p_offer_id: offerId, ...offerArgs(draft, owner.variant), p_funding_ack: draft.fundingAck }, t("Couldn't save this offer. Try again."));
 }
 
 /** set_offer_paused(p_offer_id, p_paused): Pause / Resume from the row menu. */
 export function setOfferPaused(offerId: string, paused: boolean): Promise<OfferWrite> {
-  return write("set_offer_paused", { p_offer_id: offerId, p_paused: paused }, paused ? "Couldn't pause this offer. Try again." : "Couldn't resume this offer. Try again.");
+  return write("set_offer_paused", { p_offer_id: offerId, p_paused: paused }, paused ? t("Couldn't pause this offer. Try again.") : t("Couldn't resume this offer. Try again."));
 }

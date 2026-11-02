@@ -8,6 +8,7 @@ import { serializeEnduranceResult } from "./results";
 import type { SessionSwap } from "./coachLogic";
 import type { Json } from "../../../lib/supabase/database.types";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+import { t } from "../../i18n/core";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -49,12 +50,12 @@ export interface WorkoutSaveResult {
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this workout.";
+    return t("Your session expired. Sign in again to save this workout.");
   }
   if (code === "23514") {
-    return "Some of this workout's numbers were out of range and it couldn't be saved.";
+    return t("Some of this workout's numbers were out of range and it couldn't be saved.");
   }
-  return "Couldn't save this workout. Check your connection and try again.";
+  return t("Couldn't save this workout. Check your connection and try again.");
 }
 
 /** Rounds to the scale the column actually stores, so a check constraint
@@ -164,7 +165,7 @@ export async function saveWorkoutSession(
 
   if (sessionError || !sessionRow) {
     console.error("[workout] Could not save session:", sessionError?.message);
-    return { ok: false, message: sessionError ? describe(sessionError) : "Couldn't save this workout." };
+    return { ok: false, message: sessionError ? describe(sessionError) : t("Couldn't save this workout.") };
   }
 
   const sessionId = sessionRow.id;
@@ -212,7 +213,7 @@ export async function saveWorkoutSession(
 
     if (blockError || !blockRows) {
       console.error("[workout] Could not save block results:", blockError?.message);
-      return abandon(blockError ? describe(blockError) : "Couldn't save this workout.");
+      return abandon(blockError ? describe(blockError) : t("Couldn't save this workout."));
     }
     scoredBlocks.forEach((b, i) => {
       const id = blockRows[i]?.id;
@@ -239,7 +240,7 @@ export async function saveWorkoutSession(
 
   if (exerciseError || !exerciseRows) {
     console.error("[workout] Could not save exercises:", exerciseError?.message);
-    return abandon(exerciseError ? describe(exerciseError) : "Couldn't save this workout.");
+    return abandon(exerciseError ? describe(exerciseError) : t("Couldn't save this workout."));
   }
 
   // Match children back to their parent by position rather than by array
@@ -485,7 +486,7 @@ export async function deleteWorkoutSession(sessionId: string): Promise<WorkoutMu
     return { ok: false, message: describe(error) };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That workout couldn't be deleted." };
+    return { ok: false, message: t("That workout couldn't be deleted.") };
   }
   return { ok: true };
 }
@@ -520,7 +521,7 @@ export async function updateWorkoutSession(
     return { ok: false, message: describe(error) };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That workout couldn't be updated." };
+    return { ok: false, message: t("That workout couldn't be updated.") };
   }
   return { ok: true };
 }

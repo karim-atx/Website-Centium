@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { statusFor } from "./index";
 import { fileTypeOf, type FileMeta } from "../storage/fileMeta";
+import { tk } from "../../i18n/core";
 
 // HE1.9 (Biomarkers & imaging): one row per RESULT, with the report it came
 // from, on the Database B2 model (HANDOVER_API.md "B2 · Health records and
@@ -171,7 +172,7 @@ export async function saveLabReport(input: {
   const { data, error } = await db.rpc("save_lab_report", { p_panel, p_markers: input.results.map((m) => ({ ...markerPayload(m), entry_method })) });
   if (error) {
     console.error("[labs] save_lab_report failed:", error.code, error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   }
   return { ok: true, panelId: data as string };
 }
@@ -181,7 +182,7 @@ export async function addStandaloneResult(userId: string, m: ResultInput, date: 
   const { error } = await db.from("blood_markers").insert({ user_id: userId, result_date: date, ...markerPayload(m) });
   if (error) {
     console.error("[labs] Could not add the result:", error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   }
   return { ok: true };
 }
@@ -201,7 +202,7 @@ export async function updateLabResult(id: string, patch: Omit<ResultInput, "name
     .select("id");
   if (error || !data || data.length === 0) {
     if (error) console.error("[labs] Could not update result:", error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   }
   return { ok: true };
 }
@@ -214,7 +215,7 @@ export async function updatePanel(
   const { data, error } = await db.from("blood_panels").update(patch).eq("id", panelId).select("id");
   if (error || !data || data.length === 0) {
     if (error) console.error("[labs] Could not update the report:", error.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   }
   return { ok: true };
 }
@@ -228,7 +229,7 @@ export async function moveLabResult(userId: string, result: LabResult, all: LabR
   if (result.date === date) return { ok: true };
   if (!result.panelId) {
     const { data, error } = await db.from("blood_markers").update({ result_date: date }).eq("id", result.id).select("id");
-    if (error || !data || data.length === 0) return { ok: false, message: "Couldn't save. Try again." };
+    if (error || !data || data.length === 0) return { ok: false, message: tk("Couldn't save. Try again.") };
     return { ok: true };
   }
   const { data: copy, error: insertError } = await db
@@ -238,7 +239,7 @@ export async function moveLabResult(userId: string, result: LabResult, all: LabR
     .single();
   if (insertError || !copy) {
     if (insertError) console.error("[labs] Could not copy the result:", insertError.message);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: tk("Couldn't save. Try again.") };
   }
   const removed = await deleteLabResults([result], all);
   if (!removed.ok) {
@@ -259,7 +260,7 @@ export async function deleteLabResults(remove: LabResult[], all: LabResult[]): P
   const { data, error } = await db.from("blood_markers").delete().in("id", ids).select("id");
   if (error || !data || data.length !== ids.length) {
     if (error) console.error("[labs] Could not delete results:", error.message);
-    return { ok: false, message: "Couldn't delete. Try again." };
+    return { ok: false, message: tk("Couldn't delete. Try again.") };
   }
   const gone = new Set(ids);
   const panelIds = [...new Set(remove.map((r) => r.panelId).filter((x): x is string => !!x))];

@@ -2,6 +2,7 @@ import { formatShortDate } from "../../utils/date";
 import { stage4Message } from "../venues/venueLogic";
 import { BUSINESS_CLOSED_CODE, CLOSED_BOOK_CLASS, closureMessage } from "../business-closure/logic";
 import { noShowMessage } from "../no-shows/noShowModel";
+import { t, tk, tn } from "../../i18n/core";
 
 // B9 (Database docs/HANDOVER_API.md "B9 · Classes and schedule"), the
 // member's side, as pure functions so node:test can hold them: the venue
@@ -20,9 +21,9 @@ export const isClassPolicyKind = (k: string): k is ClassPolicyKind => (CLASS_POL
 
 /** The business side's own names for the documents (business-more PoliciesPages). */
 export const CLASS_POLICY_TITLES: Record<ClassPolicyKind, string> = {
-  waiver: "Liability waiver",
-  class_terms: "Class terms",
-  house_rules: "House rules",
+  waiver: tk("Liability waiver"),
+  class_terms: tk("Class terms"),
+  house_rules: tk("House rules"),
 };
 
 /**
@@ -36,7 +37,7 @@ export type VenuePolicyKind = ClassPolicyKind | (typeof APPOINTMENT_POLICY_KINDS
 
 export const VENUE_POLICY_TITLES: Record<VenuePolicyKind, string> = {
   ...CLASS_POLICY_TITLES,
-  appointment_waiver: "Appointment waiver",
+  appointment_waiver: tk("Appointment waiver"),
 };
 
 /** The order the documents are read in: the waiver first, as the business lists them. */
@@ -58,19 +59,21 @@ export function classErrorMessage(code: string | undefined, serverMessage: strin
     case "ATXS0":
       return noShowMessage("book", code, detail, fallback);
     case "ATXE0":
-      return "This class was cancelled by the venue.";
+      return t("This class was cancelled by the venue.");
     case "ATXE2": {
       const n = /open (\d+) days?/i.exec(serverMessage)?.[1];
-      return n ? `Bookings for this class open ${n} ${n === "1" ? "day" : "days"} before it starts.` : "Bookings for this class aren't open yet.";
+      return n
+        ? tn(n === "1" ? 1 : Number(n) || 2, "Bookings for this class open {n} day before it starts.", "Bookings for this class open {n} days before it starts.", { n })
+        : t("Bookings for this class aren't open yet.");
     }
     case "ATXE3":
-      return "Bookings for this class have closed.";
+      return t("Bookings for this class have closed.");
     case "ATXE4":
-      return "Accept this venue's terms before booking.";
+      return t("Accept this venue's terms before booking.");
     case "ATXE5":
-      return "The waitlist for this class is full.";
+      return t("The waitlist for this class is full.");
     case "ATXF6":
-      return "No spots left on Centium for this class.";
+      return t("No spots left on Centium for this class.");
     case BUSINESS_CLOSED_CODE:
       return closureMessage(CLOSED_BOOK_CLASS, serverMessage);
     default:
@@ -100,22 +103,22 @@ export function bookingWindowLine(rules: Pick<ClassBookingRules, "bookingWindowD
   const days = rules.bookingWindowDays;
   if (startsAt) {
     const opens = new Date(new Date(startsAt).getTime() - days * 86_400_000);
-    if (Number.isFinite(opens.getTime()) && opens.getTime() > now.getTime()) return `Bookings open ${dayMonthOf(opens)}.`;
+    if (Number.isFinite(opens.getTime()) && opens.getTime() > now.getTime()) return t("Bookings open {date}.", { date: dayMonthOf(opens) });
   }
-  return `Bookings open ${days} ${days === 1 ? "day" : "days"} ahead.`;
+  return tn(days, "Bookings open {n} day ahead.", "Bookings open {n} days ahead.");
 }
 
 /** business_classes.level (class_level enum) as the Level tile's value. */
 export const CLASS_LEVEL_LABELS = {
-  all_levels: "All levels",
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
+  all_levels: tk("All levels"),
+  beginner: tk("Beginner"),
+  intermediate: tk("Intermediate"),
+  advanced: tk("Advanced"),
 } as const;
 export type ClassLevel = keyof typeof CLASS_LEVEL_LABELS;
 
 export function levelLabel(level: string | null | undefined): string | null {
-  return level && level in CLASS_LEVEL_LABELS ? CLASS_LEVEL_LABELS[level as ClassLevel] : null;
+  return level && level in CLASS_LEVEL_LABELS ? t(CLASS_LEVEL_LABELS[level as ClassLevel]) : null;
 }
 
 /** MO1.4.4 #27: "Mat · Water · Towel"; null when there is nothing to bring. */

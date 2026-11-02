@@ -1,6 +1,7 @@
 import type { HealthMetricPoint } from "../../types";
 import { averageOf, HEALTH_METRIC_META, withinDays, type MetricReadings } from "./series";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 // Day / Week / Month / Year, aggregated from readings that exist.
 //
@@ -30,10 +31,10 @@ export const PERIOD_DAYS: Record<Period, number> = {
 };
 
 export const PERIOD_LABEL: Record<Period, string> = {
-  daily: "Today",
-  weekly: "Weekly average",
-  monthly: "Monthly average",
-  yearly: "Yearly average",
+  daily: tk("Today"),
+  weekly: tk("Weekly average"),
+  monthly: tk("Monthly average"),
+  yearly: tk("Yearly average"),
 };
 
 export interface PeriodBucket {
@@ -95,7 +96,7 @@ function bucketOf(point: HealthMetricPoint, period: Period): { key: string; labe
     // Calendar weeks within the month, so "Week 2" means the second week of
     // that month rather than the second bucket that happened to have data.
     const weekOfMonth = Math.floor((d - 1) / 7) + 1;
-    return { key: `${y}-${String(m).padStart(2, "0")}-w${weekOfMonth}`, label: `Week ${weekOfMonth}` };
+    return { key: `${y}-${String(m).padStart(2, "0")}-w${weekOfMonth}`, label: t("Week {n}", { n: weekOfMonth }) };
   }
   return { key: `${y}-${String(m).padStart(2, "0")}`, label: MONTH_NAMES[m - 1] };
 }
@@ -142,7 +143,7 @@ export function valueOn(readings: MetricReadings, date: string): number | null {
 /** "3 readings" / "1 reading" / null when there are none. */
 export function readingCountLabel(count: number): string | null {
   if (count <= 0) return null;
-  return `${count} reading${count === 1 ? "" : "s"}`;
+  return tn(count, "{n} reading", "{n} readings");
 }
 
 function round(value: number, places: number): number {
