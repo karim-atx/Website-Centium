@@ -203,7 +203,7 @@ export const MonthGrid: React.FC<{
               data-today={id === todayIso || undefined}
               onClick={() => onSelect(id)}
               aria-pressed={sel}
-              aria-label={`${new Date(`${id}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" })}${has ? ", sessions booked" : ""}${dot.cls ? (hiredLive ? ", hired classes" : ", classes") : ""}${off ? ", day off" : ""}`}
+              aria-label={[new Date(`${id}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" }), has ? t("sessions booked") : null, dot.cls ? (hiredLive ? t("hired classes") : t("classes")) : null, off ? t("day off") : null].filter(Boolean).join(t(", "))}
               className={clsx(
                 "tap flex flex-col items-center justify-center",
                 sel ? "bg-primary-fill text-on-primary-fill" : id === todayIso ? "bg-team-lavender/[0.16]" : ""
