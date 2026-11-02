@@ -772,6 +772,8 @@ const bizrevenue: Catalogue = {
   "See all {n} reviews": { zero: "عرض كل التقييمات", one: "عرض التقييم", two: "عرض التقييمين", few: "عرض التقييمات الـ{n}", many: "عرض التقييمات الـ{n}", other: "عرض التقييمات الـ{n}" },
   // == Revenue › Overview ==
   "{n} sold": { zero: "لم يُبع شيء", one: "بيعت قطعة واحدة", two: "بيعت قطعتان", few: "بيعت {n} قطع", many: "بيعت {n} قطعة", other: "بيعت {n} قطعة" },
+  // == EH final: team ratings bars ==
+  "{n} stars: {count} reviews": { zero: "{n} نجوم: عدد التقييمات {count}", one: "نجمة واحدة: عدد التقييمات {count}", two: "نجمتان: عدد التقييمات {count}", few: "{n} نجوم: عدد التقييمات {count}", many: "{n} نجمة: عدد التقييمات {count}", other: "{n} نجمة: عدد التقييمات {count}" },
 };
 
 export default bizrevenue;

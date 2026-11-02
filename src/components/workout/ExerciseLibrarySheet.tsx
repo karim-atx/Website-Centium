@@ -256,7 +256,7 @@ export const ExerciseLibrarySheet: React.FC<{
                   onClick={() => setDetail(r)}
                   className="tap flex-1 min-w-0 flex items-center text-start"
                   style={{ gap: 6 }}
-                  aria-label={`${r.name}, details`}
+                  aria-label={t("{name}, details", { name: r.name })}
                 >
                   <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                     {r.name}

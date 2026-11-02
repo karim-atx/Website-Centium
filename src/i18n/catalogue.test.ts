@@ -65,9 +65,10 @@ const AREAS = { landing, legal, auth, settings, plans, messages, notifications, 
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).
-const SAME = /^(Centium|Atraxia|Centium Premium|Apple|Google|Google Play|App Store|English|العربية|OK|AI|PDF|QR|ID|×|·|•|—|–|\/|&|\+|%|kg|lb|cm|kcal)$/;
-const TEXT_ATTRS = new Set(["placeholder", "title", "aria-label", "alt", "label", "aria-description", "aria-placeholder"]);
-const IGNORE = /i18n-ignore/;
+const SAME = /^(Centium|Atraxia|Centium Premium|Centium Business|Whish|Apple Health|Health Connect|Apple|Google|Google Play|App Store|English|العربية|OK|AI|PDF|QR|ID|×|·|•|—|–|\/|&|\+|%|kg|lb|cm|kcal)$/;
+// Props whose value is text a person reads.
+const TEXT_PROPS = new Set(["placeholder", "title", "aria-label", "alt", "label", "aria-description", "aria-placeholder", "subtitle", "sub", "description", "hint", "caption", "heading", "message", "helper", "ariaLabel"]);
+const IGNORE = /i18n-ignore|i18n-ok/;
 
 type Found = { keys: { key: string; plural: boolean; line: number }[]; bare: { text: string; line: number }[] };
 
@@ -100,14 +101,48 @@ function scan(file: string): Found {
     if (ts.isJsxText(node) && /[A-Za-z]/.test(node.text) && !SAME.test(node.text.trim()) && !ignored(node.getStart(sf))) {
       found.bare.push({ text: node.text.trim().replace(/\s+/g, " "), line: lineOf(node) });
     }
-    if (ts.isJsxAttribute(node) && TEXT_ATTRS.has(node.name.getText(sf)) && node.initializer) {
-      const v = ts.isStringLiteral(node.initializer) ? node.initializer.text : ts.isJsxExpression(node.initializer) ? lit(node.initializer.expression) : null;
-      if (v && /[A-Za-z]/.test(v) && !SAME.test(v.trim()) && !ignored(node.getStart(sf))) found.bare.push({ text: `${node.name.getText(sf)}="${v}"`, line: lineOf(node) });
+    // EH final: English inside a template literal shown as a JSX child or a
+    // text prop ({`From ${x}`}, aria-label={`Open ${name}`}), including either
+    // branch of a ternary and both sides of ?? / || / &&; also a plain string
+    // shown as {"…"} or given to subtitle / sub / hint and the like. Allowed:
+    // joins of interpolations and punctuation, URLs and paths, <style> CSS,
+    // and lines marked "// i18n-ok: <reason>".
+    let shown: Shown[] = [];
+    if (ts.isJsxExpression(node) && (ts.isJsxFragment(node.parent) || (ts.isJsxElement(node.parent) && node.parent.openingElement.tagName.getText(sf) !== "style"))) shown = shownIn(node.expression);
+    if (ts.isJsxAttribute(node) && TEXT_PROPS.has(node.name.getText(sf)) && node.initializer) {
+      shown = ts.isJsxExpression(node.initializer) ? shownIn(node.initializer.expression) : ts.isStringLiteral(node.initializer) ? [node.initializer] : [];
+    }
+    for (const s of shown) {
+      const text = staticText(s);
+      if (/[A-Za-z]{3,}/.test(text) && !SAME.test(text.trim()) && !ignored(s.getStart(sf))) found.bare.push({ text: s.getText(sf).replace(/\s+/g, " "), line: lineOf(s) });
     }
     ts.forEachChild(node, visit);
   };
   visit(sf);
   return found;
+}
+
+// The literals an expression shows: itself, the branches of a ternary, and
+// both sides of ?? / || / && (never inside a call, so a template passed to t()
+// or a helper isn't flagged).
+type Shown = ts.TemplateExpression | ts.NoSubstitutionTemplateLiteral | ts.StringLiteral;
+function shownIn(e: ts.Expression | undefined): Shown[] {
+  if (!e) return [];
+  if (ts.isParenthesizedExpression(e)) return shownIn(e.expression);
+  if (ts.isTemplateExpression(e) || ts.isNoSubstitutionTemplateLiteral(e) || ts.isStringLiteral(e)) return [e];
+  if (ts.isConditionalExpression(e)) return [...shownIn(e.whenTrue), ...shownIn(e.whenFalse)];
+  const joins = [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken];
+  if (ts.isBinaryExpression(e) && joins.includes(e.operatorToken.kind)) return [...shownIn(e.left), ...shownIn(e.right)];
+  return [];
+}
+
+// A literal's text outside ${…}, without URLs, paths and e-mail addresses.
+function staticText(s: Shown): string {
+  return (ts.isTemplateExpression(s) ? [s.head.text, ...s.templateSpans.map((p) => p.literal.text)] : [s.text])
+    .join(" ")
+    .replace(/\b(?:https?:\/\/|mailto:|tel:)\S*/g, " ")
+    .replace(/(?:^|\s)\/[\w\-./?=&#%]*/g, " ")
+    .replace(/[\w.+-]*@[\w.-]+/g, " ");
 }
 
 const vars = (s: string) => new Set([...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]));

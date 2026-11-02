@@ -180,7 +180,7 @@ export function SeatsPage() {
           {Array.from({ length: groups }, (_, b) => {
             const members = accepted.slice(b * per, (b + 1) * per);
             return (
-              <BizSection key={b} label={b === 0 && included > 0 ? "Included seats" : `Block ${b + (included > 0 ? 0 : 1)}`}>
+              <BizSection key={b} label={b === 0 && included > 0 ? t("Included seats") : t("Block {n}", { n: b + (included > 0 ? 0 : 1) })}>
                 {members.map((m) => (
                   <BizRow key={m.professionalId} icon={User} title={m.name} desc={roleAndProfession(m)} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
                 ))}

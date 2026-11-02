@@ -303,7 +303,7 @@ function BusinessSubscription() {
           <>
             <p className="text-sm text-primary-dark">
               <Slot text={t("You're on {plan}")} slot="plan">
-                <span className="font-bold">{plan.base?.name ?? "Base"}</span>
+                <span className="font-bold">{plan.base?.name ?? "Base" /* i18n-ok: plan names come from the database and stay English */}</span>
               </Slot>
               {plan.seatBlocks > 0 && (
                 <>

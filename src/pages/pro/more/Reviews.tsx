@@ -93,7 +93,7 @@ export default function Reviews() {
                 return (
                   <div key={star} className="flex items-center" style={{ gap: 8, fontSize: textPx(10.5), color: INK.chF }}>
                     <span style={{ width: 8 }}>{star}</span>
-                    <span className="flex-1 overflow-hidden" style={{ height: 6, borderRadius: 9999, background: INK.soft }} role="img" aria-label={`${star} stars: ${n}`}>
+                    <span className="flex-1 overflow-hidden" style={{ height: 6, borderRadius: 9999, background: INK.soft }} role="img" aria-label={tn(star, "{n} star: {count}", "{n} stars: {count}", { count: n })}>
                       <span className="block h-full" style={{ width: `${counted.length ? (n / counted.length) * 100 : 0}%`, background: GOLD, borderRadius: 9999 }} />
                     </span>
                     <span className="text-end" style={{ width: 14 }}>

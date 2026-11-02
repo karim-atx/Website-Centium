@@ -140,7 +140,7 @@ export function RatingsView({
                       ) : (
                         <span className="an5-rate-val">
                           <span className="an5-rate-cnt">
-                            {p.reviews} {p.reviews === 1 ? "review" : "reviews"}
+                            {tn(p.reviews, "{n} review", "{n} reviews")}
                           </span>
                           <span className="an5-rate-star">
                             <Star size={20} fill="currentColor" stroke="none" aria-hidden />

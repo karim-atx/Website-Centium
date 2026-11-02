@@ -709,6 +709,8 @@ const business: Catalogue = {
   "Finish setting up your business before editing your listing.": "أكمِل إعداد نشاطك التجاري قبل تعديل صفحتك.",
   // Round G clash fix: the same English with another meaning in this area.
   "Invited|section": "المدعوون",
+  // == EH final: team seat blocks ==
+  "Included seats": "المقاعد المشمولة",
 };
 
 export default business;

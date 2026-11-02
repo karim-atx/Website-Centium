@@ -166,7 +166,7 @@ function HeaderRow({ choices, offerId, range, onOffer, onRange }: { choices: Off
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Offer: ${label}`}
+        aria-label={t("Offer: {name}", { name: label })}
         onClick={() => setOpen(true)}
         className="market-focus hit"
         style={{ flex: 1, minWidth: 0, height: 42, boxSizing: "border-box", borderRadius: 12, border: `1px solid ${m.border}`, background: "transparent", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, paddingBlock: "0", paddingInline: "12px 10px", fontFamily: "inherit", fontSize: px(12.5), fontWeight: 700, color: m.ink, cursor: "pointer", lineHeight: "normal" }}

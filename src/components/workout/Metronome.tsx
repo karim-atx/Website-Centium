@@ -163,7 +163,7 @@ export const Metronome: React.FC = () => {
               <Minus size={13} />
             </button>
             <span className="tabular-nums" style={{ fontSize: textPx(20), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
-              {`${bpm} BPM`}
+              {`${bpm} BPM` /* i18n-ok: BPM stays Latin, as in workout.ts */}
             </span>
             <button
               onClick={() => setBpm((b) => Math.min(200, b + 5))}

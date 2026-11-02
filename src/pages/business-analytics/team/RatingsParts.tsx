@@ -44,7 +44,7 @@ export function RatingGraphic({
       {dist && (
         <div className="an5-dist">
           {dist.map((v, i) => (
-            <div key={i} className="an5-dist-row" aria-label={`${5 - i} stars: ${v} reviews`}>
+            <div key={i} className="an5-dist-row" aria-label={tn(5 - i, "{n} star: {count} reviews", "{n} stars: {count} reviews", { count: v })}>
               <span className="an5-dist-l">
                 {5 - i}
                 <span style={{ display: "flex", color: "var(--an-gold)" }}>
@@ -195,7 +195,7 @@ export function ReviewsSheet({
               </>
             )}
             <span>
-              {count} {count === 1 ? "review" : "reviews"}
+              {tn(count, "{n} review", "{n} reviews", { n: count })}
             </span>
             {list.length >= 2 && (
               <div className="an5-sortwrap">

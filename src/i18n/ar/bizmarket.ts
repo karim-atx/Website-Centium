@@ -695,6 +695,8 @@ const bizmarket: Catalogue = {
   "They are a": "هو",
   // Round G clash fix: the same English with another meaning in this area.
   "Offered|hire": "عُرض",
+  // == EH final: offer picker ==
+  "Offer: {name}": "العرض: {name}",
 };
 
 export default bizmarket;
