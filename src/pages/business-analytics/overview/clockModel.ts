@@ -225,7 +225,7 @@ export const hoursOf = (hhmm: string): number => {
 };
 
 /** "20 min", "1 h 52 min". */
-export const fmtMin = (mn: number): string => (mn >= 60 ? t("{h} h {m} min", { h: Math.floor(mn / 60), m: mn % 60 }) : t("{n} min", { n: mn }));
+export const fmtMin = (mn: number): string => (mn >= 60 ? t("{h} h {m} min", { h: Math.floor(mn / 60), m: mn % 60 }) : tn(mn, "{n} min", "{n} min"));
 
 const hexA = (hx: string, a: number): string => {
   if (!hx.startsWith("#")) return hx.replace(/^rgb\(var\((--[\w-]+)\)\)$/, `rgb(var($1) / ${a})`);

@@ -7,7 +7,7 @@ import { ANY_AVAILABLE, bookAppointmentFor, bookForErrorMessage, fetchSlots, sea
 import { dayTitle, isoDate } from "../../../services/store/format";
 import { clock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
-import { t, tk } from "../../../i18n/core";
+import { t, tk, tn } from "../../../i18n/core";
 import { KitField, KitFieldButton, OpsSheet } from "../store/opsKit";
 
 // services/appointments' "With" default, shown through t() here.
@@ -164,7 +164,7 @@ export function AddAppointmentSheet({
         <KitFieldButton
           id="appt-service"
           label={t("Service")}
-          value={service ? t("{service}, {n} min", { service: service.name, n: service.durationMin }) : null}
+          value={service ? tn(service.durationMin, "{service}, {n} min", "{service}, {n} min", { service: service.name }) : null}
           placeholder={t("Choose a service")}
           icon={ChevronDown}
           expanded={menu?.kind === "service"}
@@ -265,7 +265,7 @@ export function AddAppointmentSheet({
         options={
           menu?.kind === "staff"
             ? [{ value: "any", label: anyAvailable }, ...team.map((p) => ({ value: p.id, label: p.name }))]
-            : active.map((s) => ({ value: s.id, label: t("{service}, {n} min", { service: s.name, n: s.durationMin }) }))
+            : active.map((s) => ({ value: s.id, label: tn(s.durationMin, "{service}, {n} min", "{service}, {n} min", { service: s.name }) }))
         }
         selected={menu?.kind === "staff" ? (staffId ?? "any") : serviceId}
         onSelect={(v) => {

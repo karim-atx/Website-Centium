@@ -45,7 +45,7 @@ export const ShareChatCard: React.FC<{ card: ShareCard; time: string; footer?: R
         ? [daysLabel(card.days)]
         : [
             card.startsAt ? `${new Date(card.startsAt).toLocaleDateString(appLocale("en-US"), { weekday: "short", day: "numeric", month: "short" })} · ${clock12(card.startsAt)}` : null,
-            card.durationMin ? t("{n} min", { n: card.durationMin }) : null,
+            card.durationMin ? tn(card.durationMin, "{n} min", "{n} min") : null,
             card.location,
           ];
   const line = facts.filter(Boolean).join(" · ");

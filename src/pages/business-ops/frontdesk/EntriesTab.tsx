@@ -3,7 +3,7 @@ import clsx from "clsx";
 import { ScanLine, UserCheck } from "lucide-react";
 import { barHeights, BAR_AREA, entrySub, hourBins, hourCounts, hourShort, isDeskMethod, type Entry } from "../../../services/front-desk/frontDeskLogic";
 import { clock12 } from "../../../utils/time12";
-import { t, tk, tx } from "../../../i18n/core";
+import { t, tk, tx, tn } from "../../../i18n/core";
 import type { DeskState } from "./useFrontDesk";
 import { DeskLabel, DeskRow, EmptyCard, ErrorCard, LIST, ListCard, RULE, ListLine, NumberBoxes, NumberBoxesSkeleton, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
@@ -46,7 +46,7 @@ export const EntriesTab: React.FC<{
 function updatedLine(at: Date | null, now: Date): string | null {
   if (!at) return null;
   const min = Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60_000));
-  return min < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: min });
+  return min < 1 ? t("Updated just now") : tn(min, "Updated {n} min ago", "Updated {n} min ago");
 }
 
 const EntriesBody: React.FC<{

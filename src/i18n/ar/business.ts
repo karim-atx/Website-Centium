@@ -268,7 +268,7 @@ const business: Catalogue = {
   "{n} at {time}": "{n} عند {time}",
   "First class": "أول حصة",
   "On now": "جارية الآن",
-  "Next class in {n} min": "الحصة التالية بعد {n} دقيقة",
+  "Next class in {n} min": { zero: "الحصة التالية بعد {n} دقيقة", one: "الحصة التالية بعد دقيقة واحدة", two: "الحصة التالية بعد دقيقتين", few: "الحصة التالية بعد {n} دقائق", many: "الحصة التالية بعد {n} دقيقةً", other: "الحصة التالية بعد {n} دقيقة" },
   ", {n} scheduled": "، {n} مجدولة",
   "{title} at {time}": "{title} عند {time}",
   "{n} of {cap} booked": "{n} من {cap} محجوز",

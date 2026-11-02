@@ -176,7 +176,7 @@ const bizops: Catalogue = {
   "Couldn't load entries": "تعذّر تحميل الدخولات",
   "No entries yet|gym entries": "لا دخولات بعد",
   "Updated just now": "حُدّث الآن",
-  "Updated {n} min ago": "حُدّث قبل {n} دقيقة",
+  "Updated {n} min ago": { zero: "حُدّث قبل {n} دقيقة", one: "حُدّث قبل دقيقة واحدة", two: "حُدّث قبل دقيقتين", few: "حُدّث قبل {n} دقائق", many: "حُدّث قبل {n} دقيقةً", other: "حُدّث قبل {n} دقيقة" },
   "Back to the front desk": "العودة إلى الاستقبال",
   "Entries today": "دخولات اليوم",
   "In now": "في الداخل الآن",
@@ -283,7 +283,7 @@ const bizops: Catalogue = {
   "Check your rules for members under 18.": "راجع قواعدك للأعضاء دون 18 عامًا.",
 
   // == Appointments · today and the day (pages/business-ops/appointments) ==
-  "{service}, {n} min": "{service}، {n} دقيقة",
+  "{service}, {n} min": { zero: "{service}، {n} دقيقة", one: "{service}، دقيقة واحدة", two: "{service}، دقيقتان", few: "{service}، {n} دقائق", many: "{service}، {n} دقيقةً", other: "{service}، {n} دقيقة" },
   "Today, {date}": "اليوم، {date}",
   "Free slot": "موعد متاح",
   "Open|free slot": "متاح",
@@ -851,7 +851,7 @@ const bizops: Catalogue = {
   "The change starts from this date. Earlier sessions keep their details.": "يبدأ التغيير من هذا التاريخ. تحتفظ الجلسات السابقة بتفاصيلها.",
   "Date, {date}": "التاريخ، {date}",
   "Time, {time}": "الوقت، {time}",
-  "Duration, {n} minutes, ends {time}": "المدة، {n} دقيقة، تنتهي {time}",
+  "Duration, {n} minutes, ends {time}": { zero: "المدة، {n} دقيقة، تنتهي {time}", one: "المدة، دقيقة واحدة، تنتهي {time}", two: "المدة، دقيقتان، تنتهي {time}", few: "المدة، {n} دقائق، تنتهي {time}", many: "المدة، {n} دقيقةً، تنتهي {time}", other: "المدة، {n} دقيقة، تنتهي {time}" },
   "Fewer spots": "أماكن أقل",
   "More spots": "أماكن أكثر",
   "Price in dollars, paid in cash at the venue": "السعر بالدولار، يُدفع نقدًا في المكان",

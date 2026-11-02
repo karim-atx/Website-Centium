@@ -18,7 +18,7 @@ import { loadOverview } from "./overviewData";
 import { dayItems, emptyNextLine, headline, headlineSize, insights, isoDay, overviewCsv, type OvRaw } from "./overviewModel";
 import { anPalette, type AnPalette } from "./palette";
 import { LiveNowCard } from "./LiveNowCard";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 
 // Analytics › Overview (AN1, BizAnalyticsV45 section "overview"), the body
 // under the shared shell (title, tabs, range, range line and Export CSV are
@@ -179,7 +179,7 @@ export function OverviewSection() {
   }, [cells, ins, loading, revLoading, setExport]);
 
   const mins = updatedAt === null ? null : Math.floor((now.getTime() - updatedAt) / 60_000);
-  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: mins });
+  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : tn(mins, "Updated {n} min ago", "Updated {n} min ago");
   const can = (key: string) => (pushed ?? []).includes(key);
 
   return (

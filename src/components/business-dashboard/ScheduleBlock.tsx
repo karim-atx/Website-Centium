@@ -84,7 +84,7 @@ export function ScheduleBlock({ c, dates, items, today, now, noClassesEver, clas
     if (end <= nowMin) return "";
     if (x.ev) return t("Next up");
     const mins = start - nowMin;
-    return mins < 60 ? t("Next class in {n} min", { n: mins }) : t("Next up");
+    return mins < 60 ? tn(mins, "Next class in {n} min", "Next class in {n} min") : t("Next up");
   };
 
   const later = featured ? dayItems.filter((x, i) => i !== featIdx && x.time > featured.time && !companions.includes(x)).sort((a, b) => a.time.localeCompare(b.time))[0] : null;
