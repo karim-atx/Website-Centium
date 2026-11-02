@@ -5,6 +5,7 @@ import type { Catalogue } from "../core";
 // checks every t/tn/tx/tk key in them has Arabic here or in another area file,
 // and that no English is left outside t() in their JSX.
 export const FILES: string[] = [
+  "services/hires/proLogic.ts",
   "pages/pro/marketplace/ProMarketplaceRoutes.tsx",
   "pages/pro/marketplace/Overview.tsx",
   "pages/pro/marketplace/Performance.tsx",
@@ -330,6 +331,20 @@ const promarket: Catalogue = {
   "{who}'s free window to add their existing team closed on {date}. You can still work with them through an opening or a direct offer.": "انتهت في {date} الفترة المجانية التي يضيف فيها {who} فريقه الحالي. ما زال بإمكانك العمل معهم عبر وظيفة شاغرة أو عرض مباشر.",
   "{who}'s free window to add their existing team has closed. You can still work with them through an opening or a direct offer.": "انتهت الفترة المجانية التي يضيف فيها {who} فريقه الحالي. ما زال بإمكانك العمل معهم عبر وظيفة شاغرة أو عرض مباشر.",
   "This invite has expired": "انتهت صلاحية هذه الدعوة",
+  // == EH final · hire plans and confirming a hire (services/hires/proLogic) ==
+  "Keep the plan name to {n} characters or fewer.": "اجعل اسم الخطة {n} حرفًا أو أقل.",
+  "Enter the price as a number, for example 180 or $180.": "أدخل السعر رقمًا، مثل 180 أو $180.",
+  "Choose how often the plan is billed.": "اختر دورية فوترة الخطة.",
+  "A plan can list up to {n} features.": "يمكن أن تذكر الخطة حتى {n} ميزات.",
+  "That plan can't be saved: check the name, price and features.": "تعذّر حفظ هذه الخطة: تحقق من الاسم والسعر والميزات.",
+  "You can't change this plan.": "لا يمكنك تغيير هذه الخطة.",
+  "That plan isn't there any more. Refresh and try again.": "لم تعد هذه الخطة موجودة. حدّث الصفحة وحاول مرة أخرى.",
+  "Couldn't save the plan. Try again.": "تعذّر حفظ الخطة. حاول مرة أخرى.",
+  "This hire isn't waiting for confirmation any more. It may have been cancelled.": "لم يعد هذا التوظيف بانتظار التأكيد. ربما أُلغي.",
+  "Your free month has ended, so this payment can't be confirmed. Upgrade to connect new clients.": "انتهى شهرك المجاني، لذا لا يمكن تأكيد هذه الدفعة. رقِّ خطتك لتتصل بعملاء جدد.",
+  "You've reached the client limit on your {plan} plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.": "بلغت الحد الأقصى للعملاء في خطة {plan}، لذا لا يمكن تأكيد هذه الدفعة. افصل عميلًا لتحرير مكان، أو رقِّ خطتك.",
+  "You've reached the client limit on your plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.": "بلغت الحد الأقصى للعملاء في خطتك، لذا لا يمكن تأكيد هذه الدفعة. افصل عميلًا لتحرير مكان، أو رقِّ خطتك.",
+  "Couldn't confirm the payment. Try again.": "تعذّر تأكيد الدفعة. حاول مرة أخرى.",
 };
 
 export default promarket;

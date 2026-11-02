@@ -81,7 +81,7 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
 
   const bp = useRead(bpOn, async () => {
     const r = await fetchClientBloodPressure([clientId], "2000-01-01");
-    return r.ok ? { ok: true as const, data: r.byClient[clientId] ?? [] } : { ok: false as const, offline: /connection|offline|reach/i.test(r.message) };
+    return r.ok ? { ok: true as const, data: r.byClient[clientId] ?? [] } : { ok: false as const, offline: typeof navigator !== "undefined" && navigator.onLine === false };
   }, [clientId]);
   const tracked = useRead(hmOn, () => fetchTrackedTypes(clientId, ["heart_rate", "sleep", "steps", "water", "calories_burned"]), [clientId]);
   const vit = useRead(hmOn, () => fetchMetricRows(clientId, ["heart_rate", "sleep", "steps", "water", "calories_burned"], since), [clientId, since]);

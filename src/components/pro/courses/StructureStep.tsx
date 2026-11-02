@@ -201,7 +201,7 @@ export const StructureStep: React.FC<{
           </div>
         ))}
       <Note>{t("Every week needs at least one lesson before you publish.")}</Note>
-      {revisionId && <Note mt={4}>{RENAME_RESETS_PROGRESS}</Note>}
+      {revisionId && <Note mt={4}>{t(RENAME_RESETS_PROGRESS)}</Note>}
 
       <PopupMenu<"edit" | "up" | "down" | "delete">
         open={!!menu}

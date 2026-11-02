@@ -4072,7 +4072,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ).length;
     if (!authUserId) return "You need to be signed in to create a folder.";
     // Five levels, as for routine folders (the server refuses the rest: ATX33).
-    if (parentId && !canAddSubfolder(parentId, workoutTemplateFolders)) return `${MAX_DEPTH_NOTE}.`;
+    if (parentId && !canAddSubfolder(parentId, workoutTemplateFolders)) return `${translate(MAX_DEPTH_NOTE)}.`;
     const result = await createTemplateFolder(authUserId, { name, parentId, color, position });
     if (!result.ok || !result.folder) return result.message ?? "Could not create that folder.";
     setWorkoutTemplateFolders((prev) => [...prev, result.folder!]);
@@ -4164,7 +4164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dest = siblingIds(parent);
     dest.splice(Math.max(0, Math.min(index, dest.length)), 0, id);
     if ((moving.parentId ?? null) === parent) return reorderWorkoutTemplateFolders(parent, dest);
-    if (!canMoveFolder(id, parent, workoutTemplateFolders)) return `${MAX_DEPTH_NOTE}.`;
+    if (!canMoveFolder(id, parent, workoutTemplateFolders)) return `${translate(MAX_DEPTH_NOTE)}.`;
 
     const before = workoutTemplateFolders;
     setWorkoutTemplateFolders((prev) => {
@@ -4583,7 +4583,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ) => {
     // Five levels at most (folderDepth); the menu disables "Add subfolder" at
     // level 5, and this refuses whatever gets past it.
-    if (parentId && !canAddSubfolder(parentId, routineFolders)) return `${MAX_DEPTH_NOTE}.`;
+    if (parentId && !canAddSubfolder(parentId, routineFolders)) return `${translate(MAX_DEPTH_NOTE)}.`;
     // Position is the count of existing siblings, which is where the UI
     // appends it. The column is NOT NULL and has no default.
     const position = routineFolders.filter((f) => (f.parentId ?? null) === (parentId ?? null)).length;
@@ -4691,7 +4691,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dest.splice(Math.max(0, Math.min(index, dest.length)), 0, id);
     // Same parent: an ordinary reorder.
     if ((moving.parentId ?? null) === parent) return reorderRoutineFolders(parent, dest);
-    if (!canMoveFolder(id, parent, routineFolders)) return `${MAX_DEPTH_NOTE}.`;
+    if (!canMoveFolder(id, parent, routineFolders)) return `${translate(MAX_DEPTH_NOTE)}.`;
 
     const before = routineFolders;
     setRoutineFolders((prev) => {

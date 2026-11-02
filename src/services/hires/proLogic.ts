@@ -5,16 +5,17 @@
 // migration 20261101000000_professional_plans_and_hires.sql.
 
 import { parsePrice, formatPrice } from "../../utils/price";
-import { PERIOD } from "../venues/venueLogic";
+import { periodWord } from "../venues/venueLogic";
 import { OFFLINE_MESSAGE } from "../network-error";
+import { t, tk } from "../../i18n/core";
 
 export type PlanBilling = "daily" | "monthly" | "annually";
 export type HirePaymentMethod = "cash" | "whish";
 
 export const BILLING_OPTIONS: { value: PlanBilling; label: string }[] = [
-  { value: "daily", label: "Daily" },
-  { value: "monthly", label: "Monthly" },
-  { value: "annually", label: "Annually" },
+  { value: "daily", label: tk("Daily") },
+  { value: "monthly", label: tk("Monthly") },
+  { value: "annually", label: tk("Annually") },
 ];
 
 /** professional_plans_name_check: non-blank, at most 80 characters. */
@@ -24,13 +25,13 @@ export const PLAN_FEATURES_MAX = 10;
 
 /** "$180/month". */
 export function planPriceLine(price: number, billing: PlanBilling): string {
-  return `${formatPrice(price) || "$0"}/${PERIOD[billing]}`;
+  return `${formatPrice(price) || "$0"}/${periodWord(billing)}`;
 }
 
 /** "Cash" / "Whish Money" — the stage 5 checkout's own names for the two. */
 export function paymentMethodLabel(method: string): string {
   if (method === "whish") return "Whish Money";
-  if (method === "cash") return "Cash";
+  if (method === "cash") return tk("Cash");
   return method;
 }
 
@@ -60,23 +61,23 @@ export interface PlanWrite {
  */
 export function validatePlanDraft(draft: PlanDraft): { ok: true; row: PlanWrite } | { ok: false; message: string } {
   const name = draft.name.trim();
-  if (!name) return { ok: false, message: "Give the plan a name." };
+  if (!name) return { ok: false, message: t("Give the plan a name.") };
   if (name.length > PLAN_NAME_MAX) {
-    return { ok: false, message: `Keep the plan name to ${PLAN_NAME_MAX} characters or fewer.` };
+    return { ok: false, message: t("Keep the plan name to {n} characters or fewer.", { n: PLAN_NAME_MAX }) };
   }
 
   const price = parsePrice(draft.price);
   if (!price.ok || price.value === null) {
-    return { ok: false, message: "Enter the price as a number, for example 180 or $180." };
+    return { ok: false, message: t("Enter the price as a number, for example 180 or $180.") };
   }
 
   if (!BILLING_OPTIONS.some((b) => b.value === draft.billing)) {
-    return { ok: false, message: "Choose how often the plan is billed." };
+    return { ok: false, message: t("Choose how often the plan is billed.") };
   }
 
   const features = draft.features.map((f) => f.trim()).filter((f) => f.length > 0);
   if (features.length > PLAN_FEATURES_MAX) {
-    return { ok: false, message: `A plan can list up to ${PLAN_FEATURES_MAX} features.` };
+    return { ok: false, message: t("A plan can list up to {n} features.", { n: PLAN_FEATURES_MAX }) };
   }
 
   return { ok: true, row: { name, price: price.value, billing: draft.billing, features, active: draft.active } };
@@ -93,14 +94,14 @@ export function describePlanWriteError(error: { code?: string; message?: string 
   switch (error?.code) {
     case "23514":
       // A table check the validator above should already have caught.
-      return "That plan can't be saved: check the name, price and features.";
+      return t("That plan can't be saved: check the name, price and features.");
     case "42501":
-      return "You can't change this plan.";
+      return t("You can't change this plan.");
     case "PGRST116":
       // UPDATE ... select().single() matched nothing: not theirs, or gone.
-      return "That plan isn't there any more. Refresh and try again.";
+      return t("That plan isn't there any more. Refresh and try again.");
     default:
-      return "Couldn't save the plan. Try again.";
+      return t("Couldn't save the plan. Try again.");
   }
 }
 
@@ -138,17 +139,17 @@ export function hireGate(facts: {
 export function describeConfirmError(code: string | undefined, planLabel?: string | null): string {
   switch (code) {
     case "ATXA1":
-      return "This hire isn't waiting for confirmation any more. It may have been cancelled.";
+      return t("This hire isn't waiting for confirmation any more. It may have been cancelled.");
     case "ATX49":
-      return "Your free month has ended, so this payment can't be confirmed. Upgrade to connect new clients.";
+      return t("Your free month has ended, so this payment can't be confirmed. Upgrade to connect new clients.");
     case "ATXA0":
       return planLabel
-        ? `You've reached the client limit on your ${planLabel} plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.`
-        : "You've reached the client limit on your plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.";
+        ? t("You've reached the client limit on your {plan} plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.", { plan: planLabel })
+        : t("You've reached the client limit on your plan, so this payment can't be confirmed. Disconnect a client to free a place, or upgrade.");
     case "ATX01":
-      return "Your session expired. Sign in again.";
+      return t("Your session expired. Sign in again.");
     default:
-      return "Couldn't confirm the payment. Try again.";
+      return t("Couldn't confirm the payment. Try again.");
   }
 }
 
@@ -156,11 +157,11 @@ export function describeConfirmError(code: string | undefined, planLabel?: strin
 export function describeCancelError(code: string | undefined): string {
   switch (code) {
     case "ATXA1":
-      return "This hire has already been cancelled.";
+      return t("This hire has already been cancelled.");
     case "ATX01":
-      return "Your session expired. Sign in again.";
+      return t("Your session expired. Sign in again.");
     default:
-      return "Couldn't cancel the hire. Try again.";
+      return t("Couldn't cancel the hire. Try again.");
   }
 }
 
