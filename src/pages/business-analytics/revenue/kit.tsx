@@ -7,6 +7,7 @@ import {
 } from "../../../services/business-revenue";
 import { toCsvText } from "../../../utils/csv";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 // Small pieces shared by the Revenue pages (AnInsightsV3 and PaySeeAllV2
 // literal values through the .rv-scope tokens in revenue.css).
@@ -76,7 +77,7 @@ export const SoonChip: React.FC = () => (
     className="inline-block text-[10px] font-extrabold uppercase tracking-[0.05em] rounded-full px-[7px] py-[1px]"
     style={{ background: v("pale"), color: v("pdark") }}
   >
-    Soon
+    {t("Soon")}
   </span>
 );
 
@@ -108,19 +109,20 @@ export const Avatar: React.FC<{
 };
 
 /** The person on a payment: their first name, or "Member" when the reader gives none (no member code yet, B7). */
-export const whoOf = (r: PaymentRecord) => r.who ?? "Member";
+export const whoOf = (r: PaymentRecord) => r.who ?? t("Member");
 
+/** The kind's people, translated where read (vocabOf runs at render). */
 export interface Vocab {
   people: string;
-  person: string;
   peopleCap: string;
+  count: (n: number) => string;
 }
 export function vocabOf(kind: BizKind): Vocab {
   if (kind === "classes")
-    return { people: "clients", person: "client", peopleCap: "Clients" };
+    return { people: t("clients"), peopleCap: t("Clients"), count: (n) => tn(n, "{n} client", "{n} clients") };
   if (kind === "store")
-    return { people: "customers", person: "customer", peopleCap: "Customers" };
-  return { people: "members", person: "member", peopleCap: "Members" };
+    return { people: t("customers"), peopleCap: t("Customers"), count: (n) => tn(n, "{n} customer", "{n} customers") };
+  return { people: t("members"), peopleCap: t("Members"), count: (n) => tn(n, "{n} member", "{n} members") };
 }
 
 /** Error card with Retry (12/600 #C0392B + 12.5/800 pDark, 44 tall). */
@@ -142,7 +144,7 @@ export const ErrorLine: React.FC<{ message: string; onRetry: () => void }> = ({
       className="tap min-h-[44px] px-[6px] text-[12.5px] font-extrabold"
       style={{ color: v("pdark") }}
     >
-      Retry
+      {t("Retry")}
     </button>
   </RCard>
 );
@@ -155,8 +157,9 @@ export const OfflineLine: React.FC<{ at: Date | null }> = ({ at }) =>
       className="mt-[10px] text-[11.5px] leading-[16px]"
       style={{ color: v("ink-soft") }}
     >
-      Offline. Showing what was loaded at{" "}
-      {at.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" })}.
+      {t("Offline. Showing what was loaded at {time}.", {
+        time: at.toLocaleTimeString(appLocale("en-US"), { hour: "numeric", minute: "2-digit" }),
+      })}
     </p>
   ) : null;
 
@@ -170,11 +173,11 @@ export const PayHeader: React.FC<{
     <button
       type="button"
       onClick={onBack}
-      aria-label="Back"
+      aria-label={t("Back")}
       className="tap w-[44px] h-[44px] shrink-0 flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
       style={{ color: v("ink") }}
     >
-      <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
+      <ChevronLeft size={22} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" />
     </button>
     <div className="min-w-0">
       <p
@@ -211,7 +214,7 @@ export const MoreRow: React.FC<{
     }}
   >
     {label}
-    {icon ?? <ChevronRight size={14} aria-hidden />}
+    {icon ?? <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />}
   </button>
 );
 

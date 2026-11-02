@@ -2,11 +2,12 @@ import {
   dddDMon,
   dMon,
   money,
-  monthYear,
+  monthName,
   type OwedItem,
   type PaidEntry,
 } from "../../../services/business-revenue";
 import type { HistRow } from "./PayKit";
+import { t, tn } from "../../../i18n/core";
 
 export const REVENUE_BASE = "/app/business/analytics/revenue";
 
@@ -31,25 +32,24 @@ export function owedChip(o: Pick<OwedItem, "overdue" | "dueOn">): {
   severe: boolean;
 } {
   if (o.overdue > 0) {
-    const t = `${o.overdue} ${o.overdue === 1 ? "day" : "days"} overdue`;
     return {
-      short: `${o.overdue} ${o.overdue === 1 ? "day" : "days"} late`,
-      long: t,
+      short: tn(o.overdue, "{n} day late", "{n} days late"),
+      long: tn(o.overdue, "{n} day overdue", "{n} days overdue"),
       late: true,
       severe: o.overdue >= 14,
     };
   }
   if (o.overdue === 0)
     return {
-      short: "Due today",
-      long: "Due today",
+      short: t("Due today"),
+      long: t("Due today"),
       late: false,
       severe: false,
     };
   const due = o.dueOn ? dddDMon(o.dueOn) : "";
   return {
-    short: `Due ${due}`,
-    long: `Due ${due}`,
+    short: t("Due {date}", { date: due }),
+    long: t("Due {date}", { date: due }),
     late: false,
     severe: false,
   };
@@ -59,15 +59,15 @@ export function owedChip(o: Pick<OwedItem, "overdue" | "dueOn">): {
 export function owedSub(
   r: Pick<OwedItem, "item" | "method" | "dueOn" | "sourceKind">,
 ): string {
-  const m = r.method === "whish" ? "Whish" : "cash";
-  if (!r.dueOn) return `${r.item}, ${m}`;
+  const m = r.method === "whish" ? "Whish" : t("cash");
+  if (!r.dueOn) return t("{item}, {method}", { item: r.item, method: m });
   return r.sourceKind === "membership"
-    ? `${r.item} · due ${dMon(r.dueOn)}, ${m}`
-    : `${r.item} · ${dMon(r.dueOn)}, ${m}`;
+    ? t("{item} · due {date}, {method}", { item: r.item, date: dMon(r.dueOn), method: m })
+    : t("{item} · {date}, {method}", { item: r.item, date: dMon(r.dueOn), method: m });
 }
 
 /** "September": the month a paid payment was for (its due day, else the day paid). */
-const monthOfIso = (iso: string) => monthYear(iso).split(" ")[0];
+const monthOfIso = (iso: string) => monthName(iso);
 
 /**
  * Paid history rows (PaySeeAllV2 hist H(): "September · $95", method, paid
@@ -82,9 +82,12 @@ export function paidHistRows(
     const late = r.dueOn && r.paidOn > r.dueOn ? daysFromTo(r.dueOn, r.paidOn) : 0;
     const how =
       style === "renewal"
-        ? r.method === "whish" ? "Whish" : "Cash"
-        : (r.method === "whish" ? "Paid with Whish" : "Paid in cash") +
-          (late > 0 ? `, ${late} ${late === 1 ? "day" : "days"} late` : "");
+        ? r.method === "whish" ? "Whish" : t("Cash")
+        : late > 0
+          ? r.method === "whish"
+            ? tn(late, "Paid with Whish, {n} day late", "Paid with Whish, {n} days late")
+            : tn(late, "Paid in cash, {n} day late", "Paid in cash, {n} days late")
+          : r.method === "whish" ? t("Paid with Whish") : t("Paid in cash");
     return {
       t: `${monthOfIso(r.dueOn ?? r.paidOn)} · ${money(r.amount)}`,
       s: how,

@@ -27,6 +27,7 @@ import { AmenitiesSheet, FirstVisitSheet } from "./DetailsSheets";
 import { fetchMayHire, fetchMyOpenings, fetchMyTeam } from "../../services/hiring";
 import { TagChip } from "./hiring/hiringParts";
 import { HIRING_ROW_PENDING, hiringRowLine } from "./hiring/teamModel";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.1 Listing Overview (HANDOVER §4 "B-MA.1
 // Listing Overview"; Business Marketplace Screens lines 51–98 and the `biz`,
@@ -115,16 +116,16 @@ export function Overview() {
       ? { activeMemberships: d ? d.activeMembers : null, classBookingsThisWeek: d ? d.bookingsThisWeek : null, sessionsThisWeek: d ? d.classesThisWeek : null, plans: plansCount }
       : null;
 
-  if (m.error && !business) return <MarketError thing="your marketplace" onRetry={m.reload} />;
+  if (m.error && !business) return <MarketError thing={tk("your marketplace")} onRetry={m.reload} />;
   if (m.loading) {
     return (
-      <div aria-busy="true" aria-label="Loading your marketplace" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
-          <MarketSkeleton radius={20} rows={2} height={96} label="Loading" />
-          <MarketSkeleton radius={20} rows={1} height={96} label="Loading" />
+          <MarketSkeleton radius={20} rows={2} height={96} label={t("Loading")} />
+          <MarketSkeleton radius={20} rows={1} height={96} label={t("Loading")} />
         </div>
-        <MarketSkeleton radius={24} rows={3} height={165} label="Loading" />
-        <MarketSkeleton radius={20} rows={3} height={148} label="Loading" />
+        <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading")} />
+        <MarketSkeleton radius={20} rows={3} height={148} label={t("Loading")} />
       </div>
     );
   }
@@ -133,10 +134,10 @@ export function Overview() {
     // under it, so the owner saves the profile first (kept from the Listing tab).
     return (
       <div style={{ borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, padding: 16, color: c.ink, lineHeight: "normal" }}>
-        <div style={{ fontSize: px(13.5), fontWeight: 800 }}>Save your business profile first</div>
-        <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>Listings are published under it.</div>
+        <div style={{ fontSize: px(13.5), fontWeight: 800 }}>{t("Save your business profile first")}</div>
+        <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>{t("Listings are published under it.")}</div>
         <OutlineButton onClick={() => navigate("/app/business/profile")} style={{ marginTop: 12 }}>
-          Set up business profile
+          {t("Set up business profile")}
         </OutlineButton>
       </div>
     );
@@ -144,7 +145,7 @@ export function Overview() {
 
   const closed = !!business.closedAt;
   const canSwitch = online && m.isOwner && !sw.busy && !closed;
-  const switchNote = closed ? "Your business is closed, so it can't be listed." : !m.isOwner ? "Only the owner can show or hide your listing." : null;
+  const switchNote = closed ? t("Your business is closed, so it can't be listed.") : !m.isOwner ? t("Only the owner can show or hide your listing.") : null;
   const hero = heroView(ov);
 
   return (
@@ -164,19 +165,19 @@ export function Overview() {
         ) : null}
       </div>
       {ov.status === "loading" ? (
-        <MarketSkeleton radius={24} rows={3} height={165} label="Loading members reached" />
+        <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading members reached")} />
       ) : (
-        <HeroStatCard label="Clients reached" value={hero.value} delta={hero.delta} sub={hero.sub} series={hero.series} />
+        <HeroStatCard label={t("Clients reached")} value={hero.value} delta={hero.delta} sub={hero.sub} series={hero.series} />
       )}
       <StatLedger rows={ledgerRows(ov, gym)} />
-      {ov.status === "error" ? <MarketError thing="your offer figures" onRetry={retry} /> : null}
+      {ov.status === "error" ? <MarketError thing={tk("your offer figures")} onRetry={retry} /> : null}
       {kind === "gym" && gym ? (
         <>
-          <CapsLabel style={{ marginTop: 4 }}>Gym</CapsLabel>
+          <CapsLabel style={{ marginTop: 4 }}>{t("Gym")}</CapsLabel>
           <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
-            <GymRow title="Memberships" sub={membershipsLine(gym.plans, gym.activeMemberships)} onOpen={() => navigate("/app/business/gym")} />
+            <GymRow title={t("Memberships")} sub={membershipsLine(gym.plans, gym.activeMemberships)} onOpen={() => navigate("/app/business/gym")} />
             <div style={{ height: 1, background: c.div, marginInlineStart: 16 }} />
-            <GymRow title="Classes" sub={classesLine(gym.sessionsThisWeek, gym.classBookingsThisWeek)} onOpen={() => navigate("/app/business/classes")} />
+            <GymRow title={t("Classes")} sub={classesLine(gym.sessionsThisWeek, gym.classBookingsThisWeek)} onOpen={() => navigate("/app/business/classes")} />
             <div style={{ height: 1, background: c.div, marginInlineStart: 16 }} />
             <HiringRow businessId={business.id} tick={tick} />
           </div>
@@ -208,7 +209,7 @@ function StudioHiring({ businessId, tick }: { businessId: string; tick: number }
   if (!may || may.id !== businessId || !may.ok) return null;
   return (
     <>
-      <CapsLabel style={{ marginTop: 4 }}>Studio</CapsLabel>
+      <CapsLabel style={{ marginTop: 4 }}>{t("Studio")}</CapsLabel>
       <div style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
         <HiringRow businessId={businessId} tick={tick} />
       </div>
@@ -229,20 +230,20 @@ function HiringRow({ businessId, tick }: { businessId: string; tick: number }) {
   const key = `${businessId}:${tick}`;
   useEffect(() => {
     let alive = true;
-    void Promise.all([fetchMyOpenings(businessId, "open"), fetchMyTeam(businessId)]).then(([o, t]) => {
+    void Promise.all([fetchMyOpenings(businessId, "open"), fetchMyTeam(businessId)]).then(([o, tr]) => {
       if (!alive) return;
-      if (o.ok && t.ok) {
+      if (o.ok && tr.ok) {
         const fresh = o.value.reduce((n, x) => n + x.newApplicantCount, 0);
-        setState({ key, sub: hiringRowLine(o.value.length, fresh, t.value.length), isNew: fresh > 0 });
-      } else if ((!o.ok && o.pending) || (!t.ok && t.pending)) setState({ key, sub: HIRING_ROW_PENDING, isNew: false });
-      else setState({ key, sub: "Couldn't load your hiring figures.", isNew: false });
+        setState({ key, sub: hiringRowLine(o.value.length, fresh, tr.value.length), isNew: fresh > 0 });
+      } else if ((!o.ok && o.pending) || (!tr.ok && tr.pending)) setState({ key, sub: HIRING_ROW_PENDING, isNew: false });
+      else setState({ key, sub: t("Couldn't load your hiring figures."), isNew: false });
     });
     return () => {
       alive = false;
     };
   }, [businessId, key]);
   const s = state && state.key === key ? state : null;
-  return <GymRow title="Hiring" sub={s?.sub ?? ""} badge={s?.isNew ? <TagChip tag="NEW" /> : null} onOpen={() => navigate("/app/business/hiring")} />;
+  return <GymRow title={t("Hiring")} sub={s?.sub ?? ""} badge={s?.isNew ? <TagChip tag="NEW" /> : null} onOpen={() => navigate("/app/business/hiring")} />;
 }
 
 /** A Gym card row (lines 60 / 62 / 94): padding 14 16, gap 12, 14 / 700 title, 11.5 --faint sub, an optional chip, 16 chevron --faint. */
@@ -260,7 +261,7 @@ function GymRow({ title, sub, onOpen, badge }: { title: string; sub: string; onO
         {sub ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub}</span> : null}
       </span>
       {badge}
-      <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
+      <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
     </button>
   );
 }
@@ -335,10 +336,10 @@ function ListingSection() {
     photos: photos.length,
     photosDone: m.strength?.photos,
     description: !!business.bio?.trim(),
-    categories: business.categories.map((k) => CATEGORY_LABEL[k] ?? k),
+    categories: business.categories.map((k) => t(CATEGORY_LABEL[k] ?? k)),
     address: business.location,
     hoursSummary: hours,
-    amenities: amenities.map((k) => (isAmenityKey(k) ? AMENITY_LABEL[k] : k)),
+    amenities: amenities.map((k) => (isAmenityKey(k) ? t(AMENITY_LABEL[k]) : k)),
     amenitiesDone,
     delivery: !!m.store && (m.store.deliveryEnabled || m.store.pickupEnabled),
     contact: !!(business.publicEmail || business.publicPhone || business.publicWebsite || business.instagram),
@@ -352,12 +353,12 @@ function ListingSection() {
   const upcoming = m.classes.classes.filter((x) => x.date >= today && notEnded(x, now)).length;
   const meta =
     kind === "store"
-      ? `${m.offerings.offerings.length} product${m.offerings.offerings.length === 1 ? "" : "s"}`
+      ? tn(m.offerings.offerings.length, "{n} product", "{n} products")
       : kind === "gym"
-        ? `${m.plans.plans.length} passes and plans`
+        ? tn(m.plans.plans.length, "{n} pass or plan", "{n} passes and plans")
         : upcoming === 0
-          ? "No upcoming classes"
-          : `${upcoming} upcoming class${upcoming === 1 ? "" : "es"}`;
+          ? t("No upcoming classes")
+          : tn(upcoming, "{n} upcoming class", "{n} upcoming classes");
   const card: CardModel = {
     name: business.name,
     type: business.type,
@@ -414,11 +415,11 @@ function ListingSection() {
   };
 
   const photoLine = galleryLine(photos.length, counts.inReview);
-  const catSub = kind === "store" ? "Customers filter Explore by these." : kind === "gym" ? "People filter Explore by these." : "Clients filter Explore by these.";
+  const catSub = kind === "store" ? t("Customers filter Explore by these.") : kind === "gym" ? t("People filter Explore by these.") : t("Clients filter Explore by these.");
 
   return (
-    <section aria-label="Listing" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <CapsLabel style={{ marginTop: 4 }}>Listing</CapsLabel>
+    <section aria-label={t("Listing")} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <CapsLabel style={{ marginTop: 4 }}>{t("Listing")}</CapsLabel>
       <StrengthCard items={items} emptyLine={v.strengthEmpty} highlight={highlight} onItem={onItem} />
       <YourCard
         m={card}
@@ -426,10 +427,10 @@ function ListingSection() {
         emptyBusiness={isEmpty}
         listedSub={v.listed}
         listedEmptySub={v.listedEmpty}
-        hiddenSub={business.closedAt ? "Your business is closed, so it can't be listed." : v.hiddenSub}
+        hiddenSub={business.closedAt ? t("Your business is closed, so it can't be listed.") : v.hiddenSub}
         onPreview={() => navigate(`${m.base}/preview`)}
-        emptyAddress="Add your address"
-        emptyBio={`Add a short description so ${v.people} know what you're about.`}
+        emptyAddress={t("Add your address")}
+        emptyBio={v.emptyBio}
       />
       <PhotosCard photos={thumbs} line={photoLine} onOpen={() => navigate(`${m.base}/photos`)} />
       <CategoriesCard
@@ -462,7 +463,7 @@ function ListingSection() {
             const next = strengthItems(inputFor(hoursSummary(rows)));
             m.refreshStrength();
             flash("hours");
-            showStrip(!wasDone && hoursSummary(rows) ? `Opening hours added. Listing strength is now ${strengthPct(next)}%.` : "Opening hours saved.");
+            showStrip(!wasDone && hoursSummary(rows) ? t("Opening hours added. Listing strength is now {pct}%.", { pct: strengthPct(next) }) : t("Opening hours saved."));
           }}
         />
       )}
@@ -473,7 +474,7 @@ function ListingSection() {
           onSaved={() => {
             setAmenitiesOpen(false);
             flash("amenities");
-            showStrip("Amenities saved.");
+            showStrip(t("Amenities saved."));
           }}
         />
       )}
@@ -484,7 +485,7 @@ function ListingSection() {
           onSaved={() => {
             setFirstVisitOpen(false);
             flash("firstVisit");
-            showStrip("First visit info saved.");
+            showStrip(t("First visit info saved."));
           }}
         />
       )}

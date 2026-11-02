@@ -1,4 +1,5 @@
 import type { BizReview, ReviewMetrics } from "../../../services/reputation/types";
+import { appLocale } from "../../../i18n/format";
 import {
   addDays,
   dateOf,
@@ -8,33 +9,29 @@ import {
   previousOf,
   type AnalyticsRange,
 } from "../analyticsRange";
+import { t, tn, tk } from "../../../i18n/core";
 
 // AN13 numbers, computed from real review rows only (HANDOVER §1: no sample
 // numbers). Leads are template sentences from these numbers (V6-37: no text
 // analysis). Weeks start on Monday (user rule). Times are hours, not clocks.
 
-const MON = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-const dm = (iso: string) => {
-  const d = dateOf(iso);
-  return `${MON[d.getMonth()]} ${d.getDate()}`;
-};
+const dm = (iso: string) => dateOf(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 const dayOf = (ts: string) => isoOf(new Date(ts));
 const mean = (a: number[]) =>
   a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
 const round1 = (v: number) => Math.round(v * 10) / 10;
+
+/**
+ * The handover's injury wording, verbatim (KEEP-SAFETY, SW-36), shown when
+ * business_reviews_page's flag_kind is 'injury' (B14 follow-up): the flag
+ * card's reason line, and the notes in Message privately and Post a reply
+ * (ReviewComposer `injury`). Never reworded. Catalogue keys: t() where shown.
+ */
+export const INJURY_LINE = tk("Mentions an injury. Read it yourself; Centium never answers these automatically.");
+export const INJURY_MESSAGE_NOTE = tk(
+  "This review mentions an injury. Centium never answers these automatically. Contact the member privately first, then reply publicly if you choose.",
+);
+export const INJURY_REPLY_NOTE = tk("This review mentions an injury. Your reply is public, so keep it short and offer to talk privately.");
 
 /** Reviews that count: not redacted, with a rating. */
 export const counted = (list: BizReview[]) =>
@@ -65,15 +62,13 @@ export function reviewTag(
 /** "Today", "1 day ago", "3 days ago", "1 week ago", "3 weeks ago", then "8 Sep" / "8 Sep 2025". */
 export function ago(ts: string, today: string = isoOf(new Date())): string {
   const d = daysBetween(dayOf(ts), today);
-  if (d <= 0) return "Today";
-  if (d === 1) return "1 day ago";
-  if (d < 7) return `${d} days ago`;
-  if (d < 14) return "1 week ago";
-  if (d < 35) return `${Math.floor(d / 7)} weeks ago`;
+  if (d <= 0) return t("Today");
+  if (d < 7) return tn(d, "1 day ago", "{n} days ago");
+  if (d < 35) return tn(Math.floor(d / 7), "1 week ago", "{n} weeks ago");
   const day = dayOf(ts);
   return dateOf(day).getFullYear() === dateOf(today).getFullYear()
     ? dm(day)
-    : `${dm(day)}, ${dateOf(day).getFullYear()}`;
+    : dateOf(day).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" });
 }
 
 export interface Metrics {
@@ -170,8 +165,6 @@ export function metricsOf(
   };
 }
 
-const plural = (n: number, one: string, many = one + "s") =>
-  `${n} ${n === 1 ? one : many}`;
 const sign = (v: number, unit = "") =>
   (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v) + unit;
 export const signed = sign;
@@ -182,17 +175,20 @@ export function heroLead(
   kindWords: { people: string; rateWhat: string },
 ): string {
   if (m.total === 0)
-    return `Reviews appear here once ${kindWords.people} rate ${kindWords.rateWhat} on Centium.`;
+    return kindWords.people === "customers"
+      ? t("Reviews appear here once customers rate your products or your store on Centium.")
+      : kindWords.people === "clients"
+        ? t("Reviews appear here once clients rate their classes or your business on Centium.")
+        : t("Reviews appear here once members rate their classes or your business on Centium.");
   if (m.early)
-    return "Your first reviews came in less than 4 weeks ago. Trends start after a full period.";
+    return t("Your first reviews came in less than 4 weeks ago. Trends start after a full period.");
   if (m.rating === null)
-    return `Your rating shows once you have ${MIN_FOR_RATING} reviews.`;
-  const n = plural(m.inRange, "new review");
+    return t("Your rating shows once you have {n} reviews.", { n: MIN_FOR_RATING });
   if (m.ratingDelta !== null && m.ratingDelta >= 0.1)
-    return `Your rating is up ${m.ratingDelta.toFixed(1)} on the period before, with ${n}.`;
+    return tn(m.inRange, "Your rating is up {delta} on the period before, with 1 new review.", "Your rating is up {delta} on the period before, with {n} new reviews.", { delta: m.ratingDelta.toFixed(1) });
   if (m.ratingDelta !== null && m.ratingDelta <= -0.1)
-    return `Your rating is down ${Math.abs(m.ratingDelta).toFixed(1)} on the period before, with ${n}.`;
-  return `Your rating held at ${m.rating.toFixed(1)}, with ${n} this period.`;
+    return tn(m.inRange, "Your rating is down {delta} on the period before, with 1 new review.", "Your rating is down {delta} on the period before, with {n} new reviews.", { delta: Math.abs(m.ratingDelta).toFixed(1) });
+  return tn(m.inRange, "Your rating held at {rating}, with 1 new review this period.", "Your rating held at {rating}, with {n} new reviews this period.", { rating: m.rating.toFixed(1) });
 }
 
 /** AN13-032 row 2 / AN13-034 row 4 (template sentences from counts). */
@@ -201,8 +197,8 @@ export function distLines(m: Metrics): { insight: string; caption: string } {
   const five = tot ? Math.round((m.dist[0] / tot) * 100) : 0;
   const low = m.dist[3] + m.dist[4];
   return {
-    insight: `${five}% are 5 stars. ${low} of ${tot} are 2 stars or lower.`,
-    caption: `${five}% of reviews are 5 stars. ${plural(low, "review")} ${low === 1 ? "is" : "are"} 2 stars or lower.`,
+    insight: t("{five}% are 5 stars. {low} of {total} are 2 stars or lower.", { five, low, total: tot }),
+    caption: tn(low, "{five}% of reviews are 5 stars. 1 review is 2 stars or lower.", "{five}% of reviews are 5 stars. {n} reviews are 2 stars or lower.", { five }),
   };
 }
 
@@ -221,16 +217,19 @@ export function healthLines(m: Metrics): {
   const h = m.replyHours ?? 0;
   const tone = replyTimeTone(h);
   return {
-    insight: `You reply to ${m.replyRate ?? 0}% of reviews, in ${h} hours on average.`,
-    rateCap: `${m.recentReplied} of the last ${plural(m.recentN, "review")} ${m.recentReplied === 1 ? "has" : "have"} a reply.`,
+    insight: t("You reply to {pct}% of reviews, in {h} hours on average.", { pct: m.replyRate ?? 0, h }),
+    rateCap:
+      m.recentReplied === 1
+        ? tn(m.recentN, "1 of the last 1 review has a reply.", "1 of the last {n} reviews has a reply.")
+        : tn(m.recentN, "{replied} of the last 1 review have a reply.", "{replied} of the last {n} reviews have a reply.", { replied: m.recentReplied }),
     timeCap:
       tone === "good"
         ? h < 24
-          ? "Target: reply within 24 to 48 hours. You're well inside it."
-          : "Target: reply within 24 to 48 hours. You're inside it."
+          ? t("Target: reply within 24 to 48 hours. You're well inside it.")
+          : t("Target: reply within 24 to 48 hours. You're inside it.")
         : tone === "caution"
-          ? "Target: reply within 24 to 48 hours. You're a little over it."
-          : "Target: reply within 24 to 48 hours. You're well over it.",
+          ? t("Target: reply within 24 to 48 hours. You're a little over it.")
+          : t("Target: reply within 24 to 48 hours. You're well over it."),
   };
 }
 
@@ -289,7 +288,7 @@ export function weekSeries(
         dayOf(r.reply.at) <= addDays(s, 6),
     ).length;
     if (n >= 3) {
-      markers.push({ i, t: `Replied to ${n}`, kind: "reply" });
+      markers.push({ i, t: t("Replied to {n}", { n }), kind: "reply" });
       return;
     }
     const a = rating[i];
@@ -305,7 +304,7 @@ export function weekSeries(
     ? c.reduce((m, r) => (r.createdAt < m ? r.createdAt : m), c[0].createdAt)
     : null;
   return {
-    labels: starts.map((s) => "Week of " + dm(s)),
+    labels: starts.map((s) => t("Week of {date}", { date: dm(s) })),
     xl: [
       dm(starts[0]),
       dm(starts[Math.floor((WEEKS - 1) / 3)]),
@@ -355,8 +354,8 @@ export function filterReviews(list: BizReview[], key: FilterKey): BizReview[] {
  */
 export function flagLine(reportedAt: string | null): string {
   return reportedAt
-    ? `You reported this to Centium on ${dm(dayOf(reportedAt))}. We're reviewing it.`
-    : "Centium is reviewing this review. You can still reply.";
+    ? t("You reported this to Centium on {date}. We're reviewing it.", { date: dm(dayOf(reportedAt)) })
+    : t("Centium is reviewing this review. You can still reply.");
 }
 
 /** AN13-011 row 6: numbers only (V6-37). */
@@ -367,11 +366,13 @@ export function allReviewsLine(
   const c = counted(list).filter(
     (r) => dayOf(r.createdAt) >= range.from && dayOf(r.createdAt) <= range.to,
   );
-  if (!c.length) return "No new reviews this period.";
+  if (!c.length) return t("No new reviews this period.");
   const by = [5, 4, 3, 2, 1].map((s) => ({
     s,
     n: c.filter((r) => r.rating === s).length,
   }));
   const top = by.reduce((m, x) => (x.n > m.n ? x : m), by[0]);
-  return `Mostly ${top.s} ${top.s === 1 ? "star" : "stars"} this period, from ${plural(c.length, "new review")}.`;
+  return top.s === 1
+    ? tn(c.length, "Mostly 1 star this period, from 1 new review.", "Mostly 1 star this period, from {n} new reviews.")
+    : tn(c.length, "Mostly {stars} stars this period, from 1 new review.", "Mostly {stars} stars this period, from {n} new reviews.", { stars: top.s });
 }

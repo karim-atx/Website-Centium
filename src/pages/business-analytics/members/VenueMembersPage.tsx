@@ -7,6 +7,7 @@ import { VSkeletonRows, useOpsToast } from "../../../components/marketplace/Venu
 import { useMyVenues } from "../../../hooks/useMyVenues";
 import { AnEmptyCard, AnHeaderRow, AnStrip } from "./anKit";
 import type { MembersVocab } from "./membersModel";
+import { t } from "../../../i18n/core";
 
 // Analytics › Members › Venue members (OURS-AN4-member-rosters rows 1-18):
 // the AN4 page header with the venue as the title (a picker with two or more
@@ -24,10 +25,10 @@ export function VenueMembersPage({ vocab }: { vocab: MembersVocab }) {
   return (
     <div>
       <AnHeaderRow
-        crumb={vocab.label}
-        backLabel={`Back to ${vocab.label}`}
+        crumb={t(vocab.label)}
+        backLabel={vocab.label === "Clients" ? t("Back to Clients") : t("Back to Members")}
         onBack={() => navigate("/app/business/analytics/members")}
-        title={selected?.name ?? "Venue members"}
+        title={selected?.name ?? t("Venue members")}
         picker={many ? { open: !!picker, onToggle: (el) => setPicker((p) => (p ? null : el)) } : undefined}
       />
       {many && (
@@ -38,7 +39,7 @@ export function VenueMembersPage({ vocab }: { vocab: MembersVocab }) {
           variant="field"
           width={224}
           align="left"
-          heading="Venues"
+          heading={t("Venues")}
           options={venues.map((v) => ({ value: v.gymId, label: v.name }))}
           selected={selected?.gymId ?? null}
           onSelect={(id) => {
@@ -50,12 +51,12 @@ export function VenueMembersPage({ vocab }: { vocab: MembersVocab }) {
       {error && venues.length === 0 && <AnStrip text={error} onRetry={reload} />}
       {loading && venues.length === 0 && !error && <VSkeletonRows rows={5} pill />}
       {!loading && venues.length === 0 && !error && (
-        <AnEmptyCard icon={Store} title="No venues yet" body="You don't run or work at a venue on Centium yet." />
+        <AnEmptyCard icon={Store} title={t("No venues yet")} body={t("You don't run or work at a venue on Centium yet.")} />
       )}
       {selected && (
         <>
           <VenueMembersRoster key={selected.gymId} gymId={selected.gymId} mode="page" onToast={showToast} />
-          <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">First names only. Members under 18 are marked.</p>
+          <p className="text-[10.5px] leading-[15px] text-charcoal-faint text-center mt-[10px]">{t("First names only. Members under 18 are marked.")}</p>
         </>
       )}
       {toast}

@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { invalidateConsoleAccess, loadConsoleAccess } from "../business-console";
 import type { Database, TablesInsert } from "../../../lib/supabase/database.types";
+import { t } from "../../i18n/core";
 
 // A business's own business_profiles row: the listing content clients see on
 // Explore.
@@ -141,7 +142,7 @@ export async function saveMyBusinessProfile(
 
   if (updated.error) {
     console.error("[business-profile] Could not update the listing:", updated.error.message);
-    return { ok: false, message: "Couldn't save your listing. Try again." };
+    return { ok: false, message: t("Couldn't save your listing. Try again.") };
   }
   if (updated.data && updated.data.length > 0) {
     return { ok: true, profile: toProfile(updated.data[0] as Row) };
@@ -152,7 +153,7 @@ export async function saveMyBusinessProfile(
   if (!businessName || !businessType) {
     return {
       ok: false,
-      message: "Finish setting up your business before editing your listing.",
+      message: t("Finish setting up your business before editing your listing."),
     };
   }
 
@@ -171,13 +172,13 @@ export async function saveMyBusinessProfile(
   const inserted = await supabase.from("business_profiles").insert(insert);
   if (inserted.error) {
     console.error("[business-profile] Could not create the listing:", inserted.error.message);
-    return { ok: false, message: "Couldn't save your listing. Try again." };
+    return { ok: false, message: t("Couldn't save your listing. Try again.") };
   }
   const made = await supabase.from("business_profiles").select(COLUMNS).eq("profile_id", userId).maybeSingle();
   invalidateConsoleAccess();
   if (made.error || !made.data) {
     console.error("[business-profile] Could not read the new listing back:", made.error?.message);
-    return { ok: false, message: "Couldn't save your listing. Try again." };
+    return { ok: false, message: t("Couldn't save your listing. Try again.") };
   }
   return { ok: true, profile: toProfile(made.data as Row) };
 }

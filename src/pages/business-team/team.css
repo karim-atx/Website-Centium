@@ -273,7 +273,7 @@ html.high-contrast.dark .tm-vars {
 .tm-badge {
   position: absolute;
   top: 10px;
-  right: 10px;
+  inset-inline-end: 10px;
   min-width: 22px;
   height: 22px;
   padding: 0 6px;
@@ -316,7 +316,7 @@ html.high-contrast.dark .tm-vars {
   min-width: 0;
 }
 .tm-box + .tm-box {
-  border-left: 1px solid var(--tm-divider);
+  border-inline-start: 1px solid var(--tm-divider);
 }
 .tm-box-l {
   font-size: 11.5px;
@@ -870,16 +870,16 @@ html.reduce-motion .tm-seat:active {
 .tm-switch-knob {
   position: absolute;
   top: 3px;
-  left: 3px;
+  inset-inline-start: 3px;
   width: 22px;
   height: 22px;
   border-radius: 999px;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(36, 31, 27, 0.25);
-  transition: left 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: inset-inline-start 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .tm-switch[aria-checked="true"] .tm-switch-knob {
-  left: 21px;
+  inset-inline-start: 21px;
 }
 html.high-contrast .tm-switch[aria-checked="false"] {
   box-shadow: inset 0 0 0 1px var(--tm-ink-soft);
@@ -1059,7 +1059,7 @@ html.high-contrast .tm-switch[aria-checked="false"] {
 }
 .tm-hours span {
   position: absolute;
-  right: 4px;
+  inset-inline-end: 4px;
   transform: translateY(-50%);
   font-size: 9.5px;
   font-weight: 700;
@@ -1091,11 +1091,11 @@ html.high-contrast .tm-col {
   position: absolute;
   border-radius: 5px;
   background: var(--tm-block) !important;
-  border-left: 2.5px solid var(--tm-primary) !important;
+  border-inline-start: 2.5px solid var(--tm-primary) !important;
   box-sizing: border-box;
 }
 html.high-contrast .tm-cls {
-  border-left-width: 3px !important;
+  border-inline-start-width: 3px !important;
 }
 .tm-cls.sel {
   box-shadow: 0 0 0 2px var(--tm-deep);

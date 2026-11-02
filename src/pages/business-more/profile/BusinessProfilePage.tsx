@@ -38,6 +38,7 @@ import { BusinessCard, type CardData } from "./BusinessCard";
 import { bizLinkState } from "../../../components/share/business/bizCardModel";
 import { NO_LINK_HINT, NOT_LISTED_HINT, PAUSED_HINT } from "../../../components/share/business/BizShareButton";
 import { useOutbox, useSignOutGuard } from "../../../components/outbox/Outbox";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // MO1B-011 / -013 / -025 · Business Profile (BizMoreV8 screen="profile", hero
 // block line 43, rows lines 262 to 268). Replaces the old listing form
@@ -59,6 +60,9 @@ import { useOutbox, useSignOutGuard } from "../../../components/outbox/Outbox";
 
 const stripes = "repeating-linear-gradient(135deg, rgb(var(--c-primary-pale)) 0 10px, var(--biz-list) 10px 20px)";
 
+
+const INSTAGRAM = "Instagram";
+
 type PhotoKind = "cover" | "logo";
 type SheetKind = "hero" | "bio" | "cats" | "area" | "contact" | "photo" | "playlist" | null;
 
@@ -66,21 +70,21 @@ function todayLine(loc: BizLocation): string {
   const today = isoWeekdayIn(loc.timezone);
   const row = loc.hours.find((h) => h.weekday === today);
   const v = dayValue(row);
-  if (v === NOT_PUBLISHED) return "Hours not published";
-  if (v === "Closed") return "Closed today";
-  return `Open today ${v}`;
+  if (v === NOT_PUBLISHED) return t("Hours not published");
+  if (v === "Closed") return t("Closed today");
+  return t("Open today {hours}", { hours: v });
 }
 
 // AN3-078 / AN3-084 pop-up bodies per type (Classes keeps the drawn sentence).
 const LISTING_ON_BODY = {
-  classes: "Clients nearby can find you, see your perk and book your classes.",
-  gym: "Clients nearby can find you, see your perk and join.",
-  store: "Customers nearby can find you, see your perk and order.",
+  classes: tk("Clients nearby can find you, see your perk and book your classes."),
+  gym: tk("Clients nearby can find you, see your perk and join."),
+  store: tk("Customers nearby can find you, see your perk and order."),
 } as const;
 const LISTING_OFF_BODY = {
-  classes: "Existing members keep their bookings. New clients won't find you until you turn it back on.",
-  gym: "Existing members keep their passes. New members won't find you until you turn it back on.",
-  store: "Existing orders still go through. New customers won't find you until you turn it back on.",
+  classes: tk("Existing members keep their bookings. New clients won't find you until you turn it back on."),
+  gym: tk("Existing members keep their passes. New members won't find you until you turn it back on."),
+  store: tk("Existing orders still go through. New customers won't find you until you turn it back on."),
 } as const;
 
 export default function BusinessProfilePage() {
@@ -156,7 +160,7 @@ export default function BusinessProfilePage() {
 
   /** Saves a sheet's patch; null on success, else the message for the sheet. */
   const save = async (patch: BusinessPatch): Promise<string | null> => {
-    if (!authUserId) return "Couldn't save. Try again.";
+    if (!authUserId) return t("Couldn't save. Try again.");
     const id = business?.id ?? null;
     if (!id) {
       // No business_profiles row yet: the first save creates it (as the old
@@ -164,7 +168,7 @@ export default function BusinessProfilePage() {
       const made = await saveMyBusinessProfile(authUserId, {}, { businessName: user.businessName, businessType: user.businessType });
       if (!made.ok) return made.message;
       reload();
-      return "Your profile was set up. Try that again.";
+      return t("Your profile was set up. Try that again.");
     }
     const r = await saveBusiness(id, patch);
     if (!r.ok) return r.message;
@@ -174,7 +178,7 @@ export default function BusinessProfilePage() {
       updateProfile({ businessName: r.value.name, businessType: r.value.type as typeof user.businessType });
     }
     setSheet(null);
-    showToast("Profile updated.");
+    showToast(t("Profile updated."));
     return null;
   };
 
@@ -198,7 +202,7 @@ export default function BusinessProfilePage() {
       return;
     }
     (k === "logo" ? ownLogo : ownCover).refresh();
-    showToast("Photo sent for approval.");
+    showToast(t("Photo sent for approval."));
   };
 
   const removePhoto = async (k: PhotoKind) => {
@@ -236,7 +240,7 @@ export default function BusinessProfilePage() {
     }
     refreshOwnAvatar();
     setSheet(null);
-    showToast("Your photo was sent for approval.");
+    showToast(t("Your photo was sent for approval."));
   };
   const onAvatarRemove = async () => {
     if (!authUserId || avatarBusy) return;
@@ -245,13 +249,13 @@ export default function BusinessProfilePage() {
     const r = await removeAvatar(authUserId, user.avatarUrl);
     setAvatarBusy(false);
     if (!r.ok) {
-      setAvatarError(r.message ?? "Couldn't remove your picture.");
+      setAvatarError(r.message ?? t("Couldn't remove your picture."));
       return;
     }
     updateProfile({ avatarUrl: undefined });
     refreshOwnAvatar();
     setSheet(null);
-    showToast("Your photo was removed.");
+    showToast(t("Your photo was removed."));
   };
 
   const setListed = async (on: boolean) => {
@@ -261,11 +265,11 @@ export default function BusinessProfilePage() {
     setListingBusy(false);
     setListConfirm(null);
     if (!r.ok) {
-      setListToast((t) => ({ n: (t?.n ?? 0) + 1, message: "Couldn't change your listing. Try again.", error: true }));
+      setListToast((prev) => ({ n: (prev?.n ?? 0) + 1, message: t("Couldn't change your listing. Try again."), error: true }));
       return;
     }
     setBusiness(r.value);
-    setListToast((t) => ({ n: (t?.n ?? 0) + 1, message: on ? "Your listing is live on Explore" : "Your listing is hidden" }));
+    setListToast((prev) => ({ n: (prev?.n ?? 0) + 1, message: on ? t("Your listing is live on Explore") : t("Your listing is hidden") }));
   };
 
   const listed = !!business?.active;
@@ -299,11 +303,11 @@ export default function BusinessProfilePage() {
     navigate("/app/onboarding");
   };
 
-  const name = business?.name ?? user.businessName ?? "Your business";
+  const name = business?.name ?? user.businessName ?? t("Your business");
   const initials = initialsOf(name);
   const ownInitials = initialsOf(user.firstName || "You");
   const place = business?.location?.trim() || locations?.[0]?.name || null;
-  const typeLine = [typeLabel(business?.type ?? user.businessType), place].filter(Boolean).join(" · ");
+  const typeLine = [t(typeLabel(business?.type ?? user.businessType)), place].filter(Boolean).join(" · ");
   const showRating = !!rating && rating.total >= 3;
 
   // The card prints a link and QR only when the link resolves (same rule as the share button).
@@ -312,7 +316,7 @@ export default function BusinessProfilePage() {
     name,
     initials,
     type: typeLine,
-    rating: showRating && rating ? `${rating.average.toFixed(1)} · ${rating.total} reviews` : null,
+    rating: showRating && rating ? `${rating.average.toFixed(1)} · ${tn(rating.total, "{n} review", "{n} reviews")}` : null,
     coverUrl: business?.coverUrl ?? null,
     logoUrl: business?.logoUrl ?? null,
     slug: linkState === "ready" ? (business?.slug ?? null) : null,
@@ -330,8 +334,8 @@ export default function BusinessProfilePage() {
   if (loading && !business) {
     return (
       <div>
-        <SubHeader title="Business Profile" />
-        <div aria-busy="true" aria-label="Loading your profile">
+        <SubHeader title={t("Business Profile")} />
+        <div aria-busy="true" aria-label={t("Loading your profile")}>
           <div className={clsx(LIST_BG, "animate-skeleton-pulse")} style={{ height: 132, borderRadius: 18 }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: 72, height: 72, borderRadius: 20, marginTop: -34, marginInlineStart: 14, boxShadow: "0 0 0 3px rgb(var(--c-cream))" }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: "55%", height: 16, borderRadius: 8, marginTop: 12 }} />
@@ -344,9 +348,9 @@ export default function BusinessProfilePage() {
 
   return (
     <div className="[--biz-list:#F7F7FC] dark:[--biz-list:rgba(174,161,220,0.10)]">
-      <SubHeader title="Business Profile" />
+      <SubHeader title={t("Business Profile")} />
       <OfflineLine />
-      {error && <LoadError message="Couldn't load your profile." onRetry={reload} />}
+      {error && <LoadError message={t("Couldn't load your profile.")} onRetry={reload} />}
 
       {/* Hero (MO1B-011 rows 2 to 7) */}
       <div className="relative" style={{ marginBottom: 16 }}>
@@ -355,18 +359,18 @@ export default function BusinessProfilePage() {
             <img src={shownCover} alt="" className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <span className="absolute text-[11px] font-bold text-charcoal-faint" style={{ insetInlineStart: 12, top: 10 }}>
-              Add a cover photo
+              {t("Add a cover photo")}
             </span>
           )}
           <ImageApprovalBadge state={ownCover.image} className="absolute start-[10px] top-[10px]" />
           {uploading === "cover" && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <Loader2 size={32} className="animate-spin text-white" aria-label="Uploading" />
+              <Loader2 size={32} className="animate-spin text-white" aria-label={t("Uploading")} />
             </span>
           )}
           <button
             type="button"
-            aria-label="Change cover photo"
+            aria-label={t("Change cover photo")}
             onClick={() => setMenu("cover")}
             disabled={!business}
             className="tap absolute flex items-center justify-center rounded-full text-white"
@@ -378,7 +382,7 @@ export default function BusinessProfilePage() {
         <div className="relative flex items-end" style={{ gap: 8, marginTop: -34, paddingBlock: "0", paddingInline: "14px 2px" }}>
           <button
             type="button"
-            aria-label="Change logo"
+            aria-label={t("Change logo")}
             onClick={() => setMenu("logo")}
             disabled={!business}
             className="tap relative flex items-center justify-center shrink-0 bg-th-8e7fd0 text-white text-[24px] font-extrabold"
@@ -388,7 +392,7 @@ export default function BusinessProfilePage() {
               {shownLogo ? <img src={shownLogo} alt="" className="w-full h-full object-cover" /> : initials}
               {uploading === "logo" && (
                 <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-                  <Loader2 size={24} className="animate-spin text-white" aria-label="Uploading" />
+                  <Loader2 size={24} className="animate-spin text-white" aria-label={t("Uploading")} />
                 </span>
               )}
             </span>
@@ -404,7 +408,7 @@ export default function BusinessProfilePage() {
           <span className="flex-1" />
           <button
             type="button"
-            aria-label="Share business card"
+            aria-label={t("Share business card")}
             onClick={() => setCardOpen(true)}
             className={clsx("tap flex items-center justify-center rounded-full text-primary-dark", LIST_BG)}
             style={{ width: 40, height: 40 }}
@@ -413,7 +417,7 @@ export default function BusinessProfilePage() {
           </button>
           <button
             type="button"
-            aria-label="Edit name and type"
+            aria-label={t("Edit name and type")}
             onClick={() => openSheet("hero")}
             className={clsx("tap flex items-center justify-center rounded-full text-primary-dark", LIST_BG)}
             style={{ width: 40, height: 40 }}
@@ -432,11 +436,11 @@ export default function BusinessProfilePage() {
                 <Star size={13} strokeWidth={2.4} aria-hidden className="text-primary-dark" />
                 {rating.average.toFixed(1)}
               </span>
-              <span className="font-semibold text-charcoal-faint">{rating.total} reviews</span>
+              <span className="font-semibold text-charcoal-faint">{rating.total} {t("reviews")}</span>
             </>
           ) : (
             <span className="rounded-full bg-primary-pale text-primary-dark" style={{ padding: "2px 8px" }}>
-              New on Centium
+              {t("New on Centium")}
             </span>
           )}
           {business && (
@@ -444,7 +448,7 @@ export default function BusinessProfilePage() {
               className={business.active ? "rounded-full bg-[rgba(63,145,101,0.14)] text-[#3F9165] dark:bg-[rgba(127,199,156,0.16)] dark:text-[#7FC79C]" : "rounded-full bg-cream-soft text-charcoal-faint"}
               style={{ padding: "2px 8px" }}
             >
-              {business.active ? "Listed" : "Hidden"}
+              {business.active ? t("Listed") : t("Hidden")}
             </span>
           )}
         </div>
@@ -492,7 +496,7 @@ export default function BusinessProfilePage() {
               onClick={() => navigate(kindKnown && kind === "store" ? "/app/business/products/photos" : "/app/business/marketplace/photos")}
               className="tap whitespace-nowrap text-[11.5px] font-bold leading-[14px] text-primary-dark"
             >
-              Manage · {gallery.length}
+              {t("Manage · {n}", { n: gallery.length })}
             </button>
           ) : locations && locations.length > 0 ? (
             <button
@@ -500,12 +504,12 @@ export default function BusinessProfilePage() {
               onClick={() => navigate("/app/business/more/locations")}
               className="tap whitespace-nowrap text-[11.5px] font-bold leading-[14px] text-primary-dark"
             >
-              Manage · {covers}
+              {t("Manage · {n}", { n: covers })}
             </button>
           ) : undefined
         }
       >
-        Photos
+        {t("Photos")}
       </BizLabel>
       <div className="grid grid-cols-4" style={{ gap: 6, marginBottom: 14 }}>
         {[0, 1, 2, 3].map((i) => {
@@ -524,28 +528,28 @@ export default function BusinessProfilePage() {
         })}
       </div>
 
-      <BizSection label="About">
-        <BizRow icon={Text} title="Bio" desc={business?.bio || "Add a few lines about what clients can expect"} onClick={() => openSheet("bio")} />
+      <BizSection label={t("About")}>
+        <BizRow icon={Text} title={t("Bio")} desc={business?.bio || t("Add a few lines about what clients can expect")} onClick={() => openSheet("bio")} />
         <BizRow
           icon={Tags}
-          title="Categories"
-          desc={business && business.categories.length > 0 ? business.categories.map((c) => CATEGORY_LABEL[c] ?? c).join(", ") : "Pick up to 5"}
+          title={t("Categories")}
+          desc={business && business.categories.length > 0 ? business.categories.map((c) => t(CATEGORY_LABEL[c] ?? c)).join(t(", ")) : t("Pick up to 5")}
           onClick={() => openSheet("cats")}
         />
-        <BizRow icon={MapPinned} title="Area" desc={business?.location?.trim() || "Shown next to your name on Explore"} onClick={() => openSheet("area")} />
+        <BizRow icon={MapPinned} title={t("Area")} desc={business?.location?.trim() || t("Shown next to your name on Explore")} onClick={() => openSheet("area")} />
         {/* Round E: the house playlist, shown on the gym's page. */}
         <BizRow
           icon={Music2}
-          title="House playlist"
+          title={t("House playlist")}
           desc={(() => {
             const service = playlistServiceOf(business?.playlistUrl);
-            return service ? `${SERVICE_LABEL[service]} · shown on your page` : "Optional. Spotify, Apple Music or YouTube Music";
+            return service ? t("{service} · shown on your page", { service: SERVICE_LABEL[service] }) : t("Optional. Spotify, Apple Music or YouTube Music");
           })()}
           onClick={() => openSheet("playlist")}
         />
       </BizSection>
 
-      <BizSection label={kindKnown && kind === "store" ? "Pickup and opening hours" : "Locations and hours"}>
+      <BizSection label={kindKnown && kind === "store" ? t("Pickup and opening hours") : t("Locations and hours")}>
         {locations === null ? null : (
           locations.map((loc) => (
             <BizRow
@@ -557,33 +561,33 @@ export default function BusinessProfilePage() {
             />
           ))
         )}
-        <BizRow icon={Plus} title="Add a location" onClick={() => navigate("/app/business/more/locations?add=1")} />
+        <BizRow icon={Plus} title={t("Add a location")} onClick={() => navigate("/app/business/more/locations?add=1")} />
       </BizSection>
 
-      <BizSection label="Contact">
-        <BizRow icon={Phone} title="Phone" value={business?.publicPhone || undefined} onClick={() => openSheet("contact")} />
-        <BizRow icon={Mail} title="Email" value={business?.publicEmail || undefined} onClick={() => openSheet("contact")} />
-        <BizRow icon={Globe} title="Website" value={business?.publicWebsite || undefined} onClick={() => openSheet("contact")} />
-        <BizRow icon={InstagramGlyph} title="Instagram" value={business?.instagram ? `@${business.instagram}` : undefined} onClick={() => openSheet("contact")} />
+      <BizSection label={tx("Contact", "section")}>
+        <BizRow icon={Phone} title={t("Phone")} value={business?.publicPhone || undefined} onClick={() => openSheet("contact")} />
+        <BizRow icon={Mail} title={t("Email")} value={business?.publicEmail || undefined} onClick={() => openSheet("contact")} />
+        <BizRow icon={Globe} title={t("Website")} value={business?.publicWebsite || undefined} onClick={() => openSheet("contact")} />
+        <BizRow icon={InstagramGlyph} title={INSTAGRAM} value={business?.instagram ? `@${business.instagram}` : undefined} onClick={() => openSheet("contact")} />
       </BizSection>
 
-      <BizLabel>Listing</BizLabel>
+      <BizLabel>{t("Listing")}</BizLabel>
       <div ref={listingRef}>
       <BizCard className="relative">
         <BizRow
-          title="Show on Explore"
-          desc="Clients can find and book you"
+          title={t("Show on Explore")}
+          desc={t("Clients can find and book you")}
           toggle={{ checked: listed, onChange: (v) => setListConfirm(v ? "on" : "off"), disabled: !business || listingBusy || !online }}
         />
         <BizRow
           icon={IdCard}
-          title="Business ID"
-          desc="Professionals use it to join your team"
+          title={t("Business ID")}
+          desc={t("Professionals use it to join your team")}
           value={business?.code ? `${business.code} · Copy` : undefined}
           valueAction={
             business?.code
               ? () => {
-                  void copyText(business.code!).then((ok) => showToast(ok ? "Business ID copied." : "Couldn't copy. Try again."));
+                  void copyText(business.code!).then((ok) => showToast(ok ? t("Business ID copied.") : t("Couldn't copy. Try again.")));
                 }
               : undefined
           }
@@ -594,7 +598,7 @@ export default function BusinessProfilePage() {
             className="absolute pointer-events-none uppercase"
             style={{ top: -10, insetInlineEnd: 16, fontSize: 9.5, fontWeight: 800, letterSpacing: "0.06em", lineHeight: "14px", padding: "3px 8px", borderRadius: 999, background: "rgb(var(--c-primary))", color: "rgb(var(--c-on-primary-fill))" }}
           >
-            {`From ${from}`}
+            {from === "Dashboard" ? t("From Dashboard") : t("From Analytics")}
           </span>
         )}
         {/* AN3-076 row 6: a 1px primary-dark border and a 4px ring while highlighted (box-shadow 0.3s ease). */}
@@ -612,11 +616,11 @@ export default function BusinessProfilePage() {
       </BizCard>
       </div>
 
-      <BizSection label="You">
+      <BizSection label={t("You")}>
         <BizRow
           icon={UserRound}
-          title="Your photo"
-          desc="Shown to your team and in direct messages"
+          title={t("Your photo")}
+          desc={t("Shown to your team and in direct messages")}
           trailing={
             <span className="flex items-center gap-2 shrink-0">
               <AvatarApprovalBadge state={ownAvatar} />
@@ -638,7 +642,7 @@ export default function BusinessProfilePage() {
         className="tap w-full flex items-center justify-center text-[14px] font-bold text-charcoal-soft"
         style={{ height: 48 }}
       >
-        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
+        {confirmSignOut ? t("Tap again to confirm sign out") : t("Sign Out")}
       </button>
 
       <input
@@ -732,10 +736,10 @@ export default function BusinessProfilePage() {
         open={listConfirm !== null}
         layout="decision"
         tone="primary"
-        title={listConfirm === "off" ? "Hide your business from Explore?" : "Show your business on Explore?"}
-        subtitle={(listConfirm === "off" ? LISTING_OFF_BODY : LISTING_ON_BODY)[kind]}
-        cancelLabel="Cancel"
-        confirmLabel={listConfirm === "off" ? "Hide" : "Turn on"}
+        title={listConfirm === "off" ? t("Hide your business from Explore?") : t("Show your business on Explore?")}
+        subtitle={t((listConfirm === "off" ? LISTING_OFF_BODY : LISTING_ON_BODY)[kind])}
+        cancelLabel={t("Cancel")}
+        confirmLabel={listConfirm === "off" ? t("Hide") : t("Turn on")}
         busy={listingBusy}
         onCancel={() => {
           if (!listingBusy) setListConfirm(null);
@@ -750,7 +754,7 @@ export default function BusinessProfilePage() {
           shape="listing"
           message={listToast.message}
           icon={listToast.error ? <AlertCircle size={18} aria-hidden className="flex-none" /> : undefined}
-          action={!listToast.error && from ? { label: `Back to ${from}`, onClick: goBack } : undefined}
+          action={!listToast.error && from ? { label: from === "Dashboard" ? t("Back to Dashboard") : t("Back to Analytics"), onClick: goBack } : undefined}
           onExpire={() => setListToast(null)}
         />
       )}
@@ -790,14 +794,14 @@ function PhotoMenu({
       <div className="fixed inset-0 z-40" style={{ background: "rgba(36,31,27,0.18)" }} onClick={onClose} aria-hidden />
       <div
         role="menu"
-        aria-label={kind === "cover" ? "Cover photo" : "Logo"}
+        aria-label={kind === "cover" ? t("Cover photo") : t("Logo")}
         className="absolute z-50 bg-cream-card border border-th-aea1dc/50"
         style={{ insetInlineEnd: 0, top, width: 220, borderRadius: 14, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 8 }}
       >
         <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-charcoal-faint" style={{ margin: "2px 4px 2px" }}>
-          {kind === "cover" ? "Cover photo" : "Logo"}
+          {kind === "cover" ? t("Cover photo") : t("Logo")}
         </p>
-        {kind === "logo" && <p className="text-[11px] text-charcoal-faint" style={{ margin: "0 4px 2px" }}>Square, at least 400 px</p>}
+        {kind === "logo" && <p className="text-[11px] text-charcoal-faint" style={{ margin: "0 4px 2px" }}>{t("Square, at least 400 px")}</p>}
         {[
           { label: "Take a photo", on: onCamera, show: true },
           { label: "Choose from library", on: onLibrary, show: true },

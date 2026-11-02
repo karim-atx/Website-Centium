@@ -4,6 +4,7 @@ import type { MembershipPlanRow, PlanDbStatus } from "../../../services/membersh
 import { CentredDialog } from "../../business-market/listingParts";
 import { archiveBody } from "./planModel";
 import { usePlans, type PlansData } from "./usePlans";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.5 / B-MA.5.1: one data source for the plan
 // list (Marketplace › Gym › Memberships and Front desk › Memberships) and the
@@ -112,7 +113,7 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         if (action === "archive") {
           return sayThen(
             {
-              text: "Plan archived",
+              text: t("Plan archived"),
               tone: "success",
               stub: "Undo",
               undo: () => {
@@ -125,17 +126,17 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             carry
           );
         }
-        return say(action === "pause" ? "Plan paused" : action === "resume" ? "Plan resumed" : "Plan restored", { planId: plan.id });
+        return say(action === "pause" ? t("Plan paused") : action === "resume" ? t("Plan resumed") : t("Plan restored"), { planId: plan.id });
       }
       if (action === "hide" || action === "show") {
         const r = await data.setVisible(plan.id, action === "show");
         if (!r.ok) return fail(r.message);
-        return say(action === "hide" ? "Plan hidden from Explore" : "Plan shown on Explore", { planId: plan.id });
+        return say(action === "hide" ? t("Plan hidden from Explore") : t("Plan shown on Explore"), { planId: plan.id });
       }
       // duplicate
       const r = await data.duplicate(plan);
       if (!r.ok) return fail(r.message);
-      return say("Plan duplicated as hidden", { planId: r.plan.id });
+      return say(t("Plan duplicated as hidden"), { planId: r.plan.id });
     } finally {
       busy.current = false;
     }
@@ -175,11 +176,11 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const r = await data.remove(plan.id);
     setDialogBusy(false);
     if (!r.ok) {
-      if (r.inUse) return setDel({ ...del, inUse: true, error: `People have bought ${plan.name}, so it can't be deleted.${plan.dbStatus === "archived" ? "" : " Archive it to stop selling it."}` });
+      if (r.inUse) return setDel({ ...del, inUse: true, error: plan.dbStatus === "archived" ? t("People have bought {name}, so it can't be deleted.", { name: plan.name }) : t("People have bought {name}, so it can't be deleted. Archive it to stop selling it.", { name: plan.name }) });
       return setDel({ ...del, error: r.message });
     }
     setDel(null);
-    sayThen({ text: "Plan deleted", tone: "success", stub: "Done" }, after, carry);
+    sayThen({ text: t("Plan deleted"), tone: "success", stub: "Done" }, after, carry);
   };
 
   const archiveCount = archiving ? (data.figuresOf(archiving.plan).active ?? data.membersOf(archiving.plan)?.length ?? null) : null;
@@ -189,20 +190,20 @@ export const PlansProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       <CentredDialog
         open={!!archiving}
-        title={archiving ? `Archive ${archiving.plan.name}?` : ""}
+        title={archiving ? t("Archive {name}?", { name: archiving.plan.name }) : ""}
         body={archiveBody(archiveCount)}
-        cancel="Cancel"
-        action="Archive plan"
+        cancel={t("Cancel")}
+        action={t("Archive plan")}
         busy={dialogBusy}
         onCancel={() => !dialogBusy && setArchiving(null)}
         onAction={() => void confirmArchive()}
       />
       <CentredDialog
         open={!!del}
-        title={del?.step === 2 ? "Confirm delete" : "Delete this plan?"}
-        body={del?.step === 2 ? "This can't be undone." : "Members with an active plan keep it until it ends."}
-        cancel="Cancel"
-        action={del?.step === 2 ? (del.inUse ? (del.plan.dbStatus === "archived" ? "OK" : "Archive plan") : "Delete plan") : "Delete"}
+        title={del?.step === 2 ? t("Confirm delete") : t("Delete this plan?")}
+        body={del?.step === 2 ? t("This can't be undone.") : t("Members with an active plan keep it until it ends.")}
+        cancel={t("Cancel")}
+        action={del?.step === 2 ? (del.inUse ? (del.plan.dbStatus === "archived" ? t("OK") : t("Archive plan")) : t("Delete plan")) : t("Delete")}
         tone={del?.inUse && del.plan.dbStatus === "archived" ? "primary" : "destructive"}
         busy={dialogBusy}
         error={del?.error}

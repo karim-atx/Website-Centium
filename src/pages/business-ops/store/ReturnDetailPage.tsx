@@ -10,6 +10,7 @@ import { useOnline } from "../../../hooks/useOnline";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { CtaSpacer, EmptyCard, ErrorCard, FixedCta, KitLabel, KitPop, KitRow, KitTip, ListCard, ListSkeleton, NumberBoxes, OpsHeader, TextButton, useOpsToast } from "./opsKit";
 import { STEP_CHIP, STEP_ICON, customerLabel, useLive } from "./storeShared";
+import { t, tx } from "../../../i18n/core";
 
 // OURS-OP1-store-return-detail · Requested > Approved > Received > Refunded,
 // or Denied (B11 respond_return). Received puts the stock back. The Refunded
@@ -35,25 +36,25 @@ export default function ReturnDetailPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <OpsHeader back kicker="Returns" title="Return" />
-        <KitLabel label="Items" />
-        <ListSkeleton rows={2} label="Loading the return" />
+        <OpsHeader back kicker={t("Returns")} title={t("Return")} />
+        <KitLabel label={t("Items")} />
+        <ListSkeleton rows={2} label={t("Loading the return")} />
       </div>
     );
   }
   if (s.status === "error") {
     return (
       <div>
-        <OpsHeader back kicker="Returns" title="Return" />
-        <ErrorCard text="Couldn't load this return." onRetry={live.reload} />
+        <OpsHeader back kicker={t("Returns")} title={t("Return")} />
+        <ErrorCard text={t("Couldn't load this return.")} onRetry={live.reload} />
       </div>
     );
   }
   if (!ret) {
     return (
       <div>
-        <OpsHeader back kicker="Returns" title="Return" />
-        <EmptyCard icon={RotateCcw} title="Return not found" body="It may have been removed." />
+        <OpsHeader back kicker={t("Returns")} title={t("Return")} />
+        <EmptyCard icon={RotateCcw} title={t("Return not found")} body={t("It may have been removed.")} />
       </div>
     );
   }
@@ -71,17 +72,17 @@ export default function ReturnDetailPage() {
     const r = await respondReturn(ret.id, to, to === "refunded" ? ret.refundAmount : null);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Return updates are coming soon." : storeErrorText(r, "Couldn't update the return. Try again."));
+      setError(r.pending ? t("Return updates are coming soon.") : storeErrorText(r, t("Couldn't update the return. Try again.")));
       return false;
     }
     const msg =
       to === "approved"
-        ? `Return approved. ${customer} has been told.`
+        ? t("Return approved. {customer} has been told.", { customer })
         : to === "received"
-          ? "Marked as received."
+          ? t("Marked as received.")
           : to === "refunded"
-            ? `Refund recorded. ${customer} has been told.`
-            : `Return denied. ${customer} has been told.`;
+            ? t("Refund recorded. {customer} has been told.", { customer })
+            : t("Return denied. {customer} has been told.", { customer });
     showToast(msg, returnAction(to, ret.kind) !== null);
     setPop(null);
     await live.refresh();
@@ -98,75 +99,75 @@ export default function ReturnDetailPage() {
 
   return (
     <div>
-      <OpsHeader back kicker="Returns" title={`Return on #${ret.orderNumber ?? ""}`} sub={`Requested ${dayClock(ret.requestedAt)}`} />
+      <OpsHeader back kicker={t("Returns")} title={t("Return on #{number}", { number: ret.orderNumber ?? "" })} sub={t("Requested {when}", { when: dayClock(ret.requestedAt) })} />
 
-      <KitLabel label="Items" />
-      <ListCard label="Items">
+      <KitLabel label={t("Items")} />
+      <ListCard label={t("Items")}>
         {ret.items.map((i) => (
-          <KitRow key={i.itemId} icon={Package} title={i.name} sub={`qty ${i.qty}`} value={money(i.amount)} />
+          <KitRow key={i.itemId} icon={Package} title={i.name} sub={t("qty {n}", { n: i.qty })} value={money(i.amount)} />
         ))}
         {ret.orderNumber !== null && (
           <KitRow
             icon={Package}
-            title={`Order #${ret.orderNumber}`}
-            sub={[customer, ret.orderPlacedAt ? `Placed ${dayWord(ret.orderPlacedAt)}` : null].filter(Boolean).join(" · ")}
+            title={t("Order #{number}", { number: ret.orderNumber })}
+            sub={[customer, ret.orderPlacedAt ? t("Placed {when}", { when: dayWord(ret.orderPlacedAt) }) : null].filter(Boolean).join(" · ")}
             onClick={() => navigate(`/app/business/orders/${ret.orderId}`)}
           />
         )}
       </ListCard>
 
-      <KitLabel label="Reason" />
-      <ListCard label="Reason">
-        <KitRow icon={MessageSquare} title={ret.reason} sub={exchange ? "Asked for an exchange" : "Asked for a refund"} subWrap />
+      <KitLabel label={t("Reason")} />
+      <ListCard label={t("Reason")}>
+        <KitRow icon={MessageSquare} title={ret.reason} sub={exchange ? t("Asked for an exchange") : t("Asked for a refund")} subWrap />
       </ListCard>
 
       {exchange ? (
         <NumberBoxes
           items={[
-            { v: String(units), l: units === 1 ? "Item" : "Items" },
-            { v: "Exchange", l: "Asked for" },
+            { v: String(units), l: units === 1 ? tx("Item", "count") : t("Items") },
+            { v: t("Exchange"), l: t("Asked for") },
           ]}
         />
       ) : (
         <NumberBoxes
           items={[
-            { v: money(ret.refundAmount), l: "Refund" },
-            whish ? { v: "Whish", l: "Refund by", d: "Coming soon", dTone: "warn" } : { v: "Cash", l: "Refund by" },
+            { v: money(ret.refundAmount), l: t("Refund") },
+            whish ? { v: "Whish", l: t("Refund by"), d: t("Coming soon"), dTone: "warn" } : { v: t("Cash"), l: t("Refund by") },
           ]}
         />
       )}
-      {whish && !exchange && <KitTip>Whish refunds are coming soon. For now, refund in cash and mark it here.</KitTip>}
-      {refundBlocked && <KitTip>Recording a refund needs the Revenue permission. Ask the owner to mark it refunded.</KitTip>}
+      {whish && !exchange && <KitTip>{t("Whish refunds are coming soon. For now, refund in cash and mark it here.")}</KitTip>}
+      {refundBlocked && <KitTip>{t("Recording a refund needs the Revenue permission. Ask the owner to mark it refunded.")}</KitTip>}
 
-      <KitLabel label="Status" />
-      <ListCard label="Status">
+      <KitLabel label={t("Status")} />
+      <ListCard label={t("Status")}>
         {returnSteps(ret).map((st) => (
           <KitRow
             key={st.key}
             icon={STEP_ICON[st.glyph]}
-            title={st.title}
-            sub={st.at ? clock12(st.at) : st.hint ?? undefined}
-            chip={st.tone === "bad" ? { label: "Denied", tone: "bad" } : STEP_CHIP[st.tone]}
+            title={t(st.title)}
+            sub={st.at ? clock12(st.at) : st.hint ? t(st.hint) : undefined}
+            chip={st.tone === "bad" ? { label: t("Denied"), tone: "bad" } : { label: t(STEP_CHIP[st.tone].label), tone: STEP_CHIP[st.tone].tone }}
           />
         ))}
       </ListCard>
 
-      {ret.status === "requested" && <TextButton tone="high" label="Deny" onClick={() => setPop("deny")} disabled={!online} />}
+      {ret.status === "requested" && <TextButton tone="high" label={t("Deny")} onClick={() => setPop("deny")} disabled={!online} />}
 
       {action && (
         <>
           <CtaSpacer />
-          <FixedCta label={action.label} onClick={onCta} busy={busy && pop === null} disabled={!online || refundBlocked} error={pop === null ? error : null} />
+          <FixedCta label={t(action.label)} onClick={onCta} busy={busy && pop === null} disabled={!online || refundBlocked} error={pop === null ? error : null} />
         </>
       )}
 
       <KitPop
         open={pop === "deny"}
         icon={CircleX}
-        title="Deny this return?"
-        body={`${customer} is told by message.`}
-        action="Deny return"
-        keep="Keep request"
+        title={t("Deny this return?")}
+        body={t("{customer} is told by message.", { customer })}
+        action={t("Deny return")}
+        keep={t("Keep request")}
         busy={busy}
         error={pop === "deny" ? error : null}
         onAction={() => void move("rejected")}
@@ -179,10 +180,10 @@ export default function ReturnDetailPage() {
         open={pop === "refund"}
         tone="primary"
         icon={Banknote}
-        title={`Refund ${money(ret.refundAmount)} in cash?`}
-        body={`Hand the money back, then confirm. It's recorded in Revenue and ${customer} is told by message.`}
-        action="Mark as refunded"
-        keep="Not yet"
+        title={t("Refund {amount} in cash?", { amount: money(ret.refundAmount) })}
+        body={t("Hand the money back, then confirm. It's recorded in Revenue and {customer} is told by message.", { customer })}
+        action={t("Mark as refunded")}
+        keep={t("Not yet")}
         busy={busy}
         error={pop === "refund" ? error : null}
         onAction={() => void move("refunded")}

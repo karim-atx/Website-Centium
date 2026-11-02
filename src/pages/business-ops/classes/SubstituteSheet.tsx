@@ -10,6 +10,7 @@ import { fieldStyle, useMarketColours } from "./parts";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { Avatar } from "./ClassSheet";
 import { overlaps, running, weekdayShort, type Session, type SessionLite } from "./scheduleModel";
+import { t, tx } from "../../../i18n/core";
 
 // Request a substitute (OP1-089 … 093; kept, PLAN §3.4, in the B-MA.6
 // MasterBottomSheet chrome: --sgrey boxes, the pinned 50 CTA). Assigning names someone else on THIS
@@ -121,15 +122,15 @@ export function SubstituteSheet({
       const type = usualType(f.professionalId);
       const sub = f.isBusy
         ? clash
-          ? `Teaching ${clash.title} at ${time12(clash.startTime)}`
-          : "Busy at that time"
+          ? t("Teaching {class} at {time}", { class: clash.title, time: time12(clash.startTime) })
+          : t("Busy at that time")
         : f.markedUnavailable || outside
-          ? "Not available then"
+          ? t("Not available then")
           : noHours
-            ? "No availability set"
+            ? t("No availability set")
             : type
-              ? `Free · teaches ${type}`
-              : "Free";
+              ? t("Free · teaches {type}", { type })
+              : tx("Free", "not busy");
       return { f, free: ok, sub };
     })
     // Free first, then busy (OP1-090 row 6); by name inside each.
@@ -145,7 +146,7 @@ export function SubstituteSheet({
 
   // OP1-090 O2: everyone busy → one line under the heading instead of the rows.
   const nobodyFree = rows.length > 0 && rows.every((r) => !r.free);
-  const dayWord = session.date === today ? "Today" : weekdayShort(session.date);
+  const dayWord = session.date === today ? t("Today") : weekdayShort(session.date);
   const chosen = pick ? rows.find((r) => r.f.professionalId === pick)?.f.firstName || nameOf(pick) : "";
 
   const assign = async () => {
@@ -157,9 +158,9 @@ export function SubstituteSheet({
     if (!r.ok) {
       // OP1-092 O3: no longer free (the server's re-check, ATXD9) reopens the list.
       if (r.busy) {
-        setError(`${chosen} is no longer free at ${time12(session.startTime)}. Choose someone else.`);
+        setError(t("{name} is no longer free at {time}. Choose someone else.", { name: chosen, time: time12(session.startTime) }));
         setPick("");
-        setTick((t) => t + 1);
+        setTick((n) => n + 1);
         setMenuOpen(true);
       } else setError(r.message);
     }
@@ -174,7 +175,7 @@ export function SubstituteSheet({
       <BottomSheet
         open={open}
         onClose={() => !busy && onClose()}
-        title="Request a substitute"
+        title={t("Request a substitute")}
         animateExit
         footerRule
         footer={
@@ -193,7 +194,7 @@ export function SubstituteSheet({
               className="market-focus w-full flex items-center justify-center"
               style={{ height: 50, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 700, border: 0, opacity: off ? 0.4 : 1 }}
             >
-              {busy ? "Assigning…" : chosen ? `Assign ${chosen}` : "Assign"}
+              {busy ? t("Assigning…") : chosen ? t("Assign {name}", { name: chosen }) : t("Assign")}
             </button>
           </>
         }
@@ -204,24 +205,24 @@ export function SubstituteSheet({
               {session.title} · {dayWord} {time12(session.startTime)}
             </p>
             <p style={{ margin: "2px 0 0", fontSize: textPx(12), color: m.ink2 }}>
-              {session.professionalId ? nameOf(session.professionalId) : "No instructor yet"} · {session.booked} booked
+              {session.professionalId ? nameOf(session.professionalId) : t("No instructor yet")} · {t("{n} booked", { n: session.booked })}
             </p>
           </div>
 
           <div ref={setGroupEl} style={box}>
-            <p style={boxLabel}>Who covers it?</p>
+            <p style={boxLabel}>{t("Who covers it?")}</p>
             {loadFailed ? (
               <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", gap: 10, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
-                Couldn't check who's free.
+                {t("Couldn't check who's free.")}
                 <button type="button" onClick={() => setTick((t) => t + 1)} className="market-focus hit" style={{ minHeight: 32, fontSize: textPx(12.5), fontWeight: 800, color: m.pdark, background: "transparent", border: 0 }}>
-                  Retry
+                  {t("Retry")}
                 </button>
               </p>
             ) : !free ? (
-              <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>Finding who's free…</p>
+              <p style={{ margin: 0, minHeight: 41, display: "flex", alignItems: "center", fontSize: textPx(14), color: m.faint }}>{t("Finding who's free…")}</p>
             ) : rows.length === 0 ? (
               <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-                No other instructor or trainer is on your team yet. Add people through Hiring.
+                {t("No other instructor or trainer is on your team yet. Add people through Hiring.")}
               </p>
             ) : (
               <button
@@ -234,7 +235,7 @@ export function SubstituteSheet({
                 style={fieldStyle(m, { active: menuOpen })}
               >
                 <span className="flex-1 min-w-0 truncate" style={{ color: chosen ? m.ink : m.faint }}>
-                  {chosen || "Choose an instructor"}
+                  {chosen || t("Choose an instructor")}
                 </span>
                 <ChevronDown size={14} style={{ color: m.faint }} aria-hidden />
               </button>
@@ -244,7 +245,7 @@ export function SubstituteSheet({
           {/* OP1-089 row 4 / OP1-092 row 2: the note to the substitute. */}
           <div style={box}>
             <label htmlFor="sub-note" className="block" style={boxLabel}>
-              Note for them (optional)
+              {t("Note for them (optional)")}
             </label>
             <style>{`.sub-note::placeholder { color: ${m.faint}; opacity: 1; }`}</style>
             <textarea
@@ -253,7 +254,7 @@ export function SubstituteSheet({
               maxLength={1000}
               disabled={busy}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Anything they should know"
+              placeholder={t("Anything they should know")}
               className="sub-note market-focus w-full block resize-none"
               style={{ ...fieldStyle(m), display: "block", minHeight: 84, outline: "none", caretColor: m.pdark }}
             />
@@ -262,7 +263,7 @@ export function SubstituteSheet({
           {/* OP1-072 row 6: the booked are told (assign_class_instructor p_tell_members). */}
           {session.booked > 0 && (
             <p style={{ margin: "0 4px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-              Booked {people} get a message with the new instructor.
+              {people === "clients" ? t("Booked clients get a message with the new instructor.") : t("Booked members get a message with the new instructor.")}
             </p>
           )}
         </div>
@@ -279,11 +280,11 @@ export function SubstituteSheet({
           setError(null);
           setMenuOpen(false);
         }}
-        heading={`Free at ${time12(session.startTime)}`}
+        heading={t("Free at {time}", { time: time12(session.startTime) })}
         emptyNote={
           nobodyFree ? (
             <p style={{ margin: "0 4px 4px", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>
-              Nobody is free at {time12(session.startTime)}. Message your team or cancel the session.
+              {t("Nobody is free at {time}. Message your team or cancel the session.", { time: time12(session.startTime) })}
             </p>
           ) : undefined
         }

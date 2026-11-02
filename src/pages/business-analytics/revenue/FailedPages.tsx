@@ -30,6 +30,7 @@ import {
   REVENUE_BASE,
   WHISH_LIVE,
 } from "./payModel";
+import { t, tn } from "../../../i18n/core";
 
 // Failed payments and retries (AN14-019 Failed half card, -025, -052 to
 // -061, -073 to -088). Built now and HIDDEN until Whish is live (V6-44,
@@ -66,7 +67,7 @@ export function useFailedPayments(): FailedPayment[] {
   return [];
 }
 
-const whoOfF = (f: FailedPayment) => f.who ?? "Member";
+const whoOfF = (f: FailedPayment) => f.who ?? t("Member");
 
 /** The Failed half card (AN14-019 row 3, circle-alert #C0392B). */
 export const FailedHalf: React.FC = () => {
@@ -84,7 +85,7 @@ export const FailedHalf: React.FC = () => {
         style={{ color: v("high") }}
       >
         <CircleAlert size={13} strokeWidth={2.4} aria-hidden />
-        Failed
+        {t("Failed")}
       </p>
       <p
         className="text-[26px] font-extrabold leading-[30px] tracking-[-0.02em] mt-[8px] rv-num"
@@ -96,7 +97,7 @@ export const FailedHalf: React.FC = () => {
         className="text-[12px] font-bold leading-[16px] mt-[2px]"
         style={{ color: v("ink") }}
       >
-        {failed.length ? `${failed.length} failed` : "No failed payments"}
+        {failed.length ? t("{n} failed", { n: failed.length }) : t("No failed payments")}
       </p>
       <p
         className="text-[11px] leading-[15px] mt-[2px] flex-1"
@@ -104,9 +105,9 @@ export const FailedHalf: React.FC = () => {
       >
         {failed.length
           ? retrying.length
-            ? `${retrying.length} retrying.`
-            : "None retrying."
-          : "Declined Whish payments show here."}
+            ? t("{n} retrying.", { n: retrying.length })
+            : t("None retrying.")
+          : t("Declined Whish payments show here.")}
       </p>
       <button
         type="button"
@@ -118,8 +119,8 @@ export const FailedHalf: React.FC = () => {
           color: failed.length ? v("pdark") : v("faint"),
         }}
       >
-        {failed.length ? `See all ${failed.length}` : "All clear"}
-        {failed.length > 0 && <ChevronRight size={14} aria-hidden />}
+        {failed.length ? t("See all {n}", { n: failed.length }) : t("All clear")}
+        {failed.length > 0 && <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />}
       </button>
     </div>
   );
@@ -150,33 +151,33 @@ export const FailedListPage: React.FC = () => {
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader
-        crumb="Revenue · Payments"
-        title="Failed payments"
+        crumb={`${t("Revenue")} · ${t("Payments")}`}
+        title={t("Failed payments")}
         onBack={() => navigate(`${REVENUE_BASE}/payments`)}
       />
       <PayBoxes
         boxes={[
           {
-            l: "Failed",
+            l: t("Failed"),
             v: money(sum(list.map((f) => f.amount))),
             faint: empty,
           },
           {
-            l: "Payments",
+            l: t("Payments"),
             v: String(list.length),
             faint: empty,
             d: empty
               ? null
               : status === "stopped"
-                ? "stopped"
-                : `${retrying} retrying`,
+                ? t("stopped")
+                : t("{n} retrying", { n: retrying }),
             dTone: "caution",
           },
         ]}
         line={
           empty
-            ? "No failed payments this period."
-            : `Whish retries automatically ${AUTO_RETRIES === 2 ? "twice" : AUTO_RETRIES + " times"}. After that, follow up yourself.`
+            ? t("No failed payments this period.")
+            : tn(AUTO_RETRIES, "Whish retries automatically once. After that, follow up yourself.", "Whish retries automatically {n} times. After that, follow up yourself.")
         }
       />
       <PayControls
@@ -186,17 +187,17 @@ export const FailedListPage: React.FC = () => {
         count={
           empty
             ? undefined
-            : `${list.length} ${list.length === 1 ? "payment" : "payments"}`
+            : tn(list.length, "{n} payment", "{n} payments")
         }
         ctrls={[
           {
             key: "sort",
             icon: ArrowDownUp,
-            label: sort === "amount" ? "Largest amount" : "Newest",
+            label: sort === "amount" ? t("Largest amount") : t("Newest"),
             menuLeft: 0,
             options: [
-              { value: "newest", label: "Newest", header: "Sort by" },
-              { value: "amount", label: "Largest amount" },
+              { value: "newest", label: t("Newest"), header: t("Sort by") },
+              { value: "amount", label: t("Largest amount") },
             ],
             selected: [sort],
             onPick: (x) => setSort(x as typeof sort),
@@ -206,16 +207,16 @@ export const FailedListPage: React.FC = () => {
             icon: SlidersHorizontal,
             label:
               status === "all"
-                ? "All statuses"
+                ? t("All statuses")
                 : status === "stopped"
-                  ? "Stopped"
-                  : "Retrying",
+                  ? t("Stopped")
+                  : t("Retrying"),
             menuLeft: 96,
             active: status !== "all",
             options: [
-              { value: "all", label: "All statuses", header: "Status" },
-              { value: "retrying", label: "Retrying" },
-              { value: "stopped", label: "Stopped" },
+              { value: "all", label: t("All statuses"), header: t("Status") },
+              { value: "retrying", label: t("Retrying") },
+              { value: "stopped", label: t("Stopped") },
             ],
             selected: [status],
             onPick: (x) => setStatus(x as typeof status),
@@ -224,8 +225,8 @@ export const FailedListPage: React.FC = () => {
       />
       {empty ? (
         <PayEmpty
-          title="No failed payments"
-          body="Payments that don't go through show here, with their retries."
+          title={t("No failed payments")}
+          body={t("Payments that don't go through show here, with their retries.")}
         />
       ) : (
         <PayList
@@ -233,24 +234,24 @@ export const FailedListPage: React.FC = () => {
             key: f.key,
             who: f.who,
             title: whoOfF(f),
-            sub: `${f.item} · failed ${f.failedOn}`,
+            sub: `${f.item} · ${t("failed {date}", { date: f.failedOn })}`,
             chip:
               f.state === "stopped"
                 ? {
-                    t: `Retried ${AUTO_RETRIES === 2 ? "twice" : AUTO_RETRIES + " times"}, stopped`,
+                    t: tn(AUTO_RETRIES, "Retried once, stopped", "Retried {n} times, stopped"),
                     bg: v("high-bg"),
                     ink: v("high"),
                   }
                 : {
-                    t: f.nextRetry ? `Retrying ${f.nextRetry}` : "Retrying now",
+                    t: f.nextRetry ? t("Retrying {when}", { when: f.nextRetry }) : t("Retrying now"),
                     bg: v("caution-bg"),
                     ink: v("pay-caution"),
                   },
-            s2: f.reason ?? "Reason not recorded",
+            s2: f.reason ?? t("Reason not recorded"),
             amt: money(f.amount),
             action: {
               icon: f.state === "stopped" ? MessageCircle : RotateCw,
-              name: `${f.state === "stopped" ? "Follow up with" : "Retry now for"} ${whoOfF(f)}`,
+              name: f.state === "stopped" ? t("Follow up with {name}", { name: whoOfF(f) }) : t("Retry now for {name}", { name: whoOfF(f) }),
               onClick: () =>
                 navigate(
                   `${REVENUE_BASE}/payments/failed/${encodeURIComponent(f.key)}?confirm=1`,
@@ -289,17 +290,17 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   const name = whoOfF(f);
   const chip =
     f.state === "inprogress"
-      ? { t: "Retrying now", bg: v("caution-bg"), ink: v("pay-caution") }
+      ? { t: t("Retrying now"), bg: v("caution-bg"), ink: v("pay-caution") }
       : used
-        ? { t: "No retries left", bg: v("high-bg"), ink: v("high") }
+        ? { t: t("No retries left"), bg: v("high-bg"), ink: v("high") }
         : f.state === "stopped"
           ? {
-              t: `Failed ${f.attempts.filter((a) => a.outcome === "failed").length} times`,
+              t: tn(f.attempts.filter((a) => a.outcome === "failed").length, "Failed once", "Failed {n} times"),
               bg: v("high-bg"),
               ink: v("high"),
             }
           : {
-              t: f.nextRetry ? `Retrying ${f.nextRetry}` : "Retrying",
+              t: f.nextRetry ? t("Retrying {when}", { when: f.nextRetry }) : t("Retrying"),
               bg: v("caution-bg"),
               ink: v("pay-caution"),
             };
@@ -312,8 +313,8 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader
-        crumb="Failed payments"
-        title="Failed payment"
+        crumb={t("Failed payments")}
+        title={t("Failed payment")}
         onBack={() => navigate(`${REVENUE_BASE}/payments/failed`)}
       />
       <PayDetail
@@ -324,26 +325,26 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         amtInk={v("high")}
         chip={chip}
         facts={[
-          { l: "Method", v: "Whish" },
-          { l: "Reason", v: f.reason ?? "Reason not recorded" },
-          { l: "Failed on", v: f.failedOn },
+          { l: t("Method"), v: "Whish" },
+          { l: t("Reason"), v: f.reason ?? t("Reason not recorded") },
+          { l: t("Failed on"), v: f.failedOn },
         ]}
-        histTitle="Attempts"
+        histTitle={t("Attempts")}
         hist={hist}
         banner={
           waiting
             ? {
                 icon: Clock,
-                t: "Still waiting for Whish",
-                s: "We'll update this payment when Whish answers. You can leave this screen.",
+                t: t("Still waiting for Whish"),
+                s: t("We'll update this payment when Whish answers. You can leave this screen."),
                 bg: v("caution-bg"),
                 ink: v("pay-caution"),
               }
             : f.state === "stopped" && !used
               ? {
                   icon: CircleX,
-                  t: "Payment didn't go through",
-                  s: "Ask the member to top up, or record it if they paid in cash.",
+                  t: t("Payment didn't go through"),
+                  s: t("Ask the member to top up, or record it if they paid in cash."),
                   bg: v("high-bg"),
                   ink: v("high"),
                 }
@@ -353,7 +354,7 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
           f.state === "inprogress"
             ? [
                 {
-                  t: "Retrying…",
+                  t: t("Retrying…"),
                   icon: LoaderCircle,
                   primary: true,
                   disabled: true,
@@ -363,7 +364,7 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
               ]
             : [
                 {
-                  t: "Retry now",
+                  t: t("Retry now"),
                   icon: RotateCw,
                   primary: true,
                   disabled: used,
@@ -371,7 +372,7 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
                   onClick: () => setConfirm(true),
                 },
                 {
-                  t: "Mark as paid",
+                  t: t("Mark as paid"),
                   icon: BadgeCheck,
                   onClick: () => undefined,
                 },
@@ -379,9 +380,9 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         }
         note={
           f.state === "inprogress"
-            ? "Whish is already trying this payment. It usually takes under a minute."
+            ? t("Whish is already trying this payment. It usually takes under a minute.")
             : used
-              ? `You can retry a payment ${AUTO_RETRIES + MANUAL_RETRIES} times. Record it if the member pays in cash.`
+              ? tn(AUTO_RETRIES + MANUAL_RETRIES, "You can retry a payment once. Record it if the member pays in cash.", "You can retry a payment {n} times. Record it if the member pays in cash.")
               : undefined
         }
       />
@@ -394,11 +395,11 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
           bg: "rgb(var(--c-primary-pale))",
           ink: "rgb(var(--c-primary-dark))",
         }}
-        title="Retry this payment now?"
+        title={t("Retry this payment now?")}
         subtitle={
           err
             ? undefined
-            : "Whish will try to collect it again. The member gets a notification."
+            : t("Whish will try to collect it again. The member gets a notification.")
         }
         extra={
           <>
@@ -407,10 +408,10 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
               style={{ background: v("soft") }}
             >
               {[
-                ["Member", name],
-                ["Item", f.item],
-                ["Amount", money(f.amount)],
-                ["Method", "Whish"],
+                [t("Member"), name],
+                [t("Item"), f.item],
+                [t("Amount"), money(f.amount)],
+                [t("Method"), "Whish"],
               ].map(([l, val], i) => (
                 <div
                   key={l}
@@ -440,12 +441,12 @@ export const FailedDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
                 className="text-[13px] font-bold mt-[6px]"
                 style={{ color: "#C0392B" }}
               >
-                {err}
+                {t(err)}
               </p>
             )}
           </>
         }
-        confirmLabel={busy ? "Retrying…" : "Retry now"}
+        confirmLabel={busy ? t("Retrying…") : t("Retry now")}
         busy={busy}
         onCancel={() => !busy && setConfirm(false)}
         onConfirm={() => {

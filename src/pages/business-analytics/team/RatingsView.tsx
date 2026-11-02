@@ -6,6 +6,7 @@ import { distOf, metaOf, ratedPeople, ratingsLead, shortAge } from "./ratingsMod
 import { RatingGraphic, ReviewsSheet } from "./RatingsParts";
 import type { RatingsState } from "./useRatings";
 import type { TeamState } from "./useTeam";
+import { t, tn } from "../../../i18n/core";
 
 // AN5-040 Ratings (AnTeamV6 view="ratings", build("ratings") l.457-468) on
 // B14 instructor_ratings + business_reviews_page (V6-85): header card, the
@@ -31,31 +32,31 @@ export function RatingsView({
   const rows = useMemo(() => ratedPeople(people, ratings.all, ratings.last3, ratings.prev3), [people, ratings.all, ratings.last3, ratings.prev3]);
   const single = people.length === 1;
   // AN5-043 rows 2-3: with one instructor the header is that instructor's own average and count.
-  const t = useMemo(() => {
+  const tf = useMemo(() => {
     if (!single || !rows[0]) return ratings.team;
     const r = rows[0];
     const n = ratings.inRange.find((x) => x.professionalId === r.id)?.reviews ?? 0;
     return { count: r.reviews, avg: r.avg, delta: null, newInRange: n };
   }, [single, rows, ratings.team, ratings.inRange]);
   const loading = ratings.status === "loading" && !ratings.updatedAt;
-  const dist = ratings.reviews ? distOf(single && rows[0] ? (ratings.byPerson.get(rows[0].id) ?? []) : ratings.reviews, t.count) : null;
+  const dist = ratings.reviews ? distOf(single && rows[0] ? (ratings.byPerson.get(rows[0].id) ?? []) : ratings.reviews, tf.count) : null;
   const reviews = ratings.reviews ?? [];
   const nameOf = (instructor: string | null) => instructor ?? "";
 
   const strip =
     ratings.status === "offline" ? (
-      <Strip offline text={`You're offline. Showing reviews as of ${ratings.updatedAt ? clock12(new Date(ratings.updatedAt)) : "the last update"}.`} />
+      <Strip offline text={ratings.updatedAt ? t("You're offline. Showing reviews as of {time}.", { time: clock12(new Date(ratings.updatedAt)) }) : t("You're offline. Showing reviews as of the last update.")} />
     ) : ratings.status === "error" ? (
-      <Strip text="Couldn't load ratings. Check your connection and try again." onRetry={ratings.reload} />
+      <Strip text={t("Couldn't load ratings. Check your connection and try again.")} onRetry={ratings.reload} />
     ) : ratings.status === "denied" ? (
-      <Strip text="Ratings need the Marketing or Edit the schedule permission." />
+      <Strip text={t("Ratings need the Marketing or Edit the schedule permission.")} />
     ) : null;
 
   return (
     <div>
-      <PageHeader crumb="Team" title="Ratings" backLabel="Back to Team" onBack={onBack} />
+      <PageHeader crumb={t("Team")} title={t("Ratings")} backLabel={t("Back to Team")} onBack={onBack} />
       {strip}
-      {single && t.count > 0 && <p className="an5-note">One instructor: there is no team average to compare with yet.</p>}
+      {single && tf.count > 0 && <p className="an5-note">{t("One instructor: there is no team average to compare with yet.")}</p>}
       {loading ? (
         <RatingsSkeleton />
       ) : (
@@ -63,22 +64,22 @@ export function RatingsView({
           <HeadCard
             cells={[
               {
-                v: t.avg === null ? "–" : t.avg.toFixed(1),
-                l: single ? "Average" : "Team average",
-                dash: t.avg === null,
-                d: t.delta !== null && t.delta !== 0 ? `${t.delta > 0 ? "+" : "−"}${Math.abs(t.delta).toFixed(1)}` : undefined,
-                dTone: t.delta !== null && t.delta > 0 ? "good" : "faint",
+                v: tf.avg === null ? "–" : tf.avg.toFixed(1),
+                l: single ? t("Average") : t("Team average"),
+                dash: tf.avg === null,
+                d: tf.delta !== null && tf.delta !== 0 ? `${tf.delta > 0 ? "+" : "−"}${Math.abs(tf.delta).toFixed(1)}` : undefined,
+                dTone: tf.delta !== null && tf.delta > 0 ? "good" : "faint",
               },
-              { v: String(t.count), l: "Reviews", d: t.newInRange > 0 && t.count > 0 ? `+${t.newInRange}` : undefined, dTone: "good" },
+              { v: String(tf.count), l: t("Reviews"), d: tf.newInRange > 0 && tf.count > 0 ? `+${tf.newInRange}` : undefined, dTone: "good" },
             ]}
-            lead={ratingsLead(t, rows)}
+            lead={ratingsLead(tf, rows)}
           />
           <QuestionCard
-            q="How do members rate each instructor?"
-            cap="Average of members' reviews, on a 1 to 5 scale. Tap an instructor to see their reviews."
+            q={t("How do members rate each instructor?")}
+            cap={t("Average of members' reviews, on a 1 to 5 scale. Tap an instructor to see their reviews.")}
             after={
-              t.count > 0 && reviews.length > 0 ? (
-                <Accordion title="Latest reviews" summary="3 newest across the team.">
+              tf.count > 0 && reviews.length > 0 ? (
+                <Accordion title={t("Latest reviews")} summary={t("3 newest across the team.")}>
                   {reviews.slice(0, 3).map((r) => (
                     <div key={r.id} className="an5-pp">
                       <span className="an5-pp-av" aria-hidden>
@@ -87,55 +88,55 @@ export function RatingsView({
                       <span className="min-w-0">
                         <span className="an5-pp-name block">{r.label}</span>
                         <span className="an5-pp-fact block">
-                          {r.redacted ? "Removed by a moderator" : `★ ${r.rating} · ${nameOf(r.instructor)} · "${r.body ?? ""}"`}
+                          {r.redacted ? t("Removed by a moderator") : `★ ${r.rating} · ${nameOf(r.instructor)} · «${r.body ?? ""}»`}
                         </span>
                       </span>
                       <span className="an5-pp-r">{shortAge(r.createdAt)}</span>
                     </div>
                   ))}
                   <button type="button" className="an5-more an5-pp-more tap" onClick={() => setTeamSheet(true)}>
-                    See all {t.count}
-                    <ChevronRight size={14} aria-hidden />
+                    {t("See all {n}", { n: tf.count })}
+                    <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
                   </button>
                 </Accordion>
               ) : undefined
             }
           >
-            {t.count === 0 ? (
+            {tf.count === 0 ? (
               <div className="an5-emptyblock">
                 <span className="an5-emptyblock-tile">
                   <Star size={20} aria-hidden />
                 </span>
-                <p className="an5-emptyblock-t">No reviews yet</p>
-                <p className="an5-emptyblock-s">Ratings appear here once members review your instructors.</p>
+                <p className="an5-emptyblock-t">{t("No reviews yet")}</p>
+                <p className="an5-emptyblock-s">{t("Ratings appear here once members review your instructors.")}</p>
               </div>
-            ) : t.avg === null ? (
+            ) : tf.avg === null ? (
               <div className="an5-emptyblock">
                 <span className="an5-emptyblock-tile">
                   <Star size={20} aria-hidden />
                 </span>
-                <p className="an5-emptyblock-t">Not enough reviews yet</p>
-                <p className="an5-emptyblock-s">{t.count} so far. The average shows after 3.</p>
+                <p className="an5-emptyblock-t">{t("Not enough reviews yet")}</p>
+                <p className="an5-emptyblock-s">{t("{n} so far. The average shows after 3.", { n: tf.count })}</p>
               </div>
             ) : (
               <RatingGraphic
                 size="lg"
-                avg={t.avg}
-                count={t.count}
-                countText={`${t.count} ${t.count === 1 ? "review" : "reviews"}${t.newInRange > 0 ? ` · +${t.newInRange} this period` : ""}`}
+                avg={tf.avg}
+                count={tf.count}
+                countText={`${tn(tf.count, "{n} review", "{n} reviews")}${tf.newInRange > 0 ? ` · ${t("+{n} this period", { n: tf.newInRange })}` : ""}`}
                 dist={dist}
               />
             )}
             {rows.length > 0 && <div className="an5-divider" />}
             <div>
               {rows.map((p) => (
-                <button key={p.id} type="button" className="an5-barrow tap" aria-label={`Open ${p.name}'s ratings`} onClick={() => onCard(p.id)}>
+                <button key={p.id} type="button" className="an5-barrow tap" aria-label={t("Open {name}'s ratings", { name: p.name })} onClick={() => onCard(p.id)}>
                   <Avatar name={p.name} seat={p.seat} />
                   <span className="min-w-0 block">
                     <span className="an5-barrow-head">
                       <span className="an5-name">{p.name}</span>
                       {p.avg === null ? (
-                        <span className="an5-new">New</span>
+                        <span className="an5-new">{t("New")}</span>
                       ) : (
                         <span className="an5-rate-val">
                           <span className="an5-rate-cnt">
@@ -156,18 +157,18 @@ export function RatingsView({
           </QuestionCard>
         </>
       )}
-      <p className="an5-foot">Instructors show as New until they have 3 reviews.</p>
+      <p className="an5-foot">{t("Instructors show as New until they have 3 reviews.")}</p>
       <ReviewsSheet
         open={teamSheet}
         onClose={() => setTeamSheet(false)}
-        title="All team reviews"
-        lead="Every instructor · all time"
+        title={t("All team reviews")}
+        lead={t("Every instructor · all time")}
         list={reviews}
-        count={t.count}
-        avg={t.avg}
+        count={tf.count}
+        avg={tf.avg}
         team
-        businessName={state.businessName || "Your business"}
-        emptyText="Reviews appear here after members rate your instructors."
+        businessName={state.businessName || t("Your business")}
+        emptyText={t("Reviews appear here after members rate your instructors.")}
       />
     </div>
   );
@@ -176,7 +177,7 @@ export function RatingsView({
 /** AN5-040 O4: header card skeleton + graphic skeleton (60×46 block, five 18 star outlines, five 7-tall tracks). */
 function RatingsSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading">
+    <div aria-busy="true" aria-label={t("Loading")}>
       <div className="an5-card an5-head">
         <div className="an5-head-grid">
           <div className="an5-head-cell">

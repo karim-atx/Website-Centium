@@ -369,7 +369,7 @@ html.high-contrast .pa-search input::placeholder {
   align-items: center;
   justify-content: center;
   color: var(--an-faint);
-  margin-right: -8px;
+  margin-inline-end: -8px;
 }
 .pa-tools {
   display: grid;
@@ -711,7 +711,7 @@ html.dark .pa-pill.is-low {
   text-align: center;
 }
 .pa-grid4 > div:nth-child(even) {
-  border-left: 1px solid var(--an-divider);
+  border-inline-start: 1px solid var(--an-divider);
 }
 .pa-grid4 > div:nth-child(n + 3) {
   border-top: 1px solid var(--an-divider);
@@ -1346,4 +1346,11 @@ html.larger-text .pa-dact {
   line-height: 16px;
   color: var(--an-ink-soft);
   text-wrap: pretty;
+}
+
+/* Round G (EH5): right to left, the bars fill from the right. */
+[dir="rtl"] .pa-bar > span,
+[dir="rtl"] .pa-vbar-f {
+  left: auto;
+  right: 0;
 }

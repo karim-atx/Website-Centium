@@ -1,4 +1,11 @@
 import type { MembershipBilling, MembershipPlanRow, PlanKind, PlanStatus } from "../../../services/membership-plans/types";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
+
+// Round G (EH5): every phrase here reads in the app's language; English keeps
+// its exact wording (planModel.test.ts). The comma between joined parts is
+// Arabic's «،» in Arabic.
+const comma = () => (getLanguage() === "ar" ? "، " : ", ");
 
 // Market + Share 3.0 · W3 · B-MA.5 Memberships / B-MA.5.1 Edit a plan: the
 // words and derived values the plan list, the plan page and the Add / Edit
@@ -10,32 +17,35 @@ import type { MembershipBilling, MembershipPlanRow, PlanKind, PlanStatus } from 
 // OURS.
 
 export const KIND_LABEL: Record<PlanKind, string> = {
-  membership: "Membership",
-  day_pass: "Day pass",
-  class_pack: "Class pack",
-  intro_offer: "Intro offer",
-  drop_in: "Drop-in",
+  membership: tk("Membership"),
+  day_pass: tk("Day pass"),
+  class_pack: tk("Class pack"),
+  intro_offer: tk("Intro offer"),
+  drop_in: tk("Drop-in"),
 };
+
+/** A plan type's name in the app's language (KIND_LABEL holds the English keys). */
+export const kindLabel = (kind: PlanKind): string => t(KIND_LABEL[kind]);
 
 /** "a day" / "a month" / "every 3 months" / "every 6 months" / "a year". */
 export function periodPhrase(billing: MembershipBilling): string {
   return billing === "daily"
-    ? "a day"
+    ? t("a day")
     : billing === "annually"
-      ? "a year"
+      ? t("a year")
       : billing === "quarterly"
-        ? "every 3 months"
+        ? t("every 3 months")
         : billing === "semiannually"
-          ? "every 6 months"
-          : "a month";
+          ? t("every 6 months")
+          : t("a month");
 }
 
 /** "7 days", "2 months", "1 year" from valid_for_days. */
 export function daysLabel(days: number | null): string {
   if (!days) return "";
-  if (days % 365 === 0) return `${days / 365} ${days === 365 ? "year" : "years"}`;
-  if (days % 30 === 0) return `${days / 30} ${days === 30 ? "month" : "months"}`;
-  return `${days} ${days === 1 ? "day" : "days"}`;
+  if (days % 365 === 0) return tn(days / 365, "1 year", "{n} years");
+  if (days % 30 === 0) return tn(days / 30, "1 month", "{n} months");
+  return tn(days, "1 day", "{n} days");
 }
 
 /**
@@ -43,40 +53,40 @@ export function daysLabel(days: number | null): string {
  * "$120 for 10 classes", "$15 a day", "$18 a class", "$20 for 7 days".
  */
 export function priceLine(p: Pick<MembershipPlanRow, "price" | "billing" | "kind" | "sessionsInPack" | "validForDays">): string {
-  if (p.kind === "class_pack") return p.sessionsInPack ? `${p.price} for ${p.sessionsInPack} classes` : p.price;
-  if (p.kind === "day_pass") return `${p.price} a day`;
-  if (p.kind === "drop_in") return `${p.price} a class`;
-  if (p.kind === "intro_offer") return p.validForDays ? `${p.price} for ${daysLabel(p.validForDays)}` : p.price;
-  return `${p.price} ${periodPhrase(p.billing)}`;
+  if (p.kind === "class_pack") return p.sessionsInPack ? tn(p.sessionsInPack, "{price} for 1 class", "{price} for {n} classes", { price: p.price }) : p.price;
+  if (p.kind === "day_pass") return t("{price} a day", { price: p.price });
+  if (p.kind === "drop_in") return t("{price} a class", { price: p.price });
+  if (p.kind === "intro_offer") return p.validForDays ? t("{price} for {length}", { price: p.price, length: daysLabel(p.validForDays) }) : p.price;
+  return t("{price} {period}", { price: p.price, period: periodPhrase(p.billing) });
 }
 
 /** Billing as a word (the share card, the plan page). */
 export function billingLabel(billing: MembershipBilling): string {
   return billing === "daily"
-    ? "Daily"
+    ? t("Daily")
     : billing === "annually"
-      ? "Annually"
+      ? t("Annually")
       : billing === "quarterly"
-        ? "Every 3 months"
+        ? t("Every 3 months")
         : billing === "semiannually"
-          ? "Every 6 months"
-          : "Monthly";
+          ? t("Every 6 months")
+          : t("Monthly");
 }
 
 /** "Renews" row value on the plan page. */
 export function renewsLabel(billing: MembershipBilling): string {
-  return billing === "annually" ? "Yearly" : billingLabel(billing);
+  return billing === "annually" ? t("Yearly") : billingLabel(billing);
 }
 
 /** "Renews" row sub on the plan page. */
 export function renewsSub(billing: MembershipBilling): string {
   return billing === "annually"
-    ? "Billed each year until cancelled"
+    ? t("Billed each year until cancelled")
     : billing === "quarterly"
-      ? "Renews every 3 months until cancelled"
+      ? t("Renews every 3 months until cancelled")
       : billing === "semiannually"
-        ? "Renews every 6 months until cancelled"
-        : "Billed each month until cancelled";
+        ? t("Renews every 6 months until cancelled")
+        : t("Billed each month until cancelled");
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +95,7 @@ export function renewsSub(billing: MembershipBilling): string {
 /** Days in one billing period ("{duration}" on the card: Monthly "30 days", 3 months "90 days", Day pass "1 day"). */
 export const PERIOD_DAYS: Record<MembershipBilling, number> = { daily: 1, monthly: 30, quarterly: 90, semiannually: 180, annually: 365 };
 
-const nDays = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
+const nDays = (n: number) => tn(n, "1 day", "{n} days");
 
 /**
  * The card's "{duration}" (bizPlans `dur`): the days one purchase covers. A
@@ -94,9 +104,9 @@ const nDays = (n: number) => `${n} ${n === 1 ? "day" : "days"}`;
  */
 export function durationLabel(p: Pick<MembershipPlanRow, "kind" | "billing" | "sessionsInPack" | "validForDays">): string {
   if (p.kind === "day_pass") return nDays(1);
-  if (p.kind === "drop_in") return "1 class";
+  if (p.kind === "drop_in") return tn(1, "1 class", "{n} classes");
   if (p.kind === "class_pack") {
-    const parts = [p.sessionsInPack ? `${p.sessionsInPack} ${p.sessionsInPack === 1 ? "class" : "classes"}` : null, p.validForDays ? nDays(p.validForDays) : null];
+    const parts = [p.sessionsInPack ? tn(p.sessionsInPack, "1 class", "{n} classes") : null, p.validForDays ? nDays(p.validForDays) : null];
     return parts.filter(Boolean).join(" · ");
   }
   if (p.kind === "intro_offer") return p.validForDays ? nDays(p.validForDays) : "";
@@ -112,10 +122,10 @@ export type ChipTone = "good" | "warn" | "soft";
 
 /** The status chip (bizPlans: Active good, Paused warn; Hidden and Archived OURS in the board's soft tone). */
 export function statusChip(status: PlanStatus): { label: string; tone: ChipTone } {
-  if (status === "paused") return { label: "Paused", tone: "warn" };
-  if (status === "hidden") return { label: "Hidden", tone: "soft" };
-  if (status === "archived") return { label: "Archived", tone: "soft" };
-  return { label: "Active", tone: "good" };
+  if (status === "paused") return { label: tx("Paused", "plan"), tone: "warn" };
+  if (status === "hidden") return { label: tx("Hidden", "plan"), tone: "soft" };
+  if (status === "archived") return { label: tx("Archived", "plan"), tone: "soft" };
+  return { label: tx("Active", "plan"), tone: "good" };
 }
 
 export interface CardFigures {
@@ -129,7 +139,6 @@ export interface CardFigures {
   isNew?: boolean;
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * The card's members line (bizPlans `members`): "Not on sale" for a paused
@@ -140,24 +149,24 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * plan just added. Null when nothing is known.
  */
 export function memberLine(p: Pick<MembershipPlanRow, "kind" | "dbStatus">, f: CardFigures): string | null {
-  if (p.dbStatus === "paused") return "Not on sale";
-  if (f.isNew && !f.active && !f.soldMonth) return "New · no members yet";
+  if (p.dbStatus === "paused") return t("Not on sale");
+  if (f.isNew && !f.active && !f.soldMonth) return t("New · no members yet");
   if (p.kind === "day_pass" || p.kind === "drop_in") {
     if (f.soldMonth === null) return null;
-    const today = f.soldToday ? ` · ${f.soldToday} today` : "";
-    return `${f.soldMonth} sold this month${today}`;
+    const sold = tn(f.soldMonth, "{n} sold this month", "{n} sold this month");
+    return f.soldToday ? `${sold} · ${tn(f.soldToday, "{n} today", "{n} today")}` : sold;
   }
-  if (p.kind === "intro_offer") return f.soldMonth === null ? null : `${f.soldMonth} used this month`;
+  if (p.kind === "intro_offer") return f.soldMonth === null ? null : tn(f.soldMonth, "{n} used this month", "{n} used this month");
   if (f.active === null) return null;
-  return plural(f.active, "member", "members");
+  return tn(f.active, "1 member", "{n} members");
 }
 
 /** The plan page status line. */
 export function statusLine(status: PlanStatus): string {
-  if (status === "paused") return "Paused: nobody new can buy it. Members keep their plan and renewals continue.";
-  if (status === "hidden") return "Hidden: not on Explore. Current members keep it.";
-  if (status === "archived") return "Archived: not on Explore and can't be bought. Current members keep it until it ends.";
-  return "Members can buy it on Explore";
+  if (status === "paused") return t("Paused: nobody new can buy it. Members keep their plan and renewals continue.");
+  if (status === "hidden") return t("Hidden: not on Explore. Current members keep it.");
+  if (status === "archived") return t("Archived: not on Explore and can't be bought. Current members keep it until it ends.");
+  return t("Members can buy it on Explore");
 }
 
 // ---------------------------------------------------------------------------
@@ -171,11 +180,11 @@ export function statusLine(status: PlanStatus): string {
  * semiannually / annually.
  */
 export const BILLING_CHIPS: { value: MembershipBilling; label: string }[] = [
-  { value: "daily", label: "One-time" },
-  { value: "monthly", label: "Monthly" },
-  { value: "quarterly", label: "3 months" },
-  { value: "semiannually", label: "6 months" },
-  { value: "annually", label: "12 months" },
+  { value: "daily", label: tk("One-time") },
+  { value: "monthly", label: tk("Monthly") },
+  { value: "quarterly", label: tk("3 months") },
+  { value: "semiannually", label: tk("6 months") },
+  { value: "annually", label: tk("12 months") },
 ];
 
 /** The chip a plan shows: every type but Membership is One-time; a Membership shows its period (null = none chosen yet). */
@@ -224,8 +233,8 @@ export function previewPrice(input: string): string | null {
 
 /** The Price box's error: the board's "Enter a price for this plan." when empty; OURS when it isn't a number. */
 export function priceProblem(input: string): string | null {
-  if (!input.trim()) return "Enter a price for this plan.";
-  if (!previewPrice(input)) return "Enter the price as a number, for example 45.";
+  if (!input.trim()) return t("Enter a price for this plan.");
+  if (!previewPrice(input)) return t("Enter the price as a number, for example 45.");
   return null;
 }
 
@@ -249,8 +258,8 @@ export function cleanIncludes(lines: string[]): string[] | null {
 /** Why the lines can't be saved (OURS), or null. */
 export function includesProblem(lines: string[]): string | null {
   const clean = cleanIncludes(lines) ?? [];
-  if (clean.length > INCLUDES_MAX) return `Keep it to ${INCLUDES_MAX} lines.`;
-  if (clean.some((x) => x.length > INCLUDE_MAX_LEN)) return `Each line can be ${INCLUDE_MAX_LEN} characters at most.`;
+  if (clean.length > INCLUDES_MAX) return t("Keep it to {n} lines.", { n: INCLUDES_MAX });
+  if (clean.some((x) => x.length > INCLUDE_MAX_LEN)) return t("Each line can be {n} characters at most.", { n: INCLUDE_MAX_LEN });
   return null;
 }
 
@@ -259,8 +268,12 @@ export const article = (word: string): string => (/^[aeiou]/i.test(word) ? "an" 
 
 /** The type switch note (kept from the v6 sheet). */
 export function switchNote(from: PlanKind, to: PlanKind): string {
-  const toLower = KIND_LABEL[to].toLowerCase();
-  return `Switched from ${KIND_LABEL[from]}. Name, price and payment type were kept; the fields below them changed to fit ${article(toLower)} ${toLower}.`;
+  // Lower-case is a no-op in Arabic; the article only picks between two English keys.
+  const toLower = kindLabel(to).toLowerCase();
+  const vars = { from: kindLabel(from), type: toLower };
+  return article(KIND_LABEL[to]) === "an"
+    ? t("Switched from {from}. Name, price and payment type were kept; the fields below them changed to fit an {type}.", vars)
+    : t("Switched from {from}. Name, price and payment type were kept; the fields below them changed to fit a {type}.", vars);
 }
 
 /** Valid for (class pack): 1, 2, 3, 6, 12 months as days. */
@@ -274,31 +287,31 @@ export const NOTICES = [0, 14, 30];
 
 /** Commitment value: "None, cancel anytime", "6 months, 30 days' notice". */
 export function commitmentLabel(months: number | null, notice: number | null): string {
-  const a = months ? `${months} months` : "None";
-  const b = notice ? `${notice} days' notice` : "cancel anytime";
-  return `${a}, ${b}`;
+  const a = months ? tn(months, "1 month", "{n} months") : t("None");
+  const b = notice ? tn(notice, "{n} day's notice", "{n} days' notice") : t("cancel anytime");
+  return `${a}${comma()}${b}`;
 }
 
 /** Includes / Covers / Which classes value: "All classes", the one name, or "{n} class types". */
-export function classesLabel(set: string[] | null, allLabel = "All classes"): string {
-  if (!set || set.length === 0) return allLabel;
-  return set.length === 1 ? set[0]! : `${set.length} class types`;
+export function classesLabel(set: string[] | null, allLabel?: string): string {
+  if (!set || set.length === 0) return allLabel ?? t("All classes");
+  return set.length === 1 ? set[0]! : tn(set.length, "1 class type", "{n} class types");
 }
 
 /** Limit value: "Unlimited" (NULL; never "0") or "Up to 12 a month". */
 export function limitLabel(n: number | null, billing: MembershipBilling): string {
-  return n && n > 0 ? `Up to ${n} ${periodPhrase(billing)}` : "Unlimited";
+  return n && n > 0 ? t("Up to {n} {period}", { n, period: periodPhrase(billing) }) : t("Unlimited");
 }
 
 /** "Spin 45 and Yoga Flow", "A, B and C". */
 export function joinAnd(items: string[]): string {
   if (items.length <= 1) return items[0] ?? "";
-  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+  return t("{list} and {last}", { list: items.slice(0, -1).join(comma()), last: items[items.length - 1]! });
 }
 
-/** "Pay with cash" (lower-case method, "Whish Money" restored). */
+/** "Pay with cash" (lower-case method, "Whish Money" restored). The method arrives in the app's language. */
 export function payWith(method: string): string {
-  return "Pay with " + method.toLowerCase().replace("whish money", "Whish Money");
+  return t("Pay with {method}", { method: method.toLowerCase().replace("whish money", "Whish Money") });
 }
 
 export interface PreviewInput {
@@ -320,21 +333,21 @@ export interface PreviewInput {
  * default, or "" when there is nothing to add.
  */
 export function previewLines(x: PreviewInput): [string, string] {
-  const covers = x.classes && x.classes.length ? joinAnd(x.classes) : x.runsClasses ? "all classes" : "gym entry";
-  if (x.kind === "day_pass") return [`${x.price} a day · ${covers}`, ""];
-  if (x.kind === "drop_in") return [`${x.price} a class · ${covers}`, ""];
+  const covers = x.classes && x.classes.length ? joinAnd(x.classes) : x.runsClasses ? t("all classes") : t("gym entry");
+  if (x.kind === "day_pass") return [`${t("{price} a day", { price: x.price })} · ${covers}`, ""];
+  if (x.kind === "drop_in") return [`${t("{price} a class", { price: x.price })} · ${covers}`, ""];
   if (x.kind === "class_pack") {
-    const s = x.sessions ? ` for ${x.sessions} classes` : "";
-    const v = x.validForDays ? ` · valid ${daysLabel(x.validForDays)}` : "";
-    return [`${x.price}${s}${v}`, x.classes && x.classes.length ? x.classes.join(", ") : ""];
+    const head = x.sessions ? tn(x.sessions, "{price} for 1 class", "{price} for {n} classes", { price: x.price }) : x.price;
+    const v = x.validForDays ? ` · ${t("valid {length}", { length: daysLabel(x.validForDays) })}` : "";
+    return [`${head}${v}`, x.classes && x.classes.length ? x.classes.join(comma()) : ""];
   }
-  if (x.kind === "intro_offer") return [`${x.price}${x.validForDays ? ` for ${daysLabel(x.validForDays)}` : ""}`, ""];
+  if (x.kind === "intro_offer") return [x.validForDays ? t("{price} for {length}", { price: x.price, length: daysLabel(x.validForDays) }) : x.price, ""];
   const phrase = periodPhrase(x.billing);
-  const limit = x.limit && x.limit > 0 ? ` · up to ${x.limit} classes ${phrase}` : x.runsClasses ? " · unlimited classes" : "";
+  const limit = x.limit && x.limit > 0 ? ` · ${t("up to {n} classes {period}", { n: x.limit, period: phrase })}` : x.runsClasses ? ` · ${t("unlimited classes")}` : "";
   const extra: string[] = [];
-  if (x.classes && x.classes.length) extra.push(x.classes.join(", "));
+  if (x.classes && x.classes.length) extra.push(x.classes.join(comma()));
   if (x.commitMonths || x.noticeDays) extra.push(commitmentLabel(x.commitMonths, x.noticeDays));
-  return [`${x.price} ${phrase}${limit}`, extra.join(" · ")];
+  return [`${t("{price} {period}", { price: x.price, period: phrase })}${limit}`, extra.join(" · ")];
 }
 
 /**
@@ -356,25 +369,23 @@ export function classTypeOptions(types: string[]): { ok: string[]; tooLong: stri
 
 /** The archive dialog's body (kept, live). */
 export function archiveBody(n: number | null): string {
-  if (!n) return "It's removed from Explore and can't be bought.";
-  return `It's removed from Explore and can't be bought. The ${n} current ${n === 1 ? "member keeps" : "members keep"} it until it ends.`;
+  if (!n) return t("It's removed from Explore and can't be bought.");
+  return tn(n, "It's removed from Explore and can't be bought. The 1 current member keeps it until it ends.", "It's removed from Explore and can't be bought. The {n} current members keep it until it ends.");
 }
 
 // ---------------------------------------------------------------------------
 // Members (`members`: avatar initials, name, plan, "Until {date}")
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Sep 2" from an ISO date (month first, D-02). */
+/** "Sep 2" from an ISO date (month first, D-02; Arabic month names in Arabic). */
 export function shortDate(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
   if (Number.isNaN(d.getTime())) return "";
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return d.toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 }
 
 /** The member row's right-hand date: "Until Nov 15" (the board's "Until 15 Nov", month first per D-02); "" for an open-ended membership. */
-export const untilLabel = (iso: string | null | undefined): string => (iso && shortDate(iso) ? `Until ${shortDate(iso)}` : "");
+export const untilLabel = (iso: string | null | undefined): string => (iso && shortDate(iso) ? t("Until {date}", { date: shortDate(iso) }) : "");
 
 /** Two-letter initials from the member's label ("Maya K." → "MK", "Taylor" → "T"). */
 export function initials(name: string): string {

@@ -10,6 +10,7 @@ import { money } from "../../services/store/format";
 import { useOnline } from "../../hooks/useOnline";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, QtyStepper, RadioRow, RetryLine, Section, SkeletonCards, Tile } from "./clientKit";
+import { t } from "../../i18n/core";
 
 // OURS-customer-store-return-request (Designed by us). Pick the items and how
 // many, a reason from our short list (V6-158), an optional note. B11
@@ -45,16 +46,16 @@ export default function ReturnRequestPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Request a return" showBack sub />
-        <SkeletonCards label="Loading your order" />
+        <PageHeader title={t("Request a return")} showBack sub />
+        <SkeletonCards label={t("Loading your order")} />
       </div>
     );
   }
   if (!o || !o.canReturn) {
     return (
       <div>
-        <PageHeader title="Request a return" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this order." onRetry={live.reload} /> : <ClientEmpty icon={Package} title="Returns aren't open for this order" line="You can ask for a return within 30 days of an order being delivered or picked up, one return at a time." />}
+        <PageHeader title={t("Request a return")} showBack sub />
+        {s.status === "error" ? <RetryLine text={t("Couldn't load this order.")} onRetry={live.reload} /> : <ClientEmpty icon={Package} title={t("Returns aren't open for this order")} line={t("You can ask for a return within 30 days of an order being delivered or picked up, one return at a time.")} />}
       </div>
     );
   }
@@ -71,7 +72,7 @@ export default function ReturnRequestPage() {
     const r = await requestReturn(o.id, items.map(([itemId, qty]) => ({ itemId, qty })), exchanges ? kind : "refund", text);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Returns are coming soon." : storeErrorText(r, "Couldn't send your request. Try again."));
+      setError(r.pending ? t("Returns are coming soon.") : storeErrorText(r, t("Couldn't send your request. Try again.")));
       return;
     }
     navigate(`/app/store/orders/${o.id}?returned=1`, { replace: true });
@@ -79,10 +80,10 @@ export default function ReturnRequestPage() {
 
   return (
     <div>
-      <PageHeader title="Request a return" subtitle={`Order #${o.number}${o.storeName ? ` · ${o.storeName}` : ""}`} showBack sub />
+      <PageHeader title={t("Request a return")} subtitle={`${t("Order #{number}", { number: o.number })}${o.storeName ? ` · ${o.storeName}` : ""}`} showBack sub />
 
-      <Section label="What are you returning?" first>
-        <ClientCard label="Items">
+      <Section label={t("What are you returning?")} first>
+        <ClientCard label={t("Items")}>
           {o.items.map((i) => {
             const on = (picked[i.id] ?? 0) > 0;
             return (
@@ -98,11 +99,11 @@ export default function ReturnRequestPage() {
                   <Tile icon={Package} />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[15px] font-semibold leading-[20px] text-charcoal break-words">{i.name}</span>
-                    <span className="block text-[12px] font-medium text-charcoal-faint">{`${money(i.unitPrice)} each · bought ${i.qty}`}</span>
+                    <span className="block text-[12px] font-medium text-charcoal-faint">{t("{price} each · bought {n}", { price: money(i.unitPrice), n: i.qty })}</span>
                   </span>
                   {on ? <SquareCheck size={20} aria-hidden className="shrink-0 text-primary-dark" /> : <Square size={20} aria-hidden className="shrink-0 text-charcoal-faint" />}
                 </button>
-                {on && i.qty > 1 && <QtyStepper value={picked[i.id]} max={i.qty} onChange={(n) => setPicked((p) => ({ ...p, [i.id]: n }))} label={`How many ${i.name}`} />}
+                {on && i.qty > 1 && <QtyStepper value={picked[i.id]} max={i.qty} onChange={(n) => setPicked((p) => ({ ...p, [i.id]: n }))} label={t("How many {name}", { name: i.name })} />}
               </div>
             );
           })}
@@ -110,34 +111,34 @@ export default function ReturnRequestPage() {
       </Section>
 
       {exchanges && (
-        <Section label="Refund or exchange?">
+        <Section label={t("Refund or exchange?")}>
           <ClientCard>
-            <div role="radiogroup" aria-label="Refund or exchange">
-              <RadioRow selected={kind === "refund"} onSelect={() => setKind("refund")} title="Refund" sub="Your money back, in cash at the store" />
-              <RadioRow selected={kind === "exchange"} onSelect={() => setKind("exchange")} title="Exchange" sub="Swap it at the store" />
+            <div role="radiogroup" aria-label={t("Refund or exchange")}>
+              <RadioRow selected={kind === "refund"} onSelect={() => setKind("refund")} title={t("Refund")} sub={t("Your money back, in cash at the store")} />
+              <RadioRow selected={kind === "exchange"} onSelect={() => setKind("exchange")} title={t("Exchange")} sub={t("Swap it at the store")} />
             </div>
           </ClientCard>
         </Section>
       )}
 
-      <Section label="Why?">
+      <Section label={t("Why?")}>
         <ClientCard>
-          <div role="radiogroup" aria-label="Reason">
+          <div role="radiogroup" aria-label={t("Reason")}>
             {RETURN_REASONS.map((r) => (
-              <RadioRow key={r} selected={reason === r} onSelect={() => setReason(r)} title={r} />
+              <RadioRow key={r} selected={reason === r} onSelect={() => setReason(r)} title={t(r)} />
             ))}
           </div>
         </ClientCard>
       </Section>
 
-      <Section label="Anything to add?">
+      <Section label={t("Anything to add?")}>
         <textarea
-          aria-label="Note for the store"
+          aria-label={t("Note for the store")}
           rows={3}
           maxLength={300}
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Optional"
+          placeholder={t("Optional")}
           className="w-full bg-cream-soft border-[0.5px] border-charcoal/[0.10] rounded-[12px] text-[14px] leading-[21px] text-charcoal placeholder:text-charcoal-faint outline-none focus:border-primary-dark"
           style={{ padding: "10px 12px", resize: "none" }}
         />
@@ -145,7 +146,7 @@ export default function ReturnRequestPage() {
 
       {amount > 0 && kind === "refund" && (
         <p className="text-[12.5px] font-medium text-charcoal-faint" style={{ marginTop: 12 }}>
-          {`Refund if approved: ${money(amount)}, in cash at the store.`}
+          {t("Refund if approved: {amount}, in cash at the store.", { amount: money(amount) })}
         </p>
       )}
       {error && (
@@ -154,7 +155,7 @@ export default function ReturnRequestPage() {
         </p>
       )}
       <div aria-hidden style={{ height: 60 }} />
-      <PinnedCta primary={{ label: "Send request", onClick: () => void send(), disabled: !ready, loading: busy }} />
+      <PinnedCta primary={{ label: t("Send request"), onClick: () => void send(), disabled: !ready, loading: busy }} />
     </div>
   );
 }

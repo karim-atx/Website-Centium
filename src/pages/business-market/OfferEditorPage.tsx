@@ -5,6 +5,7 @@ import { MarketError, MarketSkeleton } from "../../components/market/MarketState
 import { BackHeader } from "../../components/market/offers/parts";
 import { ownerInitials } from "../../services/offers";
 import type { OffersFlashState } from "./OffersManager";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.3 Create offer → Preview and publish
 // (/app/business/marketplace/offers/new, or under /app/business/products for a
@@ -25,8 +26,8 @@ export default function OfferEditorPage() {
   if (!biz.business) {
     return (
       <div>
-        <BackHeader eyebrow="Offers" title={isNew ? "New offer" : "Edit offer"} onBack={close} backLabel="Back to Offers" />
-        {biz.loading ? <MarketSkeleton radius={20} rows={3} count={3} label="Loading offer" /> : <MarketError thing="your business" onRetry={biz.reload} />}
+        <BackHeader eyebrow={t("Offers")} title={isNew ? t("New offer") : t("Edit offer")} onBack={close} backLabel={t("Back to Offers")} />
+        {biz.loading ? <MarketSkeleton radius={20} rows={3} count={3} label={t("Loading offer")} /> : <MarketError thing={tk("your business")} onRetry={biz.reload} />}
       </div>
     );
   }

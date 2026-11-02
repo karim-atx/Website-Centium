@@ -13,6 +13,8 @@ import { occurrenceDates } from "../calendar/occurrences";
 import { localDayOf, shiftDate } from "../../utils/date";
 import { DAY_LONG, DAY_SHORT, mondayFirstWeek, mondayIndex } from "../../utils/week";
 import { minutesOfDay, time12 } from "../../utils/time12";
+import { ARABIC_LOCALE } from "../../i18n/format";
+import { getLanguage, t, tk, tn, tx } from "../../i18n/core";
 
 export type DashKind = "classes" | "gym" | "store";
 
@@ -34,30 +36,36 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 
 /** "Monday, October 5" (DA1-015 #2). */
 export function dateKicker(now: Date): string {
+  // Round G (EH5): Arabic day and month names (F9); English unchanged.
+  if (getLanguage() === "ar") return now.toLocaleDateString(ARABIC_LOCALE, { weekday: "long", month: "long", day: "numeric" });
   return `${DAY_LONG[mondayIndex(now.getDay())]}, ${MONTHS_LONG[now.getMonth()]} ${now.getDate()}`;
 }
 
 /** DA1-015 #3: "Good evening" (COPY); morning and afternoon are OURS. */
 export function greeting(now: Date): string {
   const h = now.getHours();
-  if (h >= 5 && h < 12) return "Good morning";
-  if (h >= 12 && h < 17) return "Good afternoon";
-  return "Good evening";
+  if (h >= 5 && h < 12) return t("Good morning");
+  if (h >= 12 && h < 17) return t("Good afternoon");
+  return t("Good evening");
 }
 
 const parseDay = (iso: string) => new Date(`${iso}T00:00:00`);
 /** "Sat, Oct 3". */
 export const shortDay = (iso: string) => {
   const d = parseDay(iso);
+  if (getLanguage() === "ar") return d.toLocaleDateString(ARABIC_LOCALE, { weekday: "short", month: "short", day: "numeric" });
   return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
 };
 /** "Today", "Yesterday", "Tomorrow" or "Sat 3 Oct". */
 export function dayLabel(iso: string, today: string): string {
-  if (iso === today) return "Today";
-  if (iso === shiftDate(today, -1)) return "Yesterday";
-  if (iso === shiftDate(today, 1)) return "Tomorrow";
+  if (iso === today) return t("Today");
+  if (iso === shiftDate(today, -1)) return t("Yesterday");
+  if (iso === shiftDate(today, 1)) return t("Tomorrow");
   return shortDay(iso);
 }
+
+/** A weekday's short name ("Sat"; the Arabic day name in Arabic). */
+const weekdayShort = (iso: string) => (getLanguage() === "ar" ? parseDay(iso).toLocaleDateString(ARABIC_LOCALE, { weekday: "long" }) : DAY_SHORT[mondayIndex(parseDay(iso).getDay())]);
 
 const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)[0] : "");
 
@@ -142,8 +150,8 @@ function netMembers(raw: DashRaw, now: Date): GaugeModel {
   return {
     spec: { kind: "balance", weeksJoined: WJ, weeksEnded: WE, joined: j, ended: e, prevNet },
     empty,
-    label: "Net members",
-    sub: empty ? "No members yet" : `${j} joined · ${e} ended`,
+    label: t("Net members"),
+    sub: empty ? t("No members yet") : t("{joined} joined · {ended} ended", { joined: j, ended: e }),
     subTone: empty ? "faint" : "good",
     target: empty ? null : j - e,
     format: signed,
@@ -153,14 +161,14 @@ function netMembers(raw: DashRaw, now: Date): GaugeModel {
 function seatsUsed(raw: DashRaw): GaugeModel {
   const s = raw.seats;
   if (!s || s.capacity === 0) {
-    return { spec: { kind: "nodes", used: 0, total: 0 }, empty: true, label: "Seats used", sub: "No seat blocks", subTone: "faint", target: null, format: String };
+    return { spec: { kind: "nodes", used: 0, total: 0 }, empty: true, label: t("Seats used"), sub: t("No seat blocks"), subTone: "faint", target: null, format: String };
   }
   const free = Math.max(0, s.capacity - s.used);
   return {
     spec: { kind: "nodes", used: s.used, total: s.capacity },
     empty: false,
-    label: "Seats used",
-    sub: `${free} free · ${s.blocks} ${s.blocks === 1 ? "block" : "blocks"}`,
+    label: t("Seats used"),
+    sub: `${tx("{n} free", "seats", { n: free })} · ${tn(s.blocks, "{n} block", "{n} blocks")}`,
     subTone: "faint",
     target: s.used,
     format: String,
@@ -189,14 +197,14 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
       {
         spec: { kind: "petals", vals, last, today: todayIdx },
         empty: newEmpty,
-        label: "New members",
-        sub: newEmpty ? "No members yet" : early ? "This week" : diff === 0 ? "Same as last wk" : `${diff > 0 ? "+" : "−"}${Math.abs(diff)} vs last wk`,
+        label: t("New members"),
+        sub: newEmpty ? t("No members yet") : early ? t("This week") : diff === 0 ? t("Same as last wk") : t("{delta} vs last wk", { delta: `${diff > 0 ? "+" : "−"}${Math.abs(diff)}` }),
         subTone: newEmpty ? "faint" : "good",
         target: newEmpty ? null : n,
         format: String,
       },
-      { spec: { kind: "blank" }, empty: raw.liveProductsCount === 0, label: "Live listings", sub: "On Explore", subTone: "faint", target: raw.liveProductsCount === 0 ? null : raw.liveProductsCount, format: String },
-      { spec: { kind: "blank" }, empty: raw.discountsCount === 0, label: "Live discounts", sub: "On listing", subTone: "faint", target: raw.discountsCount === 0 ? null : raw.discountsCount, format: String },
+      { spec: { kind: "blank" }, empty: raw.liveProductsCount === 0, label: t("Live listings"), sub: t("On Explore"), subTone: "faint", target: raw.liveProductsCount === 0 ? null : raw.liveProductsCount, format: String },
+      { spec: { kind: "blank" }, empty: raw.discountsCount === 0, label: t("Live discounts"), sub: t("On listing"), subTone: "faint", target: raw.discountsCount === 0 ? null : raw.discountsCount, format: String },
     ];
   }
 
@@ -204,8 +212,8 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
     // OURS-DA-gym-gauges: Entries (B10: unlit until the venue has an entry), Renewals due, Net members, Seats used.
     const r = raw.renewalsDue;
     return [
-      raw.gym && gymHasEntries(raw.gym) ? gymEntriesGauge(raw.gym, k.week, k.lastWeek, k.today) : { spec: { kind: "petals", vals: [0, 0, 0, 0, 0, 0, 0], last: [0, 0, 0, 0, 0, 0, 0], today: k.week.indexOf(k.today) }, empty: true, label: "Entries", sub: "No entries yet", subTone: "faint", target: null, format: String },
-      { spec: { kind: "blank" }, empty: r === null, label: "Renewals due", sub: "In the next 7 days", subTone: r === null ? "faint" : "warn", target: r, format: String },
+      raw.gym && gymHasEntries(raw.gym) ? gymEntriesGauge(raw.gym, k.week, k.lastWeek, k.today) : { spec: { kind: "petals", vals: [0, 0, 0, 0, 0, 0, 0], last: [0, 0, 0, 0, 0, 0, 0], today: k.week.indexOf(k.today) }, empty: true, label: t("Entries"), sub: t("No entries yet"), subTone: "faint", target: null, format: String },
+      { spec: { kind: "blank" }, empty: r === null, label: t("Renewals due"), sub: t("In the next 7 days"), subTone: r === null ? "faint" : "warn", target: r, format: String },
       net,
       seats,
     ];
@@ -220,10 +228,10 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
   const pct = sumC > 0 ? sumB / sumC : 0;
   const under = fills.filter((f) => f < 0.7).length;
   const fill: GaugeModel = noClasses
-    ? { spec: { kind: "ring", fills: Array(12).fill(0), pct: 0 }, empty: true, label: "Fill rate", sub: "No classes yet", subTone: "faint", target: null, format: String }
+    ? { spec: { kind: "ring", fills: Array(12).fill(0), pct: 0 }, empty: true, label: t("Fill rate"), sub: t("No classes yet"), subTone: "faint", target: null, format: String }
     : weekClasses.length === 0
-      ? { spec: { kind: "ring", fills: Array(12).fill(0), pct: 0 }, empty: true, label: "Fill rate", sub: "No classes this week", subTone: "faint", target: null, format: String }
-      : { spec: { kind: "ring", fills, pct }, empty: false, label: "Fill rate", sub: `${under} under 70%`, subTone: "good", target: Math.round(pct * 100), format: String, unit: "%" };
+      ? { spec: { kind: "ring", fills: Array(12).fill(0), pct: 0 }, empty: true, label: t("Fill rate"), sub: t("No classes this week"), subTone: "faint", target: null, format: String }
+      : { spec: { kind: "ring", fills, pct }, empty: false, label: t("Fill rate"), sub: t("{n} under 70%", { n: under }), subTone: "good", target: Math.round(pct * 100), format: String, unit: "%" };
 
   const perDay = (dates: string[]) => dates.map((d) => (k.byDate[d] ?? []).reduce((a, c) => a + (k.booked[c.id] ?? 0), 0));
   const vals = perDay(k.week);
@@ -237,8 +245,8 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
     booked = {
       spec: { kind: "petals", vals: [0, 0, 0, 0, 0, 0, 0], last: [0, 0, 0, 0, 0, 0, 0], today: k.week.indexOf(k.today) },
       empty: true,
-      label: "Booked",
-      sub: firstUpcoming ? `First class ${DAY_SHORT[mondayIndex(parseDay(firstUpcoming.date).getDay())]}` : "No bookings yet",
+      label: t("Booked"),
+      sub: firstUpcoming ? t("First class {day}", { day: weekdayShort(firstUpcoming.date) }) : t("No bookings yet"),
       subTone: "faint",
       target: null,
       format: String,
@@ -248,8 +256,8 @@ export function gaugeModels(kind: DashKind, raw: DashRaw, now: Date): GaugeModel
     booked = {
       spec: { kind: "petals", vals, last, today: k.week.indexOf(k.today) },
       empty: false,
-      label: "Booked",
-      sub: early || delta === null ? "This week" : `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% vs last wk`,
+      label: t("Booked"),
+      sub: early || delta === null ? t("This week") : t("{delta} vs last wk", { delta: `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}%` }),
       subTone: "good",
       target: total,
       format: String,
@@ -305,17 +313,17 @@ export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock 
     return {
       kind: "empty",
       icon: "scan-line",
-      title: "No entries yet",
-      body: "Entries show here once members start checking in.",
+      title: t("No entries yet"),
+      body: t("Entries show here once members start checking in."),
       boxes: [
-        { value: "–", label: "Entries today" },
-        { value: "–", label: "Right now" },
-        r === null ? { value: "–", label: "Renewals due" } : { value: String(r), label: "Renewals due", delta: "In the next 7 days", tone: "warn" },
+        { value: "–", label: t("Entries today") },
+        { value: "–", label: t("Right now") },
+        r === null ? { value: "–", label: t("Renewals due") } : { value: String(r), label: t("Renewals due"), delta: t("In the next 7 days"), tone: "warn" },
       ],
     };
   }
   if (raw.classes.length === 0) {
-    return { kind: "empty", icon: "calendar-plus", title: "No classes yet", body: "Add your first class and bookings show here." };
+    return { kind: "empty", icon: "calendar-plus", title: t("No classes yet"), body: t("Add your first class and bookings show here.") };
   }
   const g = classGlance(raw);
   const todays = k.byDate[k.today] ?? [];
@@ -336,12 +344,12 @@ export function todayBlock(kind: DashKind, raw: DashRaw, now: Date): TodayBlock 
         id: c.id,
         title: c.title,
         detail: who ? `${time12(c.start)} · ${raw.team[c.professionalId as string]}` : time12(c.start),
-        pill: b >= c.cap ? { text: "Full", tone: "good" as const } : w > 0 ? { text: `${w} on waitlist`, tone: "pale" as const } : { text: `${Math.round(fillOf(c) * 100)}%`, tone: "soft" as const },
+        pill: b >= c.cap ? { text: t("Full"), tone: "good" as const } : w > 0 ? { text: t("{n} on waitlist", { n: w }), tone: "pale" as const } : { text: `${Math.round(fillOf(c) * 100)}%`, tone: "soft" as const },
       };
     }),
     // B15 follow-up: business_glance's early flag only (under 14 days old, or
     // under 10 classes held in the 28 days before).
-    tip: g.early ? EARLY_TIP : null,
+    tip: g.early ? t(EARLY_TIP) : null,
   };
 }
 
@@ -362,19 +370,19 @@ export function toGlance(rows: { metric: string; value: number | string | null; 
  */
 export function classGlance(raw: Pick<DashRaw, "glance" | "glanceLastWeek">): { boxes: NumberBox[]; early: boolean } {
   const g = raw.glance;
-  if (!g) return { boxes: [{ value: "–", label: "Classes today" }, { value: "–", label: "Average fill" }, { value: "–", label: "On waitlists" }], early: false };
+  if (!g) return { boxes: [{ value: "–", label: t("Classes today") }, { value: "–", label: t("Average fill") }, { value: "–", label: t("On waitlists") }], early: false };
   const boxes: NumberBox[] = [];
   const n = (f: GlanceFigure) => (f.value === null ? "–" : String(Math.round(f.value)));
-  if (g.classes_today) boxes.push({ value: n(g.classes_today), label: "Classes today" });
+  if (g.classes_today) boxes.push({ value: n(g.classes_today), label: t("Classes today") });
   const fill = g.average_fill_pct;
   if (fill) {
     const avg = fill.value === null ? null : Math.round(fill.value);
     const lw = raw.glanceLastWeek?.average_fill_pct?.value;
     const last = lw === null || lw === undefined ? null : Math.round(lw);
     const delta = !fill.early && avg !== null && last !== null ? avg - last : null;
-    boxes.push({ value: avg === null ? "–" : `${avg}%`, label: "Average fill", delta: delta === null ? undefined : `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}% vs last week`, tone: delta !== null && delta < 0 ? "warn" : "good" });
+    boxes.push({ value: avg === null ? "–" : `${avg}%`, label: t("Average fill"), delta: delta === null ? undefined : t("{delta} vs last week", { delta: `${delta >= 0 ? "+" : "−"}${Math.abs(delta)}%` }), tone: delta !== null && delta < 0 ? "warn" : "good" });
   }
-  if (g.on_waitlists) boxes.push({ value: n(g.on_waitlists), label: "On waitlists" });
+  if (g.on_waitlists) boxes.push({ value: n(g.on_waitlists), label: t("On waitlists") });
   return { boxes, early: !!(fill ?? g.classes_today)?.early };
 }
 
@@ -412,7 +420,7 @@ export function weekItems(raw: DashRaw, now: Date): { dates: string[]; items: Da
         b: 0,
         cap: 0,
         loc: e.location ?? "",
-        status: e.invite ? (e.invite.status === "accepted" ? "Going" : e.invite.status === "pending" ? "Invitation" : "") : "",
+        status: e.invite ? (e.invite.status === "accepted" ? t("Going") : e.invite.status === "pending" ? t("Invitation") : "") : "",
       });
     }
   }
@@ -443,9 +451,9 @@ export function whenLabel(at: string, now: Date): string {
   const d = new Date(at);
   if (localDayOf(d) === localDayOf(now)) {
     const mins = Math.max(0, Math.round((now.getTime() - d.getTime()) / 60000));
-    if (mins < 1) return "Just now";
-    if (mins < 60) return `${mins} min ago`;
-    return `${Math.floor(mins / 60)}h ago`;
+    if (mins < 1) return t("Just now");
+    if (mins < 60) return t("{n} min ago", { n: mins });
+    return t("{n}h ago", { n: Math.floor(mins / 60) });
   }
   return time12(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
 }
@@ -461,24 +469,24 @@ export interface SetupStep {
 }
 
 export function setupSteps(kind: DashKind, raw: DashRaw): SetupStep[] {
-  const profile: SetupStep = { key: "profile", label: "Business profile saved", action: "Set up", done: !!raw.business, to: "profile" };
-  const listing: SetupStep = { key: "listing", label: "Turn your listing on", action: "Turn on", done: !!raw.business?.active, to: "listing" };
-  const firstMember: SetupStep = { key: "member", label: "Get your first member", action: "Invite", done: raw.members.some((m) => m.accepted === true), to: "members" };
-  const plan: SetupStep = { key: "plan", label: "Add a membership plan", action: "Add", done: raw.plansCount > 0, to: "plans" };
+  const profile: SetupStep = { key: "profile", label: t("Business profile saved"), action: t("Set up"), done: !!raw.business, to: "profile" };
+  const listing: SetupStep = { key: "listing", label: t("Turn your listing on"), action: t("Turn on"), done: !!raw.business?.active, to: "listing" };
+  const firstMember: SetupStep = { key: "member", label: t("Get your first member"), action: t("Invite"), done: raw.members.some((m) => m.accepted === true), to: "members" };
+  const plan: SetupStep = { key: "plan", label: t("Add a membership plan"), action: t("Add"), done: raw.plansCount > 0, to: "plans" };
   if (kind === "store") {
     return [
       profile,
       listing,
-      { key: "product", label: "Add your first product", action: "Add", done: raw.productsCount > 0, to: "products" },
-      { key: "delivery", label: "Set delivery or pickup", action: "Set up", done: raw.storeDeliveryOrPickup, to: "delivery" },
+      { key: "product", label: t("Add your first product"), action: t("Add"), done: raw.productsCount > 0, to: "products" },
+      { key: "delivery", label: t("Set delivery or pickup"), action: t("Set up"), done: raw.storeDeliveryOrPickup, to: "delivery" },
       // First order: B11 store_orders_page total_count (open while B11 is not on the database).
-      { key: "order", label: "Get your first order", action: "View", done: (raw.store?.totalOrders ?? 0) > 0, to: "orders" },
+      { key: "order", label: t("Get your first order"), action: t("View"), done: (raw.store?.totalOrders ?? 0) > 0, to: "orders" },
     ];
   }
   if (kind === "gym") {
-    return [profile, listing, plan, { key: "checkin", label: "Set up check-in", action: "Set up", done: raw.accessQr, to: "checkin" }, firstMember];
+    return [profile, listing, plan, { key: "checkin", label: t("Set up check-in"), action: t("Set up"), done: raw.accessQr, to: "checkin" }, firstMember];
   }
-  return [profile, listing, { key: "class", label: "Create your first class", action: "Create", done: raw.classes.length > 0, to: "classes" }, plan, firstMember];
+  return [profile, listing, { key: "class", label: t("Create your first class"), action: t("Create"), done: raw.classes.length > 0, to: "classes" }, plan, firstMember];
 }
 
 export const isClassBased = (kind: DashKind) => kind === "classes";
@@ -489,17 +497,23 @@ export { DAY_SHORT, DAY_LONG };
 
 const OPEN_ORDER = new Set(["placed", "packed", "out_for_delivery", "ready_for_pickup"]);
 const ORDER_PILL: Record<string, { text: string; tone: "good" | "warn" | "pale" }> = {
-  placed: { text: "To pack", tone: "warn" },
-  packed: { text: "Packed", tone: "pale" },
+  placed: { text: tk("To pack"), tone: "warn" },
+  packed: { text: tk("Packed"), tone: "pale" },
   out_for_delivery: { text: "Out", tone: "pale" },
-  ready_for_pickup: { text: "Ready", tone: "good" },
+  ready_for_pickup: { text: tk("Ready"), tone: "good" },
+};
+/** The order pill in the app's language ("Out" is "out for delivery": its own context). */
+const orderPill = (status: string) => {
+  const p = ORDER_PILL[status];
+  if (!p) return p;
+  return { ...p, text: status === "out_for_delivery" ? tx("Out", "out for delivery") : t(p.text) };
 };
 /**
  * The early tip (DA1-005 #3 / DA1-013 #2 position), shown when business_glance
  * says the figure rests on thin history (B15 follow-up: the business is under
  * 14 days old, or the source has under 10 records in the 28 days before).
  */
-export const EARLY_TIP = "Early days: not enough history yet";
+export const EARLY_TIP = tk("Early days: not enough history yet");
 
 /**
  * DA1-011: Orders today, To pack or deliver, Low stock (under 5 left); the
@@ -510,11 +524,11 @@ export const EARLY_TIP = "Early days: not enough history yet";
 export function storeToday(raw: DashRaw): TodayBlock {
   const s = raw.store;
   if (!s || s.totalOrders === 0) {
-    return { kind: "empty", icon: "package", title: "No orders yet", body: "Orders show here as soon as your first product is listed." };
+    return { kind: "empty", icon: "package", title: t("No orders yet"), body: t("Orders show here as soon as your first product is listed.") };
   }
 
   const open = s.orders.filter((o) => OPEN_ORDER.has(o.status));
-  const items = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+  const items = (n: number) => tn(n, "{n} item", "{n} items");
   // B15: Orders today and Low stock are business_glance's (orders_today on the
   // business's own day; low_stock under 5 left). "To pack or deliver" is
   // glance's orders_open (placed, packed, out for delivery, ready for pickup:
@@ -523,11 +537,11 @@ export function storeToday(raw: DashRaw): TodayBlock {
   const g = raw.glance;
   const fig = (f: GlanceFigure | undefined) => (f && f.value !== null ? Math.round(f.value) : null);
   const boxes: NumberBox[] = [];
-  if (!g || g.orders_today) boxes.push({ value: fig(g?.orders_today) === null ? "–" : String(fig(g?.orders_today)), label: "Orders today" });
-  boxes.push({ value: String(fig(g?.orders_open) ?? open.length), label: "To pack or deliver" });
+  if (!g || g.orders_today) boxes.push({ value: fig(g?.orders_today) === null ? "–" : String(fig(g?.orders_today)), label: t("Orders today") });
+  boxes.push({ value: String(fig(g?.orders_open) ?? open.length), label: t("To pack or deliver") });
   if (!g || g.low_stock) {
     const low = fig(g?.low_stock);
-    boxes.push(low === null ? { value: "–", label: "Low stock" } : low > 0 ? { value: String(low), label: "Low stock", delta: "Under 5 left", tone: "warn" } : { value: "0", label: "Low stock" });
+    boxes.push(low === null ? { value: "–", label: t("Low stock") } : low > 0 ? { value: String(low), label: t("Low stock"), delta: t("Under 5 left"), tone: "warn" } : { value: "0", label: t("Low stock") });
   }
   return {
     kind: "store",
@@ -535,14 +549,14 @@ export function storeToday(raw: DashRaw): TodayBlock {
     orders: open.slice(0, 3).map((o) => ({
       id: o.id,
       glyph: o.fulfilment === "delivery" ? "truck" : "package",
-      title: `Order #${o.number}`,
-      detail: `${o.fulfilment === "delivery" ? "Delivery" : "Pickup"} · ${items(o.itemCount)} · ${o.label}`,
-      pill: ORDER_PILL[o.status],
+      title: t("Order #{number}", { number: o.number }),
+      detail: `${o.fulfilment === "delivery" ? t("Delivery") : t("Pickup")} · ${items(o.itemCount)} · ${o.label}`,
+      pill: orderPill(o.status),
     })),
     openCount: open.length,
-    low: s.lowStock.slice(0, 3).map((p) => ({ id: p.id, title: p.name, detail: p.category ?? "Other", value: `${p.stock} left` })),
+    low: s.lowStock.slice(0, 3).map((p) => ({ id: p.id, title: p.name, detail: p.category ?? t("Other"), value: t("{n} left", { n: p.stock }) })),
     lowCount: s.lowStock.length,
     // The server's early flag only (orders in the 28 days before, B15 follow-up).
-    tip: g?.orders_open?.early || g?.orders_today?.early ? EARLY_TIP : null,
+    tip: g?.orders_open?.early || g?.orders_today?.early ? t(EARLY_TIP) : null,
   };
 }

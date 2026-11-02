@@ -10,6 +10,7 @@ import { openNowTag } from "../../services/venues/hours";
 import { MemberTag } from "../marketplace/MemberTag";
 import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The per-type "Today" block under the gauge cluster (V6-52 / D-BU4-1):
 // BizTypeKit's glance screen (DA1-003 classes, DA1-007 gym, DA1-011 store)
@@ -44,8 +45,8 @@ export function TodayBlock({
   const navigate = useNavigate();
   const openEntries = onEntries ?? (() => navigate("/app/business/operations"));
   return (
-    <section aria-label="Today" style={{ marginBottom: 6 }}>
-      <KitLabel c={c} label="Today" />
+    <section aria-label={t("Today")} style={{ marginBottom: 6 }}>
+      <KitLabel c={c} label={t("Today")} />
       {model.kind === "empty" ? (
         <>
           {model.boxes && <NumberBoxes c={c} boxes={model.boxes} />}
@@ -56,13 +57,13 @@ export function TodayBlock({
           <NumberBoxes c={c} boxes={model.boxes} />
           {model.orders.length > 0 && (
             <>
-              <KitLabel c={c} label="Orders to fulfil" action="See all" onAction={onOrders} />
+              <KitLabel c={c} label={t("Orders to fulfil")} action={t("See all")} onAction={onOrders} />
               <KitList c={c} rows={model.orders.map((o) => ({ key: o.id, Icon: o.glyph === "truck" ? Truck : Package, title: o.title, detail: o.detail, pill: o.pill, onClick: onOpenOrder ? () => onOpenOrder(o.id) : undefined }))} />
             </>
           )}
           {model.low.length > 0 && (
             <>
-              <KitLabel c={c} label="Low stock" action="See all" onAction={onProducts} />
+              <KitLabel c={c} label={t("Low stock")} action={t("See all")} onAction={onProducts} />
               <KitList c={c} rows={model.low.map((p) => ({ key: p.id, Icon: Package, title: p.title, detail: p.detail, value: p.value, onClick: onProducts }))} />
             </>
           )}
@@ -71,10 +72,10 @@ export function TodayBlock({
       ) : model.kind === "gym" ? (
         <>
           <NumberBoxes c={c} boxes={model.boxes} />
-          {model.bars.length > 0 && <KitBars c={c} title="Busy times today" sub="When is the floor busiest?" bars={model.bars} hi={model.hi} />}
+          {model.bars.length > 0 && <KitBars c={c} title={t("Busy times today")} sub={t("When is the floor busiest?")} bars={model.bars} hi={model.hi} />}
           {model.recent.length > 0 && (
             <>
-              <KitLabel c={c} label="Recent entries" action="See all" onAction={openEntries} />
+              <KitLabel c={c} label={t("Recent entries")} action={t("See all")} onAction={openEntries} />
               <KitList c={c} rows={model.recent.map((r) => ({ key: r.id, Icon: ScanLine, title: r.title, detail: r.detail, pill: r.pill, onClick: openEntries }))} />
             </>
           )}
@@ -83,10 +84,10 @@ export function TodayBlock({
       ) : (
         <>
           <NumberBoxes c={c} boxes={model.boxes} />
-          {model.bars.length > 0 && <KitBars c={c} title="Fill by class today" sub="Which classes are filling up?" bars={model.bars} hi={model.hi} />}
+          {model.bars.length > 0 && <KitBars c={c} title={t("Fill by class today")} sub={t("Which classes are filling up?")} bars={model.bars} hi={model.hi} />}
           {model.next.length > 0 && (
             <>
-              <KitLabel c={c} label="Next up" action="See all" onAction={onSeeAll} />
+              <KitLabel c={c} label={t("Next up")} action={t("See all")} onAction={onSeeAll} />
               <KitList c={c} rows={model.next.map((r) => ({ key: r.id, Icon: CalendarDays, title: r.title, detail: r.detail, pill: r.pill, onClick: onOpenClass }))} />
             </>
           )}
@@ -121,9 +122,9 @@ export function VenueBoxes({ c, gymId }: { c: DashPalette; gymId: string }) {
   const d = data?.gymId === gymId ? data.value : null;
   const open = d ? openNowTag(d.isOpenNow) : null;
   return (
-    <section aria-label="This venue" style={{ marginBottom: 6 }}>
+    <section aria-label={t("This venue")} style={{ marginBottom: 6 }}>
       <div style={{ position: "relative" }}>
-        <KitLabel c={c} label="This venue" />
+        <KitLabel c={c} label={t("This venue")} />
         {open && (
           <span style={{ position: "absolute", insetInlineEnd: 2, top: 0 }}>
             <MemberTag label={open.label} tone={open.tone} />
@@ -144,25 +145,25 @@ export function VenueBoxes({ c, gymId }: { c: DashPalette; gymId: string }) {
             c={c}
             cols={3}
             boxes={[
-              { value: d.activeMembers.toLocaleString(appLocale()), label: "Active members" },
-              { value: d.membershipsAwaitingPayment.toLocaleString(appLocale()), label: "Awaiting payment" },
+              { value: d.activeMembers.toLocaleString(appLocale()), label: t("Active members") },
+              { value: d.membershipsAwaitingPayment.toLocaleString(appLocale()), label: t("Awaiting payment") },
               // B15: null without "revenue": the two money boxes are left out, never "$0".
               ...(d.amountAwaitingPayment !== null && d.amountMarkedPaidThisMonth !== null
                 ? [
-                    { value: money(d.amountAwaitingPayment), label: "Agreed, not yet paid" },
-                    { value: money(d.amountMarkedPaidThisMonth), label: "Marked paid this month" },
+                    { value: money(d.amountAwaitingPayment), label: t("Agreed, not yet paid") },
+                    { value: money(d.amountMarkedPaidThisMonth), label: t("Marked paid this month") },
                   ]
                 : []),
-              { value: d.classesThisWeek.toLocaleString(appLocale()), label: "Classes this week" },
-              { value: d.bookingsThisWeek.toLocaleString(appLocale()), label: "Bookings this week" },
-              { value: d.waitlistWaiting.toLocaleString(appLocale()), label: "On waitlists" },
-              { value: d.cancellationsThisWeek.toLocaleString(appLocale()), label: "Cancellations this week" },
-              { value: d.reviewsAverage === null ? "–" : d.reviewsAverage.toFixed(1), label: "Reviews", delta: reviewsLine(d.reviewsAverage, d.reviewsCount) },
+              { value: d.classesThisWeek.toLocaleString(appLocale()), label: t("Classes this week") },
+              { value: d.bookingsThisWeek.toLocaleString(appLocale()), label: t("Bookings this week") },
+              { value: d.waitlistWaiting.toLocaleString(appLocale()), label: t("On waitlists") },
+              { value: d.cancellationsThisWeek.toLocaleString(appLocale()), label: t("Cancellations this week") },
+              { value: d.reviewsAverage === null ? "–" : d.reviewsAverage.toFixed(1), label: t("Reviews"), delta: reviewsLine(d.reviewsAverage, d.reviewsCount) },
             ]}
           />
           {d.amountAwaitingPayment !== null && (
             <p style={{ fontSize: textPx(11), lineHeight: linePx(16), color: c.faint, textAlign: "center", margin: "-4px 0 14px" }}>
-              Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.
+              {t("Payments happen at the venue, not through Centium. These figures are what was agreed and what your staff marked as paid.")}
             </p>
           )}
         </>

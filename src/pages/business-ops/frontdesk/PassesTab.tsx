@@ -13,6 +13,7 @@ import { deskMoney, renewalSub, weekSales, type DeskSale, type FrontDeskMember, 
 import type { DeskState } from "./useFrontDesk";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { todayLocal } from "../../../utils/date";
+import { t, tx } from "../../../i18n/core";
 import { expiredRows, expiredSub, type ExpiredRow } from "./expiredRows";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, LIST, ListCard, ListLine, NumberBoxes, RowsSkeleton, StatusChip } from "./frontDeskKit";
 
@@ -85,14 +86,14 @@ export const PassesTab: React.FC<{
   const unpaid = desk.live === true ? (desk.weekSales ?? []).filter((x) => !x.paid) : [];
   const canDesk = access.meets("front_desk");
   const labelOf = new Map(members.filter((m) => m.personId).map((m) => [m.personId as string, m.label]));
-  const saleWho = (sale: DeskSale) => (sale.personId ? labelOf.get(sale.personId) ?? "Member" : sale.who);
+  const saleWho = (sale: DeskSale) => (sale.personId ? labelOf.get(sale.personId) ?? t("Member") : sale.who);
   const markSalePaid = async (sale: DeskSale) => {
     if (busy || !canDesk) return;
     setBusy(true);
     const res = await markDeskSalePaid(sale.id);
     setBusy(false);
     if (!res.ok) return showToast(res.message);
-    showToast(`${saleWho(sale)}'s ${sale.planName} is marked as paid.`);
+    showToast(t("{name}'s {plan} is marked as paid.", { name: saleWho(sale), plan: sale.planName }));
     offerPromotionUsed({ kind: "day_pass", sourceId: sale.id });
     onDeskChanged();
   };
@@ -111,7 +112,7 @@ export const PassesTab: React.FC<{
       showToast(res.message);
       return;
     }
-    showToast(`${r.label}'s membership is renewed from ${dayMonthYear(r.expiresOn)}. Payment is due.`);
+    showToast(t("{name}'s membership is renewed from {date}. Payment is due.", { name: r.label, date: dayMonthYear(r.expiresOn) }));
     onChanged();
   };
 
@@ -122,21 +123,21 @@ export const PassesTab: React.FC<{
       title={r.label}
       sub={renewalSub(r)}
       first={i === 0}
-      ariaLabel={`${r.label}, ${renewalSub(r)}. Options`}
+      ariaLabel={t("{name}, {detail}. Options", { name: r.label, detail: renewalSub(r) })}
       menuOpen={menuFor?.membershipId === r.membershipId}
       onClick={(el) => openMenu(r, el)}
       trailing={
         r.alreadyRenewed ? (
-          <StatusChip tone="good">Renewed</StatusChip>
+          <StatusChip tone="good">{t("Renewed")}</StatusChip>
         ) : r.cancelAtPeriodEnd ? (
-          <StatusChip tone="warn">Ending</StatusChip>
+          <StatusChip tone="warn">{t("Ending")}</StatusChip>
         ) : (
           // Drawn as a chip, but it is an action (OP1-017 row 10): a button
           // with a 44 hit box; it opens the member's thread (MB-02).
           <ChipButton
             tone="pale"
-            label="Remind"
-            ariaLabel={canRemind(r) ? `Remind ${r.label}` : `Remind ${r.label} (needs messages access)`}
+            label={t("Remind")}
+            ariaLabel={canRemind(r) ? t("Remind {name}", { name: r.label }) : t("Remind {name} (needs messages access)", { name: r.label })}
             disabled={!canRemind(r) || busy}
             onClick={() => void remind(r)}
           />
@@ -146,7 +147,7 @@ export const PassesTab: React.FC<{
   );
 
   const expiredRow = (r: ExpiredRow, i: number) => (
-    <DeskRow key={r.membershipId} icon={CircleAlert} title={r.label} sub={expiredSub(r.daysAgo)} first={i === 0} trailing={<StatusChip tone="high">Expired</StatusChip>} />
+    <DeskRow key={r.membershipId} icon={CircleAlert} title={r.label} sub={expiredSub(r.daysAgo)} first={i === 0} trailing={<StatusChip tone="high">{t("Expired")}</StatusChip>} />
   );
 
   const overlays = (
@@ -168,7 +169,7 @@ export const PassesTab: React.FC<{
         onClose={() => setEnding(null)}
         onDone={(r, status) => {
           setEnding(null);
-          showToast(status === "cancelled" ? `${r.label}'s membership has ended.` : `${r.label}'s membership ends on ${dayMonthYear(r.expiresOn)}.`);
+          showToast(status === "cancelled" ? t("{name}'s membership has ended.", { name: r.label }) : t("{name}'s membership ends on {date}.", { name: r.label, date: dayMonthYear(r.expiresOn) }));
           onChanged();
         }}
       />
@@ -180,11 +181,11 @@ export const PassesTab: React.FC<{
     // S2: renewals in the next 30 days, grouped This week / Later.
     return (
       <div className="flex flex-col">
-        <DeskLabel action={{ label: "Back", onClick: () => setSeeAll(false), ariaLabel: "Back to passes and renewals" }}>Renewals in the next 30 days</DeskLabel>
-        <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>This week</p>
-        {dueNow.length ? <ListCard label="This week">{dueNow.map(anyRow)}</ListCard> : <ListLine>None due</ListLine>}
-        <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>Later</p>
-        {later.length ? <ListCard label="Later">{later.map(row)}</ListCard> : <ListLine>None due</ListLine>}
+        <DeskLabel action={{ label: t("Back"), onClick: () => setSeeAll(false), ariaLabel: t("Back to passes and renewals") }}>{t("Renewals in the next 30 days")}</DeskLabel>
+        <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>{t("This week")}</p>
+        {dueNow.length ? <ListCard label={t("This week")}>{dueNow.map(anyRow)}</ListCard> : <ListLine>{t("None due")}</ListLine>}
+        <p className="text-[11px] font-semibold leading-[14px] text-charcoal-faint" style={{ margin: "0 2px 6px" }}>{t("Later")}</p>
+        {later.length ? <ListCard label={t("Later")}>{later.map(row)}</ListCard> : <ListLine>{t("None due")}</ListLine>}
         {overlays}
       </div>
     );
@@ -193,33 +194,33 @@ export const PassesTab: React.FC<{
   return (
     <div className="flex flex-col">
       <PassCard />
-      <DeskLabel action={dueNow.length > 3 || later.length > 0 ? { label: "See all", onClick: () => setSeeAll(true), ariaLabel: "See all renewals" } : undefined}>Renewals due</DeskLabel>
+      <DeskLabel action={dueNow.length > 3 || later.length > 0 ? { label: t("See all"), onClick: () => setSeeAll(true), ariaLabel: t("See all renewals") } : undefined}>{t("Renewals due")}</DeskLabel>
       {loading && renewals.length === 0 ? (
         <RowsSkeleton />
       ) : error && renewals.length === 0 ? (
-        <ErrorCard title="Couldn't load renewals" onRetry={onRetry} />
+        <ErrorCard title={t("Couldn't load renewals")} onRetry={onRetry} />
       ) : dueNow.length === 0 ? (
-        <ListLine>None due</ListLine>
+        <ListLine>{t("None due")}</ListLine>
       ) : (
-        <ListCard label="Renewals due">{dueNow.slice(0, 3).map(anyRow)}</ListCard>
+        <ListCard label={t("Renewals due")}>{dueNow.slice(0, 3).map(anyRow)}</ListCard>
       )}
       {(sellsDayPass || (desk.weekSales?.length ?? 0) > 0 || desk.live !== true) && (
         <>
-          <DeskLabel>Day passes this week</DeskLabel>
+          <DeskLabel>{t("Day passes this week")}</DeskLabel>
           {/* "–" is the source's own no-value mark: no B10, an unreadable list, or no reader (Joined after). */}
           <NumberBoxes
             items={[
-              { label: "Sold", value: week2 ? String(week2.sold) : "–" },
-              { label: "Revenue", value: week2 ? deskMoney(week2.revenue) : "–" },
-              { label: "Joined after", value: "–" },
+              { label: t("Sold"), value: week2 ? String(week2.sold) : "–" },
+              { label: t("Revenue"), value: week2 ? deskMoney(week2.revenue) : "–" },
+              { label: t("Joined after"), value: "–" },
             ]}
           />
         </>
       )}
       {unpaid.length > 0 && (
         <>
-          <DeskLabel>Day passes to collect</DeskLabel>
-          <ListCard label="Day passes to collect">
+          <DeskLabel>{t("Day passes to collect")}</DeskLabel>
+          <ListCard label={t("Day passes to collect")}>
             {unpaid.map((sale, i) => (
               <DeskRow
                 key={sale.id}
@@ -230,8 +231,8 @@ export const PassesTab: React.FC<{
                 trailing={
                   <ChipButton
                     tone="warn"
-                    label="Mark paid"
-                    ariaLabel={`Mark ${saleWho(sale)}'s ${sale.planName} paid`}
+                    label={t("Mark paid")}
+                    ariaLabel={t("Mark {name}'s {plan} paid", { name: saleWho(sale), plan: sale.planName })}
                     disabled={!online || busy || !canDesk}
                     onClick={() => void markSalePaid(sale)}
                   />
@@ -251,9 +252,9 @@ const PassCard: React.FC = () => (
   <div className={`${LIST} flex items-center`} style={{ borderRadius: 20, padding: 16, gap: 14, marginBottom: 14 }}>
     <PassIllustration />
     <div className="min-w-0">
-      <p className="text-[14px] font-extrabold leading-[19px] text-charcoal">Member QR pass</p>
+      <p className="text-[14px] font-extrabold leading-[19px] text-charcoal">{t("Member QR pass")}</p>
       <p className="text-[12px] leading-[17px] text-charcoal-soft" style={{ marginTop: 4, textWrap: "pretty" } as React.CSSProperties}>
-        Each member has a pass in their app. It scans at the door and works offline.
+        {t("Each member has a pass in their app. It scans at the door and works offline.")}
       </p>
     </div>
   </div>
@@ -295,7 +296,7 @@ const RenewalMenu: React.FC<{
   onEnd: (r: RenewalDue) => void;
 }> = ({ menuFor, anchor, online, onClose, onRenew, onRemind, onEnd }) => {
   const chase = !!menuFor && !menuFor.alreadyRenewed && !menuFor.cancelAtPeriodEnd;
-  const offline = online ? undefined : "You're offline";
+  const offline = online ? undefined : t("You're offline");
   return (
     <PopupMenu
       open={!!menuFor && !!anchor}
@@ -303,9 +304,9 @@ const RenewalMenu: React.FC<{
       onClose={onClose}
       align="right"
       options={[
-        ...(chase ? [{ value: "renew", label: "Renew", disabled: !online, note: offline }] : []),
-        ...(chase && onRemind && menuFor.personId ? [{ value: "remind", label: "Send a reminder", disabled: !online, note: offline }] : []),
-        { value: "end", label: "End membership", destructive: true, disabled: !online, note: offline },
+        ...(chase ? [{ value: "renew", label: t("Renew"), disabled: !online, note: offline }] : []),
+        ...(chase && onRemind && menuFor.personId ? [{ value: "remind", label: t("Send a reminder"), disabled: !online, note: offline }] : []),
+        { value: "end", label: tx("End membership", "business"), destructive: true, disabled: !online, note: offline },
       ]}
       onSelect={(v) => {
         const r = menuFor;
@@ -370,10 +371,10 @@ const EndPopup: React.FC<{
       frame="kit"
       tone="destructive"
       icon={<XCircle size={20} strokeWidth={2.2} />}
-      title={ending ? `End ${ending.label}’s membership?` : ""}
-      subtitle={now ? "Their pass stops working straight away." : `Their pass stops working at the end of the paid period, on ${until}.`}
-      confirmLabel={busy ? "Ending…" : "End membership"}
-      cancelLabel="Keep it"
+      title={ending ? t("End {name}’s membership?", { name: ending.label }) : ""}
+      subtitle={now ? t("Their pass stops working straight away.") : t("Their pass stops working at the end of the paid period, on {date}.", { date: until })}
+      confirmLabel={busy ? t("Ending…") : tx("End membership", "business")}
+      cancelLabel={t("Keep it")}
       initialFocus="cancel"
       busy={busy}
       confirmDisabled={!online}
@@ -381,28 +382,28 @@ const EndPopup: React.FC<{
         <div className="text-start" style={{ marginTop: 12 }}>
           {terms && terms.length > 0 && (
             <p className="text-center text-[12px] font-bold leading-[17px] text-charcoal-soft" style={{ marginBottom: 10 }}>
-              Plan terms: {terms.join(" · ")}
+              {t("Plan terms: {terms}", { terms: terms.join(" · ") })}
             </p>
           )}
-          <div role="radiogroup" aria-label="When it ends" className="flex flex-col" style={{ gap: 8 }}>
-            {choice(!now, "At the end of the paid period", `They keep their pass until ${until}.`, () => setNow(false))}
-            {choice(now, "Now", "Their pass stops working today.", () => setNow(true))}
+          <div role="radiogroup" aria-label={t("When it ends")} className="flex flex-col" style={{ gap: 8 }}>
+            {choice(!now, t("At the end of the paid period"), t("They keep their pass until {date}.", { date: until }), () => setNow(false))}
+            {choice(now, t("Now"), t("Their pass stops working today."), () => setNow(true))}
           </div>
           <label htmlFor="fd-end-reason" className="block text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ margin: "12px 0 6px" }}>
-            Reason (optional)
+            {t("Reason (optional)")}
           </label>
           <input
             id="fd-end-reason"
             value={reason}
             maxLength={500}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="For your records"
+            placeholder={t("For your records")}
             className="w-full bg-cream-soft border-[1.5px] border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] focus:outline-none text-[13.5px] font-bold text-charcoal placeholder:font-medium placeholder:text-charcoal-faint"
             style={{ height: 46, borderRadius: 14, padding: "0 12px" }}
           />
           {!online && (
             <p role="status" className="text-[11.5px] font-bold leading-[16px] text-charcoal-faint" style={{ marginTop: 8 }}>
-              You're offline.
+              {t("You're offline.")}
             </p>
           )}
           {error && (

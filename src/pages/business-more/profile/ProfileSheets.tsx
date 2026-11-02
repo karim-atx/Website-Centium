@@ -5,6 +5,9 @@ import { BizButton, BizButtonSoft, BizDropdown, BizField, BizFieldButton, BizShe
 import { InstagramGlyph } from "../../../components/business-more/InstagramGlyph";
 import { BUSINESS_TYPE_OPTIONS, CATEGORY_KEYS, CATEGORY_LABEL, MAX_CATEGORIES, typeLabel, type BizKind } from "../../../components/business-more/kind";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
+import { t, tx } from "../../../i18n/core";
+
+const INSTAGRAM = "Instagram";
 import type { BusinessPatch, BusinessTypeValue } from "../../../services/business-more";
 import { PlaylistField, playlistFieldValid } from "../../../components/music/PlaylistField";
 import { tidyPlaylistInput } from "../../../services/music/playlistLink";
@@ -57,7 +60,7 @@ export function NameTypeSheet({
 
   const save = () => {
     if (!draftName.trim()) {
-      setNameError("Add your business name");
+      setNameError(t("Add your business name"));
       return;
     }
     if (draftType !== type) {
@@ -68,10 +71,10 @@ export function NameTypeSheet({
   };
 
   return (
-    <BizSheet open={open} onClose={onClose} title="Name and type" lead="Shown at the top of your listing.">
+    <BizSheet open={open} onClose={onClose} title={t("Name and type")} lead={t("Shown at the top of your listing.")}>
       <BizField
         id="biz-name"
-        label="Business name"
+        label={t("Business name")}
         value={draftName}
         onChange={(v) => {
           setDraftName(v);
@@ -84,16 +87,16 @@ export function NameTypeSheet({
       />
       <BizFieldButton
         id="biz-type"
-        label="Business type"
-        value={typeLabel(draftType)}
+        label={t("Business type")}
+        value={t(typeLabel(draftType))}
         icon={typeOpen ? ChevronUp : ChevronDown}
         expanded={typeOpen}
         onClick={() => setTypeOpen((o) => !o)}
       />
       {typeOpen && (
         <BizDropdown
-          label="Business type"
-          options={BUSINESS_TYPE_OPTIONS}
+          label={t("Business type")}
+          options={BUSINESS_TYPE_OPTIONS.map((o) => ({ ...o, label: t(o.label) }))}
           value={draftType}
           onPick={(v) => {
             setDraftType(v);
@@ -106,14 +109,14 @@ export function NameTypeSheet({
           {error}
         </p>
       )}
-      <BizButton label="Save" onClick={save} disabled={!dirty} busy={busy} />
+      <BizButton label={t("Save")} onClick={save} disabled={!dirty} busy={busy} />
       <BizConfirm
         open={askType}
         icon={RefreshCcw}
-        title="Change your business type?"
-        body={`Your navbar, Dashboard and Analytics change to match ${typeLabel(draftType)}.`}
-        action="Change type"
-        cancel={`Keep ${typeLabel(type)}`}
+        title={t("Change your business type?")}
+        body={t("Your navbar, Dashboard and Analytics change to match {type}.", { type: t(typeLabel(draftType)) })}
+        action={t("Change type")}
+        cancel={t("Keep {type}", { type: t(typeLabel(type)) })}
         busy={busy}
         onCancel={() => setAskType(false)}
         onAction={() => {
@@ -137,9 +140,9 @@ export function BioSheet({ open, onClose, bio, onSave }: { open: boolean; onClos
   const over = draft.length > BIO_MAX;
   const dirty = draft.trim() !== bio.trim();
   return (
-    <BizSheet open={open} onClose={onClose} title="Bio" lead="A few lines about what clients can expect.">
+    <BizSheet open={open} onClose={onClose} title={t("Bio")} lead={t("A few lines about what clients can expect.")}>
       <div style={{ marginBottom: 12 }}>
-        <FieldLabel htmlFor="biz-bio">Bio</FieldLabel>
+        <FieldLabel htmlFor="biz-bio">{t("Bio")}</FieldLabel>
         <textarea
           id="biz-bio"
           value={draft}
@@ -158,7 +161,7 @@ export function BioSheet({ open, onClose, bio, onSave }: { open: boolean; onClos
       </div>
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton
-        label="Save"
+        label={t("Save")}
         disabled={!dirty || over}
         busy={busy}
         onClick={async () => {
@@ -184,20 +187,20 @@ export function HousePlaylistSheet({ open, onClose, url, onSave }: { open: boole
   const next = tidyPlaylistInput(draft);
   const dirty = next !== url.trim();
   return (
-    <BizSheet open={open} onClose={onClose} title="House playlist" lead="The music you play here. Members open it in their own app.">
+    <BizSheet open={open} onClose={onClose} title={t("House playlist")} lead={t("The music you play here. Members open it in their own app.")}>
       <PlaylistField
         value={draft}
         onChange={(v) => {
           setDraft(v);
           setError(null);
         }}
-        label="House playlist (optional)"
-        hint="Shown on your page on Explore."
+        label={t("House playlist (optional)")}
+        hint={t("Shown on your page on Explore.")}
         error={error}
         style={{ marginBottom: 12 }}
       />
       <BizButton
-        label={url && !next ? "Remove playlist" : "Save"}
+        label={url && !next ? t("Remove playlist") : t("Save")}
         disabled={!dirty || !playlistFieldValid(next)}
         busy={busy}
         onClick={async () => {
@@ -259,8 +262,8 @@ export function CategoriesSheet({
     <BizSheet
       open={open}
       onClose={onClose}
-      title="Categories"
-      lead={limit ? "Pick up to 5." : "Pick up to 5. Clients filter Explore by these."}
+      title={t("Categories")}
+      lead={limit ? t("Pick up to 5.") : t("Pick up to 5. Clients filter Explore by these.")}
       leadTone={limit ? "high" : "soft"}
     >
       <style>{`@keyframes biz-chip-shake { 0%,100% { transform: translateX(0) } 25% { transform: translateX(-4px) } 75% { transform: translateX(4px) } }`}</style>
@@ -280,14 +283,14 @@ export function CategoriesSheet({
               )}
               style={{ height: 36, padding: "0 14px", borderRadius: 12, animation: shake === k ? "biz-chip-shake 0.4s ease" : undefined }}
             >
-              {CATEGORY_LABEL[k] ?? k}
+              {t(CATEGORY_LABEL[k] ?? k)}
             </button>
           );
         })}
       </div>
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton
-        label={`Save · ${picked.length} selected`}
+        label={t("Save · {n} selected", { n: picked.length })}
         disabled={!dirty}
         busy={busy}
         onClick={async () => {
@@ -334,8 +337,8 @@ export function ContactSheet({
 
   const save = async () => {
     const next: typeof errors = {};
-    if (d.email.trim() && !EMAIL_RE.test(d.email.trim())) next.email = "Use a full email address, like name@business.com.";
-    if (handle && !INSTAGRAM_RE.test(handle)) next.instagram = "Use your Instagram handle: letters, numbers, dots and underscores.";
+    if (d.email.trim() && !EMAIL_RE.test(d.email.trim())) next.email = t("Use a full email address, like name@business.com.");
+    if (handle && !INSTAGRAM_RE.test(handle)) next.instagram = t("Use your Instagram handle: letters, numbers, dots and underscores.");
     setErrors(next);
     if (next.email || next.instagram) return;
     setBusy(true);
@@ -346,11 +349,11 @@ export function ContactSheet({
   };
 
   return (
-    <BizSheet open={open} onClose={onClose} title="Contact" lead="How clients reach you from your listing.">
-      <BizField id="biz-phone" label="Phone" value={d.phone} onChange={(v) => setD({ ...d, phone: v })} icon={Phone} type="tel" inputMode="tel" autoComplete="tel" />
+    <BizSheet open={open} onClose={onClose} title={tx("Contact", "section")} lead={t("How clients reach you from your listing.")}>
+      <BizField id="biz-phone" label={t("Phone")} value={d.phone} onChange={(v) => setD({ ...d, phone: v })} icon={Phone} type="tel" inputMode="tel" autoComplete="tel" />
       <BizField
         id="biz-email"
-        label="Email"
+        label={t("Email")}
         value={d.email}
         onChange={(v) => {
           setD({ ...d, email: v });
@@ -362,10 +365,10 @@ export function ContactSheet({
         autoComplete="email"
         error={errors.email}
       />
-      <BizField id="biz-web" label="Website" value={d.website} onChange={(v) => setD({ ...d, website: v })} icon={Globe} inputMode="url" autoComplete="url" />
+      <BizField id="biz-web" label={t("Website")} value={d.website} onChange={(v) => setD({ ...d, website: v })} icon={Globe} inputMode="url" autoComplete="url" />
       <BizField
         id="biz-ig"
-        label="Instagram"
+        label={INSTAGRAM}
         value={d.instagram}
         onChange={(v) => {
           setD({ ...d, instagram: v });
@@ -376,7 +379,7 @@ export function ContactSheet({
         error={errors.instagram}
       />
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
-      <BizButton label="Save" onClick={() => void save()} disabled={!dirty} busy={busy} />
+      <BizButton label={t("Save")} onClick={() => void save()} disabled={!dirty} busy={busy} />
     </BizSheet>
   );
 }
@@ -396,11 +399,11 @@ export function AreaSheet({ open, onClose, area, onSave }: { open: boolean; onCl
   const [error, setError] = useState<string | null>(null);
   const dirty = draft.trim() !== area.trim();
   return (
-    <BizSheet open={open} onClose={onClose} title="Area" lead="The neighbourhood or city clients see next to your business name.">
-      <BizField id="biz-area" label="Area" value={draft} onChange={setDraft} icon={MapPin} placeholder="Hamra, Beirut" maxLength={AREA_MAX} autoComplete="address-level2" />
+    <BizSheet open={open} onClose={onClose} title={t("Area")} lead={t("The neighbourhood or city clients see next to your business name.")}>
+      <BizField id="biz-area" label={t("Area")} value={draft} onChange={setDraft} icon={MapPin} placeholder={t("Hamra, Beirut")} maxLength={AREA_MAX} autoComplete="address-level2" />
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton
-        label="Save"
+        label={t("Save")}
         disabled={!dirty}
         busy={busy}
         onClick={async () => {
@@ -449,17 +452,17 @@ export function YourPhotoSheet({
   onRemove: () => void;
 }) {
   return (
-    <BizSheet open={open} onClose={onClose} title="Your photo" lead="Your own picture, separate from the business logo. Your team and the people you message see it.">
+    <BizSheet open={open} onClose={onClose} title={t("Your photo")} lead={t("Your own picture, separate from the business logo. Your team and the people you message see it.")}>
       <div className="flex justify-center" style={{ marginBottom: 14 }}>
         <span
           className="relative flex items-center justify-center overflow-hidden rounded-full bg-th-8e7fd0 text-white text-[28px] font-extrabold"
           style={{ width: 88, height: 88 }}
           aria-busy={busy || undefined}
         >
-          {avatarUrl ? <img src={avatarUrl} alt="Your photo" className="w-full h-full object-cover" /> : <span aria-hidden>{initials}</span>}
+          {avatarUrl ? <img src={avatarUrl} alt={t("Your photo")} className="w-full h-full object-cover" /> : <span aria-hidden>{initials}</span>}
           {busy && (
             <span className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <Loader2 size={24} className="animate-spin text-white" aria-label="Saving" />
+              <Loader2 size={24} className="animate-spin text-white" aria-label={t("Saving")} />
             </span>
           )}
         </span>
@@ -475,9 +478,9 @@ export function YourPhotoSheet({
           {error}
         </p>
       )}
-      <BizButton label="Choose from library" onClick={onLibrary} busy={busy} />
-      <BizButtonSoft label="Take a photo" onClick={onCamera} disabled={busy} />
-      {canRemove && <BizButtonSoft label="Remove photo" tone="high" onClick={onRemove} disabled={busy} />}
+      <BizButton label={t("Choose from library")} onClick={onLibrary} busy={busy} />
+      <BizButtonSoft label={t("Take a photo")} onClick={onCamera} disabled={busy} />
+      {canRemove && <BizButtonSoft label={t("Remove photo")} tone="high" onClick={onRemove} disabled={busy} />}
     </BizSheet>
   );
 }

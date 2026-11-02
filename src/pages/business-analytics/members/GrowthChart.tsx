@@ -5,7 +5,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import type { GrowthWeek } from "../../../services/business-analytics";
 import { canHide, growthChart, type SeriesKey } from "./membersModel";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tx } from "../../../i18n/core";
 
 // AN4-005 rows 18-33 and S2-S7 (AnMembersV6 "growth chart v2", l.99-135 markup,
 // l.339-376 logic): active members as a line, joins above and ends below the
@@ -150,10 +150,10 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
             </g>
           ))}
           <text x={rtl ? 318 : "0"} y="114" fontSize="7.5" fontWeight="700" fill={c.good} opacity={g.jOp} style={{ transition: fade }}>
-            Joined
+            {t("Joined")}
           </text>
           <text x={rtl ? 318 : "0"} y="149" fontSize="7.5" fontWeight="700" fill={c.high} opacity={g.eOp} style={{ transition: fade }}>
-            Ended
+            {t("Ended")}
           </text>
           {flip(
             <>
@@ -203,7 +203,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
         <span
           data-chart="1"
           role="slider"
-          aria-label="Scrub the growth chart"
+          aria-label={t("Scrub the growth chart")}
           aria-valuemin={1}
           aria-valuemax={n}
           aria-valuenow={(mi ?? last) + 1}
@@ -289,13 +289,13 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
               {shown.pinned && (
                 <span style={{ display: "flex", alignItems: "center", gap: 3, color: c.pDark }}>
                   <Pin size={11} strokeWidth={2.4} aria-hidden />
-                  Pinned
+                  {tx("Pinned", "chart week")}
                 </span>
               )}
             </p>
             {/* AN4-024 O2: the weeks before the first member. */}
             {shown.tip.none ? (
-              <p style={{ marginTop: 5, fontSize: 11.5, lineHeight: "16px", color: c.inkSoft, whiteSpace: "nowrap" }}>No members yet</p>
+              <p style={{ marginTop: 5, fontSize: 11.5, lineHeight: "16px", color: c.inkSoft, whiteSpace: "nowrap" }}>{t("No members yet")}</p>
             ) : (
             <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", rowGap: 2, marginTop: 5, fontSize: 11.5, lineHeight: "16px" }}>
               {shown.tip.rows.map((r) => (
@@ -312,7 +312,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
           </div>
         )}
       </div>
-      <p style={{ fontSize: 10.5, lineHeight: "14px", color: c.faint, marginTop: 6 }}>Drag across the chart to read each week. Tap to pin.</p>
+      <p style={{ fontSize: 10.5, lineHeight: "14px", color: c.faint, marginTop: 6 }}>{t("Drag across the chart to read each week. Tap to pin.")}</p>
       {/* AN4-005 O9: the weeks as a table for screen readers. */}
       <table className="sr-only">
         <tbody>

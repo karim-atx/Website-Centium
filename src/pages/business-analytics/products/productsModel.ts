@@ -9,30 +9,14 @@ import {
   type AnalyticsRange,
 } from "../analyticsRange";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // AN11 numbers from real store orders (B11 store_orders / store_order_items)
 // only. Until B11 is on the database the screens show their empty states,
 // never a sample. An order counts once placed and not cancelled; returned
 // items are part of Returns (OP1), not taken off sales here.
 
-const MON = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
-const dm = (iso: string) => {
-  const d = dateOf(iso);
-  return `${MON[d.getMonth()]} ${d.getDate()}`;
-};
+const dm = (iso: string) => dateOf(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 const dayOf = (ts: string) => isoOf(new Date(ts));
 
 export interface Sold {
@@ -205,7 +189,7 @@ export function money(v: number): string {
 
 /** "$29", "$42.50" (list prices keep their cents). */
 export function price(v: number | null): string {
-  if (v === null) return "No price";
+  if (v === null) return t("No price");
   return (
     "$" +
     (Number.isInteger(v)
@@ -269,7 +253,7 @@ export function productSeries(
     .map((o) => o.placedAt)
     .sort();
   return {
-    labels: starts.map((s) => "Week of " + dm(s)),
+    labels: starts.map((s) => t("Week of {date}", { date: dm(s) })),
     xl: [
       dm(starts[0]),
       dm(starts[Math.floor(DETAIL_WEEKS / 2) - 1]),
@@ -290,22 +274,22 @@ export function productSeries(
 
 /** OURS-AN11-listing-detail row 3b: numbers only. */
 export function detailLead(visible: boolean, s: ProductSeries | null): string {
-  if (!visible) return "Hidden from Explore, so no new sales.";
+  if (!visible) return t("Hidden from Explore, so no new sales.");
   if (!s || s.totU === 0)
-    return "No sales yet. Sales show here once it starts selling.";
+    return t("No sales yet. Sales show here once it starts selling.");
   const perWeek = Math.max(1, Math.round(s.totU / DETAIL_WEEKS));
   if (s.prevTotU > 0 && s.totU > s.prevTotU)
-    return `Selling about ${perWeek} a week, up on the 8 weeks before.`;
+    return t("Selling about {n} a week, up on the 8 weeks before.", { n: perWeek });
   if (s.prevTotU > 0 && s.totU < s.prevTotU)
-    return `Selling about ${perWeek} a week, a little slower than the 8 weeks before.`;
-  return `Selling steadily, about ${perWeek} a week.`;
+    return t("Selling about {n} a week, a little slower than the 8 weeks before.", { n: perWeek });
+  return t("Selling steadily, about {n} a week.", { n: perWeek });
 }
 
 export type SortKey = "sold" | "price" | "new";
 export const SORTS: { key: SortKey; label: string }[] = [
-  { key: "sold", label: "Most sold" },
-  { key: "price", label: "Price, low to high" },
-  { key: "new", label: "Newest first" },
+  { key: "sold", label: tk("Most sold") },
+  { key: "price", label: tk("Price, low to high") },
+  { key: "new", label: tk("Newest first") },
 ];
 
 /** `newest`: each product id to its place in the newest-first list (fetchStoreProducts order). */
@@ -382,7 +366,6 @@ export interface DiscountView {
   useTone: "primary" | "caution" | "ended";
 }
 
-const nWord = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /** The day it really ended: ended_at's day when earlier than ends_on. */
 export function discountEnd(f: Pick<DiscountFacts, "endsOn" | "endedAt">): string | null {
@@ -408,16 +391,16 @@ export function discountView(f: DiscountFacts, today: string, lastUse: string | 
   let daysLeft: string;
   let dlTone: DaysLeftTone;
   if (f.status === "scheduled") {
-    daysLeft = `Starts in ${nWord(daysBetween(today, f.startsOn), "day", "days")}`;
+    daysLeft = tn(daysBetween(today, f.startsOn), "Starts in 1 day", "Starts in {n} days");
     dlTone = "scheduled";
   } else if (f.status === "ended") {
-    daysLeft = `Ended ${dm(end ?? today)}`;
+    daysLeft = tx("Ended {date}", "discount", { date: dm(end ?? today) });
     dlTone = "ended";
   } else if (left === null) {
-    daysLeft = "No end date";
+    daysLeft = t("No end date");
     dlTone = "normal";
   } else {
-    daysLeft = left <= 0 ? "Ends today" : `${nWord(left, "day", "days")} left`;
+    daysLeft = left <= 0 ? t("Ends today") : tn(left, "1 day left", "{n} days left");
     dlTone = soon ? "soon" : "normal";
   }
   let elapsed = 0;
@@ -431,13 +414,13 @@ export function discountView(f: DiscountFacts, today: string, lastUse: string | 
     idleDays,
     daysLeft,
     dlTone,
-    dates: end ? `${dm(f.startsOn)} to ${dm(end)}` : `From ${dm(f.startsOn)}`,
+    dates: end ? t("{from} to {to}", { from: dm(f.startsOn), to: dm(end) }) : t("From {date}", { date: dm(f.startsOn) }),
     from: dm(f.startsOn),
-    to: end ? dm(end) : "No end date",
+    to: end ? dm(end) : t("No end date"),
     end,
     elapsed,
     marker: f.status === "live" && !!f.endsOn,
-    use: f.uses === null ? null : lim ? `${f.uses} of ${lim} used` : `${f.uses} used · no limit`,
+    use: f.uses === null ? null : lim ? t("{n} of {limit} used", { n: f.uses, limit: lim }) : t("{n} used · no limit", { n: f.uses }),
     usePct: f.uses === null ? 0 : lim ? Math.min(100, pctU * 100) : f.uses ? 100 : 0,
     useTone: f.status === "ended" ? "ended" : pctU >= 0.8 ? "caution" : "primary",
   };
@@ -449,25 +432,27 @@ export function usesPerWeek(f: Pick<DiscountFacts, "uses" | "startsOn" | "endsOn
   const last = end && end < today ? end : today;
   const weeks = Math.max(1, (daysBetween(f.startsOn, last) + 1) / 7);
   const k = Math.round((f.uses ?? 0) / weeks);
-  return k < 1 ? "less than once a week" : k === 1 ? "about once a week" : `about ${k} times a week`;
+  return k < 1 ? t("less than once a week") : k === 1 ? t("about once a week") : t("about {n} times a week", { n: k });
 }
 
 /** The detail's lead (ddv.lead, computed). `audienceNew` is the type's "New customers only". */
 export function discountLead(f: DiscountFacts, view: DiscountView, today: string, audienceNew: string): string {
-  if (f.status === "ended") return `It ended on ${dm(view.end ?? today)}. Duplicate it to run it again.`;
-  if (f.status === "scheduled") return f.showOnListing ? `It goes live on ${dm(f.startsOn)} and shows on your listing then.` : `It goes live on ${dm(f.startsOn)}.`;
-  if (f.status === "paused") return "It's paused, so it can't be used now. Resume it in Products, Promotions.";
-  if (f.uses === null) return "Uses show here for people with the Marketing or Revenue permission.";
+  if (f.status === "ended") return t("It ended on {date}. Duplicate it to run it again.", { date: dm(view.end ?? today) });
+  if (f.status === "scheduled") return f.showOnListing ? t("It goes live on {date} and shows on your listing then.", { date: dm(f.startsOn) }) : t("It goes live on {date}.", { date: dm(f.startsOn) });
+  if (f.status === "paused") return t("It's paused, so it can't be used now. Resume it in Products, Promotions.");
+  if (f.uses === null) return t("Uses show here for people with the Marketing or Revenue permission.");
   if (f.uses === 0)
     return f.showOnListing
-      ? `No one has used it yet. It shows on your listing to ${f.audience === "new" ? audienceNew.toLowerCase() : "everyone"}.`
-      : "No one has used it yet. It isn't shown on your listing.";
+      ? f.audience === "new"
+        ? t("No one has used it yet. It shows on your listing to {audience}.", { audience: audienceNew.toLowerCase() })
+        : t("No one has used it yet. It shows on your listing to everyone.")
+      : t("No one has used it yet. It isn't shown on your listing.");
   const rate = usesPerWeek(f, today);
   if (view.soon) {
     const left = f.endsOn ? daysBetween(today, f.endsOn) : 0;
-    return `It ends ${left <= 0 ? "today" : `in ${nWord(left, "day", "days")}`} and is used ${rate}.`;
+    return left <= 0 ? t("It ends today and is used {rate}.", { rate }) : tn(left, "It ends in 1 day and is used {rate}.", "It ends in {n} days and is used {rate}.", { rate });
   }
-  return `Used ${rate}.`;
+  return t("Used {rate}.", { rate });
 }
 
 /** The `n` Mondays ending with this week's. */

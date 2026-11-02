@@ -12,6 +12,7 @@ import {
 import type { BusinessRole, ClassRow, SeatInfo, TeamData, TeamPerson } from "./teamTypes";
 import { fetchPlanSummary, seatFacts } from "../../../services/centium-billing";
 import { assignInstructor as assignViaClasses, fetchClassBookings } from "../../../services/business-classes";
+import { t } from "../../../i18n/core";
 
 // AN5 Team analytics: an adapter over the shared services this batch's Team
 // agent (services/business-team/team.ts: team, seats, seat price, join
@@ -157,7 +158,7 @@ export async function fetchNames(ids: string[]): Promise<Map<string, string>> {
   if (ids.length === 0) return new Map();
   try {
     const r = await db.from("public_profile_summary").select("id, first_name").in("id", ids);
-    return new Map(((r.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || "Unnamed"]));
+    return new Map(((r.data ?? []) as { id: string; first_name: string | null }[]).map((p) => [p.id, p.first_name?.trim() || t("Unnamed")]));
   } catch {
     return new Map();
   }

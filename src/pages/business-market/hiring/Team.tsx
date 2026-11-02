@@ -12,6 +12,7 @@ import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { ExistingTeamChip, HiringEmpty, NotForThisBusiness, PaleNote, PEOPLE_ICON } from "./teamParts";
 import { classLine, classTile, firstName, hireLine, removeConfirmBody, removeSentence } from "./teamModel";
+import { isRtl, t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4-B · B-MA.8.4 Team (Business Hiring Screens lines
 // 156–185, `M()` / teamList / menu / teamRemove1–2 / teamRemoved / teamEmpty;
@@ -66,7 +67,7 @@ export default function TeamPage() {
   const message = async (member: TeamMember) => {
     const r = await startThread(member.professional.id);
     if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
-    else showStrip("Couldn't open the chat. Try again.", "error");
+    else showStrip(t("Couldn't open the chat. Try again."), "error");
   };
 
   const onMenu = (member: TeamMember, v: "profile" | "assign" | "message" | "remove") => {
@@ -83,7 +84,7 @@ export default function TeamPage() {
   const confirmRemove = async () => {
     if (!removing || !businessId || busy) return;
     if (!online) {
-      setDlgError("You're offline. Try again when you're connected.");
+      setDlgError(t("You're offline. Try again when you're connected."));
       return;
     }
     setBusy(true);
@@ -96,19 +97,19 @@ export default function TeamPage() {
     }
     const gone = removing.member;
     setRemoving(null);
-    setLoad((l) => (l.status === "ok" ? { status: "ok", team: l.team.filter((t) => t.professional.id !== gone.professional.id) } : l));
-    showStrip(`${gone.professional.name} removed from your team`);
+    setLoad((l) => (l.status === "ok" ? { status: "ok", team: l.team.filter((tm) => tm.professional.id !== gone.professional.id) } : l));
+    showStrip(t("{name} removed from your team", { name: gone.professional.name }));
   };
 
-  const header = <BackHeader eyebrow="Hiring" title="Team" onBack={back} backLabel="Back to Hiring" />;
-  const note = <PaleNote>Your Team are the professionals you hired through Hiring. Only they can be named as class instructors.</PaleNote>;
+  const header = <BackHeader eyebrow={t("Hiring")} title={t("Team")} onBack={back} backLabel={t("Back to Hiring")} />;
+  const note = <PaleNote>{t("Your Team are the professionals you hired through Hiring. Only they can be named as class instructors.")}</PaleNote>;
 
   let body: React.ReactNode;
   if (biz.loading || (businessId && load.status === "loading")) {
     body = (
       <>
         {note}
-        <MarketSkeleton radius={20} rows={3} height={147} count={2} label="Loading your team" style={{ marginTop: 12 }} />
+        <MarketSkeleton radius={20} rows={3} height={147} count={2} label={t("Loading your team")} style={{ marginTop: 12 }} />
       </>
     );
   } else if (!biz.canHire || !businessId) {
@@ -126,9 +127,9 @@ export default function TeamPage() {
         {note}
         <HiringEmpty
           icon={PEOPLE_ICON}
-          title="No one on your team yet"
-          body="Professionals you hire through Hiring show here, with their classes. Until then, classes show Instructor not listed."
-          action={load.status === "ok" ? { label: "Post an opening", onPress: postOpening } : undefined}
+          title={t("No one on your team yet")}
+          body={t("Professionals you hire through Hiring show here, with their classes. Until then, classes show Instructor not listed.")}
+          action={load.status === "ok" ? { label: t("Post an opening"), onPress: postOpening } : undefined}
           top={40}
         />
       </>
@@ -138,18 +139,18 @@ export default function TeamPage() {
       <>
         {note}
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-          {load.team.map((t) => {
-            const id = t.professional.id;
-            const line = hireLine(t.hires);
+          {load.team.map((tm) => {
+            const id = tm.professional.id;
+            const line = hireLine(tm.hires);
             const open = menu?.member.professional.id === id;
             return (
               <div key={id} data-member style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
                 <div style={{ padding: "14px 16px 10px", display: "flex", gap: 12, alignItems: "center" }}>
-                  <MarketAvatar id={id} name={t.professional.name} photoUrl={t.professional.photoUrl} size={48} fontSize={15} />
+                  <MarketAvatar id={id} name={tm.professional.name} photoUrl={tm.professional.photoUrl} size={48} fontSize={15} />
                   <div style={{ flex: 1, minWidth: 0, lineHeight: "normal" }}>
-                    <div style={{ fontSize: px(15), fontWeight: 800, lineHeight: lh(20), color: m.ink }}>{t.professional.name}</div>
-                    {t.professional.specialty ? <div style={{ fontSize: px(12), color: m.ink2 }}>{t.professional.specialty}</div> : null}
-                    {t.source === "existing_team" ? <ExistingTeamChip /> : null}
+                    <div style={{ fontSize: px(15), fontWeight: 800, lineHeight: lh(20), color: m.ink }}>{tm.professional.name}</div>
+                    {tm.professional.specialty ? <div style={{ fontSize: px(12), color: m.ink2 }}>{tm.professional.specialty}</div> : null}
+                    {tm.source === "existing_team" ? <ExistingTeamChip /> : null}
                     {line ? (
                       <div style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 5, fontSize: px(11), fontWeight: 700, color: m.tealink }}>
                         <TicketCheck size={12} />
@@ -159,10 +160,10 @@ export default function TeamPage() {
                   </div>
                   <button
                     type="button"
-                    aria-label={`Options for ${t.professional.name}`}
+                    aria-label={t("Options for {name}", { name: tm.professional.name })}
                     aria-haspopup="menu"
                     aria-expanded={open}
-                    onClick={(e) => setMenu(open ? null : { member: t, anchor: e.currentTarget })}
+                    onClick={(e) => setMenu(open ? null : { member: tm, anchor: e.currentTarget })}
                     className="hit market-focus"
                     style={{ width: 32, height: 32, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: open ? m.pale : "transparent", border: 0, padding: 0, flexShrink: 0, cursor: "pointer" }}
                   >
@@ -173,7 +174,7 @@ export default function TeamPage() {
                     </svg>
                   </button>
                 </div>
-                {t.classes.map((c, i) => {
+                {tm.classes.map((c, i) => {
                   const tile = classTile(c);
                   return (
                     <div key={`${c.seriesId ?? c.title}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 16px", borderTop: `0.5px solid ${m.div}`, lineHeight: "normal" }}>
@@ -207,12 +208,12 @@ export default function TeamPage() {
         onClose={() => setMenu(null)}
         anchor={menu?.anchor ?? null}
         width={184}
-        align="right"
+        align={isRtl() ? "left" : "right"}
         options={[
-          { value: "profile", label: "View profile" },
-          { value: "assign", label: "Assign classes" },
-          { value: "message", label: "Message" },
-          { value: "remove", label: "Remove from team", destructive: true },
+          { value: "profile", label: t("View profile") },
+          { value: "assign", label: t("Assign classes") },
+          { value: "message", label: t("Message") },
+          { value: "remove", label: t("Remove from team"), destructive: true },
         ]}
         onSelect={(v) => menu && onMenu(menu.member, v as "profile" | "assign" | "message" | "remove")}
       />
@@ -222,10 +223,10 @@ export default function TeamPage() {
         width={338}
         pad="24px 22px 22px"
         actionsTop={18}
-        title={!r ? "" : r.step === 1 ? `Remove ${firstName(r.member.professional.name)} from your team?` : "Confirm remove"}
+        title={!r ? "" : r.step === 1 ? t("Remove {name} from your team?", { name: firstName(r.member.professional.name) }) : t("Confirm remove")}
         body={!r ? undefined : r.step === 1 ? (removeSentence(r.member.classes) ?? undefined) : removeConfirmBody(r.member)}
-        cancel="Cancel"
-        action={r?.step === 2 ? "Remove from team" : "Remove"}
+        cancel={t("Cancel")}
+        action={r?.step === 2 ? t("Remove from team") : t("Remove")}
         busy={busy}
         error={r?.step === 2 ? dlgError : null}
         onCancel={() => !busy && setRemoving(null)}

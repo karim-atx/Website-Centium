@@ -14,17 +14,18 @@ import { useOnline } from "../../hooks/useOnline";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientConfirm, ClientEmpty, ClientRow, RetryLine, Section, SkeletonCards, type ClientTone } from "./clientKit";
 import { customerStatus } from "./MyOrdersPage";
+import { t, tk } from "../../i18n/core";
 
 // OURS-customer-store-order-detail (Designed by us): the status tracker, the
 // items, how it arrives, the total; Cancel while it's only placed; Request a
 // return once it's done.
 
 const RETURN_WORDS: Record<StoreReturn["status"], { label: string; tone: ClientTone; line: string }> = {
-  requested: { label: "Requested", tone: "pale", line: "The store will look at your request." },
-  approved: { label: "Approved", tone: "good", line: "Bring the item back to the store." },
-  received: { label: "Received", tone: "pale", line: "The store has the item. Your refund is next." },
-  refunded: { label: "Refunded", tone: "soft", line: "Your refund is done." },
-  rejected: { label: "Declined", tone: "bad", line: "The store declined this return." },
+  requested: { label: tk("Requested"), tone: "pale", line: tk("The store will look at your request.") },
+  approved: { label: tk("Approved"), tone: "good", line: tk("Bring the item back to the store.") },
+  received: { label: tk("Received"), tone: "pale", line: tk("The store has the item. Your refund is next.") },
+  refunded: { label: tk("Refunded"), tone: "soft", line: tk("Your refund is done.") },
+  rejected: { label: tk("Declined"), tone: "bad", line: tk("The store declined this return.") },
 };
 
 export default function MyOrderPage() {
@@ -37,7 +38,7 @@ export default function MyOrderPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(params.get("placed") ? "Order placed. The store has it." : params.get("returned") ? "Return requested." : null);
+  const [toast, setToast] = useState<string | null>(params.get("placed") ? t("Order placed. The store has it.") : params.get("returned") ? t("Return requested.") : null);
   const s = live.state;
   const d = s.status === "ok" ? s.value : null;
   const o = d?.order ?? null;
@@ -45,16 +46,16 @@ export default function MyOrderPage() {
   if (s.status === "loading") {
     return (
       <div>
-        <PageHeader title="Order" showBack sub />
-        <SkeletonCards heights={[160, 112, 90]} label="Loading your order" />
+        <PageHeader title={t("Order")} showBack sub />
+        <SkeletonCards heights={[160, 112, 90]} label={t("Loading your order")} />
       </div>
     );
   }
   if (s.status !== "ok" || !o) {
     return (
       <div>
-        <PageHeader title="Order" showBack sub />
-        {s.status === "error" ? <RetryLine text="Couldn't load this order." onRetry={live.reload} /> : <ClientEmpty icon={Package} title="Order not found" line="It may have been removed." />}
+        <PageHeader title={t("Order")} showBack sub />
+        {s.status === "error" ? <RetryLine text={t("Couldn't load this order.")} onRetry={live.reload} /> : <ClientEmpty icon={Package} title={t("Order not found")} line={t("It may have been removed.")} />}
       </div>
     );
   }
@@ -69,19 +70,19 @@ export default function MyOrderPage() {
     const r = await cancelOrder(o.id, null);
     setBusy(false);
     if (!r.ok) {
-      setError(r.pending ? "Cancelling orders is coming soon." : storeErrorText(r, "Couldn't cancel the order. Try again."));
+      setError(r.pending ? t("Cancelling orders is coming soon.") : storeErrorText(r, t("Couldn't cancel the order. Try again.")));
       return;
     }
     setCancelOpen(false);
-    setToast(r.value.paidToRefund ? "Order cancelled. The store will give your cash back." : "Order cancelled.");
+    setToast(r.value.paidToRefund ? t("Order cancelled. The store will give your cash back.") : t("Order cancelled."));
     await live.refresh();
   };
 
   return (
     <div>
-      <PageHeader title={`Order #${o.number}`} subtitle={[o.storeName, `placed ${dayClock(o.placedAt)}`].filter(Boolean).join(" · ")} showBack sub />
+      <PageHeader title={t("Order #{number}", { number: o.number })} subtitle={[o.storeName, t("placed {when}", { when: dayClock(o.placedAt) })].filter(Boolean).join(" · ")} showBack sub />
 
-      <ClientCard label="Status">
+      <ClientCard label={t("Status")}>
         <div className="flex items-center justify-between" style={{ padding: "12px 14px 4px" }}>
           <span className="text-[15px] font-bold text-charcoal">{status.label}</span>
         </div>
@@ -107,7 +108,7 @@ export default function MyOrderPage() {
                 </span>
                 <span className="flex-1 min-w-0 flex items-baseline justify-between" style={{ gap: 8 }}>
                   <span className={clsx("text-[14px] leading-[20px]", done || bad ? "font-semibold text-charcoal" : "font-medium text-charcoal-faint")}>
-                    {st.key === "out" ? "On its way" : st.key === "ready" ? "Ready to collect" : st.title}
+                    {st.key === "out" ? t("On its way") : st.key === "ready" ? t("Ready to collect") : t(st.title)}
                   </span>
                   {st.at && <span className="text-[12px] font-medium text-charcoal-faint tabular-nums">{clock12(st.at)}</span>}
                 </span>
@@ -117,35 +118,35 @@ export default function MyOrderPage() {
         </ol>
       </ClientCard>
 
-      <Section label="Items">
-        <ClientCard label="Items">
+      <Section label={t("Items")}>
+        <ClientCard label={t("Items")}>
           {o.items.map((i) => (
-            <ClientRow key={i.id} icon={Package} title={i.name} sub={`qty ${i.qty}`} value={money(i.lineTotal)} />
+            <ClientRow key={i.id} icon={Package} title={i.name} sub={t("qty {n}", { n: i.qty })} value={money(i.lineTotal)} />
           ))}
-          {delivery && <ClientRow title="Delivery" value={o.deliveryFee === 0 ? "Free" : money(o.deliveryFee)} />}
-          <ClientRow title={<span className="font-bold">Total</span>} value={money(o.total)} />
+          {delivery && <ClientRow title={t("Delivery")} value={o.deliveryFee === 0 ? t("Free") : money(o.deliveryFee)} />}
+          <ClientRow title={<span className="font-bold">{t("Total")}</span>} value={money(o.total)} />
         </ClientCard>
       </Section>
 
-      <Section label={delivery ? "Delivery" : "Pickup"}>
+      <Section label={delivery ? t("Delivery") : t("Pickup")}>
         <ClientCard>
           {delivery ? (
-            <ClientRow icon={Truck} title={o.deliveryAddress ?? "Address removed"} sub={o.deliveryAddress ? "Only the store sees this, for this order." : "Removed 90 days after delivery."} />
+            <ClientRow icon={Truck} title={o.deliveryAddress ?? t("Address removed")} sub={o.deliveryAddress ? t("Only the store sees this, for this order.") : t("Removed 90 days after delivery.")} />
           ) : (
-            <ClientRow icon={Store} title={o.storeName ?? "The store"} sub="Collect it at the store" />
+            <ClientRow icon={Store} title={o.storeName ?? t("The store")} sub={t("Collect it at the store")} />
           )}
           <ClientRow
             icon={Banknote}
-            title={o.paymentMethod === "whish" ? "Whish" : "Cash"}
-            sub={o.paymentStatus === "refunded" ? "Refunded" : o.paymentStatus === "paid" ? "Paid" : delivery ? "Pay when it's delivered" : "Pay when you pick it up"}
+            title={o.paymentMethod === "whish" ? "Whish" : t("Cash")}
+            sub={o.paymentStatus === "refunded" ? t("Refunded") : o.paymentStatus === "paid" ? t("Paid") : delivery ? t("Pay when it's delivered") : t("Pay when you pick it up")}
           />
         </ClientCard>
       </Section>
 
       {d?.ret && (
-        <Section label="Return">
+        <Section label={t("Return")}>
           <ClientCard>
-            <ClientRow icon={RotateCcw} title={d.ret.reason} sub={d.ret.kind === "exchange" && d.ret.status === "received" ? "The store has the item. Your exchange is done." : RETURN_WORDS[d.ret.status].line} pill={{ label: RETURN_WORDS[d.ret.status].label, tone: RETURN_WORDS[d.ret.status].tone }} />
+            <ClientRow icon={RotateCcw} title={d.ret.reason} sub={d.ret.kind === "exchange" && d.ret.status === "received" ? t("The store has the item. Your exchange is done.") : t(RETURN_WORDS[d.ret.status].line)} pill={{ label: t(RETURN_WORDS[d.ret.status].label), tone: RETURN_WORDS[d.ret.status].tone }} />
           </ClientCard>
         </Section>
       )}
@@ -153,7 +154,7 @@ export default function MyOrderPage() {
       <div style={{ marginTop: 18 }}>
         {o.canCancel && (
           <button type="button" onClick={() => setCancelOpen(true)} disabled={!online} className="tap w-full text-[14px] font-bold text-status-high disabled:opacity-40" style={{ minHeight: 44 }}>
-            Cancel order
+            {t("Cancel order")}
           </button>
         )}
         {o.canReturn && (
@@ -164,20 +165,20 @@ export default function MyOrderPage() {
             className="tap w-full text-[14px] font-bold text-primary-dark disabled:opacity-40"
             style={{ minHeight: 44 }}
           >
-            Request a return
+            {t("Request a return")}
           </button>
         )}
       </div>
       {o.canReturn && (
-        <p className="text-[12px] font-medium text-charcoal-faint text-center">The store's returns policy applies.</p>
+        <p className="text-[12px] font-medium text-charcoal-faint text-center">{t("The store's returns policy applies.")}</p>
       )}
 
       <ClientConfirm
         open={cancelOpen}
-        title={`Cancel order #${o.number}?`}
-        body="The store sees it as cancelled. This can't be undone."
-        keep="Keep order"
-        confirm="Cancel order"
+        title={t("Cancel order #{number}?", { number: o.number })}
+        body={t("The store sees it as cancelled. This can't be undone.")}
+        keep={t("Keep order")}
+        confirm={t("Cancel order")}
         destructive
         busy={busy}
         error={error}

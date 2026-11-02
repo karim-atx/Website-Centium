@@ -16,6 +16,7 @@ import { StatLedger } from "../../../components/market/StatLedger";
 import { PLANS_ROUTE } from "../plans";
 import { BackHeader, Caps, Chip, OutlineButton, useMarketColours } from "./parts";
 import { WeekGrid } from "./WeekGrid";
+import { NO_INSTRUCTOR } from "./instructorTeam";
 import { BizShareButton } from "../../../components/share/business/BizShareButton";
 import { weekSchedule } from "../../../components/share/business/bizCardModel";
 import { takeParkedDraft, useSessionActions } from "./SessionActions";
@@ -50,6 +51,7 @@ import {
   type SeriesCard,
   type Session,
 } from "./scheduleModel";
+import { t, tk, tn } from "../../../i18n/core";
 
 // Market + Share 3.0 · B-MA.6 Weekly schedule (Business Marketplace Screens
 // `classesWeek`, markup lines 382–407, script `bizWeek` / `sessions`; HANDOVER
@@ -166,12 +168,12 @@ export default function SchedulePage() {
   // OP1-088 (B7 MB-02): only for a seat that may message and see who booked, and a session someone booked.
   const msgOption: PopupMenuOption<string> | null =
     menuSession && actions.canMessage && menuSession.booked > 0
-      ? { value: "msg", label: people === "clients" ? "Message clients" : "Message members", disabled: offline, note: offline ? "You're offline" : undefined }
+      ? { value: "msg", label: people === "clients" ? t("Message clients") : t("Message members"), disabled: offline, note: offline ? t("You're offline") : undefined }
       : null;
   const menuRow = menuSession ? rowOf(menuSession.id) : null;
   // The old Open spots' Promote (a class under 40% within 48 hours, on Explore).
   const promoteOption: PopupMenuOption<string> | null =
-    menuSession && !classesType && isLowSoon(menuSession, now) && menuRow?.listedOnExplore !== false && centium.listingActive !== false ? { value: "promote", label: "Promote this class" } : null;
+    menuSession && !classesType && isLowSoon(menuSession, now) && menuRow?.listedOnExplore !== false && centium.listingActive !== false ? { value: "promote", label: t("Promote this class") } : null;
   // B9: a booked session offers Cancel session (OURS-AN3 C1); one nobody
   // booked keeps Delete class; a repeating one adds Stop repeating (OURS); a
   // cancelled one has no actions.
@@ -181,12 +183,12 @@ export default function SchedulePage() {
         ? [msgOption]
         : []
       : [
-          { value: "edit", label: "Edit" },
+          { value: "edit", label: t("Edit") },
           ...(msgOption ? [msgOption] : []),
-          { value: "sub", label: "Request a substitute" },
-          ...(menuSession.seriesId ? [{ value: "end", label: "Stop repeating" }] : []),
+          { value: "sub", label: t("Request a substitute") },
+          ...(menuSession.seriesId ? [{ value: "end", label: t("Stop repeating") }] : []),
           ...(promoteOption ? [promoteOption] : []),
-          menuSession.booked > 0 ? { value: "cancel", label: "Cancel session", destructive: true } : { value: "delete", label: "Delete class", destructive: true },
+          menuSession.booked > 0 ? { value: "cancel", label: t("Cancel session"), destructive: true } : { value: "delete", label: t("Delete class"), destructive: true },
         ]
     : [];
 
@@ -209,8 +211,8 @@ export default function SchedulePage() {
   const header = (
     <BackHeader
       m={m}
-      eyebrow={classesType ? undefined : "Gym"}
-      title={classesType ? "Schedule" : "Classes"}
+      eyebrow={classesType ? undefined : t("Gym")}
+      title={classesType ? t("Schedule") : t("Classes")}
       onBack={classesType ? null : goBack}
       right={
         !firstLoad && !api.error && !noBusiness ? (
@@ -218,8 +220,8 @@ export default function SchedulePage() {
             <ViewToggle m={m} view={view} onChange={setViewKept} />
             {/* Market + Share 3.0 B-SH.1: share this week's timetable (Weekly schedule card). */}
             <BizShareButton
-              label="Share this week's schedule"
-              emptyHint={shareWeek.count === 0 ? "Nothing to share yet. Add a class to share your schedule." : null}
+              label={t("Share this week's schedule")}
+              emptyHint={shareWeek.count === 0 ? t("Nothing to share yet. Add a class to share your schedule.") : null}
               getData={() => ({ t: "schedule", d: shareWeek })}
             />
           </>
@@ -235,22 +237,22 @@ export default function SchedulePage() {
       {offline && api.loadedAt !== null && <MarketOffline loaded style={{ marginBottom: 12 }} />}
 
       {firstLoad ? (
-        <div aria-busy="true" aria-label="Loading your schedule">
+        <div aria-busy="true" aria-label={t("Loading your schedule")}>
           <div className="flex" style={{ gap: 6 }}>
             {Array.from({ length: 7 }, (_, i) => (
               <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ flex: 1, height: 62, borderRadius: 12, background: m.soft }} />
             ))}
           </div>
-          <MarketSkeleton radius={20} rows={3} count={3} gap={10} label="Loading your classes" style={{ marginTop: 66 }} />
+          <MarketSkeleton radius={20} rows={3} count={3} gap={10} label={t("Loading your classes")} style={{ marginTop: 66 }} />
         </div>
       ) : api.error ? (
-        <MarketError thing="your schedule" onRetry={api.reload} />
+        <MarketError thing={tk("your schedule")} onRetry={api.reload} />
       ) : noBusiness ? (
         <>
-          <MarketEmptyCard title="Save your business profile first" body="Classes are scheduled under it." />
+          <MarketEmptyCard title={t("Save your business profile first")} body={t("Classes are scheduled under it.")} />
           <div style={{ marginTop: 12 }}>
             <OutlineButton m={m} onClick={() => navigate("/app/business/profile")}>
-              Set up business profile
+              {t("Set up business profile")}
             </OutlineButton>
           </div>
         </>
@@ -273,7 +275,7 @@ export default function SchedulePage() {
                 </svg>
               }
             >
-              Add class
+              {t("Add class")}
             </OutlineButton>
           </div>
 
@@ -294,8 +296,8 @@ export default function SchedulePage() {
           ) : dayList.length === 0 ? (
             <MarketEmptyCard
               style={{ marginTop: 10 }}
-              title={api.sessions.length === 0 ? "No classes scheduled yet" : `No classes on ${weekdayLong(day)}`}
-              body={api.sessions.length === 0 ? `Create your first class and ${people} can book it on Explore.` : "Tap Add class to schedule one."}
+              title={api.sessions.length === 0 ? t("No classes scheduled yet") : t("No classes on {day}", { day: weekdayLong(day) })}
+              body={api.sessions.length === 0 ? (people === "clients" ? t("Create your first class and clients can book it on Explore.") : t("Create your first class and members can book it on Explore.")) : t("Tap Add class to schedule one.")}
             />
           ) : (
             <div className="flex flex-col" style={{ marginTop: 10, gap: 10 }}>
@@ -334,8 +336,8 @@ export default function SchedulePage() {
 
           {/* The old Open spots week navigation (OURS placement: under the cards). */}
           <div className="flex items-center justify-between" style={{ marginTop: 12, marginInlineStart: -10, marginInlineEnd: -10 }}>
-            <WeekArrow m={m} label="Previous week" onClick={() => moveWeek(-1)}>
-              <ChevronLeft size={16} aria-hidden />
+            <WeekArrow m={m} label={t("Previous week")} onClick={() => moveWeek(-1)}>
+              <ChevronLeft size={16} className="rtl:-scale-x-100" aria-hidden />
             </WeekArrow>
             <button
               type="button"
@@ -345,14 +347,14 @@ export default function SchedulePage() {
               }}
               disabled={week === mondayOf(today)}
               className="market-focus hit"
-              aria-label={week === mondayOf(today) ? `${weekOf(week)}, this week` : `${weekOf(week)}. Back to this week`}
+              aria-label={week === mondayOf(today) ? t("{week}, this week", { week: weekOf(week) }) : t("{week}. Back to this week", { week: weekOf(week) })}
               style={{ fontSize: textPx(12), fontWeight: 800, color: m.ink, background: "transparent", border: 0, minHeight: 32, borderRadius: 10 }}
               aria-live="polite"
             >
               {weekOf(week)}
             </button>
-            <WeekArrow m={m} label="Next week" onClick={() => moveWeek(1)}>
-              <ChevronRight size={16} aria-hidden />
+            <WeekArrow m={m} label={t("Next week")} onClick={() => moveWeek(1)}>
+              <ChevronRight size={16} className="rtl:-scale-x-100" aria-hidden />
             </WeekArrow>
           </div>
 
@@ -371,29 +373,29 @@ export default function SchedulePage() {
               onMessageInstructor={async (pid) => {
                 const r = await startThread(pid);
                 if (r.ok) navigate("/app/messages", { state: { threadId: r.threadId } });
-                else actions.show("Couldn't open the chat. Try again.");
+                else actions.show(t("Couldn't open the chat. Try again."));
               }}
             />
           )}
 
           <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
-            Next 7 days
+            {t("Next 7 days")}
           </Caps>
           <StatLedger
             rows={[
-              { label: "Sessions this week", value: String(fig.sessions), delta: !fig.early && !fig.empty ? signed(fig.sessionsDelta) : "–" },
-              { label: "Spots booked", value: fig.bookedPct === null ? "–" : `${fig.bookedPct}%`, delta: !fig.early && !fig.empty && fig.pctDelta !== null ? signed(fig.pctDelta, " pts") : "–" },
-              { label: "Classes today", value: String(todayRows.length), delta: null },
-              { label: "Open on Centium today", value: centium.listingActive === null && !centium.fromCentium ? "–" : String(todaysOpen), delta: null },
-              { label: "Booked from Centium today", value: todaysFromCentium === null ? "–" : String(todaysFromCentium), delta: null },
+              { label: t("Sessions this week"), value: String(fig.sessions), delta: !fig.early && !fig.empty ? signed(fig.sessionsDelta) : "–" },
+              { label: t("Spots booked"), value: fig.bookedPct === null ? "–" : `${fig.bookedPct}%`, delta: !fig.early && !fig.empty && fig.pctDelta !== null ? signed(fig.pctDelta, ` ${t("pts")}`) : "–" },
+              { label: t("Classes today"), value: String(todayRows.length), delta: null },
+              { label: t("Open on Centium today"), value: centium.listingActive === null && !centium.fromCentium ? "–" : String(todaysOpen), delta: null },
+              { label: t("Booked from Centium today"), value: todaysFromCentium === null ? "–" : String(todaysFromCentium), delta: null },
             ]}
           />
           <p style={{ margin: "8px 4px 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{figuresLine(fig, api.sessions, issues, today, now)}</p>
 
           {series.length > 0 && (
-            <section aria-label="Repeating classes">
+            <section aria-label={t("Repeating classes")}>
               <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
-                Repeating classes
+                {t("Repeating classes")}
               </Caps>
               <div className="flex flex-col" style={{ gap: 10 }}>
                 {series.map((card) => {
@@ -414,11 +416,11 @@ export default function SchedulePage() {
           )}
 
           <Caps m={m} style={{ marginTop: 22, marginBottom: 8 }}>
-            Settings
+            {t("Settings")}
           </Caps>
           <div style={{ borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
-            <LinkRow m={m} icon={<Settings2 size={17} aria-hidden />} title="Class rules" sub="Waitlist and late cancels" onClick={() => navigate("/app/business/classes/rules")} />
-            {showPlans && <LinkRow m={m} icon={<Ticket size={17} aria-hidden />} title="Plans" sub="Memberships and class packs" onClick={() => navigate(PLANS_ROUTE)} divider />}
+            <LinkRow m={m} icon={<Settings2 size={17} aria-hidden />} title={t("Class rules")} sub={t("Waitlist and late cancels")} onClick={() => navigate("/app/business/classes/rules")} />
+            {showPlans && <LinkRow m={m} icon={<Ticket size={17} aria-hidden />} title={t("Plans")} sub={t("Memberships and class packs")} onClick={() => navigate(PLANS_ROUTE)} divider />}
           </div>
         </>
       )}
@@ -460,11 +462,11 @@ function useNow(): Date {
 /** The kept List / Week toggle (OP1-074 rows 8-9), in the header: the board's segmented track (--segtrack, radius 12, padding 2), active --segactive. */
 function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "week"; onChange: (v: "list" | "week") => void }) {
   return (
-    <div role="tablist" aria-label="Schedule view" className="flex" style={{ gap: 2, padding: 2, borderRadius: 12, background: m.segtrack }}>
+    <div role="tablist" aria-label={t("Schedule view")} className="flex" style={{ gap: 2, padding: 2, borderRadius: 12, background: m.segtrack }}>
       {(
         [
-          ["list", "List", <List key="i" size={16} strokeWidth={2.2} aria-hidden />],
-          ["week", "Week", <CalendarRange key="i" size={16} strokeWidth={2.2} aria-hidden />],
+          ["list", tk("List view"), <List key="i" size={16} strokeWidth={2.2} aria-hidden />],
+          ["week", tk("Week view"), <CalendarRange key="i" size={16} strokeWidth={2.2} aria-hidden />],
         ] as const
       ).map(([k, label, icon]) => {
         const on = view === k;
@@ -474,8 +476,8 @@ function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "w
             type="button"
             role="tab"
             aria-selected={on}
-            aria-label={`${label} view`}
-            title={`${label} view`}
+            aria-label={t(label)}
+            title={t(label)}
             onClick={() => onChange(k)}
             className="market-focus hit flex items-center justify-center"
             style={{ width: 40, height: 40, borderRadius: 10, background: on ? m.segactive : "transparent", color: on ? m.onfill : m.segink, border: 0 }}
@@ -491,7 +493,7 @@ function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "w
 /** bizWeek (lines 385–391): 7 tiles, flex 1, gap 6, 62 tall, radius 12; selected --segactive with --onfill ink, the fill lifted to 4.5:1 under white (lead decision, R1 polish). */
 function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; days: ReturnType<typeof weekStrip>; selected: string | null; today: string; onPick: (day: string) => void }) {
   return (
-    <div role="group" aria-label="Days of the week" className="flex" style={{ gap: 6 }}>
+    <div role="group" aria-label={t("Days of the week")} className="flex" style={{ gap: 6 }}>
       {days.map((d) => {
         const on = d.day === selected;
         const ink = on ? m.onfill : m.ink;
@@ -502,7 +504,7 @@ function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; day
             type="button"
             aria-pressed={on}
             aria-current={d.day === today ? "date" : undefined}
-            aria-label={`${weekdayLong(d.day)} ${d.n}, ${classesCount(d.count)}`}
+            aria-label={t("{day} {date}, {count}", { day: weekdayLong(d.day), date: d.n, count: classesCount(d.count) })}
             onClick={() => onPick(d.day)}
             className="market-focus flex flex-col items-center justify-center min-w-0"
             style={{ flex: 1, minHeight: 62, borderRadius: 12, background: on ? fillUnder(m.segactive, m.onfill) : m.soft, border: 0, padding: 0, lineHeight: "normal" }}
@@ -564,10 +566,10 @@ function SessionCard({
   const ended = isEnded(s, now);
   const cancelled = !!s.cancelled;
   const low = isLowSoon(s, now);
-  const t = time12Split(s.startTime);
+  const clock = time12Split(s.startTime);
   const menuRef = useRef<HTMLButtonElement | null>(null);
   const tone = flag ? TONES(m)[flag.tone] : null;
-  const whoText = who || "No instructor named";
+  const whoText = who || t(NO_INSTRUCTOR);
   return (
     <div
       id={`session-${s.id}`}
@@ -589,20 +591,20 @@ function SessionCard({
         type="button"
         onClick={onOpen}
         {...press.handlers}
-        aria-label={`${s.title}, ${time12(s.startTime)}, ${durationText(s.startTime, s.endTime)}, ${cancelled ? "cancelled" : `${s.booked} of ${s.maxCapacity} booked`}${flag && !cancelled ? `, ${flag.label}` : ""}. Bookings`}
+        aria-label={t("{class}, {time}, {length}, {state}. Bookings", { class: s.title, time: time12(s.startTime), length: durationText(s.startTime, s.endTime), state: `${cancelled ? t("cancelled") : t("{booked} of {cap} booked", { booked: s.booked, cap: s.maxCapacity })}${flag && !cancelled ? `, ${flag.label}` : ""}` })}
         className="market-focus absolute inset-0 w-full"
         style={{ zIndex: 0, borderRadius: 20, background: "transparent", border: 0 }}
       />
       <div aria-hidden className="shrink-0 text-center" style={{ width: 52, alignSelf: "center", borderRadius: 12, background: m.pale, padding: "8px 0", position: "relative", pointerEvents: "none" }}>
-        <div className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{t?.time ?? s.startTime}</div>
-        <div style={{ fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{t?.meridiem ?? ""}</div>
+        <div className="tabular-nums" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{clock?.time ?? s.startTime}</div>
+        <div style={{ fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{clock?.meridiem ? t(clock.meridiem) : ""}</div>
       </div>
       <div className="flex-1 min-w-0" style={{ position: "relative", pointerEvents: "none" }}>
         <div className="flex justify-between" style={{ gap: 8 }}>
           <span className="flex items-center min-w-0" style={{ gap: 6 }}>
             <span className="truncate" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink, textDecoration: cancelled ? "line-through" : "none" }}>{s.title}</span>
             {flag && tone && <Chip label={flag.label} bg={tone[0]} ink={tone[1]} />}
-            {!flag && isNew && <Chip label="New" bg={m.tealbg} ink={m.tealink} />}
+            {!flag && isNew && <Chip label={t("New")} bg={m.tealbg} ink={m.tealink} />}
           </span>
           <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 700, color: m.ink }}>{price}</span>
         </div>
@@ -620,7 +622,7 @@ function SessionCard({
         {(centium || featured) && (
           <div className="flex items-center flex-wrap" style={{ marginTop: 6, gap: 6 }}>
             {centium && <span style={{ fontSize: textPx(11), fontWeight: 700, color: centium.tone === "teal" ? m.tealink : m.faint }}>{centium.text}</span>}
-            {featured && <Chip label="Featured" bg={m.pale} ink={m.pdark} icon={<Award size={10} strokeWidth={2.6} aria-hidden />} />}
+            {featured && <Chip label={t("Featured")} bg={m.pale} ink={m.pdark} icon={<Award size={10} strokeWidth={2.6} aria-hidden />} />}
           </div>
         )}
       </div>
@@ -628,7 +630,7 @@ function SessionCard({
         <button
           ref={menuRef}
           type="button"
-          aria-label={`Actions for ${s.title} at ${time12(s.startTime)}`}
+          aria-label={t("Actions for {class} at {time}", { class: s.title, time: time12(s.startTime) })}
           disabled={menuDisabled}
           onClick={() => menuRef.current && onMenu(menuRef.current)}
           className="market-focus hit shrink-0 flex items-center justify-center disabled:opacity-40"
@@ -659,7 +661,7 @@ function SeriesCardView({ m, card, who, price, onOpen }: { m: MarketPalette; car
       </span>
       <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(17), color: m.pdark }}>{card.typeLine}</span>
       <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{card.whenLine}</span>
-      <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{`Max ${s.maxCapacity}${who ? ` · ${who}` : ""}`}</span>
+      <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{`${t("Max {n}", { n: s.maxCapacity })}${who ? ` · ${who}` : ""}`}</span>
     </button>
   );
 }
@@ -714,42 +716,46 @@ function NeedsAttention({
       <button type="button" aria-expanded={open} onClick={onToggle} className="market-focus w-full flex items-center text-start" style={{ gap: 10, padding: "12px 14px", minHeight: 56, background: m.highbg, border: 0 }}>
         <TriangleAlert size={17} strokeWidth={2.2} style={{ color: m.high }} className="shrink-0" aria-hidden />
         <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>Needs attention</span>
+          <span className="block" style={{ fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{t("Needs attention")}</span>
           <span className="block" style={{ fontSize: textPx(11.5), color: m.ink2 }}>
-            {count} {count === 1 ? "session" : "sessions"} in the next 7 days
+            {tn(count, "{n} session in the next 7 days", "{n} sessions in the next 7 days")}
           </span>
         </span>
         <ChevronDown size={18} strokeWidth={2.2} aria-hidden className="shrink-0" style={{ color: m.high, transform: open ? "rotate(180deg)" : "none", transition: reduced ? "none" : "transform .25s cubic-bezier(0.22,1,0.36,1)" }} />
       </button>
       {open &&
         issues.map((is) => {
-          const t = issueText(is, nameOf, people);
+          const text = issueText(is, nameOf, people);
           const s = is.sessions[0];
           const col = is.kind === "low" ? m.caution : m.high;
           const instructorMsg = is.kind === "double" && !!s.professionalId;
           const membersMsg = !instructorMsg && !!onMessageMembers && s.booked > 0;
           const msgOn = instructorMsg || membersMsg;
-          const msgAria = instructorMsg ? `Message ${nameOf(s.professionalId)}` : `Message the ${s.booked} booked ${people}`;
+          const msgAria = instructorMsg
+            ? t("Message {name}", { name: nameOf(s.professionalId) })
+            : people === "clients"
+              ? tn(s.booked, "Message the {n} booked client", "Message the {n} booked clients")
+              : tn(s.booked, "Message the {n} booked member", "Message the {n} booked members");
           return (
             <div key={is.kind} className="grid" style={{ gridTemplateColumns: "3px 28px minmax(0,1fr)", columnGap: 10, padding: "12px 14px", borderTop: `0.5px solid ${m.div}` }}>
               <span aria-hidden style={{ borderRadius: 999, background: col }} />
               <span className="tabular-nums" style={{ fontSize: textPx(20), fontWeight: 800, color: col }}>{is.sessions.length}</span>
               <div className="min-w-0">
-                <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, color: m.ink }}>{t.title}</p>
-                <p style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{t.body}</p>
+                <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800, color: m.ink }}>{text.title}</p>
+                <p style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: linePx(17), color: m.ink2 }}>{text.body}</p>
                 <div className="flex items-center flex-wrap" style={{ gap: 6, marginTop: 8 }}>
                   <button type="button" onClick={() => onOpenSession(s.id)} className="market-focus hit inline-flex items-center min-w-0" style={{ minHeight: 36, padding: "0 10px", borderRadius: 10, border: `1px solid ${m.border}`, fontSize: textPx(11.5), fontWeight: 800, color: m.ink, maxWidth: "100%", background: "transparent" }}>
-                    <span className="truncate">{t.chip}</span>
+                    <span className="truncate">{text.chip}</span>
                   </button>
                   {is.kind !== "low" && (
                     <button type="button" onClick={() => (is.kind === "noinst" ? onAssign(s.id) : onOpenSession(s.id))} className="market-focus hit inline-flex items-center" style={{ minHeight: 36, padding: "0 12px", borderRadius: 10, background: m.fill, color: m.onfill, fontSize: textPx(11.5), fontWeight: 800, whiteSpace: "nowrap", border: 0 }}>
-                      {is.kind === "noinst" ? "Assign" : "Fix"}
+                      {is.kind === "noinst" ? t("Assign") : t("Fix")}
                     </button>
                   )}
                   <button
                     type="button"
-                    aria-label={msgOn ? msgAria : `${msgAria}: needs messages access`}
-                    title={msgOn ? msgAria : `${msgAria}: needs messages access`}
+                    aria-label={msgOn ? msgAria : t("{action}: needs messages access", { action: msgAria })}
+                    title={msgOn ? msgAria : t("{action}: needs messages access", { action: msgAria })}
                     disabled={!msgOn}
                     onClick={() => {
                       if (instructorMsg && s.professionalId) onMessageInstructor(s.professionalId);

@@ -3,6 +3,7 @@ import { MarketProvider, tabKeyOf, type MarketTabKey } from "../../../business-m
 import { StoreMarketPanel } from "../../../business-market/MarketplacePage";
 import { ShowcaseManager } from "../../../business-market/ShowcaseManager";
 import { BackHeader } from "../../../business-market/listingParts";
+import { t } from "../../../../i18n/core";
 
 // Market + Share 3.0 · W3 · Store › Products (D-12: a store keeps Products in
 // its navbar, and the B-MA tabs sit inside it, Products = Showcase). The page
@@ -25,7 +26,7 @@ export default function StoreProductsPage() {
     return (
       <MarketProvider forceKind="store">
         <div style={{ marginTop: -4 }}>
-          <BackHeader eyebrow="Products" title={category} onBack={() => navigate("/app/business/products")} backLabel="Back to Products" />
+          <BackHeader eyebrow={t("Products")} title={category} onBack={() => navigate("/app/business/products")} backLabel={t("Back to Products")} />
           <ShowcaseManager section={category} />
         </div>
       </MarketProvider>
@@ -40,5 +41,5 @@ export default function StoreProductsPage() {
     setParams(next, { replace: true });
   };
 
-  return <StoreMarketPanel title="Products" tab={tab} onTab={onTab} />;
+  return <StoreMarketPanel title={t("Products")} tab={tab} onTab={onTab} />;
 }

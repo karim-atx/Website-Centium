@@ -1,4 +1,5 @@
 import type { BizReview, InstructorRating } from "../../../services/reputation/types";
+import { t, tn } from "../../../i18n/core";
 
 // AN5 Ratings on B14 (instructor_ratings + business_reviews_page). Pure, for
 // the node tests. Rules: an average shows from 3 reviews (HANDOVER §3.10,
@@ -95,10 +96,12 @@ export function trendOf(last: InstructorRating | undefined, before: InstructorRa
 }
 
 export function metaOf(reviews: number, trend: Trend | null): string {
-  if (reviews === 0) return "No reviews yet";
-  if (reviews < MIN_REVIEWS) return "Shown after 3 reviews";
-  if (!trend) return "Not enough reviews for a trend yet";
-  return `Trend ${trend} over 3 months`;
+  if (reviews === 0) return t("No reviews yet");
+  if (reviews < MIN_REVIEWS) return t("Shown after 3 reviews");
+  if (!trend) return t("Not enough reviews for a trend yet");
+  if (trend === "up") return t("Trend up over 3 months");
+  if (trend === "down") return t("Trend down over 3 months");
+  return t("Trend steady over 3 months");
 }
 
 export interface RatedPerson {
@@ -150,25 +153,25 @@ const firstWord = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 /** AN5-040 row 2 / AN5-043 row 4 / OURS R1, R3. */
 export function ratingsLead(team: TeamFigures, rows: RatedPerson[]): string {
-  if (team.count === 0) return "No reviews yet. Members can review an instructor after a class.";
-  if (team.avg === null) return "The team average shows after 3 reviews.";
+  if (team.count === 0) return t("No reviews yet. Members can review an instructor after a class.");
+  if (team.avg === null) return t("The team average shows after 3 reviews.");
   const rated = rows.filter((r) => r.avg !== null);
   if (rows.length === 1 && rated.length === 1)
-    return `${rated[0].name} is rated ${rated[0].avg!.toFixed(1)} from ${rated[0].reviews} reviews.`;
-  if (!rated.length) return "Instructors show a rating once they have 3 reviews.";
+    return tn(rated[0].reviews, "{name} is rated {avg} from {n} reviews.", "{name} is rated {avg} from {n} reviews.", { name: rated[0].name, avg: rated[0].avg!.toFixed(1) });
+  if (!rated.length) return t("Instructors show a rating once they have 3 reviews.");
   const fresh = rows.find((r) => r.avg === null);
-  const top = `${firstWord(rated[0].name)} has the highest rating.`;
-  return fresh ? `${top} ${firstWord(fresh.name)} shows as New until they have 3 reviews.` : top;
+  const top = t("{name} has the highest rating.", { name: firstWord(rated[0].name) });
+  return fresh ? `${top} ${t("{name} shows as New until they have 3 reviews.", { name: firstWord(fresh.name) })}` : top;
 }
 
 /** AN5-045 row 9: the Ratings box's right line against the team average. */
 export function vsTeam(avg: number | null, teamAvg: number | null): { text: string; good: boolean } | null {
   if (teamAvg === null) return null;
-  const t = teamAvg.toFixed(1);
-  if (avg === null) return { text: `Team avg ${t}`, good: false };
-  if (avg >= teamAvg + 0.05) return { text: `Above team avg ${t}`, good: true };
-  if (avg > teamAvg - 0.05) return { text: `Same as team avg ${t}`, good: false };
-  return { text: `Below team avg ${t}`, good: false };
+  const avgText = teamAvg.toFixed(1);
+  if (avg === null) return { text: t("Team avg {avg}", { avg: avgText }), good: false };
+  if (avg >= teamAvg + 0.05) return { text: t("Above team avg {avg}", { avg: avgText }), good: true };
+  if (avg > teamAvg - 0.05) return { text: t("Same as team avg {avg}", { avg: avgText }), good: false };
+  return { text: t("Below team avg {avg}", { avg: avgText }), good: false };
 }
 
 export type ReviewSort = "newest" | "highest" | "lowest";
@@ -189,8 +192,8 @@ export function sortReviews(list: BizReview[], sort: ReviewSort): BizReview[] {
 /** The accordion's short age (AnTeamV6 l.468 "2 wk"). */
 export function shortAge(ts: string, now: number = Date.now()): string {
   const d = Math.max(0, Math.floor((now - Date.parse(ts)) / 86_400_000));
-  if (d === 0) return "Today";
-  if (d < 7) return `${d} d`;
-  if (d < 35) return `${Math.floor(d / 7)} wk`;
-  return `${Math.max(1, Math.floor(d / 30))} mo`;
+  if (d === 0) return t("Today");
+  if (d < 7) return t("{n} d", { n: d });
+  if (d < 35) return t("{n} wk", { n: Math.floor(d / 7) });
+  return t("{n} mo", { n: Math.max(1, Math.floor(d / 30)) });
 }

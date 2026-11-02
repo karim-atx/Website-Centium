@@ -6,7 +6,7 @@ import { Toast } from "../../../components/ui/Toast";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { fetchVenueCancellationDefault } from "../../../services/business-classes";
 import { fetchBookingPolicies, setBookingPolicy } from "../../../services/business-classes/schedule";
-import { effectiveRules, hoursBefore, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../../services/business-classes/scheduleRules";
+import { effectiveRules, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../../services/business-classes/scheduleRules";
 import { linePx, textPx } from "../../../theme/textSize";
 import type { MarketPalette } from "../../../theme/marketTokens";
 import { FOCUS_CSS } from "../../../components/market/usePress";
@@ -14,6 +14,7 @@ import { MarketError, MarketOffline, MarketSkeleton } from "../../../components/
 import { BackHeader, BoardSwitch, useMarketColours } from "./parts";
 import { useSchedule } from "./useSchedule";
 import { todayIso } from "./scheduleModel";
+import { getLanguage, t, tk, tn } from "../../../i18n/core";
 
 // Waitlist and late cancels (OP1-094; OpsTabsV4 view=settings), one card per
 // class type (V6-160: rules per class type).
@@ -33,6 +34,9 @@ import { todayIso } from "./scheduleModel";
 const SIZES = [3, 5, 10, 20];
 const LATE = [2, 4, 6, 12, 24, 48];
 
+/** scheduleRules' hoursBefore ("12 hours before", "Until class time"), in the app's language. */
+const hoursBefore = (h: number): string => (h === 0 ? t("Until class time") : tn(h, "{n} hour before", "{n} hours before"));
+
 export default function ClassRulesPage() {
   const m = useMarketColours();
   const navigate = useNavigate();
@@ -46,7 +50,7 @@ export default function ClassRulesPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [toast, setToast] = useState<{ m: string; k: number } | null>(null);
   const today = todayIso();
-  const people = api.people === "clients" ? "Clients" : "Members";
+  const lead = api.people === "clients" ? t("Waitlist and late cancels for each class type. Clients see these when they book.") : t("Waitlist and late cancels for each class type. Members see these when they book.");
 
   useEffect(() => {
     if (!api.businessId) return;
@@ -80,24 +84,24 @@ export default function ClassRulesPage() {
       setSaving(null);
       if (!r.ok) {
         setPolicies(before);
-        setToast({ m: "Couldn't save. Try again.", k: Date.now() });
+        setToast({ m: t("Couldn't save. Try again."), k: Date.now() });
         return;
       }
       setPolicies((cur) => [...(cur ?? []).filter((p) => p.id !== draft.id && p.id !== r.value.id), r.value]);
-      setToast({ m: "Rules saved.", k: Date.now() });
+      setToast({ m: t("Rules saved."), k: Date.now() });
     },
     [api.businessId, policies]
   );
 
   const venueHours = venueDefault ?? null;
   const upcoming = api.classes.filter((r) => r.date >= today && !r.cancelledAt);
-  const typeKey = (t: string) => t.trim().toLowerCase();
+  const typeKey = (s: string) => s.trim().toLowerCase();
   const fromClasses = upcoming.map((r) => r.classType).filter(Boolean);
-  const fromRows = (policies ?? []).map((p) => p.classType).filter((t): t is string => !!t);
+  const fromRows = (policies ?? []).map((p) => p.classType).filter((s): s is string => !!s);
   const types: string[] = [];
-  for (const t of [...fromClasses, ...fromRows]) if (!types.some((x) => typeKey(x) === typeKey(t))) types.push(t);
+  for (const s of [...fromClasses, ...fromRows]) if (!types.some((x) => typeKey(x) === typeKey(s))) types.push(s);
   types.sort((a, b) => a.localeCompare(b));
-  const back = api.kind === "classes" ? "Schedule" : "Classes";
+  const back = api.kind === "classes" ? t("Schedule") : t("Classes");
   const loading = (api.loading && api.loadedAt === null) || (!policies && !loadError);
   const def = policies ? effectiveRules(policies, null, venueHours) : null;
   const disabled = !canWrite || !api.online;
@@ -105,48 +109,53 @@ export default function ClassRulesPage() {
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader m={m} eyebrow={back} title="Class rules" onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"))} />
-      <p style={{ margin: 0, fontSize: textPx(13), color: m.ink2 }}>Waitlist and late cancels for each class type. {people} see these when they book.</p>
+      <BackHeader m={m} eyebrow={back} title={t("Class rules")} onBack={() => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/classes"))} />
+      <p style={{ margin: 0, fontSize: textPx(13), color: m.ink2 }}>{lead}</p>
       {access.ready && !canWrite && (
-        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Only staff who manage the schedule can change these.</p>
+        <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{t("Only staff who manage the schedule can change these.")}</p>
       )}
       {!api.online && <MarketOffline loaded style={{ marginTop: 12 }} />}
       <div style={{ height: 14 }} aria-hidden />
 
       {loading ? (
-        <MarketSkeleton radius={20} rows={3} count={2} gap={12} label="Loading your class rules" />
+        <MarketSkeleton radius={20} rows={3} count={2} gap={12} label={t("Loading your class rules")} />
       ) : api.error || loadError ? (
         <MarketError
-          thing="your class rules"
+          thing={tk("your class rules")}
           onRetry={() => {
             api.reload();
-            setTick((t) => t + 1);
+            setTick((n) => n + 1);
           }}
         />
       ) : (
         <>
-          {types.map((t) => {
-            const eff = effectiveRules(policies ?? [], t, venueHours);
+          {types.map((type) => {
+            const eff = effectiveRules(policies ?? [], type, venueHours);
             return (
               <RuleCard
-                key={typeKey(t)}
+                key={typeKey(type)}
                 m={m}
-                title={t}
+                title={type}
                 waitlistCap={eff.waitlistCap}
                 lateHours={eff.cancellationHours}
                 disabled={disabled}
-                busy={saving?.startsWith(`${t}|`) ?? false}
-                onWaitlist={(on) => void save(t, "waitlistCap", on ? (def && def.waitlistCap > 0 ? def.waitlistCap : POLICY_FALLBACK.waitlistCap) : 0)}
-                onSize={(n) => void save(t, "waitlistCap", n)}
-                onLate={(h) => void save(t, "cancellationHours", h)}
+                busy={saving?.startsWith(`${type}|`) ?? false}
+                onWaitlist={(on) => void save(type, "waitlistCap", on ? (def && def.waitlistCap > 0 ? def.waitlistCap : POLICY_FALLBACK.waitlistCap) : 0)}
+                onSize={(n) => void save(type, "waitlistCap", n)}
+                onLate={(h) => void save(type, "cancellationHours", h)}
               />
             );
           })}
           {def && (
             <RuleCard
               m={m}
-              title={types.length ? "Other class types" : "Every class type"}
-              note={`Class types without their own rules use these${def.waitlistCap === 0 ? ": no waitlist" : `: a waitlist of up to ${def.waitlistCap}`}, ${hoursBefore(def.cancellationHours).toLowerCase()}.`}
+              title={types.length ? t("Other class types") : t("Every class type")}
+              note={(() => {
+                const late = getLanguage() === "en" ? hoursBefore(def.cancellationHours).toLowerCase() : hoursBefore(def.cancellationHours);
+                return def.waitlistCap === 0
+                  ? t("Class types without their own rules use these: no waitlist, {late}.", { late })
+                  : t("Class types without their own rules use these: a waitlist of up to {n}, {late}.", { n: def.waitlistCap, late });
+              })()}
               waitlistCap={def.waitlistCap}
               lateHours={def.cancellationHours}
               disabled={disabled}
@@ -202,10 +211,10 @@ function RuleCard({
       <ChevronDown size={14} style={{ color: m.faint }} />
     </button>
   );
-  const row = (t: string, s: string | null, right: ReactNode, first = false) => (
+  const row = (label: string, s: string | null, right: ReactNode, first = false) => (
     <div className="flex items-center flex-wrap" style={{ gap: 10, padding: "10px 16px", borderTop: first ? "none" : `0.5px solid ${m.div}`, minHeight: 54 }}>
       <div className="flex-1 min-w-0" style={{ minWidth: 140 }}>
-        <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{t}</p>
+        <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{label}</p>
         {s && <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>{s}</p>}
       </div>
       {right}
@@ -217,13 +226,13 @@ function RuleCard({
     <div style={{ marginBottom: 12, borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
       <p style={{ margin: 0, padding: "14px 16px 6px", fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{title}</p>
       {row(
-        "Waitlist",
-        on ? "When the class is full" : "Members can't join a waitlist",
-        <BoardSwitch m={m} checked={on} onChange={(v) => onWaitlist(v)} disabled={disabled || busy} label={`Waitlist for ${title}`} />,
+        t("Waitlist"),
+        on ? t("When the class is full") : t("Members can't join a waitlist"),
+        <BoardSwitch m={m} checked={on} onChange={(v) => onWaitlist(v)} disabled={disabled || busy} label={t("Waitlist for {class}", { class: title })} />,
         true
       )}
-      {on && row("Waitlist size", null, picker("size", `Up to ${waitlistCap}`, `Waitlist size for ${title}, up to ${waitlistCap}`))}
-      {row("Late cancel", "Cancelling later than this loses the booking", picker("late", hoursBefore(lateHours), `Late cancel for ${title}, ${hoursBefore(lateHours)}`))}
+      {on && row(t("Waitlist size"), null, picker("size", t("Up to {n}", { n: waitlistCap }), t("Waitlist size for {class}, up to {n}", { class: title, n: waitlistCap })))}
+      {row(t("Late cancel"), t("Cancelling later than this loses the booking"), picker("late", hoursBefore(lateHours), t("Late cancel for {class}, {late}", { class: title, late: hoursBefore(lateHours) })))}
       {note && (
         <p style={{ margin: 0, padding: "10px 16px 14px", borderTop: `0.5px solid ${m.div}`, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textWrap: "pretty" }}>{note}</p>
       )}
@@ -233,7 +242,7 @@ function RuleCard({
         anchor={menu?.el ?? null}
         options={
           menu?.which === "size"
-            ? sizes.map((n) => ({ value: String(n), label: `Up to ${n}` }))
+            ? sizes.map((n) => ({ value: String(n), label: t("Up to {n}", { n }) }))
             : late.map((h) => ({ value: String(h), label: hoursBefore(h) }))
         }
         selected={menu?.which === "size" ? String(waitlistCap) : String(lateHours)}
@@ -243,7 +252,7 @@ function RuleCard({
           if (which === "size") onSize(Number(v));
           else onLate(Number(v));
         }}
-        heading={menu?.which === "size" ? "Waitlist size" : "Late cancel"}
+        heading={menu?.which === "size" ? t("Waitlist size") : t("Late cancel")}
         width={190}
       />
     </div>

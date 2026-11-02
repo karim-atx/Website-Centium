@@ -7,7 +7,11 @@ import { ANY_AVAILABLE, bookAppointmentFor, bookForErrorMessage, fetchSlots, sea
 import { dayTitle, isoDate } from "../../../services/store/format";
 import { clock12 } from "../../../utils/time12";
 import { useOnline } from "../../../hooks/useOnline";
+import { t, tk } from "../../../i18n/core";
 import { KitField, KitFieldButton, OpsSheet } from "../store/opsKit";
+
+// services/appointments' "With" default, shown through t() here.
+tk("Any available");
 
 // OURS-OP1-appointments-detail rows 15-22 · Add appointment (OP1-010 sheet).
 // Day (row 18): the shared calendar card (CalendarPickerSheet, Monday first,
@@ -93,14 +97,14 @@ export function AddAppointmentSheet({
       return;
     }
     let alive = true;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       void searchClients(businessId, q).then((r) => {
         if (alive) setMatches(r.status === "ok" ? r.value : []);
       });
     }, 250);
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [open, businessId, query, client]);
 
@@ -126,7 +130,8 @@ export function AddAppointmentSheet({
   const service = active.find((s) => s.id === serviceId) ?? null;
   const dayLabel = dayTitle(new Date(`${date}T00:00:00`));
   const canPickTime = !!serviceId && !!slots && slots.length > 0;
-  const staffName = staffId ? (team.find((p) => p.id === staffId)?.name ?? null) : ANY_AVAILABLE;
+  const anyAvailable = t(ANY_AVAILABLE);
+  const staffName = staffId ? (team.find((p) => p.id === staffId)?.name ?? null) : anyAvailable;
   const openWheel = (el: HTMLButtonElement) => {
     if (wheel) return setWheel(null);
     // A wheel always shows a value: the first free time until one is turned to.
@@ -144,7 +149,7 @@ export function AddAppointmentSheet({
     const r = await bookAppointmentFor(businessId, client.id, serviceId, staffId, startsAt);
     setBusy(false);
     if (!r.ok) {
-      const msg = r.pending ? "Adding appointments is coming soon." : bookForErrorMessage(r.code, r.message ?? "", "Couldn't add the appointment. Try again.");
+      const msg = r.pending ? t("Adding appointments is coming soon.") : bookForErrorMessage(r.code, r.message ?? "", t("Couldn't add the appointment. Try again."));
       if (r.code === "ATXF2" || r.code === "ATXF3") setTimeError(msg);
       else if (r.code === "ATX96") setClientError(msg);
       else setError(msg);
@@ -155,26 +160,26 @@ export function AddAppointmentSheet({
 
   return (
     <>
-      <OpsSheet open={open} onClose={onClose} title="Add appointment" button="Save" onButton={save} disabled={!serviceId || !startsAt || !client || !online} busy={busy} error={error}>
+      <OpsSheet open={open} onClose={onClose} title={t("Add appointment")} button={t("Save")} onButton={save} disabled={!serviceId || !startsAt || !client || !online} busy={busy} error={error}>
         <KitFieldButton
           id="appt-service"
-          label="Service"
-          value={service ? `${service.name}, ${service.durationMin} min` : null}
-          placeholder="Choose a service"
+          label={t("Service")}
+          value={service ? t("{service}, {n} min", { service: service.name, n: service.durationMin }) : null}
+          placeholder={t("Choose a service")}
           icon={ChevronDown}
           expanded={menu?.kind === "service"}
           onClick={(el) => setMenu({ kind: "service", el })}
-          note={active.length === 0 ? "Add a service first, under More." : undefined}
+          note={active.length === 0 ? t("Add a service first, under More.") : undefined}
           disabled={active.length === 0}
         />
-        <KitFieldButton id="appt-staff" label="With" value={staffName} placeholder={ANY_AVAILABLE} icon={ChevronDown} expanded={menu?.kind === "staff"} onClick={(el) => setMenu({ kind: "staff", el })} />
-        <KitFieldButton id="appt-day" label="Day" value={dayLabel} placeholder="Choose a day" icon={Calendar} popup="dialog" expanded={dayOpen} onClick={() => setDayOpen(true)} />
+        <KitFieldButton id="appt-staff" label={t("With")} value={staffName} placeholder={anyAvailable} icon={ChevronDown} expanded={menu?.kind === "staff"} onClick={(el) => setMenu({ kind: "staff", el })} />
+        <KitFieldButton id="appt-day" label={t("Day")} value={dayLabel} placeholder={t("Choose a day")} icon={Calendar} popup="dialog" expanded={dayOpen} onClick={() => setDayOpen(true)} />
         <div className="relative">
           <KitFieldButton
             id="appt-time"
-            label="Time"
+            label={t("Time")}
             value={startsAt ? clock12(startsAt) : null}
-            placeholder={!serviceId ? "Choose a service first" : slots && slots.length === 0 ? "No free slots this day" : "Choose a time"}
+            placeholder={!serviceId ? t("Choose a service first") : slots && slots.length === 0 ? t("No free slots this day") : t("Choose a time")}
             icon={Clock}
             popup="dialog"
             expanded={!!wheel}
@@ -187,7 +192,7 @@ export function AddAppointmentSheet({
               <div
                 ref={revealCard}
                 role="dialog"
-                aria-label="Time"
+                aria-label={t("Time")}
                 onKeyDown={(e) => {
                   if (e.key === "Escape" || e.key === "Enter") {
                     e.stopPropagation();
@@ -202,7 +207,7 @@ export function AddAppointmentSheet({
                   band="business"
                   columns={[
                     {
-                      label: "Time",
+                      label: t("Time"),
                       value: startsAt,
                       options: (slots ?? []).map((x) => ({ value: x.startsAt, label: clock12(x.startsAt) })),
                       onChange: (v) => {
@@ -218,20 +223,20 @@ export function AddAppointmentSheet({
         </div>
         <KitField
           id="appt-client"
-          label="Client"
+          label={t("Client")}
           value={client ? client.label : query}
           onChange={(v) => {
             setClient(null);
             setClientError(null);
             setQuery(v);
           }}
-          placeholder="Search name or client code"
+          placeholder={t("Search name or client code")}
           icon={Search}
           error={clientError}
-          note={client ? undefined : "Your own clients: members and people who booked with you."}
+          note={client ? undefined : t("Your own clients: members and people who booked with you.")}
         />
         {!client && matches.length > 0 && (
-          <div role="listbox" aria-label="Clients" className="bg-cream-card border border-th-aea1dc/50 dark:border-th-a991fe/50" style={{ borderRadius: 14, padding: 6, marginTop: -6, marginBottom: 12 }}>
+          <div role="listbox" aria-label={t("Clients")} className="bg-cream-card border border-th-aea1dc/50 dark:border-th-a991fe/50" style={{ borderRadius: 14, padding: 6, marginTop: -6, marginBottom: 12 }}>
             {matches.slice(0, 6).map((c) => (
               <button
                 key={c.id}
@@ -259,8 +264,8 @@ export function AddAppointmentSheet({
         variant="field"
         options={
           menu?.kind === "staff"
-            ? [{ value: "any", label: ANY_AVAILABLE }, ...team.map((p) => ({ value: p.id, label: p.name }))]
-            : active.map((s) => ({ value: s.id, label: `${s.name}, ${s.durationMin} min` }))
+            ? [{ value: "any", label: anyAvailable }, ...team.map((p) => ({ value: p.id, label: p.name }))]
+            : active.map((s) => ({ value: s.id, label: t("{service}, {n} min", { service: s.name, n: s.durationMin }) }))
         }
         selected={menu?.kind === "staff" ? (staffId ?? "any") : serviceId}
         onSelect={(v) => {
@@ -276,7 +281,7 @@ export function AddAppointmentSheet({
         selectedDate={date}
         today={today}
         minDate={today}
-        title="Day"
+        title={t("Day")}
         dayInk="ink"
         onSelect={(d) => {
           setDayOpen(false);

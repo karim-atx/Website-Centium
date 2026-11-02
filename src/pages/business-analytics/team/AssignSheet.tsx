@@ -7,6 +7,7 @@ import { Avatar, Buttons, ErrLine, LeadRow, RowsCard, Sheet, Strip } from "./par
 import { assignInstructor, loadClasses, loadOffOn, type ClassRow, type TeamPerson } from "./teamData";
 import { dayDate, weekday } from "./fmt";
 import type { Vocab } from "./vocab";
+import { t, tx } from "../../../i18n/core";
 
 // AN5-024 (option list), AN5-026 (selected), AN5-027 (confirm), AN5-029
 // (cancel: closes, nothing saved), AN5-030 (nobody free), AN5-035 (Fix 3a
@@ -88,7 +89,8 @@ export function AssignSheet({
   const anyOff = rows.some((r) => r.off);
   const chosen = people.find((p) => p.id === pick) ?? null;
   const accepted = people.filter((p) => p.acceptedAt && (mode === "assign" || p.id !== session.professionalId));
-  const when = `${dayDate(session.date)}, ${range12(session.start, session.end)}`;
+  const when = `${dayDate(session.date)}، ${range12(session.start, session.end)}`;
+  const store = vocab.kind === "store";
 
   const save = async () => {
     if (!chosen || !businessId) return;
@@ -117,45 +119,45 @@ export function AssignSheet({
       setStep("failed");
       return;
     }
-    onDone(`${chosen.name} now runs ${session.title} on ${dayDate(session.date)}.`);
+    onDone(t("{name} now runs {class} on {date}.", { name: chosen.name, class: session.title, date: dayDate(session.date) }));
   };
 
   // A9 · nobody on the team at all.
   if (accepted.length === 0 && mode === "assign") {
     return (
-      <Sheet open={open} onClose={onClose} title={`You have no ${vocab.plural} yet`}>
-        <LeadRow icon={UserPlus}>Add a professional to your team, then assign them to classes.</LeadRow>
-        <Buttons primary={{ label: "Add an employee", onClick: onInvite }} marginTop={16} />
+      <Sheet open={open} onClose={onClose} title={store ? t("You have no staff yet") : t("You have no instructors yet")}>
+        <LeadRow icon={UserPlus}>{t("Add a professional to your team, then assign them to classes.")}</LeadRow>
+        <Buttons primary={{ label: t("Add an employee"), onClick: onInvite }} marginTop={16} />
       </Sheet>
     );
   }
 
   if (step === "failed" && chosen) {
     return (
-      <Sheet open={open} onClose={onClose} title={`Couldn't assign ${chosen.name}`}>
+      <Sheet open={open} onClose={onClose} title={t("Couldn't assign {name}", { name: chosen.name })}>
         <LeadRow icon={WifiOff} tone="high">
-          Check your connection and try again. Nothing was changed.
+          {t("Check your connection and try again. Nothing was changed.")}
         </LeadRow>
-        <Buttons alt={{ label: "Cancel", onClick: onClose }} primary={{ label: "Try again", onClick: () => void save(), busy }} marginTop={16} />
+        <Buttons alt={{ label: t("Cancel"), onClick: onClose }} primary={{ label: t("Try again"), onClick: () => void save(), busy }} marginTop={16} />
       </Sheet>
     );
   }
 
   if (step === "confirm" && chosen) {
     return (
-      <Sheet open={open} onClose={onClose} title={`Assign ${chosen.name} to ${session.title}?`}>
-        <LeadRow>The class shows them as the {vocab.singular}.</LeadRow>
+      <Sheet open={open} onClose={onClose} title={t("Assign {name} to {class}?", { name: chosen.name, class: session.title })}>
+        <LeadRow>{store ? t("The class shows them as the staff member.") : t("The class shows them as the instructor.")}</LeadRow>
         <RowsCard
           rows={[
-            { l: "Class", v: session.title },
-            { l: "When", v: when },
-            { l: "Booked", v: `${session.booked} of ${session.capacity}` },
-            { l: vocab.singular === "instructor" ? "Instructor" : "Staff", v: chosen.name, bold: true },
+            { l: t("Class"), v: session.title },
+            { l: tx("When", "class time"), v: when },
+            { l: t("Booked"), v: t("{n} of {total}", { n: session.booked, total: session.capacity }) },
+            { l: vocab.singular === "instructor" ? t("Instructor") : t("Staff"), v: chosen.name, bold: true },
           ]}
         />
         <Buttons
-          alt={{ label: "Back", onClick: () => setStep("list"), disabled: busy }}
-          primary={{ label: busy ? "Assigning…" : "Assign", onClick: () => void save(), busy, disabled: !online }}
+          alt={{ label: t("Back"), onClick: () => setStep("list"), disabled: busy }}
+          primary={{ label: busy ? t("Assigning…") : t("Assign"), onClick: () => void save(), busy, disabled: !online }}
           marginTop={16}
         />
       </Sheet>
@@ -166,27 +168,27 @@ export function AssignSheet({
   if (free.length === 0 && !justBooked) {
     const reassign = mode === "reassign";
     return (
-      <Sheet open={open} onClose={onClose} title={reassign ? `Nobody else is free at ${at}` : `No ${vocab.plural} are free at ${at}`}>
+      <Sheet open={open} onClose={onClose} title={reassign ? t("Nobody else is free at {time}", { time: at }) : store ? t("No staff are free at {time}", { time: at }) : t("No instructors are free at {time}", { time: at })}>
         <LeadRow icon={UserX} tone="high">
           {reassign
             ? anyOff
-              ? "Everyone else on your team is teaching or off at that time."
-              : "Everyone else on your team is teaching at that time."
+              ? t("Everyone else on your team is teaching or off at that time.")
+              : t("Everyone else on your team is teaching at that time.")
             : anyOff
-              ? "Everyone on your team is teaching or off at that time."
-              : "Everyone on your team is teaching at that time."}
+              ? t("Everyone on your team is teaching or off at that time.")
+              : t("Everyone on your team is teaching at that time.")}
         </LeadRow>
         {!reassign && (
           <RowsCard
             rows={[
-              { l: "Class", v: `${session.title}, ${weekday(session.date)} ${at}` },
-              { l: "Your team", v: accepted.length === 1 ? `1 ${vocab.singular}, ${anyOff ? "not free" : "busy"}` : `${accepted.length} ${vocab.plural}, ${anyOff ? "none free" : "all busy"}` },
+              { l: t("Class"), v: `${session.title}، ${weekday(session.date)} ${at}` },
+              { l: t("Your team"), v: accepted.length === 1 ? (store ? (anyOff ? t("1 staff member, not free") : t("1 staff member, busy")) : anyOff ? t("1 instructor, not free") : t("1 instructor, busy")) : store ? (anyOff ? t("{n} staff, none free", { n: accepted.length }) : t("{n} staff, all busy", { n: accepted.length })) : anyOff ? t("{n} instructors, none free", { n: accepted.length }) : t("{n} instructors, all busy", { n: accepted.length }) },
             ]}
           />
         )}
         <Buttons
-          alt={reassign ? { label: "Back", onClick: onBack ?? onClose } : { label: "Add an employee", onClick: onInvite }}
-          primary={{ label: reassign ? `Move ${session.title}` : "Change the time", onClick: () => onMove(session) }}
+          alt={reassign ? { label: t("Back"), onClick: onBack ?? onClose } : { label: t("Add an employee"), onClick: onInvite }}
+          primary={{ label: reassign ? t("Move {class}", { class: session.title }) : t("Change the time"), onClick: () => onMove(session) }}
           marginTop={16}
         />
       </Sheet>
@@ -195,13 +197,13 @@ export function AssignSheet({
 
   const assignNow = mode === "reassign";
   return (
-    <Sheet open={open} onClose={onClose} title={mode === "reassign" ? `Give ${session.title} to…` : `Assign ${vocab.aSingular}`}>
-      {!online && <Strip offline text="You're offline. Assigning needs a connection." />}
+    <Sheet open={open} onClose={onClose} title={mode === "reassign" ? t("Give {class} to…", { class: session.title }) : store ? t("Assign a staff member") : t("Assign an instructor")}>
+      {!online && <Strip offline text={t("You're offline. Assigning needs a connection.")} />}
       <p className="an5-leadt" style={{ marginBottom: 14 }}>
-        {mode === "reassign" ? `${dayDate(session.date)}, ${range12(session.start, session.end)}` : `${session.title} · ${when}`}
+        {mode === "reassign" ? when : `${session.title} · ${when}`}
       </p>
-      <div className="an5-optlist" role="listbox" aria-label={`Available ${vocab.plural}`}>
-        <p className="an5-optlist-l">Available at {at}</p>
+      <div className="an5-optlist" role="listbox" aria-label={store ? t("Available staff") : t("Available instructors")}>
+        <p className="an5-optlist-l">{t("Available at {time}", { time: at })}</p>
         {rows.map(({ person, busyWith, off }) => {
           const selected = pick === person.id;
           const disabled = !!busyWith || off || !online;
@@ -222,10 +224,10 @@ export function AssignSheet({
                 <span className="an5-opt-n block">{person.name}</span>
                 <span className={`an5-opt-s block${busyWith ? " is-busy" : ""}`}>
                   {busyWith
-                    ? `Already teaching ${busyWith.title} at ${time12(busyWith.start)}`
+                    ? t("Already teaching {class} at {time}", { class: busyWith.title, time: time12(busyWith.start) })
                     : off
-                      ? `Off on ${dayDate(session.date)}`
-                      : `Free ${weekday(session.date)} ${range12(session.start, session.end)}`}
+                      ? t("Off on {date}", { date: dayDate(session.date) })
+                      : t("Free {day} {time}", { day: weekday(session.date), time: range12(session.start, session.end) })}
                 </span>
               </span>
               <span className="an5-opt-check">{selected && <Check size={16} strokeWidth={2.6} aria-hidden />}</span>
@@ -239,25 +241,25 @@ export function AssignSheet({
             </span>
             <span className="min-w-0">
               <span className="an5-opt-n block">{p.name}</span>
-              <span className="an5-opt-s block">Invite pending. You can assign them once they join.</span>
+              <span className="an5-opt-s block">{t("Invite pending. You can assign them once they join.")}</span>
             </span>
             <span />
           </div>
         ))}
       </div>
-      {justBooked && <ErrLine text={`${justBooked} was just booked at that time. Choose someone else.`} />}
+      {justBooked && <ErrLine text={t("{name} was just booked at that time. Choose someone else.", { name: justBooked })} />}
       <Buttons
         marginTop={16}
-        alt={{ label: mode === "reassign" ? "Back" : "Cancel", onClick: mode === "reassign" ? onBack ?? onClose : onClose, disabled: busy }}
+        alt={{ label: mode === "reassign" ? t("Back") : t("Cancel"), onClick: mode === "reassign" ? onBack ?? onClose : onClose, disabled: busy }}
         primary={
           chosen
             ? {
-                label: busy ? "Assigning…" : `Assign ${chosen.name}`,
+                label: busy ? t("Assigning…") : t("Assign {name}", { name: chosen.name }),
                 onClick: () => (assignNow ? void save() : setStep("confirm")),
                 busy,
                 disabled: !online,
               }
-            : { label: `Choose ${vocab.aSingular}`, onClick: () => undefined, tone: "soft", disabled: true }
+            : { label: store ? t("Choose a staff member") : t("Choose an instructor"), onClick: () => undefined, tone: "soft", disabled: true }
         }
       />
     </Sheet>

@@ -46,9 +46,10 @@ import {
 } from "../../services/business-more";
 import { returnsSummary } from "./storePolicyText";
 import { formatShortDate } from "../../utils/date";
+import { t, tn } from "../../i18n/core";
 import { fetchJoinRequests } from "../../services/business-team/team";
 import { fetchBookingPolicies } from "../../services/business-classes/schedule";
-import { daysAhead, effectiveRules, policyFor, type BookingPolicy } from "../../services/business-classes/scheduleRules";
+import { effectiveRules, policyFor, type BookingPolicy } from "../../services/business-classes/scheduleRules";
 
 // MO1B-007 / -009 / -010 · the business More (BizMoreV8 screen="index",
 // template lines 24 to 26, rows 168 to 175). The client More format with
@@ -126,8 +127,8 @@ export default function BusinessMoreIndex() {
   // The values the Booking policies screen (PoliciesPages) edits; undefined while loading.
   const rules = policies === undefined || venueHours === undefined ? undefined : effectiveRules(policies ?? [], null, venueHours);
   const cancelHours = rules === undefined ? undefined : (policies ? policyFor(policies, null)?.cancellationHours : null) ?? venueHours;
-  const windowLine = rules === undefined ? PLACEHOLDER : `Up to ${daysAhead(rules.bookingWindowDays)} ahead`;
-  const waitlistLine = rules === undefined ? PLACEHOLDER : rules.waitlistCap > 0 ? `On · up to ${rules.waitlistCap} ${rules.waitlistCap === 1 ? "person" : "people"}` : "Off";
+  const windowLine = rules === undefined ? PLACEHOLDER : tn(rules.bookingWindowDays, "Up to {n} day ahead", "Up to {n} days ahead");
+  const waitlistLine = rules === undefined ? PLACEHOLDER : rules.waitlistCap > 0 ? tn(rules.waitlistCap, "On · up to {n} person", "On · up to {n} people") : t("Off");
 
   const go = (to: string) => () => navigate(to);
   const sub = (p: string) => go(`/app/business/more/${p}`);
@@ -154,8 +155,8 @@ export default function BusinessMoreIndex() {
         <BizRow
           well="index"
           icon={ListChecks}
-          title="Setup checklist"
-          desc={hidden ? `${done} of ${totalItems} done · Show on Explore is off` : `${done} of ${totalItems} done`}
+          title={t("Setup checklist")}
+          desc={hidden ? t("{done} of {total} done · Show on Explore is off", { done, total: totalItems }) : t("{done} of {total} done", { done, total: totalItems })}
           onClick={go(hidden ? "/app/business/profile" : "/app")}
           extra={
             <span aria-hidden className="block bg-th-ebeaf6 dark:bg-th-aea1dc/[0.16] overflow-hidden" style={{ height: 4, borderRadius: 999, marginTop: 6 }}>
@@ -164,12 +165,12 @@ export default function BusinessMoreIndex() {
           }
         />
       )}
-      <BizRow well="index" icon={Building2} title="Business Profile" desc="Name, photos, locations, ID & listing" onClick={go("/app/business/profile")} />
+      <BizRow well="index" icon={Building2} title={t("Business Profile")} desc={t("Name, photos, locations, ID & listing")} onClick={go("/app/business/profile")} />
       <BizRow
         well="index"
         icon={MessageCircle}
-        title="Messages"
-        desc="Your conversations"
+        title={t("Messages")}
+        desc={t("Your conversations")}
         onClick={go("/app/messages")}
         trailing={<UnreadBadge count={unread.total} />}
         chevron
@@ -177,31 +178,31 @@ export default function BusinessMoreIndex() {
       <BizRow
         well="index"
         icon={CalendarDays}
-        title="Calendar"
-        desc={kind === "store" && kindKnown ? "Your events and pop-ups" : "Schedule clients to professionals & classes"}
+        title={t("Calendar")}
+        desc={kind === "store" && kindKnown ? t("Your events and pop-ups") : t("Schedule clients to professionals & classes")}
         onClick={go("/app/business/calendar")}
       />
-      <BizRow well="index" icon={ReferralLeafIcon} title="Referral" desc="Share your code, earn rewards" onClick={() => setReferralOpen(true)} />
+      <BizRow well="index" icon={ReferralLeafIcon} title={t("Referral")} desc={t("Share your code, earn rewards")} onClick={() => setReferralOpen(true)} />
     </>
   );
 
   return (
     <div>
       <p className="text-[19px] font-bold tracking-[-0.03em] leading-[28.5px] text-charcoal" style={{ marginBottom: 13 }}>
-        More
+        {t("More")}
       </p>
 
-      <BizLabel>Business</BizLabel>
+      <BizLabel>{t("Business")}</BizLabel>
       <BizCard>{businessRows}</BizCard>
 
       {/* The per-type sections wait for the lane, so a gym never flashes the store rows. */}
-      {!kindKnown && <RowsSkeleton rows={4} label="Loading" />}
+      {!kindKnown && <RowsSkeleton rows={4} label={t("Loading")} />}
       {kindKnown && (
       <>
 
       {showTeam && (
         <>
-          <BizLabel>{kind === "store" ? "Staff" : "Team and access"}</BizLabel>
+          <BizLabel>{kind === "store" ? t("Staff") : t("Team and access")}</BizLabel>
           <BizCard>
             <BizRow
               well="index"
@@ -212,15 +213,15 @@ export default function BusinessMoreIndex() {
             />
             {kind !== "store" && (
               <>
-                <BizRow well="index" icon={ShieldCheck} title="Roles and permissions" desc="Who can see and change what" onClick={sub("roles")} />
-                <BizRow well="index" icon={UserPlus} title="Join requests" desc="Professionals who used your ID" badge={joinCount > 0 ? joinCount : undefined} onClick={sub("join-requests")} />
+                <BizRow well="index" icon={ShieldCheck} title={t("Roles and permissions")} desc={t("Who can see and change what")} onClick={sub("roles")} />
+                <BizRow well="index" icon={UserPlus} title={t("Join requests")} desc={t("Professionals who used your ID")} badge={joinCount > 0 ? joinCount : undefined} onClick={sub("join-requests")} />
               </>
             )}
             <BizRow
               well="index"
               icon={Armchair}
-              title="Seats"
-              desc={plan && team ? (totalSeats > 0 ? `${used} of ${totalSeats} used · add seats` : "No seats yet · add seats") : PLACEHOLDER}
+              title={t("Seats")}
+              desc={plan && team ? (totalSeats > 0 ? t("{used} of {total} used · add seats", { used, total: totalSeats }) : t("No seats yet · add seats")) : PLACEHOLDER}
               onClick={sub("seats")}
             />
           </BizCard>
@@ -229,53 +230,53 @@ export default function BusinessMoreIndex() {
 
       {kind === "classes" && (
         <>
-          <BizLabel>Booking policies</BizLabel>
+          <BizLabel>{t("Booking policies")}</BizLabel>
           <BizCard>
             <BizRow
               well="index"
               icon={CalendarX}
-              title="Cancellations"
-              desc={cancelHours === undefined ? PLACEHOLDER : cancelHours === null ? "Set when you add a location" : `Free until ${cancelHours} hours before`}
+              title={t("Cancellations")}
+              desc={cancelHours === undefined ? PLACEHOLDER : cancelHours === null ? t("Set when you add a location") : tn(cancelHours, "Free until {n} hour before", "Free until {n} hours before")}
               onClick={sub("policies/edit?section=cancellations")}
             />
-            <BizRow well="index" icon={CalendarRange} title="Booking window" desc={windowLine} onClick={sub("policies/edit?section=window")} />
-            <BizRow well="index" icon={ListOrdered} title="Waitlist" desc={waitlistLine} onClick={sub("policies/edit?section=waitlist")} />
-            <BizRow well="index" icon={BellRing} title="Class reminders" desc="Coming soon" onClick={sub("policies/edit?section=reminders")} />
-            <BizRow well="index" icon={FileCheck} title="Terms and waivers" desc="Clients accept when booking" onClick={sub("policies")} />
+            <BizRow well="index" icon={CalendarRange} title={t("Booking window")} desc={windowLine} onClick={sub("policies/edit?section=window")} />
+            <BizRow well="index" icon={ListOrdered} title={t("Waitlist")} desc={waitlistLine} onClick={sub("policies/edit?section=waitlist")} />
+            <BizRow well="index" icon={BellRing} title={t("Class reminders")} desc={t("Coming soon")} onClick={sub("policies/edit?section=reminders")} />
+            <BizRow well="index" icon={FileCheck} title={t("Terms and waivers")} desc={t("Clients accept when booking")} onClick={sub("policies")} />
           </BizCard>
         </>
       )}
       {kind === "gym" && (
         <>
-          <BizLabel>Entry rules</BizLabel>
+          <BizLabel>{t("Entry rules")}</BizLabel>
           <BizCard>
             <BizRow
               well="index"
               icon={CalendarX}
-              title="Cancellations"
-              desc={cancelHours === undefined ? PLACEHOLDER : cancelHours === null ? "Set when you add a location" : `Free until ${cancelHours} hours before`}
+              title={t("Cancellations")}
+              desc={cancelHours === undefined ? PLACEHOLDER : cancelHours === null ? t("Set when you add a location") : tn(cancelHours, "Free until {n} hour before", "Free until {n} hours before")}
               onClick={sub("policies/edit?section=cancellations")}
             />
-            <BizRow well="index" icon={FileCheck} title="Liability waiver" desc="Accepted once, before the first visit" onClick={sub("policy/waiver")} />
-            <BizRow well="index" icon={FileText} title="House rules" desc="Optional" onClick={sub("policy/house_rules")} />
+            <BizRow well="index" icon={FileCheck} title={t("Liability waiver")} desc={t("Accepted once, before the first visit")} onClick={sub("policy/waiver")} />
+            <BizRow well="index" icon={FileText} title={t("House rules")} desc={t("Optional")} onClick={sub("policy/house_rules")} />
           </BizCard>
         </>
       )}
       {kind === "store" && (
         <>
-          <BizLabel>Orders and policies</BizLabel>
+          <BizLabel>{t("Orders and policies")}</BizLabel>
           <BizCard>
             <BizRow
               well="index"
               icon={RotateCcw}
-              title="Returns and refunds"
-              desc={returnsLine === undefined ? PLACEHOLDER : returnsLine ?? "Not set yet"}
+              title={t("Returns and refunds")}
+              desc={returnsLine === undefined ? PLACEHOLDER : returnsLine ?? t("Not set yet")}
               onClick={sub("store-policies")}
             />
-            <BizRow well="index" icon={FileCheck} title="Terms clients accept" desc="Shown before checkout" onClick={sub("store-policies")} />
-            {wellness && <BizRow well="index" icon={FileCheck} title="Terms and waivers" desc="For appointments" onClick={sub("policy/appointment_waiver")} />}
+            <BizRow well="index" icon={FileCheck} title={t("Terms clients accept")} desc={t("Shown before checkout")} onClick={sub("store-policies")} />
+            {wellness && <BizRow well="index" icon={FileCheck} title={t("Terms and waivers")} desc={t("For appointments")} onClick={sub("policy/appointment_waiver")} />}
             {/* v6 Batch 4 (V6-158): services and free slots are set up here. */}
-            {wellness && <BizRow well="index" icon={CalendarClock} title="Services and free slots" desc="What clients can book, and when" onClick={go("/app/business/services")} />}
+            {wellness && <BizRow well="index" icon={CalendarClock} title={t("Services and free slots")} desc={t("What clients can book, and when")} onClick={go("/app/business/services")} />}
           </BizCard>
         </>
       )}
@@ -283,19 +284,19 @@ export default function BusinessMoreIndex() {
       </>
       )}
 
-      <BizLabel>Payments and billing</BizLabel>
+      <BizLabel>{t("Payments and billing")}</BizLabel>
       <BizCard>
-        <BizRow well="index" icon={Wallet} title="Payment methods" desc="Cash · Whish soon" onClick={sub("payment-methods")} />
-        <BizRow well="index" icon={Landmark} title="Payouts" desc="Whish payouts are coming" onClick={sub("payouts")} />
-        <BizRow well="index" icon={Receipt} title="Invoices and receipts" desc="Coming soon" onClick={sub("invoices")} />
-        <BizRow well="index" icon={Percent} title="Taxes" desc="Coming soon" onClick={sub("taxes")} />
+        <BizRow well="index" icon={Wallet} title={t("Payment methods")} desc={t("Cash · Whish soon")} onClick={sub("payment-methods")} />
+        <BizRow well="index" icon={Landmark} title={t("Payouts")} desc={t("Whish payouts are coming")} onClick={sub("payouts")} />
+        <BizRow well="index" icon={Receipt} title={t("Invoices and receipts")} desc={t("Coming soon")} onClick={sub("invoices")} />
+        <BizRow well="index" icon={Percent} title={t("Taxes")} desc={t("Coming soon")} onClick={sub("taxes")} />
       </BizCard>
 
-      <BizLabel>App</BizLabel>
+      <BizLabel>{t("App")}</BizLabel>
       <BizCard>
-        <BizRow well="index" icon={Bell} title="Notifications" desc="Bookings, payments, reviews & more" onClick={sub("notifications")} />
-        <BizRow well="index" icon={Download} title="Export reports" desc={kind === "store" && kindKnown ? "Orders, customers, transactions" : "Bookings, members, transactions"} onClick={sub("export")} />
-        <BizRow well="index" icon={Settings} title="Settings" desc="Appearance, security, help & legal" onClick={go("/app/settings")} />
+        <BizRow well="index" icon={Bell} title={t("Notifications")} desc={t("Bookings, payments, reviews & more")} onClick={sub("notifications")} />
+        <BizRow well="index" icon={Download} title={t("Export reports")} desc={kind === "store" && kindKnown ? t("Orders, customers, transactions") : t("Bookings, members, transactions")} onClick={sub("export")} />
+        <BizRow well="index" icon={Settings} title={t("Settings")} desc={t("Appearance, security, help & legal")} onClick={go("/app/settings")} />
       </BizCard>
 
       {/* MO1B-007 row 13: Centium Business, the paid business plan (BU6-18). */}
@@ -311,21 +312,21 @@ export default function BusinessMoreIndex() {
             <PremiumLeafIcon size={15} style={{ color: "rgb(var(--thi-c8bfe9))" }} />
           </span>
           <span>
-            <span className="block text-[12.5px] font-extrabold leading-[18.75px] text-white">Centium Business</span>
+            <span className="block text-[12.5px] font-extrabold leading-[18.75px] text-white">{"Centium Business"}</span>
             <span className="block text-[10px] leading-[15px] text-white/60">
               {plan?.active
                 ? [
-                    `${plan.base?.name ?? "Business"} plan`,
-                    `${plan.totalSeats} seat${plan.totalSeats === 1 ? "" : "s"}`,
-                    renews ? `renews ${fmtRenew(renews)}` : null,
+                    plan.base?.name ? t("{plan} plan", { plan: plan.base.name }) : t("Business plan"),
+                    tn(plan.totalSeats, "{n} seat", "{n} seats"),
+                    renews ? t("renews {date}", { date: fmtRenew(renews) }) : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")
-                : "See your plan and seats"}
+                : t("See your plan and seats")}
             </span>
           </span>
         </span>
-        <ChevronRight size={14} className="shrink-0" style={{ color: "rgb(var(--thi-c8bfe9))" }} />
+        <ChevronRight size={14} className="shrink-0 rtl:-scale-x-100" style={{ color: "rgb(var(--thi-c8bfe9))" }} />
       </button>
 
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />

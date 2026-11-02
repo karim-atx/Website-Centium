@@ -11,6 +11,7 @@ import { ALREADY_IN_HOURS, deniedLine, deskMoney, GUEST_LABEL_MAX, type DayPassP
 import { memberNumberLabel } from "../../../services/business-members";
 import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { textPx } from "../../../theme/textSize";
+import { t, tx } from "../../../i18n/core";
 import type { CheckInPreset } from "./ScanSheet";
 
 // OP1-015 · Check someone in (BizTypeKit sheet: 53 header, body padding
@@ -93,7 +94,7 @@ export const CheckInSheet: React.FC<{
   useEffect(() => {
     if (!open || gymIds.length === 0 || !q || picked || walkIn !== null) return;
     let alive = true;
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void Promise.all(gymIds.map((g) => deskFindMember(g, q, 6))).then((rs) => {
         if (!alive) return;
         const rows = rs.flatMap((r) => (r.ok ? r.value : [])).filter((m) => m.status === "active" || m.status === "upcoming");
@@ -104,7 +105,7 @@ export const CheckInSheet: React.FC<{
     }, 200);
     return () => {
       alive = false;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
     };
   }, [open, gymIds, q, picked, walkIn]);
   const shown = results && results.q === q ? results.rows : null;
@@ -112,7 +113,7 @@ export const CheckInSheet: React.FC<{
   const canSell = live === true && dayPasses.length > 0;
   const plan = pass?.startsWith("day:") ? dayPasses.find((p) => `day:${p.id}` === pass) ?? null : null;
   const isGuest = pass === "guest";
-  const passLabel = (m: { planName: string; expiresOn: string | null }) => (m.expiresOn ? `${m.planName || "Membership"} · until ${dayMonthYear(m.expiresOn)}` : m.planName || "Membership");
+  const passLabel = (m: { planName: string; expiresOn: string | null }) => (m.expiresOn ? `${m.planName || t("Membership")} · ${t("until {date}", { date: dayMonthYear(m.expiresOn) })}` : m.planName || t("Membership"));
   const dayLabel = (p: DayPassPlan) => `${p.name} · ${deskMoney(p.price)}`;
   /** Search result sub: "Member #0042", then the pass (desk_find_member carries no paid date). */
   const resultSub = (m: DeskMember) => [m.memberNumber !== null ? memberNumberLabel(m.memberNumber) : null, passLabel(m)].filter(Boolean).join(" · ");
@@ -122,7 +123,7 @@ export const CheckInSheet: React.FC<{
 
   const ready = !!gymId && live === true && (ownPass || (!!plan && (!!picked || !!walkIn)) || (isGuest && !!picked && guestName.trim().length > 0));
   const disabled = !online || !ready || busy;
-  const label = !online ? "You're offline" : busy ? "Saving…" : plan ? "Sell and check in" : isGuest ? "Check in guest" : "Check in";
+  const label = !online ? t("You're offline") : busy ? t("Saving…") : plan ? t("Sell and check in") : isGuest ? t("Check in guest") : t("Check in");
 
   const submit = async () => {
     if (disabled || !gymId) return;
@@ -132,13 +133,13 @@ export const CheckInSheet: React.FC<{
       const buyer = picked?.personId ? { personId: picked.personId } : walkIn ? { guestLabel: walkIn } : null;
       if (!buyer) {
         setBusy(false);
-        setProblem({ text: "This person isn't one of your members. Sell to them as a guest by name.", tone: "high" });
+        setProblem({ text: t("This person isn't one of your members. Sell to them as a guest by name."), tone: "high" });
         return;
       }
       const r = await sellDayPass(gymId, plan.id, buyer, paid);
       setBusy(false);
       if (!r.ok) return setProblem({ text: r.message, tone: "high" });
-      onDone(paid ? `${who} is checked in with a day pass.` : `${who} is checked in. The day pass is in Money owed.`);
+      onDone(paid ? t("{name} is checked in with a day pass.", { name: who }) : t("{name} is checked in. The day pass is in Money owed.", { name: who }));
       // Optional "Promotion used" (never blocks the sale); an unpaid sale is offered when it's marked paid.
       if (paid) offerPromotionUsed({ kind: "day_pass", sourceId: r.value });
       return;
@@ -150,14 +151,14 @@ export const CheckInSheet: React.FC<{
       if (!r.ok) return setProblem({ text: r.message, tone: "high" });
       const g = r.value;
       if (g.result === "in") {
-        onDone(`${label} is checked in as ${picked.name}'s guest. ${g.used} of ${g.allowed} guest passes used this month.`);
+        onDone(t("{guest} is checked in as {name}'s guest. {used} of {allowed} guest passes used this month.", { guest: label, name: picked.name, used: g.used, allowed: g.allowed }));
         return;
       }
       setProblem({
         text:
           g.denyReason === "guest_limit"
-            ? `Not checked in: ${picked.name} has used all ${g.allowed} guest passes this month.`
-            : `Not checked in: ${picked.name}'s pass isn't valid today, so they can't bring a guest.`,
+            ? t("Not checked in: {name} has used all {allowed} guest passes this month.", { name: picked.name, allowed: g.allowed })
+            : t("Not checked in: {name}'s pass isn't valid today, so they can't bring a guest.", { name: picked.name }),
         tone: "high",
       });
       return;
@@ -167,9 +168,9 @@ export const CheckInSheet: React.FC<{
       setBusy(false);
       if (!r.ok) return setProblem({ text: r.message, tone: "high" });
       const c = r.value;
-      if (c.alreadyIn) return setProblem({ text: `Already checked in: ${c.firstName ?? picked.name} came in within the last ${ALREADY_IN_HOURS} hours.`, tone: "soft" });
+      if (c.alreadyIn) return setProblem({ text: t("Already checked in: {name} came in within the last {n} hours.", { name: c.firstName ?? picked.name, n: ALREADY_IN_HOURS }), tone: "soft" });
       if (c.result === "in") {
-        onDone(`${c.firstName ?? picked.name} is checked in.`);
+        onDone(t("{name} is checked in.", { name: c.firstName ?? picked.name }));
         return;
       }
       setProblem({ text: deniedLine(c.denyReason ?? "no_pass"), tone: "high" });
@@ -199,16 +200,16 @@ export const CheckInSheet: React.FC<{
     ...(live === true
       ? dayPasses.map((p) => ({ value: `day:${p.id}`, label: dayLabel(p) }))
       : // The pending rule: day passes sold at the door need B10.
-        [{ value: "day-pass", label: "Day pass", disabled: true, note: "Coming soon" }]),
-    ...(picked && live === true ? [{ value: "guest", label: `Guest of ${picked.name}` }] : []),
+        [{ value: "day-pass", label: t("Day pass"), disabled: true, note: t("Coming soon") }]),
+    ...(picked && live === true ? [{ value: "guest", label: t("Guest of {host}", { host: picked.name }) }] : []),
   ];
-  const passText = plan ? dayLabel(plan) : isGuest && picked ? `Guest of ${picked.name}` : picked && pass ? passLabel(picked) : null;
+  const passText = plan ? dayLabel(plan) : isGuest && picked ? t("Guest of {host}", { host: picked.name }) : picked && pass ? passLabel(picked) : null;
 
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Check someone in"
+      title={t("Check someone in")}
       tone="business"
       headerHeight={53}
       bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
@@ -216,7 +217,7 @@ export const CheckInSheet: React.FC<{
         <div>
           {live === false && online && (
             <p role="note" className="text-center text-[11.5px] font-semibold leading-[16px] text-charcoal-faint" style={{ marginBottom: 8 }}>
-              Saving desk check-ins is coming soon. Scanning a pass works now.
+              {t("Saving desk check-ins is coming soon. Scanning a pass works now.")}
             </p>
           )}
           {problem && (
@@ -246,14 +247,14 @@ export const CheckInSheet: React.FC<{
             className="tap w-full flex items-center justify-center text-center text-[12.5px] font-extrabold text-primary-dark"
             style={{ minHeight: 44, marginTop: 4 }}
           >
-            Not a member yet? Create a code
+            {t("Not a member yet? Create a code")}
           </button>
         </div>
       }
     >
       <div>
         <label htmlFor="fd-member" className="block text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ marginBottom: 6 }}>
-          Member
+          {t("Member")}
         </label>
         <div className={FIELD} style={{ minHeight: 46, borderRadius: 14, padding: "0 12px", gap: 8, marginBottom: query && !picked && walkIn === null ? 6 : 12 }}>
           <input
@@ -266,24 +267,24 @@ export const CheckInSheet: React.FC<{
               setPass(null);
               setProblem(null);
             }}
-            placeholder="Search name or member code"
+            placeholder={t("Search name or member code")}
             autoComplete="off"
             className="flex-1 min-w-0 bg-transparent focus:outline-none text-[13.5px] font-bold text-charcoal placeholder:font-medium placeholder:text-charcoal-faint [html.high-contrast_&]:placeholder:text-charcoal-soft"
           />
           <Search size={16} strokeWidth={2.2} aria-hidden className="shrink-0 text-charcoal-faint" />
         </div>
         {query.trim() && !picked && walkIn === null && (
-          <div role="listbox" aria-label="Members" className="bg-cream-card border border-solid border-th-aea1dc/50 shadow-menu" style={{ borderRadius: 14, padding: 8, marginBottom: 12 }}>
+          <div role="listbox" aria-label={t("Members")} className="bg-cream-card border border-solid border-th-aea1dc/50 shadow-menu" style={{ borderRadius: 14, padding: 8, marginBottom: 12 }}>
             {shown === null ? (
               <p className="text-[11px] leading-[15px] text-charcoal-faint" style={{ padding: "8px 10px" }}>
-                Searching…
+                {t("Searching…")}
               </p>
             ) : (
               <>
                 {shown.length === 0 && (
                   <div style={{ padding: "8px 10px" }}>
-                    <p className="text-[13px] font-bold leading-[18px] text-charcoal">No member found</p>
-                    <p className="text-[11px] leading-[15px] text-charcoal-faint">Check the spelling or the member code.</p>
+                    <p className="text-[13px] font-bold leading-[18px] text-charcoal">{t("No member found")}</p>
+                    <p className="text-[11px] leading-[15px] text-charcoal-faint">{t("Check the spelling or the member code.")}</p>
                   </div>
                 )}
                 {shown.map((m) => (
@@ -309,8 +310,8 @@ export const CheckInSheet: React.FC<{
                     className="tap w-full text-start rounded-lg hover:bg-primary-pale"
                     style={{ minHeight: 44, padding: "6px 10px" }}
                   >
-                    <span className="block text-[13px] font-bold leading-[18px] text-primary-dark truncate">Sell a day pass to “{q.slice(0, GUEST_LABEL_MAX)}”</span>
-                    <span className="block text-[11px] leading-[15px] text-charcoal-faint">Not a member: a guest by name</span>
+                    <span className="block text-[13px] font-bold leading-[18px] text-primary-dark truncate">{t("Sell a day pass to “{name}”", { name: q.slice(0, GUEST_LABEL_MAX) })}</span>
+                    <span className="block text-[11px] leading-[15px] text-charcoal-faint">{t("Not a member: a guest by name")}</span>
                   </button>
                 )}
               </>
@@ -319,7 +320,7 @@ export const CheckInSheet: React.FC<{
         )}
 
         <p id="fd-pass-label" className="text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ marginBottom: 6 }}>
-          Pass
+          {t("Pass")}
         </p>
         <button
           ref={setPassEl}
@@ -333,20 +334,20 @@ export const CheckInSheet: React.FC<{
           style={{ minHeight: 46, borderRadius: 14, padding: "0 12px", gap: 8 }}
         >
           <span className={clsx("flex-1 min-w-0 truncate text-[13.5px]", passText ? "font-bold text-charcoal" : "font-medium text-charcoal-faint")}>
-            {passText ?? (walkIn !== null ? "Choose a day pass" : "Choose a member first")}
+            {passText ?? (walkIn !== null ? t("Choose a day pass") : t("Choose a member first"))}
           </span>
           <ChevronDown size={16} strokeWidth={2.2} aria-hidden className="shrink-0 text-charcoal-faint" />
         </button>
         {refused && (
           <p role="note" className="text-[11.5px] font-bold leading-[16px] text-status-high" style={{ marginTop: 5 }}>
-            No valid pass. Sell a day pass or mark the membership paid.
+            {t("No valid pass. Sell a day pass or mark the membership paid.")}
           </p>
         )}
 
         {isGuest && (
           <>
             <label htmlFor="fd-guest" className="block text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ margin: "12px 0 6px" }}>
-              Guest's name
+              {t("Guest's name")}
             </label>
             <input
               id="fd-guest"
@@ -357,7 +358,7 @@ export const CheckInSheet: React.FC<{
                 setProblem(null);
               }}
               autoComplete="off"
-              placeholder="For your entries list"
+              placeholder={t("For your entries list")}
               className={clsx(FIELD, "focus:outline-none text-[13.5px] font-bold text-charcoal placeholder:font-medium placeholder:text-charcoal-faint")}
               style={{ height: 46, borderRadius: 14, padding: "0 12px" }}
             />
@@ -365,14 +366,14 @@ export const CheckInSheet: React.FC<{
         )}
 
         {plan && (
-          <div role="radiogroup" aria-label="Payment" style={{ marginTop: 12 }}>
+          <div role="radiogroup" aria-label={tx("Payment", "how it is paid")} style={{ marginTop: 12 }}>
             <p className="text-[12px] font-bold leading-[16px] text-charcoal-soft" style={{ marginBottom: 6 }}>
-              Payment
+              {tx("Payment", "how it is paid")}
             </p>
             <div className="grid grid-cols-2" style={{ gap: 8 }}>
               {[
-                { on: paid, label: "Paid now", sub: "Cash", pick: () => setPaid(true) },
-                { on: !paid, label: "Pay later", sub: "Goes to Money owed", pick: () => setPaid(false) },
+                { on: paid, label: t("Paid now"), sub: t("Cash"), pick: () => setPaid(true) },
+                { on: !paid, label: t("Pay later"), sub: t("Goes to Money owed"), pick: () => setPaid(false) },
               ].map((c) => (
                 <button
                   key={c.label}
@@ -395,7 +396,7 @@ export const CheckInSheet: React.FC<{
         )}
 
         <button type="button" onClick={onScanInstead} className="tap text-[12.5px] font-bold text-primary-dark" style={{ minHeight: 44, marginTop: 4 }}>
-          Scan a pass instead
+          {t("Scan a pass instead")}
         </button>
       </div>
       {(picked || walkIn !== null) && (

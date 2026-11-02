@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { lh, px, useMarketColors } from "./listingParts";
 import { addDays, dateOf, dayMonth, daysBetween, isoOf } from "./model";
+import { t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 // Market + Share 3.0 · W3 (D-13): kept and restyled in the handover chrome
 // (an r20 --card panel on --border; the edges --fill / --onfill, the range
@@ -14,8 +16,12 @@ import { addDays, dateOf, dayMonth, daysBetween, isoOf } from "./model";
 // day that can be picked (featuring: today + 90). `fixedStart` = a started
 // promotion (ATX10): its start stays, a tap picks only the end.
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const WD = ["M", "T", "W", "T", "F", "S", "S"];
+/** "October 2026" in the app's language (Arabic month names in Arabic). */
+const monthTitle = (y: number, m: number): string => new Date(y, m, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
+/** "October 6" for a day button's label. */
+const dayLabel = (y: number, m: number, d: number): string => new Date(y, m, d).toLocaleDateString(appLocale("en-US"), { month: "long", day: "numeric" });
+/** The weekday initials, Monday first (1 Jan 2024 was a Monday). */
+const weekdayInitials = (): string[] => Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(appLocale("en-US"), { weekday: "narrow" }));
 
 export function RangeCalendar({
   from,
@@ -61,24 +67,24 @@ export function RangeCalendar({
       setB(null);
     } else setB(iso);
   };
-  const line = a && b ? `${dayMonth(a)} to ${dayMonth(b)} · ${daysBetween(a, b)} days` : a ? `${dayMonth(a)} to …` : "";
+  const line = a && b ? `${t("{from} to {to}", { from: dayMonth(a), to: dayMonth(b) })} · ${tn(daysBetween(a, b), "{n} day", "{n} days")}` : a ? t("{from} to …", { from: dayMonth(a) }) : "";
   const nav = (d: number) => setMonth((x) => ({ y: x.m + d < 0 ? x.y - 1 : x.m + d > 11 ? x.y + 1 : x.y, m: (x.m + d + 12) % 12 }));
   const disc = (dis: boolean) => ({ width: 32, height: 32, borderRadius: 999, background: c.soft, color: dis ? c.tert : c.ink2, display: "flex", alignItems: "center", justifyContent: "center", border: 0 });
 
   return (
-    <div role="dialog" aria-label="Choose dates" style={{ borderRadius: 20, border: `1px solid ${c.border}`, background: c.card, padding: 12, lineHeight: "normal" }}>
+    <div role="dialog" aria-label={t("Choose dates")} style={{ borderRadius: 20, border: `1px solid ${c.border}`, background: c.card, padding: 12, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <button type="button" aria-label="Previous month" aria-disabled={atCurrent} onClick={() => !atCurrent && nav(-1)} className="tap market-focus" style={disc(atCurrent)}>
-          <ChevronLeft size={16} aria-hidden />
+        <button type="button" aria-label={t("Previous month")} aria-disabled={atCurrent} onClick={() => !atCurrent && nav(-1)} className="tap market-focus" style={disc(atCurrent)}>
+          <ChevronLeft size={16} aria-hidden className="rtl:-scale-x-100" />
         </button>
-        <p style={{ fontSize: px(15), fontWeight: 700, color: c.ink }} aria-live="polite">{`${MONTHS[month.m]} ${month.y}`}</p>
-        <button type="button" aria-label="Next month" onClick={() => nav(1)} className="tap market-focus" style={disc(false)}>
-          <ChevronRight size={16} aria-hidden />
+        <p style={{ fontSize: px(15), fontWeight: 700, color: c.ink }} aria-live="polite">{monthTitle(month.y, month.m)}</p>
+        <button type="button" aria-label={t("Next month")} onClick={() => nav(1)} className="tap market-focus" style={disc(false)}>
+          <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" />
         </button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4, marginBottom: 4 }} aria-hidden>
-        {WD.map((w, i) => (
+        {weekdayInitials().map((w, i) => (
           <span key={i} style={{ textAlign: "center", fontSize: px(10), fontWeight: 700, color: c.faint, padding: "4px 0" }}>
             {w}
           </span>
@@ -100,7 +106,7 @@ export function RangeCalendar({
               type="button"
               aria-disabled={past}
               aria-pressed={edge || inR}
-              aria-label={`${MONTHS[month.m]} ${i + 1}`}
+              aria-label={dayLabel(month.y, month.m, i + 1)}
               onClick={() => !past && pick(iso)}
               className="market-focus"
               style={{
@@ -128,7 +134,7 @@ export function RangeCalendar({
       <p style={{ fontSize: px(12), fontWeight: 700, color: c.ink2, textAlign: "center", marginTop: 10, minHeight: lh(18) }}>{line}</p>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.4fr)", gap: 8, marginTop: 10 }}>
         <button type="button" onClick={onCancel} className="market-focus" style={{ height: 44, borderRadius: 14, border: 0, background: c.cancelbg, fontFamily: "inherit", fontSize: px(14), fontWeight: 700, color: c.cancelink, cursor: "pointer" }}>
-          Cancel
+          {t("Cancel")}
         </button>
         <button
           type="button"
@@ -137,7 +143,7 @@ export function RangeCalendar({
           className="market-focus"
           style={{ height: 44, borderRadius: 14, background: c.fill, color: c.onfill, border: 0, fontFamily: "inherit", fontSize: px(14), fontWeight: 700, opacity: a && b ? 1 : 0.4, cursor: a && b ? "pointer" : "default" }}
         >
-          Done
+          {t("Done")}
         </button>
       </div>
     </div>

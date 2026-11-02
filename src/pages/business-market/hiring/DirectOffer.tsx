@@ -15,6 +15,7 @@ import { BusyWarning, FeeNoticeRow, HiredLine, HiringEmpty, PersonHead, UserPlus
 import { OpeningFormFields, useLiveClasses } from "./PostOpeningSheet";
 import HireConfirmDialog, { type DialogNote, type HireOffer } from "./HireConfirmDialog";
 import { busyText, emptyForm, hiredLine, parseForm, sentStrip, type OpeningFormState, type ParsedForm } from "./hubModel";
+import { t, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · B-MA.8.6 Find a professional / direct offer
 // (Business Hiring Screens `srch`, `dOffer`, `dConfirm`, `dSent`; markup
@@ -60,8 +61,8 @@ export default function DirectOfferPage() {
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
   useEffect(() => {
-    const t = window.setTimeout(() => setDq(q.trim()), 300);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setDq(q.trim()), 300);
+    return () => window.clearTimeout(timer);
   }, [q]);
   const results = useHiringRead(() => (id ? searchProfessionals(id, dq) : null), [id, dq]);
 
@@ -117,7 +118,7 @@ export default function DirectOfferPage() {
     setConfirm(null);
     setWho(null);
     showStrip(sentStrip(p.name), {
-      action: "View",
+      action: t("View"),
       onAction: () => document.querySelector<HTMLElement>(`[data-result="${CSS.escape(p.id)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }),
     });
   };
@@ -128,7 +129,7 @@ export default function DirectOfferPage() {
   return (
     <div style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackHeader eyebrow="Hiring" title="Find a professional" onBack={back} backLabel="Back to Hiring" />
+      <BackHeader eyebrow={t("Hiring")} title={t("Find a professional")} onBack={back} backLabel={t("Back to Hiring")} />
       {strip}
 
       {!biz.loading && !biz.canHire ? (
@@ -141,24 +142,24 @@ export default function DirectOfferPage() {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              aria-label="Search professionals by name or specialty"
+              aria-label={t("Search professionals by name or specialty")}
               autoComplete="off"
               enterKeyHint="search"
               style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent", fontFamily: "inherit", fontSize: textPx(14), fontWeight: 600, color: m.ink, padding: 0 }}
             />
             {q ? (
-              <button type="button" onClick={() => setQ("")} aria-label="Clear search" className="tap market-focus" style={{ display: "flex", border: 0, background: "transparent", padding: 0, color: m.faint, cursor: "pointer" }}>
+              <button type="button" onClick={() => setQ("")} aria-label={t("Clear search")} className="tap market-focus" style={{ display: "flex", border: 0, background: "transparent", padding: 0, color: m.faint, cursor: "pointer" }}>
                 <X size={16} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
               </button>
             ) : null}
           </div>
-          <div style={{ marginTop: 10, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Ranked by Centium work history and reviews. Only professionals open to gym work show here.</div>
+          <div style={{ marginTop: 10, fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{t("Ranked by Centium work history and reviews. Only professionals open to gym work show here.")}</div>
 
-          {results.state === "loading" && !results.value ? <MarketSkeleton radius={20} rows={3} count={3} label="Searching professionals" style={{ marginTop: 12 }} /> : null}
+          {results.state === "loading" && !results.value ? <MarketSkeleton radius={20} rows={3} count={3} label={t("Searching professionals")} style={{ marginTop: 12 }} /> : null}
           {results.state === "error" ? <MarketError thing="professionals" onRetry={results.retry} style={{ marginTop: 12 }} /> : null}
           {results.state === "offline" ? <MarketOffline loaded={list.length > 0} onRetry={results.retry} force style={{ marginTop: 12 }} /> : null}
-          {results.state === "pending" ? <SoonNote style={{ marginTop: 16 }}>Hiring is coming soon.</SoonNote> : null}
-          {results.state === "ok" && list.length === 0 ? <SoonNote style={{ marginTop: 16 }}>{dq ? "No professionals match this search." : "No professionals are open to gym work yet."}</SoonNote> : null}
+          {results.state === "pending" ? <SoonNote style={{ marginTop: 16 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
+          {results.state === "ok" && list.length === 0 ? <SoonNote style={{ marginTop: 16 }}>{dq ? t("No professionals match this search.") : t("No professionals are open to gym work yet.")}</SoonNote> : null}
 
           <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             {list.map((p, i) => {
@@ -172,11 +173,11 @@ export default function DirectOfferPage() {
                       type="button"
                       onClick={() => !sent && start(p)}
                       aria-disabled={sent || undefined}
-                      aria-label={sent ? `Offered to ${p.name}` : `Send offer to ${p.name}`}
+                      aria-label={sent ? t("Offered to {name}", { name: p.name }) : t("Send offer to {name}", { name: p.name })}
                       className="hit market-focus"
                       style={{ height: 36, padding: "0 14px", borderRadius: 11, border: 0, background: sent ? offBg : m.fill, color: sent ? offInk : m.onfill, display: "flex", alignItems: "center", fontSize: textPx(12.5), fontWeight: 800, whiteSpace: "nowrap", fontFamily: "inherit", cursor: sent ? "default" : "pointer", flexShrink: 0 }}
                     >
-                      {sent ? "Offered" : "Send offer"}
+                      {sent ? tx("Offered", "hire") : t("Send offer")}
                     </button>
                   </div>
                   {sent && offered[p.id].length ? <BusyWarning lines={offered[p.id].map(busyText).filter(Boolean)} style={{ marginTop: 10 }} /> : null}
@@ -190,12 +191,12 @@ export default function DirectOfferPage() {
       <MasterSheet
         open={sheetOpen && !!who}
         onClose={() => setSheetOpen(false)}
-        title={who ? `Offer to ${who.name}` : "Offer"}
+        title={who ? t("Offer to {name}", { name: who.name }) : tx("Offer", "hire")}
         footer={
           <>
             <FeeNoticeRow text={feeNoticeText(rules)} />
             <PrimaryButton onClick={review} disabled={!parsed || (parsed.type === "class_slot" && !slot)}>
-              Review offer
+              {t("Review offer")}
             </PrimaryButton>
           </>
         }

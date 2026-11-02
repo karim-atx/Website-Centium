@@ -37,6 +37,7 @@ import { useAnalytics } from "../analyticsContext";
 import { ErrorLine, RCard, SecLabel, Skel, v } from "./kit";
 import { useRevenue } from "./revenueContext";
 import { useRecordedRevenue } from "./useRecordedRevenue";
+import { t, tn } from "../../../i18n/core";
 
 // AN14-001 / -003 / -005 to -009 / -011 (AnInsightsV3 page "revenue", sub
 // "overview"; chart cfg chA, modes Total / By stream). Every value comes from
@@ -69,10 +70,10 @@ const colOf = (k: string) => STREAM_COL[k] ?? v("tert");
 
 /** "the 4 weeks before" etc. for the lead. */
 function beforeWords(key: string): string {
-  if (key === "week") return "the week before";
-  if (key === "4w") return "the 4 weeks before";
-  if (key === "12w") return "the 12 weeks before";
-  return "the period before";
+  if (key === "week") return t("the week before");
+  if (key === "4w") return t("the 4 weeks before");
+  if (key === "12w") return t("the 12 weeks before");
+  return t("the period before");
 }
 
 export const OverviewTab: React.FC = () => {
@@ -155,10 +156,10 @@ export const OverviewTab: React.FC = () => {
   }, [f, data, range, today]);
 
   if (rec.error && !m)
-    return <ErrorLine message="Couldn't load revenue." onRetry={rec.reload} />;
+    return <ErrorLine message={t("Couldn't load revenue.")} onRetry={rec.reload} />;
   if (!m)
     return (
-      <div role="status" aria-label="Loading">
+      <div role="status" aria-label={t("Loading")}>
         <RCard className="mt-[16px] px-[16px] pt-[20px] pb-[16px]">
           <Skel h={44} className="mx-auto w-[60%]" />
           <div className="grid grid-cols-2 gap-[16px] mt-[20px]">
@@ -166,7 +167,7 @@ export const OverviewTab: React.FC = () => {
             <Skel h={28} />
           </div>
         </RCard>
-        <SecLabel>Revenue trend</SecLabel>
+        <SecLabel>{t("Revenue trend")}</SecLabel>
         <RCard className="p-[16px]">
           <Skel h={44} r={14} />
           <Skel h={140} className="mt-[12px]" />
@@ -180,10 +181,10 @@ export const OverviewTab: React.FC = () => {
   const heroValue = empty ? "$0" : money(m.tot);
   const heroDelta = !empty && m.compare ? pctDelta(m.tot, m.totP) : null;
   const heroLabel = empty
-    ? "Revenue collected"
+    ? t("Revenue collected")
     : store
-      ? "Sales this period"
-      : "Revenue collected this period";
+      ? t("Sales this period")
+      : t("Revenue collected this period");
 
   // ---- boxes (COPY per type) ----
   type Box = { v: string; d: string | null; l: string; dGood?: boolean };
@@ -191,8 +192,8 @@ export const OverviewTab: React.FC = () => {
   if (store) {
     // B11 store_sales_summary: the average order and the share returned.
     boxes = [
-      { v: storeSales ? money(storeSales.averageOrder) : "–", d: null, l: "Average order" },
-      { v: storeSales && storeSales.returnedPct !== null ? `${Math.round(storeSales.returnedPct)}%` : "–", d: null, l: "Returned" },
+      { v: storeSales ? money(storeSales.averageOrder) : "–", d: null, l: t("Average order") },
+      { v: storeSales && storeSales.returnedPct !== null ? `${Math.round(storeSales.returnedPct)}%` : "–", d: null, l: t("Returned") },
     ];
   } else {
     const recurring = recurringMonthly(m.records, today);
@@ -204,7 +205,7 @@ export const OverviewTab: React.FC = () => {
       second = {
         v: money(per),
         d: m.compare && n && nP ? moneyDelta(per, perP) : null,
-        l: "Per booking",
+        l: t("Per booking"),
         dGood: per >= perP,
       };
     } else {
@@ -212,10 +213,10 @@ export const OverviewTab: React.FC = () => {
       second = {
         v: money(act ? m.tot / act : 0),
         d: null,
-        l: "Per active member",
+        l: t("Per active member"),
       };
     }
-    boxes = [{ v: money(recurring), d: null, l: "Recurring each month" }, second];
+    boxes = [{ v: money(recurring), d: null, l: t("Recurring each month") }, second];
   }
   if (empty)
     boxes = boxes.map((b) => ({ ...b, v: b.v === "–" ? "–" : "$0", d: null }));
@@ -223,32 +224,30 @@ export const OverviewTab: React.FC = () => {
   // ---- lead (template sentences from numbers only, OD-4) ----
   let lead: string;
   if (m.denied)
-    lead = "Revenue shows here for people with the Revenue permission.";
+    lead = t("Revenue shows here for people with the Revenue permission.");
   else if (empty)
-    lead =
-      "No transactions yet. Revenue appears once you record a payment. Cash today, Whish soon.";
+    lead = t("No transactions yet. Revenue appears once you record a payment. Cash today, Whish soon.");
   else if (m.early)
-    lead =
-      "Your first payments came in less than 4 weeks ago. Comparisons start after a full period.";
+    lead = t("Your first payments came in less than 4 weeks ago. Comparisons start after a full period.");
   else {
     const parts: string[] = [];
     if (m.compare) {
       const p = pctDelta(m.tot, m.totP);
       if (p === null)
-        parts.push(`Nothing was recorded in ${beforeWords(range.key)}.`);
+        parts.push(t("Nothing was recorded in {before}.", { before: beforeWords(range.key) }));
       else if (m.tot > m.totP)
-        parts.push(`Up ${p.slice(1)} on ${beforeWords(range.key)}.`);
+        parts.push(t("Up {pct} on {before}.", { pct: p.slice(1), before: beforeWords(range.key) }));
       else if (m.tot < m.totP)
-        parts.push(`Down ${p.slice(1)} on ${beforeWords(range.key)}.`);
-      else parts.push(`The same as ${beforeWords(range.key)}.`);
+        parts.push(t("Down {pct} on {before}.", { pct: p.slice(1), before: beforeWords(range.key) }));
+      else parts.push(t("The same as {before}.", { before: beforeWords(range.key) }));
     }
     const bw = bestWeek(m.series);
-    if (bw) parts.push(`The week of ${dMon(bw)} was your best.`);
+    if (bw) parts.push(t("The week of {date} was your best.", { date: dMon(bw) }));
     if (!parts.length)
       parts.push(
         m.tot
-          ? `${money(m.tot)} collected ${rangeWords(range)}.`
-          : `Nothing was recorded ${rangeWords(range)}.`,
+          ? t("{amount} collected {range}.", { amount: money(m.tot), range: rangeWords(range) })
+          : t("Nothing was recorded {range}.", { range: rangeWords(range) }),
       );
     lead = parts.join(" ");
   }
@@ -261,7 +260,7 @@ export const OverviewTab: React.FC = () => {
     .filter((k) => sum(m.series.byKind[k] ?? []) > 0)
     .map((k) => ({ key: k, label: streamLabel(k) }));
   const tips: ScrubTipRow[][] = days.map((_, i) => {
-    const rows: ScrubTipRow[] = [{ l: "Total", v: money(m.series.total[i]) }];
+    const rows: ScrubTipRow[] = [{ l: t("Total"), v: money(m.series.total[i]) }];
     if (present.length > 1)
       present.forEach((s) =>
         rows.push({
@@ -270,12 +269,12 @@ export const OverviewTab: React.FC = () => {
           col: colOf(s.key),
         }),
       );
-    rows.push({ l: "Transactions", v: String(m.series.count[i]) });
+    rows.push({ l: t("Transactions"), v: String(m.series.count[i]) });
     if (m.compare) {
       const p = m.prevSeries.total[i] ?? 0;
       const d = m.series.total[i] - p;
       rows.push({
-        l: "vs last period",
+        l: t("vs last period"),
         v:
           (d >= 0 ? "+" : "−") +
           money(Math.abs(d)) +
@@ -314,25 +313,25 @@ export const OverviewTab: React.FC = () => {
       }
       vals[vals.length - 1] += m.series.total[i];
     });
-    labels = weeks.map((w) => `Week of ${dMon(w)}`);
+    labels = weeks.map((w) => t("Week of {date}", { date: dMon(w) }));
     xl = weeks.length ? [dMon(weeks[0]), dMon(weeks[weeks.length - 1])] : [];
     modes = [
       {
-        t: "Total",
+        t: t("Total"),
         kind: "bars",
-        unit: "$ per week",
+        unit: t("$ per week"),
         cur: vals,
         min: 0,
         step,
         fmt: moneyK,
-        tips: vals.map((x) => [{ l: "Sales", v: money(x) }]),
+        tips: vals.map((x) => [{ l: t("Sales"), v: money(x) }]),
       },
     ];
   } else {
     modes = [
       {
-        t: "Total",
-        unit: "$ per day",
+        t: t("Total"),
+        unit: t("$ per day"),
         cur: m.series.total,
         prev: m.compare ? m.prevSeries.total : [],
         min: 0,
@@ -344,9 +343,9 @@ export const OverviewTab: React.FC = () => {
     // By stream needs payments tagged by stream: shown once two streams carry money (AN14-003 O1).
     if (present.length > 1)
       modes.push({
-        t: "By stream",
+        t: t("By stream"),
         kind: "stack",
-        unit: "$ per day",
+        unit: t("$ per day"),
         cur: m.series.total,
         prev: m.compare ? m.prevSeries.total : [],
         min: 0,
@@ -401,16 +400,15 @@ export const OverviewTab: React.FC = () => {
     labels,
     xl,
     markers,
-    aria: store ? "Sales per week" : "Revenue per day",
-    caption:
-      "Drag across to read each day, tap to pin one. Tap the legend to show or hide a series.",
-    earlyText: "The trend starts after 2 weeks of payments.",
-    emptyText: "Revenue shows here once payments are recorded.",
-    curLabel: "Collected",
+    aria: store ? t("Sales per week") : t("Revenue per day"),
+    caption: t("Drag across to read each day, tap to pin one. Tap the legend to show or hide a series."),
+    earlyText: t("The trend starts after 2 weeks of payments."),
+    emptyText: t("Revenue shows here once payments are recorded."),
+    curLabel: t("Collected"),
     prevLabel:
       range.key === "week"
-        ? "Week before"
-        : `${daysBetween(m.prev.from, m.prev.to) + 1} days before`,
+        ? t("Week before")
+        : tn(daysBetween(m.prev.from, m.prev.to) + 1, "{n} day before", "{n} days before"),
     modes,
   };
   const chartEmpty = empty || m.chartEarly || m.tot === 0;
@@ -425,19 +423,19 @@ export const OverviewTab: React.FC = () => {
     !chartEmpty && !m.early
       ? [
           {
-            l: "Total",
+            l: t("Total"),
             v: money(m.tot),
             d: m.compare ? pctDelta(m.tot, m.totP) : null,
             good: m.tot >= m.totP,
           },
           {
-            l: "Best day",
+            l: t("Best day"),
             v: money(m.series.total[bestI]),
             d: days[bestI] ? dMon(days[bestI]) : null,
             faint: true,
           },
           {
-            l: "Average per day",
+            l: t("Average per day"),
             v: money(avg),
             d: m.compare ? moneyDelta(avg, avgP) : null,
             good: avg >= avgP,
@@ -452,7 +450,7 @@ export const OverviewTab: React.FC = () => {
           className="mt-[12px] text-[11.5px] leading-[16px] rounded-[12px] px-[12px] py-[8px]"
           style={{ color: v("ink-soft"), background: v("soft") }}
         >
-          Early data: your first payments came in less than 4 weeks ago.
+          {t("Early data: your first payments came in less than 4 weeks ago.")}
         </p>
       )}
 
@@ -544,18 +542,16 @@ export const OverviewTab: React.FC = () => {
           <p>{lead}</p>
           {m.und.n > 0 && (
             <p className="mt-[6px]">
-              Not counted yet: {money(m.und.amount)} from {m.und.n}{" "}
-              {m.und.n === 1 ? "membership" : "memberships"} marked paid. Their
-              payment dates aren't shared with Analytics yet.
+              {tn(m.und.n, "Not counted yet: {amount} from {n} membership marked paid. Their payment dates aren't shared with Analytics yet.", "Not counted yet: {amount} from {n} memberships marked paid. Their payment dates aren't shared with Analytics yet.", { amount: money(m.und.amount) })}
             </p>
           )}
         </div>
       </RCard>
 
-      <SecLabel>{store ? "Sales by week" : "Revenue trend"}</SecLabel>
+      <SecLabel>{store ? t("Sales by week") : t("Revenue trend")}</SecLabel>
       <RCard className="p-[16px]">
         <p className="text-[14px] font-extrabold" style={{ color: v("ink") }}>
-          Is revenue growing, and where does it come from?
+          {t("Is revenue growing, and where does it come from?")}
         </p>
         <p
           className="text-[11.5px] leading-[16px] mt-[2px] mb-[12px]"
@@ -564,10 +560,10 @@ export const OverviewTab: React.FC = () => {
           }
         >
           {store
-            ? "Sales recorded each week."
+            ? t("Sales recorded each week.")
             : m.compare
-              ? `Money collected each day. The dashed line is the ${daysBetween(m.prev.from, m.prev.to) + 1} days before.`
-              : "Money collected each day."}
+              ? tn(daysBetween(m.prev.from, m.prev.to) + 1, "Money collected each day. The dashed line is the day before.", "Money collected each day. The dashed line is the {n} days before.")
+              : t("Money collected each day.")}
         </p>
         <ScrubChart
           cfg={cfg}
@@ -660,8 +656,8 @@ const PriceLine: React.FC<{
           style={{ color: "#C0392B" }}
         >
           {failed === "offline"
-            ? "You're offline. Price changes show when you're back online."
-            : "Couldn't load price changes."}
+            ? t("You're offline. Price changes show when you're back online.")
+            : t("Couldn't load price changes.")}
         </p>
         <button
           type="button"
@@ -669,7 +665,7 @@ const PriceLine: React.FC<{
           className="tap min-h-[44px] px-[6px] text-[12.5px] font-extrabold shrink-0"
           style={{ color: v("pdark") }}
         >
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
@@ -679,7 +675,7 @@ const PriceLine: React.FC<{
       className="text-[11px] leading-[18px] mt-[8px]"
       style={{ color: v("faint"), textWrap: "pretty" } as React.CSSProperties}
     >
-      <ScrubMarkerChip kind="price">Price change</ScrubMarkerChip>{" "}
+      <ScrubMarkerChip kind="price">{t("Price change")}</ScrubMarkerChip>{" "}
       {priceSinceLine(from, since, today)}
     </p>
   );
@@ -694,14 +690,14 @@ const TopProducts: React.FC<{ rows: TopProduct[] }> = ({ rows }) => {
   const mx = Math.max(1, ...rows.map((r) => r.sales));
   return (
     <>
-      <SecLabel>Top products</SecLabel>
+      <SecLabel>{t("Top products")}</SecLabel>
       <RCard className="pt-[10px] px-[16px] pb-[12px]">
-        <div role="list" aria-label="Top products">
+        <div role="list" aria-label={t("Top products")}>
           {rows.map((r, i) => (
             <div
               key={r.offeringId ?? r.name}
               role="listitem"
-              aria-label={`${i + 1}. ${r.name}, ${money(r.sales)}, ${r.units} sold`}
+              aria-label={`${i + 1}. ${r.name}، ${money(r.sales)}، ${tn(r.units, "{n} sold", "{n} sold")}`}
               className="grid items-center min-h-[52px] py-[6px]"
               style={{
                 gridTemplateColumns: "22px minmax(0,1fr) auto",
@@ -750,7 +746,7 @@ const TopProducts: React.FC<{ rows: TopProduct[] }> = ({ rows }) => {
                   className="block text-[10px] font-bold leading-[12px] whitespace-nowrap"
                   style={{ color: v("faint") }}
                 >
-                  {r.units} sold
+                  {tn(r.units, "{n} sold", "{n} sold")}
                 </span>
               </span>
             </div>
@@ -760,7 +756,7 @@ const TopProducts: React.FC<{ rows: TopProduct[] }> = ({ rows }) => {
           className="text-[11px] leading-[15px] mt-[6px]"
           style={{ color: v("faint") }}
         >
-          Ranked by sales. Sales here are the value of orders placed and not cancelled, paid or not.
+          {t("Ranked by sales. Sales here are the value of orders placed and not cancelled, paid or not.")}
         </p>
       </RCard>
     </>

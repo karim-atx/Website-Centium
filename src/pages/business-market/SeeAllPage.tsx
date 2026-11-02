@@ -8,6 +8,7 @@ import { BackHeader, Card, lh, px, useMarketColors } from "./listingParts";
 import { dayMonth } from "./model";
 import { EXPANDED } from "../../services/market/performanceModel";
 import { OfferPerformanceExpanded } from "./OfferPerformance";
+import { t, tk, tn } from "../../i18n/core";
 
 // performance/:which under the Marketplace (and a Store's Products):
 // - views | redemptions | points | rate: the B-MA.7 full-screen chart
@@ -62,35 +63,35 @@ function ListingSeeAll({ which }: { which: string | undefined }) {
     };
   }, [live, businessId, tick]);
 
-  const title = top ? (kind === "store" ? "Top items" : kind === "gym" ? "Top passes" : "Top classes") : kind === "store" ? "New customers" : kind === "gym" ? "New members" : "New clients";
-  const empty = kind === "store" ? "No orders from Centium yet." : kind === "gym" ? "No passes bought from Centium yet." : "No bookings from Centium yet.";
+  const title = top ? (kind === "store" ? t("Top items") : kind === "gym" ? t("Top passes") : t("Top classes")) : kind === "store" ? t("New customers") : kind === "gym" ? t("New members") : t("New clients");
+  const empty = kind === "store" ? t("No orders from Centium yet.") : kind === "gym" ? t("No passes bought from Centium yet.") : t("No bookings from Centium yet.");
   // The item's own kind names the count: a gym's top item can be a class or a pass.
   const unit = (n: number, k: string) => {
     const store = k === "product" || (k === "other" && kind === "store");
     const pass = k === "plan" || (k === "other" && kind === "gym");
-    return store ? `${num(n)} order${n === 1 ? "" : "s"}` : pass ? `${num(n)} pass${n === 1 ? "" : "es"}` : `${num(n)} booking${n === 1 ? "" : "s"}`;
+    return store ? tn(n, "{n} order", "{n} orders", { n: num(n) }) : pass ? tn(n, "{n} pass", "{n} passes", { n: num(n) }) : tn(n, "{n} booking", "{n} bookings", { n: num(n) });
   };
   const rows = top ? [...(data?.top ?? [])].filter((x) => x.bookings > 0).sort((a, b) => b.bookings - a.bookings || b.impressions - a.impressions) : [];
   const weeks = !top ? [...(data?.newClients ?? [])].filter((w) => w.n > 0).reverse() : [];
   const max = Math.max(1, ...rows.map((r) => r.bookings));
-  const person = kind === "store" ? "customer" : kind === "gym" ? "member" : "client";
+  const newPeople = (n: number) => (kind === "store" ? tn(n, "{n} new customer", "{n} new customers", { n: num(n) }) : kind === "gym" ? tn(n, "{n} new member", "{n} new members", { n: num(n) }) : tn(n, "{n} new client", "{n} new clients", { n: num(n) }));
   const row = (i: number): React.CSSProperties => ({ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderTop: i ? `1px solid ${m.div}` : "none" });
 
   return (
     <div style={{ color: m.ink, lineHeight: "normal" }}>
-      <BackHeader eyebrow={kind === "store" ? "Products · Performance" : "Marketplace · Performance"} title={title} onBack={() => navigate(tabHref("perf"))} backLabel="Back to Performance" />
-      <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, margin: "0 0 8px", lineHeight: lh(15.75) }}>Last 12 weeks · from Centium</p>
+      <BackHeader eyebrow={kind === "store" ? t("Products · Performance") : t("Marketplace · Performance")} title={title} onBack={() => navigate(tabHref("perf"))} backLabel={t("Back to Performance")} />
+      <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, margin: "0 0 8px", lineHeight: lh(15.75) }}>{t("Last 12 weeks · from Centium")}</p>
       {live && error && !data ? (
-        <MarketError thing="your performance" onRetry={() => setTick((t) => t + 1)} />
+        <MarketError thing={tk("your performance")} onRetry={() => setTick((t) => t + 1)} />
       ) : live && !data ? (
-        <MarketSkeleton radius={20} rows={4} height={180} label="Loading your performance" />
+        <MarketSkeleton radius={20} rows={4} height={180} label={t("Loading your performance")} />
       ) : top && rows.length > 0 ? (
         <Card r={20} style={{ overflow: "hidden" }}>
           {rows.map((r, i) => (
             <div key={r.itemId} style={row(i)}>
               <span style={{ width: 20, fontSize: px(12), fontWeight: 800, color: m.faint, fontVariantNumeric: "tabular-nums" }}>{i + 1}</span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: m.ink, lineHeight: lh(19) }}>{r.title ?? "Removed item"}</span>
+                <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: m.ink, lineHeight: lh(19) }}>{r.title ?? t("Removed item")}</span>
                 <span aria-hidden style={{ display: "block", height: 6, borderRadius: 999, background: m.soft, marginTop: 6, overflow: "hidden" }}>
                   <span style={{ display: "block", height: "100%", width: `${(r.bookings / max) * 100}%`, borderRadius: 999, background: m.fill }} />
                 </span>
@@ -103,13 +104,13 @@ function ListingSeeAll({ which }: { which: string | undefined }) {
         <Card r={20} style={{ overflow: "hidden" }}>
           {weeks.map((w, i) => (
             <div key={w.weekStart} style={row(i)}>
-              <span style={{ flex: 1, fontSize: px(13.5), fontWeight: 700, color: m.ink }}>{`Week of ${dayMonth(w.weekStart)}`}</span>
-              <span style={{ fontSize: px(13), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{`${num(w.n)} new ${person}${w.n === 1 ? "" : "s"}`}</span>
+              <span style={{ flex: 1, fontSize: px(13.5), fontWeight: 700, color: m.ink }}>{t("Week of {date}", { date: dayMonth(w.weekStart) })}</span>
+              <span style={{ fontSize: px(13), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{newPeople(w.n)}</span>
             </div>
           ))}
         </Card>
       ) : (
-        <MarketEmptyCard title="No data yet" body={empty} />
+        <MarketEmptyCard title={t("No data yet")} body={empty} />
       )}
     </div>
   );

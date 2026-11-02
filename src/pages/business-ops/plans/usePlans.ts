@@ -20,6 +20,7 @@ import {
 import { fetchPlanFigures } from "../../../services/business-analytics";
 import { todayLocal } from "../../../utils/date";
 import { sharedNames, type CardFigures } from "./planModel";
+import { t } from "../../../i18n/core";
 
 /** This calendar month to date: the card's "sold this month" (bizPlans "21 sold this month"). */
 export function monthToDate(today: string): { from: string; to: string } {
@@ -120,7 +121,7 @@ export function usePlans() {
 
   const reload = useCallback(() => {
     setLoading(true);
-    setTick((t) => t + 1);
+    setTick((n) => n + 1);
   }, []);
 
   /** Active members of one plan; null while unknown or unreadable (or when two plans share its name). */
@@ -155,7 +156,7 @@ export function usePlans() {
   );
 
   const add = async (draft: PlanDraft): Promise<WriteOutcome> => {
-    if (!businessId) return { ok: false, message: "Save your business profile first to start adding plans." };
+    if (!businessId) return { ok: false, message: t("Save your business profile first to start adding plans.") };
     const r = await createPlan(businessId, draft);
     if (!r.ok) return r;
     setPlans((prev) => [...prev, r.plan]);
@@ -172,7 +173,7 @@ export function usePlans() {
 
   const remove = async (planId: string): Promise<DeleteOutcome> => {
     const r = await deletePlan(planId);
-    if (!r.ok) return { ok: false, message: r.message ?? "Couldn't delete the plan. Try again.", inUse: r.inUse };
+    if (!r.ok) return { ok: false, message: r.message ?? t("Couldn't delete the plan. Try again."), inUse: r.inUse };
     setPlans((prev) => prev.filter((p) => p.id !== planId));
     return { ok: true };
   };
@@ -187,7 +188,7 @@ export function usePlans() {
   const setVisible = async (planId: string, visible: boolean) => replace(await setPlanVisible(planId, visible));
   /** Duplicate as hidden. */
   const duplicate = async (plan: MembershipPlanRow): Promise<WriteOutcome> => {
-    if (!businessId) return { ok: false, message: "Couldn't duplicate the plan. Try again." };
+    if (!businessId) return { ok: false, message: t("Couldn't duplicate the plan. Try again.") };
     const r = await duplicatePlan(businessId, plan);
     if (r.ok) setPlans((prev) => [...prev, r.plan]);
     return r;

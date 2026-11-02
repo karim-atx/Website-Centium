@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Lock } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
+import { t } from "../../i18n/core";
 import { PERMISSION_LABEL, type ConsoleNeed } from "../../services/business-console";
 
 // B7 · what a console page shows somebody who may not use it.
@@ -13,7 +14,7 @@ import { PERMISSION_LABEL, type ConsoleNeed } from "../../services/business-cons
 // of `need`; otherwise they get a plain card saying what is missing and who
 // can give it, instead of an empty business or controls the server refuses.
 
-const needLabel = (n: ConsoleNeed) => (n === "owner" ? null : PERMISSION_LABEL[n]);
+const needLabel = (n: ConsoleNeed) => (n === "owner" ? null : t(PERMISSION_LABEL[n]));
 
 export function ConsoleGate({ need, children }: { need: ConsoleNeed | ConsoleNeed[]; children: ReactNode }) {
   const { user } = useApp();
@@ -23,7 +24,7 @@ export function ConsoleGate({ need, children }: { need: ConsoleNeed | ConsoleNee
   if (access.ready && needs.some((n) => access.meets(n))) return <>{children}</>;
   if (!access.ready && !access.failed) {
     return (
-      <div role="status" aria-label="Loading" className="space-y-[10px] pt-[6px]">
+      <div role="status" aria-label={t("Loading")} className="space-y-[10px] pt-[6px]">
         <span className="block h-[28px] w-1/2 rounded-[10px] bg-cream-soft animate-skeleton-pulse" />
         <span className="block h-[120px] rounded-[18px] bg-cream-soft animate-skeleton-pulse" />
       </div>
@@ -44,16 +45,16 @@ function NoAccess({ needs, businessName, nothingOn, failed, onRetry }: { needs: 
   const navigate = useNavigate();
   const labels = needs.map(needLabel).filter((l): l is string => !!l);
   const ownerOnly = labels.length === 0;
-  const title = failed ? "Couldn't check your access" : businessName ? "You don't have access to this" : "This is a business's console";
+  const title = failed ? t("Couldn't check your access") : businessName ? t("You don't have access to this") : t("This is a business's console");
   const body = failed
-    ? "Check your connection and try again."
+    ? t("Check your connection and try again.")
     : !businessName
-      ? "Join a business's team and ask the owner for access. Businesses lists the teams you're on."
+      ? t("Join a business's team and ask the owner for access. Businesses lists the teams you're on.")
       : nothingOn
-        ? `${businessName}'s owner hasn't turned on anything you can do in their business console yet. Ask them for access.`
+        ? t("{business}'s owner hasn't turned on anything you can do in their business console yet. Ask them for access.", { business: businessName })
         : ownerOnly
-        ? `Only ${businessName}'s owner can use this page.`
-        : `Ask ${businessName}'s owner to turn on ${labels.map((l) => `"${l}"`).join(" or ")} for you.`;
+        ? t("Only {business}'s owner can use this page.", { business: businessName })
+        : t("Ask {business}'s owner to turn on {permissions} for you.", { business: businessName, permissions: labels.map((l) => t("\"{label}\"", { label: l })).join(t(" or ")) });
   return (
     <div className="pt-[6px]">
       <div role="note" className="rounded-[20px] bg-cream-card border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] text-center" style={{ padding: "26px 20px 22px" }}>
@@ -67,7 +68,7 @@ function NoAccess({ needs, businessName, nothingOn, failed, onRetry }: { needs: 
           onClick={() => (failed ? onRetry() : navigate("/app/more/businesses"))}
           className="tap mt-[16px] h-[44px] px-[18px] rounded-[14px] bg-primary-fill text-on-primary-fill text-[13px] font-bold"
         >
-          {failed ? "Try again" : "Businesses"}
+          {failed ? t("Try again") : t("Businesses")}
         </button>
       </div>
     </div>

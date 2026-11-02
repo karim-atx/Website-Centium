@@ -13,6 +13,7 @@ import { OffersTab } from "./OffersManager";
 import { PerformanceTab } from "./PerformanceTab";
 import { useListingSwitch } from "./useListingSwitch";
 import { lh, px, useMarketColors } from "./listingParts";
+import { isRtl, t } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.1–B-MA.7 Marketplace (Business Marketplace
 // Screens lines 31–41 and the `biz.subtitle` / `topTabs` script): the tabbed
@@ -54,7 +55,7 @@ function MarketplaceBody() {
   // Until the lane is known the per-type subtitle holds as a skeleton line.
   return (
     <MarketTabsScreen
-      title="Marketplace"
+      title={t("Marketplace")}
       tab={tab}
       onTab={(k) => {
         const next = new URLSearchParams(params);
@@ -77,12 +78,14 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
   const { accessibility } = useApp();
   const larger = !!accessibility.largerText;
   const tabsRef = useRef<(HTMLButtonElement | null)[]>([]);
-  const labels: Record<MarketTabKey, string> = { overview: "Overview", showcase: "Showcase", offers: "Offers", perf: "Performance" };
+  const labels: Record<MarketTabKey, string> = { overview: t("Overview"), showcase: t("Showcase"), offers: t("Offers"), perf: t("Performance") };
   const onKey = (e: React.KeyboardEvent, i: number) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
     const n = MARKET_TAB_KEYS.length;
-    const j = e.key === "Home" ? 0 : e.key === "End" ? n - 1 : (i + (e.key === "ArrowRight" ? 1 : n - 1)) % n;
+    // In Arabic the tabs run right to left, so the arrow that points onward is ArrowLeft.
+    const onward = isRtl() ? "ArrowLeft" : "ArrowRight";
+    const j = e.key === "Home" ? 0 : e.key === "End" ? n - 1 : (i + (e.key === onward ? 1 : n - 1)) % n;
     onTab(MARKET_TAB_KEYS[j]);
     tabsRef.current[j]?.focus();
   };
@@ -93,7 +96,7 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <h1 style={{ fontSize: px(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: lh(34), color: c.ink, margin: 0 }}>{title}</h1>
         {/* Market + Share 3.0 B-SH.1 / B-SH.4: share the business's profile card (Find us on Centium); the Overview figures never go on it. */}
-        <BizShareButton label="Share your profile: Find us on Centium" style={{ marginBlock: "-5px", marginInline: "0 -5px" }} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
+        <BizShareButton label={t("Share your profile: Find us on Centium")} style={{ marginBlock: "-5px", marginInline: "0 -5px" }} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
       </div>
       {subtitleReady ? (
         <p style={{ fontSize: px(13), fontWeight: 500, color: c.faint, marginTop: 4, lineHeight: lh(19) }}>{m.v.subtitle}</p>
@@ -102,7 +105,7 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
       )}
       <div
         role="tablist"
-        aria-label="Marketplace"
+        aria-label={t("Marketplace")}
         className={larger ? "scroll-row no-scrollbar" : undefined}
         style={{ margin: "16px 0 18px", display: "flex", gap: 5, padding: 6, borderRadius: 16, background: c.segtrack }}
       >
@@ -157,7 +160,7 @@ export function MarketTabsScreen({ title, tab, onTab, subtitleReady = true }: { 
 
 function TabBody({ tab }: { tab: MarketTabKey }) {
   const m = useMarket();
-  if (!m.kindKnown && m.loading) return <MarketSkeleton radius={24} rows={3} count={2} label="Loading your marketplace" />;
+  if (!m.kindKnown && m.loading) return <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} />;
   if (tab === "showcase") return <ShowcaseManager />;
   if (tab === "offers") return <OffersTab />;
   if (tab === "perf") return <PerformanceTab />;
@@ -184,8 +187,8 @@ export function HiddenBanner() {
   return (
     <div role="status" style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 16, background: c.highbg, padding: "12px 14px", marginBottom: 12 }}>
       <span style={{ flex: 1, minWidth: 0, fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700, color: c.high }}>
-        {closed ? "Hidden. Your business is closed, so it can't be listed." : `Hidden. ${v.bannerBody} Vouchers already issued still work.`}
-        {!m.isOwner && !closed ? <span style={{ display: "block", fontWeight: 600 }}>Only the owner can turn it on.</span> : null}
+        {closed ? t("Hidden. Your business is closed, so it can't be listed.") : t("Hidden. {reason} Vouchers already issued still work.", { reason: v.bannerBody })}
+        {!m.isOwner && !closed ? <span style={{ display: "block", fontWeight: 600 }}>{t("Only the owner can turn it on.")}</span> : null}
       </span>
       {m.isOwner && !closed && (
         <button
@@ -195,7 +198,7 @@ export function HiddenBanner() {
           className="tap market-focus"
           style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, background: c.high, color: c.onfill, border: 0, fontSize: px(12), fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0, opacity: !online || sw.busy ? 0.4 : 1, fontFamily: "inherit", cursor: "pointer" }}
         >
-          Turn on
+          {t("Turn on")}
         </button>
       )}
       {sw.toast}

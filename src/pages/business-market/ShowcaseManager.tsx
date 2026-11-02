@@ -14,6 +14,7 @@ import { useMarket } from "./MarketContext";
 import { usePendingPhotos } from "./usePendingPhotos";
 import { CapsLabel, OutlineButton, TextLink, lh, px, useMarketColors, useStrip } from "./listingParts";
 import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine } from "./showcaseModel";
+import { t, tk, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 · B-MA.2 Showcase Manager (HANDOVER §4 "B-MA.2
 // Showcase Manager"; Business Marketplace Screens lines 100–117 and the
@@ -94,31 +95,31 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
     setOrder(ids);
     const r = await reorderShowcase(ids);
     if (r.ok) {
-      showStrip("Order saved");
+      showStrip(t("Order saved"));
       return;
     }
     setOrder(before);
-    showStrip(r.offline ? "You're offline. Try again when you're connected." : r.message, r.offline ? "neutral" : "error");
+    showStrip(r.offline ? t("You're offline. Try again when you're connected.") : r.message, r.offline ? "neutral" : "error");
   };
 
   const open = (p: Product | null) => setEditor({ open: true, product: p });
   const allIds = products.map((p) => p.id);
   const banner = !store ? (
     <div style={{ borderRadius: 16, background: c.pale, padding: "12px 14px", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700, color: c.pdark, marginBottom: 12 }}>
-      Showcase only. Members can't buy these in the app.
+      {t("Showcase only. Members can't buy these in the app.")}
     </div>
   ) : null;
 
   let body: React.ReactNode;
   if (!businessId || state.status === "loading") {
-    body = <MarketSkeleton radius={24} rows={3} count={1} height={292} label={store ? "Loading your products" : "Loading your showcase"} />;
+    body = <MarketSkeleton radius={24} rows={3} count={1} height={292} label={store ? t("Loading your products") : t("Loading your showcase")} />;
   } else if (state.status === "error" || state.status === "pending") {
-    body = <MarketError thing={store ? "your products" : "your showcase"} onRetry={reload} />;
+    body = <MarketError thing={store ? tk("your products") : tk("your showcase")} onRetry={reload} />;
   } else if (section) {
     const list = products.filter((p) => (p.category ?? "Other") === section);
     body = list.length ? (
       <ItemList
-        label={section}
+        label={section === "Other" ? t("Other") : section}
         items={list}
         pending={pending}
         store={store}
@@ -127,7 +128,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
         onReorder={(ids) => void reorder(mergeSectionOrder(allIds, list.map((p) => p.id), ids))}
       />
     ) : (
-      <p style={{ fontSize: px(12.5), color: c.faint, textAlign: "center", padding: "24px 0" }}>Nothing in this category yet.</p>
+      <p style={{ fontSize: px(12.5), color: c.faint, textAlign: "center", padding: "24px 0" }}>{t("Nothing in this category yet.")}</p>
     );
   } else if (products.length === 0) {
     body = (
@@ -142,7 +143,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
         <CapsLabel>{itemsHeader(products.length)}</CapsLabel>
         <OutlineButton onClick={() => open(null)} disabled={!canEdit || !online}>
           <Plus size={15} strokeWidth={2.4} aria-hidden style={{ transform: "none" }} />
-          Add item
+          {t("Add item")}
         </OutlineButton>
       </div>
     );
@@ -152,20 +153,22 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
       const fig = (n: number) => (shipped ? String(n) : "–");
       body = (
         <>
-          <StockFigures items={[{ v: String(sc.live), l: "Live products" }, { v: fig(sc.low), l: "Low stock" }, { v: fig(sc.out), l: "Out of stock" }]} />
+          <StockFigures items={[{ v: String(sc.live), l: t("Live products") }, { v: fig(sc.low), l: t("Low stock") }, { v: fig(sc.out), l: t("Out of stock") }]} />
           <div style={{ marginTop: 12 }}>{header}</div>
-          {groupByCategory(products).map((g) => (
-            <section key={g.name} aria-label={g.name} style={{ marginTop: 16 }}>
+          {groupByCategory(products).map((g) => {
+            const groupName = g.name === "Other" ? t("Other") : g.name;
+            return (
+            <section key={g.name} aria-label={groupName} style={{ marginTop: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", minHeight: 24, marginBottom: 8 }}>
-                <CapsLabel as="p">{g.name}</CapsLabel>
+                <CapsLabel as="p">{groupName}</CapsLabel>
                 {g.list.length > CAP ? (
-                  <TextLink onClick={() => navigate(`${m.base}?tab=showcase&category=${encodeURIComponent(g.name)}`)} ariaLabel={`See all ${g.name}`}>
-                    See all
+                  <TextLink onClick={() => navigate(`${m.base}?tab=showcase&category=${encodeURIComponent(g.name)}`)} ariaLabel={t("See all {name}", { name: groupName })}>
+                    {t("See all")}
                   </TextLink>
                 ) : null}
               </div>
               <ItemList
-                label={g.name}
+                label={groupName}
                 items={g.list.slice(0, CAP)}
                 pending={pending}
                 store
@@ -174,7 +177,8 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
                 onReorder={(ids) => void reorder(mergeSectionOrder(allIds, g.list.map((p) => p.id), ids))}
               />
             </section>
-          ))}
+            );
+          })}
         </>
       );
     } else {
@@ -183,7 +187,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
           {banner}
           {header}
           <div style={{ marginTop: 10 }}>
-            <ItemList label="Showcase items" items={products} pending={pending} store={false} canReorder={canEdit} onOpen={open} onReorder={(ids) => void reorder(ids)} />
+            <ItemList label={t("Showcase items")} items={products} pending={pending} store={false} canReorder={canEdit} onOpen={open} onReorder={(ids) => void reorder(ids)} />
           </div>
         </>
       );
@@ -240,13 +244,13 @@ function EmptyShowcase({ store, canAdd, onAdd }: { store: boolean; canAdd: boole
       <span style={{ width: 56, height: 56, borderRadius: 18, background: dark ? c.pale : "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center", color: c.accent }}>
         <Package size={24} strokeWidth={1.75} aria-hidden />
       </span>
-      <div style={{ fontSize: px(16), fontWeight: 800 }}>{store ? "No products yet" : "No items yet"}</div>
+      <div style={{ fontSize: px(16), fontWeight: 800 }}>{store ? t("No products yet") : t("No items yet")}</div>
       <div style={{ fontSize: px(13), lineHeight: 1.55, color: c.faint, maxWidth: 290 }}>
-        {store ? "Add your first product with a photo, price and stock." : "Add what you sell or offer. Items show on your Showcase on Explore."}
+        {store ? t("Add your first product with a photo, price and stock.") : t("Add what you sell or offer. Items show on your Showcase on Explore.")}
       </div>
       <OutlineButton onClick={onAdd} disabled={!canAdd} style={{ marginTop: 6 }}>
         <Plus size={15} strokeWidth={2.4} aria-hidden style={{ transform: "none" }} />
-        Add item
+        {t("Add item")}
       </OutlineButton>
     </div>
   );
@@ -291,15 +295,15 @@ function ItemList({
   const listRef = useRef<HTMLDivElement>(null);
   const byId = new Map(items.map((p) => [p.id, p]));
   const shown = drag ? (drag.order.map((id) => byId.get(id)).filter(Boolean) as Product[]) : items;
-  const nameOf = (id: string) => byId.get(id)?.name ?? "Item";
+  const nameOf = (id: string) => byId.get(id)?.name ?? tx("Item", "showcase");
 
   const finish = (d: { id: string; order: string[] }) => {
     setDrag(null);
     if (d.order.join() === ids.join()) {
-      setAnnounce(`${nameOf(d.id)} dropped. The order didn't change.`);
+      setAnnounce(t("{name} dropped. The order didn't change.", { name: nameOf(d.id) }));
       return;
     }
-    setAnnounce(`${nameOf(d.id)} dropped at position ${d.order.indexOf(d.id) + 1} of ${d.order.length}.`);
+    setAnnounce(t("{name} dropped at position {n} of {total}.", { name: nameOf(d.id), n: d.order.indexOf(d.id) + 1, total: d.order.length }));
     onReorder(d.order);
   };
 
@@ -352,7 +356,7 @@ function ItemList({
       e.preventDefault();
       if (!drag) {
         setDrag({ id, order: ids, pointer: false });
-        setAnnounce(`${nameOf(id)} picked up, position ${ids.indexOf(id) + 1} of ${ids.length}. Use the up and down arrows to move it, Space to drop, Escape to cancel.`);
+        setAnnounce(t("{name} picked up, position {n} of {total}. Use the up and down arrows to move it, Space to drop, Escape to cancel.", { name: nameOf(id), n: ids.indexOf(id) + 1, total: ids.length }));
       } else finish(drag);
       return;
     }
@@ -362,11 +366,11 @@ function ItemList({
       const from = drag.order.indexOf(drag.id);
       const next = moveTo(drag.order, drag.id, from + (e.key === "ArrowUp" ? -1 : 1));
       setDrag({ ...drag, order: next });
-      setAnnounce(`Position ${next.indexOf(drag.id) + 1} of ${next.length}.`);
+      setAnnounce(t("Position {n} of {total}.", { n: next.indexOf(drag.id) + 1, total: next.length }));
     } else if (e.key === "Escape") {
       e.preventDefault();
       setDrag(null);
-      setAnnounce(`Cancelled. ${nameOf(drag.id)} is back at position ${ids.indexOf(drag.id) + 1}.`);
+      setAnnounce(t("Cancelled. {name} is back at position {n}.", { name: nameOf(drag.id), n: ids.indexOf(drag.id) + 1 }));
     }
   };
 
@@ -379,6 +383,9 @@ function ItemList({
         {shown.map((p, i) => {
           const lifted = drag?.id === p.id;
           const chip = store ? stockChip(p) : p.visible ? null : { label: "Hidden", tone: "soft" as const };
+          // stockChip (services/store) answers in English: "Hidden", "Out", "Low".
+          const chipText = !chip ? "" : chip.label === "Hidden" ? t("Hidden") : chip.label === "Out" ? tx("Out", "stock") : chip.label === "Low" ? tx("Low", "stock") : chip.label;
+          const stockWords = !chip ? "" : chip.label === "Out" ? t("Out of stock") : chip.label === "Low" ? t("Low stock") : "";
           const [chipBg, chipInk] = !chip ? ["", ""] : chip.tone === "warn" ? [c.cautionbg, c.caution] : chip.tone === "bad" ? [c.highbg, c.high] : [c.soft, c.faint];
           const op = p.visible ? 1 : 0.5;
           const photo = pending.get(p.id) ?? p.imageUrl;
@@ -403,7 +410,7 @@ function ItemList({
             >
               <button
                 type="button"
-                aria-label={`Move ${p.name}`}
+                aria-label={t("Move {name}", { name: p.name })}
                 aria-pressed={lifted && !drag?.pointer ? true : undefined}
                 aria-roledescription="drag handle"
                 disabled={!canReorder}
@@ -420,7 +427,7 @@ function ItemList({
               <button
                 type="button"
                 onClick={() => onOpen(p)}
-                aria-label={`${p.name}${p.visible ? "" : ", hidden"}${chip && chip.label !== "Hidden" ? `, ${chip.label} stock` : ""}. Edit item`}
+                aria-label={`${p.name}${p.visible ? "" : `${t(", ")}${t("hidden")}`}${stockWords ? `${t(", ")}${stockWords}` : ""}. ${t("Edit item")}`}
                 className="market-focus"
                 style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: 0, border: 0, background: "transparent", textAlign: "start", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
               >
@@ -432,8 +439,8 @@ function ItemList({
                   {p.description ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.description}</span> : null}
                   {price ? <span style={{ display: "block", fontSize: px(12), fontWeight: 700, marginTop: 1 }}>{price}</span> : null}
                 </span>
-                {chip ? <span style={{ fontSize: px(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, flexShrink: 0, lineHeight: "normal" }}>{chip.label}</span> : null}
-                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
+                {chip ? <span style={{ fontSize: px(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, flexShrink: 0, lineHeight: "normal" }}>{chipText}</span> : null}
+                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
               </button>
             </div>
           );

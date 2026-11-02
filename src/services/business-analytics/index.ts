@@ -23,6 +23,7 @@ import {
   type PlanFigure,
   type ScorecardRow,
 } from "./model";
+import { t, tk } from "../../i18n/core";
 
 export * from "./model";
 
@@ -43,21 +44,21 @@ export type Read<T> = { ok: true; value: T } | { ok: false; pending?: boolean; d
 type Rpc = <T>(fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: T | null; error: PostgrestError | null }>;
 const rpc = (supabase as unknown as { rpc: (...a: unknown[]) => unknown }).rpc.bind(supabase) as unknown as Rpc;
 
-const LOAD_FAIL = "Couldn't load your numbers.";
+const LOAD_FAIL = tk("Couldn't load your numbers.");
 
 async function call<R, T>(fn: string, args: Record<string, unknown>, map: (rows: R[]) => T): Promise<Read<T>> {
   try {
     const { data, error } = await rpc<R[]>(fn, args);
     if (error) {
-      if (error.code === "PGRST202" || error.code === "42883") return { ok: false, pending: true, message: LOAD_FAIL };
-      if (error.code === "ATX03") return { ok: false, denied: true, message: LOAD_FAIL };
+      if (error.code === "PGRST202" || error.code === "42883") return { ok: false, pending: true, message: t(LOAD_FAIL) };
+      if (error.code === "ATX03") return { ok: false, denied: true, message: t(LOAD_FAIL) };
       console.error(`[analytics] ${fn} failed:`, error.message);
-      return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : LOAD_FAIL };
+      return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t(LOAD_FAIL) };
     }
     return { ok: true, value: map(Array.isArray(data) ? data : data ? [data as R] : []) };
   } catch (e) {
     console.error(`[analytics] ${fn} failed:`, e);
-    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : LOAD_FAIL };
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : t(LOAD_FAIL) };
   }
 }
 

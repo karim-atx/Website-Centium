@@ -40,9 +40,9 @@ import { composeReturns, DELIVERY_TIMES, dollars, parseReturns, RETURN_WINDOWS, 
 import { formatShortDate } from "../../utils/date";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { fetchBookingPolicies, setBookingPolicy } from "../../services/business-classes/schedule";
-import { daysAhead, effectiveRules, minutesBefore, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../services/business-classes/scheduleRules";
+import { effectiveRules, policyFor, POLICY_FALLBACK, type BookingPolicy, type PolicyField } from "../../services/business-classes/scheduleRules";
 import { fetchNoShowPause, POLICY_COPY, setNoShowPause } from "../../services/no-shows";
-import { t } from "../../i18n/core";
+import { t, tk, tn } from "../../i18n/core";
 
 // MO1B-001 / -003 / -005 and OURS-MO1B-booking-policies, -waiver-editor,
 // -store-policies-edit. One sub-page row for all of them (V6-109: BizMoreV8's
@@ -65,13 +65,22 @@ import { t } from "../../i18n/core";
 const fmtDate = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short", year: "numeric" });
 
 const DOC_TITLE: Record<PolicyKind, string> = {
-  waiver: "Liability waiver",
-  class_terms: "Class terms",
-  house_rules: "House rules",
-  returns: "Returns policy",
-  delivery: "Delivery terms",
-  appointment_waiver: "Appointment waiver",
+  waiver: tk("Liability waiver"),
+  class_terms: tk("Class terms"),
+  house_rules: tk("House rules"),
+  returns: tk("Returns policy"),
+  delivery: tk("Delivery terms"),
+  appointment_waiver: tk("Appointment waiver"),
 };
+
+// Round G (EH5): the booking-window and closing labels in the app's language
+// (scheduleRules' daysAhead / minutesBefore are English).
+const daysLabel = (d: number) => tn(d, "{n} day", "{n} days");
+const beforeLabel = (m: number) => (m === 0 ? t("At class time") : m % 60 === 0 ? tn(m / 60, "{n} hour before", "{n} hours before") : t("{n} min before", { n: m }));
+const freeUntil = (h: number) => tn(h, "Free until {n} hour before", "Free until {n} hours before");
+
+// The starting templates below stay English: they become the business's own
+// published policy text (Round F: business policy templates stay English).
 
 /** LEGAL_AND_HELP.md "Templates": the starting text before a first version. */
 const TEMPLATE: Record<PolicyKind, (kind: BizKind) => string> = {
@@ -102,12 +111,14 @@ const TEMPLATE: Record<PolicyKind, (kind: BizKind) => string> = {
 
 const HOW_SEEN: Partial<Record<PolicyKind, (k: BizKind) => string>> = {
   waiver: (k) =>
-    `Shown once, before a client's first ${k === "gym" ? "visit" : "booking"}. They tick I've read and accept the liability waiver to continue.`,
-  class_terms: () => "Shown at checkout.",
-  house_rules: () => "Shown on your listing.",
-  returns: () => "Shown before checkout.",
-  delivery: () => "Shown before checkout when delivery is chosen.",
-  appointment_waiver: () => "Shown once, before a client's first appointment.",
+    k === "gym"
+      ? t("Shown once, before a client's first visit. They tick I've read and accept the liability waiver to continue.")
+      : t("Shown once, before a client's first booking. They tick I've read and accept the liability waiver to continue."),
+  class_terms: () => t("Shown at checkout."),
+  house_rules: () => t("Shown on your listing."),
+  returns: () => t("Shown before checkout."),
+  delivery: () => t("Shown before checkout when delivery is chosen."),
+  appointment_waiver: () => t("Shown once, before a client's first appointment."),
 };
 
 function useLocations(bizId: string | null) {
@@ -191,10 +202,10 @@ export function BookingPoliciesPage() {
   const hours = own ?? venueHours;
   const loadError = error ?? pol.error;
   return (
-    <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"}>
+    <BizPage title={!kindKnown ? t("Policies") : gym ? t("Entry rules") : t("Booking policies")}>
       {loadError && (
         <LoadError
-          message="Couldn't load your policies."
+          message={t("Couldn't load your policies.")}
           onRetry={() => {
             reload();
             pol.reload();
@@ -202,14 +213,14 @@ export function BookingPoliciesPage() {
         />
       )}
       {(!locs || !pol.rows) && !loadError ? (
-        <RowsSkeleton rows={3} label="Loading your policies" />
+        <RowsSkeleton rows={3} label={t("Loading your policies")} />
       ) : (
         <>
-          <BizSection label="Cancellations">
+          <BizSection label={t("Cancellations")}>
             <BizRow
               icon={CalendarX}
-              title={hours === null ? "Free until 12 hours before" : `Free until ${hours} hours before`}
-              desc="After that it counts as used"
+              title={freeUntil(hours === null ? 12 : hours)}
+              desc={t("After that it counts as used")}
               onClick={() => navigate("/app/business/more/policies/edit?section=cancellations")}
             />
           </BizSection>
@@ -224,15 +235,15 @@ export function BookingPoliciesPage() {
               />
             </BizSection>
           )}
-          <BizSection label="Documents">
+          <BizSection label={t("Documents")}>
             <BizRow
               icon={FileCheck}
-              title="Liability waiver"
-              desc={gym ? "Accepted once, before the first visit" : "Accepted once, before the first booking"}
+              title={t("Liability waiver")}
+              desc={gym ? t("Accepted once, before the first visit") : t("Accepted once, before the first booking")}
               onClick={() => navigate("/app/business/more/policy/waiver")}
             />
-            {!gym && <BizRow icon={FileText} title="Class terms" desc="Shown at checkout" onClick={() => navigate("/app/business/more/policy/class_terms")} />}
-            {gym && <BizRow icon={FileText} title="House rules" desc="Optional" onClick={() => navigate("/app/business/more/policy/house_rules")} />}
+            {!gym && <BizRow icon={FileText} title={t("Class terms")} desc={t("Shown at checkout")} onClick={() => navigate("/app/business/more/policy/class_terms")} />}
+            {gym && <BizRow icon={FileText} title={t("House rules")} desc={t("Optional")} onClick={() => navigate("/app/business/more/policy/house_rules")} />}
           </BizSection>
         </>
       )}
@@ -306,7 +317,7 @@ export function BookingPoliciesEditor() {
     showToast(t(r.value ? POLICY_COPY.on : POLICY_COPY.off));
   };
 
-  const soon = "Coming soon";
+  const soon = t("Coming soon");
   const off = !canWrite || busy;
   const noShowRow = (
     <BizRow
@@ -316,82 +327,82 @@ export function BookingPoliciesEditor() {
     />
   );
   return (
-    <BizPage title={!kindKnown ? "Policies" : gym ? "Entry rules" : "Booking policies"} sub="Applied to every class unless a class type overrides it.">
+    <BizPage title={!kindKnown ? t("Policies") : gym ? t("Entry rules") : t("Booking policies")} sub={t("Applied to every class unless a class type overrides it.")}>
       {loadError && (
         <LoadError
-          message="Couldn't load your policies."
+          message={t("Couldn't load your policies.")}
           onRetry={() => {
             reload();
             pol.reload();
           }}
         />
       )}
-      {!ready && !loadError && <RowsSkeleton rows={4} label="Loading your policies" />}
+      {!ready && !loadError && <RowsSkeleton rows={4} label={t("Loading your policies")} />}
       {ready && (
         <>
-          <BizSection id="pol-cancellations" label="Cancellations" footer={access.ready && !canWrite ? "Only staff who manage the schedule can change these." : undefined}>
+          <BizSection id="pol-cancellations" label={t("Cancellations")} footer={access.ready && !canWrite ? t("Only staff who manage the schedule can change these.") : undefined}>
             {WINDOWS.map((h) => (
               <BizRow
                 key={h}
-                title={`Free until ${h} hours before`}
-                desc={h === 12 ? "After that, the booking counts as used" : undefined}
+                title={freeUntil(h)}
+                desc={h === 12 ? t("After that, the booking counts as used") : undefined}
                 radio={{ selected: current === h }}
-                onClick={() => current !== h && void write("cancellationHours", h, "Cancellation window saved.")}
+                onClick={() => current !== h && void write("cancellationHours", h, t("Cancellation window saved."))}
                 disabled={off}
               />
             ))}
-            {!WINDOWS.includes(current) && <BizRow title={`Free until ${current} hours before`} radio={{ selected: true }} />}
+            {!WINDOWS.includes(current) && <BizRow title={freeUntil(current)} radio={{ selected: true }} />}
           </BizSection>
           {!gym && (
             <>
-              <BizSection id="pol-late" label="Late cancels and no-shows" footer={t(POLICY_COPY.lateSoon)}>
-                <BizRow title="Count a late cancel as a used class" desc="For packs and limited memberships" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
-                <BizRow title="Charge a late-cancel fee" desc="Paid with the next booking" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+              <BizSection id="pol-late" label={t("Late cancels and no-shows")} footer={t(POLICY_COPY.lateSoon)}>
+                <BizRow title={t("Count a late cancel as a used class")} desc={t("For packs and limited memberships")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+                <BizRow title={t("Charge a late-cancel fee")} desc={t("Paid with the next booking")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
                 {noShowRow}
               </BizSection>
-              <BizSection id="pol-window" label="Booking window">
-                <BizRow title="How far ahead clients can book" value={daysAhead(eff.bookingWindowDays)} drop onClick={() => setMenu(menu === "ahead" ? null : "ahead")} disabled={off} />
+              <BizSection id="pol-window" label={t("Booking window")}>
+                <BizRow title={t("How far ahead clients can book")} value={daysLabel(eff.bookingWindowDays)} drop onClick={() => setMenu(menu === "ahead" ? null : "ahead")} disabled={off} />
                 {menu === "ahead" && (
                   <BizDropdown
-                    label="How far ahead clients can book"
-                    options={(AHEAD.includes(eff.bookingWindowDays) ? AHEAD : [...AHEAD, eff.bookingWindowDays].sort((a, b) => a - b)).map((d) => ({ value: String(d), label: daysAhead(d) }))}
+                    label={t("How far ahead clients can book")}
+                    options={(AHEAD.includes(eff.bookingWindowDays) ? AHEAD : [...AHEAD, eff.bookingWindowDays].sort((a, b) => a - b)).map((d) => ({ value: String(d), label: daysLabel(d) }))}
                     value={String(eff.bookingWindowDays)}
-                    onPick={(v) => void write("bookingWindowDays", Number(v), "Booking window saved.")}
+                    onPick={(v) => void write("bookingWindowDays", Number(v), t("Booking window saved."))}
                   />
                 )}
-                <BizRow title="Booking closes" value={minutesBefore(eff.closesMinutesBefore)} drop onClick={() => setMenu(menu === "closes" ? null : "closes")} disabled={off} />
+                <BizRow title={t("Booking closes")} value={beforeLabel(eff.closesMinutesBefore)} drop onClick={() => setMenu(menu === "closes" ? null : "closes")} disabled={off} />
                 {menu === "closes" && (
                   <BizDropdown
-                    label="Booking closes"
-                    options={(CLOSES.includes(eff.closesMinutesBefore) ? CLOSES : [...CLOSES, eff.closesMinutesBefore].sort((a, b) => a - b)).map((m) => ({ value: String(m), label: minutesBefore(m) }))}
+                    label={t("Booking closes")}
+                    options={(CLOSES.includes(eff.closesMinutesBefore) ? CLOSES : [...CLOSES, eff.closesMinutesBefore].sort((a, b) => a - b)).map((m) => ({ value: String(m), label: beforeLabel(m) }))}
                     value={String(eff.closesMinutesBefore)}
-                    onPick={(v) => void write("closesMinutesBefore", Number(v), "Booking window saved.")}
+                    onPick={(v) => void write("closesMinutesBefore", Number(v), t("Booking window saved."))}
                   />
                 )}
               </BizSection>
-              <BizSection id="pol-waitlist" label="Waitlist" footer="Offering freed spots automatically is coming soon.">
+              <BizSection id="pol-waitlist" label={t("Waitlist")} footer={t("Offering freed spots automatically is coming soon.")}>
                 <BizRow
-                  title="Waitlist when a class is full"
-                  toggle={{ checked: eff.waitlistCap > 0, onChange: (v) => void write("waitlistCap", v ? POLICY_FALLBACK.waitlistCap : 0, v ? "Waitlist turned on." : "Waitlist turned off."), disabled: off }}
+                  title={t("Waitlist when a class is full")}
+                  toggle={{ checked: eff.waitlistCap > 0, onChange: (v) => void write("waitlistCap", v ? POLICY_FALLBACK.waitlistCap : 0, v ? t("Waitlist turned on.") : t("Waitlist turned off.")), disabled: off }}
                 />
-                <BizRow title="Offer freed spots automatically" desc="The first person has 30 minutes to accept" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+                <BizRow title={t("Offer freed spots automatically")} desc={t("The first person has 30 minutes to accept")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
                 {eff.waitlistCap > 0 && (
                   <>
-                    <BizRow title="Waitlist size" value={`${eff.waitlistCap} ${eff.waitlistCap === 1 ? "person" : "people"}`} drop onClick={() => setMenu(menu === "size" ? null : "size")} disabled={off} />
+                    <BizRow title={t("Waitlist size")} value={tn(eff.waitlistCap, "{n} person", "{n} people")} drop onClick={() => setMenu(menu === "size" ? null : "size")} disabled={off} />
                     {menu === "size" && (
                       <BizDropdown
-                        label="Waitlist size"
-                        options={(WAITLIST.includes(eff.waitlistCap) ? WAITLIST : [...WAITLIST, eff.waitlistCap].sort((a, b) => a - b)).map((n) => ({ value: String(n), label: `${n} people` }))}
+                        label={t("Waitlist size")}
+                        options={(WAITLIST.includes(eff.waitlistCap) ? WAITLIST : [...WAITLIST, eff.waitlistCap].sort((a, b) => a - b)).map((n) => ({ value: String(n), label: tn(n, "{n} person", "{n} people") }))}
                         value={String(eff.waitlistCap)}
-                        onPick={(v) => void write("waitlistCap", Number(v), "Waitlist size saved.")}
+                        onPick={(v) => void write("waitlistCap", Number(v), t("Waitlist size saved."))}
                       />
                     )}
                   </>
                 )}
               </BizSection>
-              <BizSection id="pol-reminders" label="Reminders" footer={soon}>
-                <BizRow title="Remind clients before class" toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
-                <BizRow title="When" dim />
+              <BizSection id="pol-reminders" label={t("Reminders")} footer={soon}>
+                <BizRow title={t("Remind clients before class")} toggle={{ checked: false, onChange: () => undefined, disabled: true }} dim />
+                <BizRow title={t("When")} dim />
               </BizSection>
             </>
           )}
@@ -401,18 +412,18 @@ export function BookingPoliciesEditor() {
               {noShowRow}
             </BizSection>
           )}
-          <BizSection id="pol-terms" label="Terms and waivers">
+          <BizSection id="pol-terms" label={t("Terms and waivers")}>
             <BizRow
               icon={FileCheck}
-              title="Liability waiver"
-              desc={gym ? "Accepted once, before the first visit" : "Accepted once, before the first booking"}
-              value="Edit"
+              title={t("Liability waiver")}
+              desc={gym ? t("Accepted once, before the first visit") : t("Accepted once, before the first booking")}
+              value={t("Edit")}
               onClick={() => navigate("/app/business/more/policy/waiver")}
             />
             {gym ? (
-              <BizRow icon={FileText} title="House rules" desc="Optional" value="Edit" onClick={() => navigate("/app/business/more/policy/house_rules")} />
+              <BizRow icon={FileText} title={t("House rules")} desc={t("Optional")} value={t("Edit")} onClick={() => navigate("/app/business/more/policy/house_rules")} />
             ) : (
-              <BizRow icon={FileText} title="Class terms" desc="Shown at checkout" value="Edit" onClick={() => navigate("/app/business/more/policy/class_terms")} />
+              <BizRow icon={FileText} title={t("Class terms")} desc={t("Shown at checkout")} value={t("Edit")} onClick={() => navigate("/app/business/more/policy/class_terms")} />
             )}
           </BizSection>
         </>
@@ -465,7 +476,7 @@ export function PolicyEditorPage() {
   const base = current?.body ?? TEMPLATE[docKind](kind);
   const dirty = text !== null && text.trim() !== base.trim();
   const next = (doc ? Math.max(0, ...doc.versions.map((v) => v.version)) : 0) + 1;
-  const title = DOC_TITLE[docKind];
+  const title = t(DOC_TITLE[docKind]);
   const isWaiver = docKind === "waiver" || docKind === "appointment_waiver";
 
   const publish = async (reaccept: boolean) => {
@@ -480,7 +491,7 @@ export function PolicyEditorPage() {
     }
     setText(null);
     setTick((t) => t + 1);
-    showToast(reaccept || !current ? `Version ${r.value} saved. Clients accept it at their next booking.` : `Version ${r.value} saved.`);
+    showToast(reaccept || !current ? t("Version {n} saved. Clients accept it at their next booking.", { n: r.value }) : t("Version {n} saved.", { n: r.value }));
   };
 
   const save = () => {
@@ -509,34 +520,34 @@ export function PolicyEditorPage() {
   if (view === "history") {
     const readingV = doc?.versions.find((v) => v.version === reading) ?? null;
     return (
-      <BizPage title="Version history" sub={title}>
+      <BizPage title={t("Version history")} sub={title}>
         {error && <LoadError onRetry={() => setTick((t) => t + 1)} />}
         {!doc && !error && <RowsSkeleton rows={3} />}
         {doc && doc.versions.length === 0 && (
           <BizSection>
-            <BizRow icon={FileText} title="No versions yet" desc="Save your first version to publish it" />
+            <BizRow icon={FileText} title={t("No versions yet")} desc={t("Save your first version to publish it")} />
           </BizSection>
         )}
         {doc && doc.versions.length > 0 && (
-          <BizSection label="Versions">
+          <BizSection label={t("Versions")}>
             {doc.versions.map((v) => (
               <BizRow
                 key={v.id}
                 icon={FileText}
-                title={v.version === doc.currentVersion ? `Version ${v.version} · current` : `Version ${v.version}`}
+                title={v.version === doc.currentVersion ? t("Version {n} · current", { n: v.version }) : t("Version {n}", { n: v.version })}
                 desc={
                   v.version === doc.currentVersion
-                    ? `${v.publishedAt ? fmtDate(v.publishedAt) : "Draft"} · accepted by ${doc.acceptedCurrent} ${doc.acceptedCurrent === 1 ? "client" : "clients"}`
-                    : `${v.publishedAt ? fmtDate(v.publishedAt) : "Draft"} · read-only`
+                    ? `${v.publishedAt ? fmtDate(v.publishedAt) : t("Draft")} · ${tn(doc.acceptedCurrent, "accepted by {n} client", "accepted by {n} clients")}`
+                    : `${v.publishedAt ? fmtDate(v.publishedAt) : t("Draft")} · ${t("read-only")}`
                 }
-                value="View"
+                value={t("View")}
                 onClick={() => setReading(v.version)}
               />
             ))}
           </BizSection>
         )}
         {readingV && (
-          <BizSheet open onClose={() => setReading(null)} title={`Version ${readingV.version}`} lead={readingV.publishedAt ? `Published ${fmtDate(readingV.publishedAt)}. Read-only.` : "Read-only."}>
+          <BizSheet open onClose={() => setReading(null)} title={t("Version {n}", { n: readingV.version })} lead={readingV.publishedAt ? t("Published {date}. Read-only.", { date: fmtDate(readingV.publishedAt) }) : t("Read-only.")}>
             <p className="whitespace-pre-wrap text-[13px] leading-[20px] text-charcoal">{readingV.body}</p>
           </BizSheet>
         )}
@@ -551,17 +562,17 @@ export function PolicyEditorPage() {
       {doc && text !== null && (
         <>
           <p className="text-[11.5px] font-bold text-charcoal-faint" style={{ margin: "0 0 10px" }}>
-            {current && current.publishedAt ? `Version ${current.version} · last updated ${fmtDate(current.publishedAt)}` : "Not published yet · starts from our template"}
+            {current && current.publishedAt ? t("Version {n} · last updated {date}", { n: current.version, date: fmtDate(current.publishedAt) }) : t("Not published yet · starts from our template")}
           </p>
           <div className="overflow-hidden border-[1.5px] border-primary" style={{ borderRadius: 16, marginBottom: 12 }}>
-            <div role="toolbar" aria-label="Formatting" className={clsx("flex border-b", LIST_BG, BORDER)} style={{ gap: 4, padding: "6px 8px" }}>
+            <div role="toolbar" aria-label={t("Formatting")} className={clsx("flex border-b", LIST_BG, BORDER)} style={{ gap: 4, padding: "6px 8px" }}>
               {(
                 [
-                  ["heading", Heading, "Heading"],
-                  ["bold", Bold, "Bold"],
-                  ["list", List, "Bulleted list"],
-                  ["ordered", ListOrdered, "Numbered list"],
-                  ["link", LinkIcon, "Link"],
+                  ["heading", Heading, t("Heading")],
+                  ["bold", Bold, t("Bold")],
+                  ["list", List, t("Bulleted list")],
+                  ["ordered", ListOrdered, t("Numbered list")],
+                  ["link", LinkIcon, t("Link")],
                 ] as const
               ).map(([m, Icon, label]) => (
                 <button key={m} type="button" aria-label={label} onClick={() => apply(m)} className="tap flex items-center justify-center text-charcoal-soft" style={{ width: 36, height: 36, borderRadius: 9 }}>
@@ -585,7 +596,7 @@ export function PolicyEditorPage() {
           {HOW_SEEN[docKind] && (
             <>
               <p className="text-[12.5px] font-extrabold text-charcoal" style={{ margin: "4px 0 8px" }}>
-                How clients see it
+                {t("How clients see it")}
               </p>
               <p className="text-[12px] leading-[19px] text-charcoal-soft" style={{ margin: "0 0 12px" }}>
                 {HOW_SEEN[docKind]!(kind)}
@@ -595,23 +606,23 @@ export function PolicyEditorPage() {
           <BizSection>
             <BizRow
               icon={History}
-              title="Version history"
-              desc={`${doc.versions.length} ${doc.versions.length === 1 ? "version" : "versions"}`}
+              title={t("Version history")}
+              desc={tn(doc.versions.length, "{n} version", "{n} versions")}
               onClick={() => navigate(`/app/business/more/policy/${docKind}/history`)}
             />
           </BizSection>
-          <BizButton label={`Save as version ${next}`} onClick={save} disabled={!dirty && !!current} busy={busy} />
+          <BizButton label={t("Save as version {n}", { n: next })} onClick={save} disabled={!dirty && !!current} busy={busy} />
         </>
       )}
       <BizConfirm
         open={ask}
         icon={FileCheck}
-        title="Ask clients to accept again?"
-        body={`${doc?.acceptedCurrent ?? 0} ${doc?.acceptedCurrent === 1 ? "client" : "clients"} accepted version ${current?.version ?? ""}. Ask them to accept version ${next} at their next booking, or keep their acceptance as it is.`}
+        title={t("Ask clients to accept again?")}
+        body={tn(doc?.acceptedCurrent ?? 0, "{n} client accepted version {version}. Ask them to accept version {next} at their next booking, or keep their acceptance as it is.", "{n} clients accepted version {version}. Ask them to accept version {next} at their next booking, or keep their acceptance as it is.", { version: current?.version ?? "", next })}
         // D7: default Yes for waivers, No for class terms (the first button is focused on open).
-        action={isWaiver ? "Yes, at their next booking" : "No, keep their acceptance"}
-        secondary={{ label: isWaiver ? "No, keep their acceptance" : "Yes, at their next booking", onClick: () => void publish(!isWaiver) }}
-        cancel="Keep editing"
+        action={isWaiver ? t("Yes, at their next booking") : t("No, keep their acceptance")}
+        secondary={{ label: isWaiver ? t("No, keep their acceptance") : t("Yes, at their next booking"), onClick: () => void publish(!isWaiver) }}
+        cancel={t("Keep editing")}
         busy={busy}
         onAction={() => void publish(isWaiver)}
         onCancel={() => setAsk(false)}
@@ -619,10 +630,10 @@ export function PolicyEditorPage() {
       <BizConfirm
         open={discard}
         icon={Trash2}
-        title="Discard your changes?"
-        body={current ? `The ${title.toLowerCase()} stays at version ${current.version}.` : `The ${title.toLowerCase()} stays unpublished.`}
-        action="Discard"
-        cancel="Keep editing"
+        title={t("Discard your changes?")}
+        body={current ? t("The {title} stays at version {n}.", { title: title.toLowerCase(), n: current.version }) : t("The {title} stays unpublished.", { title: title.toLowerCase() })}
+        action={t("Discard")}
+        cancel={t("Keep editing")}
         onAction={() => {
           setDiscard(false);
           navigate(-1);
@@ -665,67 +676,67 @@ export function StorePoliciesPage() {
   }, [bizId, tick]);
 
   const persist = async (next: StoreSettings): Promise<string | null> => {
-    if (!bizId) return "Couldn't save. Try again.";
+    if (!bizId) return t("Couldn't save. Try again.");
     setBusy(true);
     const r = await saveStoreSettings(bizId, next);
     setBusy(false);
     if (!r.ok) return r.message;
     setS(r.value);
     setSheet(null);
-    showToast("Policies updated.");
+    showToast(t("Policies updated."));
     return null;
   };
 
   const ret = s ? parseReturns(s.returnsPolicy) : null;
   return (
-    <BizPage title="Store policies">
-      {error && <LoadError message="Couldn't load your policies." onRetry={() => setTick((t) => t + 1)} />}
-      {!s && !error && <RowsSkeleton rows={4} label="Loading your policies" />}
+    <BizPage title={t("Store policies")}>
+      {error && <LoadError message={t("Couldn't load your policies.")} onRetry={() => setTick((t) => t + 1)} />}
+      {!s && !error && <RowsSkeleton rows={4} label={t("Loading your policies")} />}
       {s && ret && (
         <>
-          <BizSection label="Returns">
+          <BizSection label={t("Returns")}>
             <BizRow
               icon={RotateCcw}
-              title={!s.returnsPolicy ? "Not set yet" : !ret.ours ? "Your returns policy" : ret.window === "none" ? "No returns" : `Returns within ${ret.window} days`}
-              desc={!s.returnsPolicy ? "Add how customers can return items" : !ret.ours ? s.returnsPolicy : ret.window === "none" ? undefined : ret.condition === "unopened" ? "Unopened items only" : "Any condition"}
+              title={!s.returnsPolicy ? t("Not set yet") : !ret.ours ? t("Your returns policy") : ret.window === "none" ? t("No returns") : t("Returns within {n} days", { n: ret.window })}
+              desc={!s.returnsPolicy ? t("Add how customers can return items") : !ret.ours ? s.returnsPolicy : ret.window === "none" ? undefined : ret.condition === "unopened" ? t("Unopened items only") : t("Any condition")}
               onClick={() => setSheet("returns")}
             />
-            <BizRow icon={Repeat} title="Exchanges" desc={s.allowExchanges ? "Allowed" : "Not offered"} onClick={() => setSheet("returns")} />
+            <BizRow icon={Repeat} title={t("Exchanges")} desc={s.allowExchanges ? t("Allowed") : t("Not offered")} onClick={() => setSheet("returns")} />
           </BizSection>
-          <BizSection label="Delivery">
+          <BizSection label={t("Delivery")}>
             {s.deliveryEnabled ? (
               <>
                 <BizRow
                   icon={Truck}
-                  title="Delivery fee"
-                  desc={s.freeDeliveryOver !== null ? `Free over ${dollars(s.freeDeliveryOver)}` : undefined}
+                  title={t("Delivery fee")}
+                  desc={s.freeDeliveryOver !== null ? t("Free over {amount}", { amount: dollars(s.freeDeliveryOver) }) : undefined}
                   value={s.deliveryFee !== null ? <span className="text-[13px] font-extrabold text-charcoal">{dollars(s.deliveryFee)}</span> : undefined}
                   onClick={() => setSheet("delivery")}
                 />
                 <BizRow
                   icon={Clock}
-                  title="Delivery time"
+                  title={t("Delivery time")}
                   value={s.deliveryTimeText ? <span className="text-[13px] font-extrabold text-charcoal">{s.deliveryTimeText}</span> : undefined}
                   onClick={() => setSheet("delivery")}
                 />
               </>
             ) : (
-              <BizRow icon={Truck} title="Delivery" desc="Off · turn it on to set a fee and time" onClick={() => setSheet("delivery")} />
+              <BizRow icon={Truck} title={t("Delivery")} desc={t("Off · turn it on to set a fee and time")} onClick={() => setSheet("delivery")} />
             )}
             <BizRow
-              title="Pickup"
-              desc="Customers collect from your store"
+              title={t("Pickup")}
+              desc={t("Customers collect from your store")}
               toggle={{ checked: s.pickupEnabled, disabled: busy, onChange: (v) => void persist({ ...s, pickupEnabled: v }) }}
             />
           </BizSection>
-          <BizSection label="Documents">
-            <BizRow icon={FileCheck} title="Terms clients accept" desc="Shown before checkout" onClick={() => navigate("/app/business/more/policy/returns")} />
-            {wellness && <BizRow icon={FileCheck} title="Terms and waivers" desc="For appointments" onClick={() => navigate("/app/business/more/policy/appointment_waiver")} />}
+          <BizSection label={t("Documents")}>
+            <BizRow icon={FileCheck} title={t("Terms clients accept")} desc={t("Shown before checkout")} onClick={() => navigate("/app/business/more/policy/returns")} />
+            {wellness && <BizRow icon={FileCheck} title={t("Terms and waivers")} desc={t("For appointments")} onClick={() => navigate("/app/business/more/policy/appointment_waiver")} />}
           </BizSection>
           {/* MO1B-005 row 4: the tip. */}
           <div className="flex items-start bg-primary-pale text-primary-dark" style={{ gap: 10, borderRadius: 16, padding: "12px 14px", marginBottom: 14 }}>
             <Lightbulb size={15} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
-            <p className="text-[12.5px] leading-[18px]">Waivers are hidden for stores. Wellness Service stores can turn them on for appointments.</p>
+            <p className="text-[12.5px] leading-[18px]">{t("Waivers are hidden for stores. Wellness Service stores can turn them on for appointments.")}</p>
           </div>
           {sheet === "returns" && <ReturnsSheet settings={s} onClose={() => setSheet(null)} onSave={persist} />}
           {sheet === "delivery" && <DeliverySheet settings={s} onClose={() => setSheet(null)} onSave={persist} />}
@@ -736,13 +747,13 @@ export function StorePoliciesPage() {
   );
 }
 
-const WINDOW_OPTIONS: { value: string; label: string }[] = [
-  ...RETURN_WINDOWS.map((w) => ({ value: String(w), label: `${w} days` })),
-  { value: "none", label: "No returns" },
+const windowOptions = (): { value: string; label: string }[] => [
+  ...RETURN_WINDOWS.map((w) => ({ value: String(w), label: daysLabel(w) })),
+  { value: "none", label: t("No returns") },
 ];
-const CONDITION_OPTIONS: { value: ReturnCondition; label: string }[] = [
-  { value: "unopened", label: "Unopened items only" },
-  { value: "any", label: "Any condition" },
+const conditionOptions = (): { value: ReturnCondition; label: string }[] => [
+  { value: "unopened", label: t("Unopened items only") },
+  { value: "any", label: t("Any condition") },
 ];
 
 function ReturnsSheet({ settings, onClose, onSave }: { settings: StoreSettings; onClose: () => void; onSave: (s: StoreSettings) => Promise<string | null> }) {
@@ -754,19 +765,19 @@ function ReturnsSheet({ settings, onClose, onSave }: { settings: StoreSettings; 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   return (
-    <BizSheet open onClose={onClose} title="Returns" lead="What customers can send back, and for how long.">
+    <BizSheet open onClose={onClose} title={t("Returns")} lead={t("What customers can send back, and for how long.")}>
       <BizFieldButton
         id="ret-window"
-        label="Return window"
-        value={win === "none" ? "No returns" : `${win} days`}
+        label={t("Return window")}
+        value={win === "none" ? t("No returns") : daysLabel(win)}
         icon={open === "win" ? ChevronUp : ChevronDown}
         expanded={open === "win"}
         onClick={() => setOpen(open === "win" ? null : "win")}
       />
       {open === "win" && (
         <BizDropdown
-          label="Return window"
-          options={WINDOW_OPTIONS}
+          label={t("Return window")}
+          options={windowOptions()}
           value={String(win)}
           onPick={(v) => {
             setWin(v === "none" ? "none" : (Number(v) as ReturnWindow));
@@ -778,16 +789,16 @@ function ReturnsSheet({ settings, onClose, onSave }: { settings: StoreSettings; 
         <>
           <BizFieldButton
             id="ret-cond"
-            label="Condition"
-            value={CONDITION_OPTIONS.find((c) => c.value === cond)?.label}
+            label={t("Condition")}
+            value={conditionOptions().find((c) => c.value === cond)?.label}
             icon={open === "cond" ? ChevronUp : ChevronDown}
             expanded={open === "cond"}
             onClick={() => setOpen(open === "cond" ? null : "cond")}
           />
           {open === "cond" && (
             <BizDropdown
-              label="Condition"
-              options={CONDITION_OPTIONS}
+              label={t("Condition")}
+              options={conditionOptions()}
               value={cond}
               onPick={(v) => {
                 setCond(v);
@@ -798,11 +809,11 @@ function ReturnsSheet({ settings, onClose, onSave }: { settings: StoreSettings; 
         </>
       )}
       <div className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 12 }}>
-        <BizRow title="Allow exchanges" toggle={{ checked: ex && win !== "none", onChange: setEx, disabled: win === "none" }} />
+        <BizRow title={t("Allow exchanges")} toggle={{ checked: ex && win !== "none", onChange: setEx, disabled: win === "none" }} />
       </div>
       {error && <p role="alert" className="text-[12px] font-bold text-status-high">{error}</p>}
       <BizButton
-        label="Save"
+        label={t("Save")}
         busy={busy}
         onClick={async () => {
           setBusy(true);
@@ -828,18 +839,18 @@ function DeliverySheet({ settings, onClose, onSave }: { settings: StoreSettings;
   const overN = parse(over);
   const bad = (feeN !== null && (isNaN(feeN) || feeN < 0 || feeN > 1000)) || (overN !== null && (isNaN(overN) || overN <= 0 || overN > 100000));
   return (
-    <BizSheet open onClose={onClose} title="Delivery" lead="Only shown when you deliver.">
+    <BizSheet open onClose={onClose} title={t("Delivery")} lead={t("Only shown when you deliver.")}>
       <div className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 12 }}>
-        <BizRow title="Offer delivery" toggle={{ checked: on, onChange: setOn }} />
+        <BizRow title={t("Offer delivery")} toggle={{ checked: on, onChange: setOn }} />
       </div>
       {on && (
         <>
-          <BizField id="del-fee" label="Delivery fee ($)" value={fee} onChange={setFee} inputMode="decimal" placeholder="0" />
-          <BizField id="del-over" label="Free delivery over ($)" value={over} onChange={setOver} inputMode="decimal" placeholder="Optional" />
+          <BizField id="del-fee" label={t("Delivery fee ($)")} value={fee} onChange={setFee} inputMode="decimal" placeholder="0" />
+          <BizField id="del-over" label={t("Free delivery over ($)")} value={over} onChange={setOver} inputMode="decimal" placeholder={t("Optional")} />
           <BizFieldButton
             id="del-time"
-            label="Delivery time"
-            value={time || "Choose"}
+            label={t("Delivery time")}
+            value={time ? t(time) : t("Choose")}
             placeholder={!time}
             icon={timeOpen ? ChevronUp : ChevronDown}
             expanded={timeOpen}
@@ -847,8 +858,8 @@ function DeliverySheet({ settings, onClose, onSave }: { settings: StoreSettings;
           />
           {timeOpen && (
             <BizDropdown
-              label="Delivery time"
-              options={DELIVERY_TIMES.map((t) => ({ value: t, label: t }))}
+              label={t("Delivery time")}
+              options={DELIVERY_TIMES.map((d) => ({ value: d, label: t(d) }))}
               value={time}
               onPick={(v) => {
                 setTime(v);
@@ -858,9 +869,9 @@ function DeliverySheet({ settings, onClose, onSave }: { settings: StoreSettings;
           )}
         </>
       )}
-      {(error || bad) && <p role="alert" className="text-[12px] font-bold text-status-high">{error ?? "Use amounts like 3 or 2.50."}</p>}
+      {(error || bad) && <p role="alert" className="text-[12px] font-bold text-status-high">{error ?? t("Use amounts like 3 or 2.50.")}</p>}
       <BizButton
-        label="Save"
+        label={t("Save")}
         disabled={bad}
         busy={busy}
         onClick={async () => {

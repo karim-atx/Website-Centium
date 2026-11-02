@@ -5,9 +5,8 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Toggle } from "../../components/ui/Toggle";
 import { dateOf, dayMonth, daysBetween, isoOf, pickRangeDay, previousOf, type AnalyticsRange } from "./analyticsRange";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // AN5-061 · the Custom range sheet, shared by every Analytics section: From /
 // To boxes (the active end bordered), a Monday-first month grid with the
@@ -15,11 +14,8 @@ const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // days after today can't be picked. First tap sets From, the next sets To;
 // a day before From restarts.
 
-const DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-const weekdayDayMonth = (iso: string) => {
-  const d = dateOf(iso);
-  return `${WD[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()}`;
-};
+const DOW = [tk("Mo"), tk("Tu"), tk("We"), tk("Th"), tk("Fr"), tk("Sa"), tk("Su")];
+const weekdayDayMonth = (iso: string) => dateOf(iso).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 
 export function CustomRangeSheet({
   open,
@@ -92,13 +88,13 @@ export function CustomRangeSheet({
       )}
       style={{ padding: "8px 12px" }}
     >
-      <span className="block text-[10px] font-bold text-charcoal-faint">{which === "from" ? "From" : "To"}</span>
-      <span className="block text-[14px] leading-[19px] font-extrabold text-charcoal">{value ? weekdayDayMonth(value) : "Choose a day"}</span>
+      <span className="block text-[10px] font-bold text-charcoal-faint">{which === "from" ? t("From") : t("To")}</span>
+      <span className="block text-[14px] leading-[19px] font-extrabold text-charcoal">{value ? weekdayDayMonth(value) : t("Choose a day")}</span>
     </button>
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Custom range" tone="business">
+    <BottomSheet open={open} onClose={onClose} title={t("Custom range")} tone="business">
       <div className="grid grid-cols-2 gap-[8px] mb-[14px]">
         {box("from", from)}
         {box("to", to)}
@@ -106,7 +102,7 @@ export function CustomRangeSheet({
       <div className="flex items-center justify-between mb-[8px]">
         <button
           type="button"
-          aria-label="Previous month"
+          aria-label={t("Previous month")}
           disabled={!canPrev}
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
           className="tap w-[44px] h-[44px] flex items-center justify-center disabled:opacity-30"
@@ -120,7 +116,7 @@ export function CustomRangeSheet({
         </p>
         <button
           type="button"
-          aria-label="Next month"
+          aria-label={t("Next month")}
           disabled={!canNext}
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
           className="tap w-[44px] h-[44px] flex items-center justify-center disabled:opacity-30"
@@ -133,11 +129,11 @@ export function CustomRangeSheet({
       <div className="grid grid-cols-7" aria-hidden>
         {DOW.map((d) => (
           <span key={d} className="text-center text-[10px] font-bold text-charcoal-faint" style={{ padding: "4px 0" }}>
-            {d}
+            {t(d)}
           </span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-[4px]" role="grid" aria-label="Choose the range">
+      <div className="grid grid-cols-7 gap-y-[4px]" role="grid" aria-label={t("Choose the range")}>
         {cells.map((iso, i) => {
           if (!iso) return <span key={`b${i}`} />;
           const disabled = iso > today || iso < earliest;
@@ -161,7 +157,10 @@ export function CustomRangeSheet({
                 type="button"
                 disabled={disabled}
                 onClick={() => pick(iso)}
-                aria-label={`${d.toLocaleDateString(appLocale("en-US"), { weekday: "long", day: "numeric", month: "long" })}${isStart ? ", range start" : isEnd ? ", range end" : ""}`}
+                aria-label={(() => {
+                  const day = d.toLocaleDateString(appLocale("en-US"), { weekday: "long", day: "numeric", month: "long" });
+                  return isStart ? t("{day}, range start", { day }) : isEnd ? t("{day}, range end", { day }) : day;
+                })()}
                 aria-pressed={isStart || isEnd}
                 className={clsx(
                   "w-[36px] h-[36px] rounded-full text-[13px] tabular-nums disabled:opacity-30",
@@ -176,26 +175,26 @@ export function CustomRangeSheet({
       </div>
       <div className="border-t border-charcoal/[0.06] mt-[14px] pt-[12px] flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[13px] leading-[17px] font-bold text-charcoal">Compare with previous period</p>
+          <p className="text-[13px] leading-[17px] font-bold text-charcoal">{t("Compare with previous period")}</p>
           <p className="text-[11px] leading-[15px] text-charcoal-faint">
-            {dayMonth(prev.from, today)} to {dayMonth(prev.to, today)}
+            {t("{from} to {to}", { from: dayMonth(prev.from, today), to: dayMonth(prev.to, today) })}
           </p>
         </div>
-        <Toggle checked={compare} onChange={setCompare} size="onboarding" label="Compare with previous period" />
+        <Toggle checked={compare} onChange={setCompare} size="onboarding" label={t("Compare with previous period")} />
       </div>
       <p className="text-[11px] leading-[15px] text-charcoal-faint mt-[10px]">
-        {count === 1 ? "1 day selected." : `${count} days selected.`} Up to 12 months back; days after today can't be picked.
+        {tn(count, "1 day selected.", "{n} days selected.")} {t("Up to 12 months back; days after today can't be picked.")}
       </p>
       <div className="grid gap-[10px] mt-[14px]" style={{ gridTemplateColumns: "1fr 1.6fr" }}>
         <button type="button" onClick={onClose} className="tap h-[46px] rounded-[14px] border border-solid border-charcoal/[0.11] dark:border-charcoal/[0.08] text-[13px] font-bold text-charcoal">
-          Cancel
+          {t("Cancel")}
         </button>
         <button
           type="button"
           onClick={() => onApply({ key: "custom", from, to: to ?? from, compare })}
           className="tap h-[46px] rounded-[14px] bg-primary-fill text-on-primary-fill text-[13px] font-extrabold"
         >
-          Apply range
+          {t("Apply range")}
         </button>
       </div>
     </BottomSheet>

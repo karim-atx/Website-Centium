@@ -6,7 +6,7 @@ import type { ActivityEvent, TotalType, WeekTotal } from "./activityFeed";
 import { dayLabel, whenLabel } from "./dashboardModel";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t, tk, tx } from "../../i18n/core";
 
 // DA1-015 #29-#31 · Recent activity (BizSummaryV27), OURS-DA-states #3-#6:
 // live line, refresh, collapsed 3 rows, expanded with this week's totals, the
@@ -115,7 +115,7 @@ function Row({ c, e, now, isNew }: { c: DashPalette; e: ActivityEvent; now: Date
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: textPx(12.5), fontWeight: 600, lineHeight: linePx(17), color: c.ink }}>
           <span style={{ minWidth: 0 }}>{e.title}</span>
           {isNew && (
-            <span style={{ fontSize: textPx(9), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: c.onFill, background: c.fill, borderRadius: 999, padding: "1px 6px" }}>New</span>
+            <span style={{ fontSize: textPx(9), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: c.onFill, background: c.fill, borderRadius: 999, padding: "1px 6px" }}>{t("New")}</span>
           )}
         </span>
         {(e.sub || e.isMinor) && <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: c.faint }}>{[e.sub, e.isMinor ? "Under 18" : ""].filter(Boolean).join(" · ")}</span>}
@@ -135,7 +135,7 @@ function groupByDay(events: ActivityEvent[], today: string) {
   return out;
 }
 
-const EMPTY_TEXT = "Joins, bookings, ended memberships and new classes show here as they happen.";
+const EMPTY_TEXT = tk("Joins, bookings, ended memberships and new classes show here as they happen.");
 
 function Groups({ c, events, now, today, newIds }: { c: DashPalette; events: ActivityEvent[]; now: Date; today: string; newIds: Set<number> }) {
   return (
@@ -156,7 +156,7 @@ function EmptyLine({ c }: { c: DashPalette }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0 10px" }}>
       <span style={{ width: 36, height: 36, borderRadius: 999, border: `1.5px dashed ${c.tert}`, flexShrink: 0 }} />
-      <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: c.faint, margin: 0 }}>{EMPTY_TEXT}</p>
+      <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: c.faint, margin: 0 }}>{t(EMPTY_TEXT)}</p>
     </div>
   );
 }
@@ -166,22 +166,22 @@ function Totals({ c, totals }: { c: DashPalette; totals: WeekTotal[] }) {
   const rtl = isRtl();
   return (
     <div style={{ padding: "0 16px 12px" }}>
-      <p style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, marginBottom: 8, marginTop: 0 }}>This week, compared with last week</p>
+      <p style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, marginBottom: 8, marginTop: 0 }}>{t("This week, compared with last week")}</p>
       <div style={{ display: "grid", gridTemplateColumns: `repeat(${totals.length},minmax(0,1fr))`, gap: 6 }}>
-        {totals.map((t) => {
-          const col = badgeOf(c, t.type);
-          const has = t.n + t.prev > 0;
-          const mx = has ? Math.max(...t.days, 1) : 1;
-          const pts = t.days.map((v, k) => [rtl ? 44 - (2 + k * 6.67) : 2 + k * 6.67, has ? 12 - (v / mx) * 10 : 7]);
+        {totals.map((wt) => {
+          const col = badgeOf(c, wt.type);
+          const has = wt.n + wt.prev > 0;
+          const mx = has ? Math.max(...wt.days, 1) : 1;
+          const pts = wt.days.map((v, k) => [rtl ? 44 - (2 + k * 6.67) : 2 + k * 6.67, has ? 12 - (v / mx) * 10 : 7]);
           const spark = pts.map((p, k) => (k ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
           const last = pts[6];
-          const diff = t.n - t.prev;
-          const trend = !has ? "No activity yet" : diff === 0 ? "Same as last wk" : `${diff > 0 ? "↑ +" : "↓ −"}${Math.abs(diff)} vs last wk`;
-          const goodDir = t.label === "Ended" ? diff < 0 : diff > 0;
-          const Icon = TYPE_ICON[t.type];
+          const diff = wt.n - wt.prev;
+          const trend = !has ? t("No activity yet") : diff === 0 ? t("Same as last wk") : t("{delta} vs last wk", { delta: `${diff > 0 ? "↑ +" : "↓ −"}${Math.abs(diff)}` });
+          const goodDir = wt.type === "end" ? diff < 0 : diff > 0;
+          const Icon = TYPE_ICON[wt.type];
           return (
             <div
-              key={t.label}
+              key={wt.type}
               style={{
                 position: "relative",
                 borderRadius: 16,
@@ -200,8 +200,8 @@ function Totals({ c, totals }: { c: DashPalette; totals: WeekTotal[] }) {
               <span style={{ width: 28, height: 28, borderRadius: 10, background: has ? rgbaOf(col, c.dark ? 0.2 : 0.14) : c.track, color: has ? col : c.tert, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Icon size={14} strokeWidth={2.4} aria-hidden />
               </span>
-              <span style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(22), letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: has ? c.ink : c.tert }}>{has ? String(t.n) : "–"}</span>
-              <span style={{ fontSize: textPx(10), fontWeight: 600, lineHeight: linePx(12), color: c.faint }}>{t.label}</span>
+              <span style={{ fontSize: textPx(20), fontWeight: 800, lineHeight: linePx(22), letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: has ? c.ink : c.tert }}>{has ? String(wt.n) : "–"}</span>
+              <span style={{ fontSize: textPx(10), fontWeight: 600, lineHeight: linePx(12), color: c.faint }}>{wt.label}</span>
               <svg width="44" height="14" viewBox="0 0 44 14" className="qa-shape" style={{ display: "block", overflow: "visible" }} aria-hidden>
                 <path d={spark} fill="none" style={{ stroke: has ? col : c.tert }} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" strokeDasharray={has ? "none" : "2 3"} />
                 {has && <path d={`M${(last[0] - 2).toFixed(1)},${last[1].toFixed(1)} a2,2 0 1,0 4,0 a2,2 0 1,0 -4,0`} style={{ fill: col }} />}
@@ -245,23 +245,23 @@ export function RecentActivityCard({
   const [open, setOpen] = useState(false);
   const shown = useMemo(() => (open ? week : week.slice(0, 3)), [open, week]);
   const mins = updatedAt === null ? null : Math.max(0, Math.floor((now.getTime() - updatedAt) / 60000));
-  const updated = mins === null ? "" : mins < 1 ? "Updated just now" : `Updated ${mins} min ago`;
+  const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : t("Updated {n} min ago", { n: mins });
   const toggle = () => setOpen(!open);
   return (
-    <section aria-label="Recent activity" style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, overflow: "hidden", marginBottom: 20 }}>
+    <section aria-label={t("Recent activity")} style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.border}`, overflow: "hidden", marginBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 12px" }}>
         <button type="button" onClick={toggle} aria-expanded={open} style={{ flex: 1, minWidth: 0, cursor: "pointer", background: "none", border: 0, padding: 0, textAlign: "start" }}>
-          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: c.faint, whiteSpace: "nowrap", margin: 0, lineHeight: 1.5 }}>Recent activity</p>
+          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em", color: c.faint, whiteSpace: "nowrap", margin: 0, lineHeight: 1.5 }}>{t("Recent activity")}</p>
           <p data-live-line style={{ display: "flex", alignItems: "center", gap: 6, fontSize: textPx(11), lineHeight: linePx(15), color: c.inkSoft, marginTop: 3, marginBottom: 0 }}>
             <span style={{ width: 8, height: 8, borderRadius: 999, background: online ? c.good : c.tert, boxShadow: online ? `0 0 0 3px ${c.goodTint}` : "none", flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: online ? c.good : c.faint }}>{online ? "Live" : "Offline"}</span>
+            <span style={{ fontWeight: 700, color: online ? c.good : c.faint }}>{online ? tx("Live", "connection") : t("Offline")}</span>
             {updated && <span>{`· ${updated}`}</span>}
           </p>
         </button>
         <button
           type="button"
           className="hit"
-          aria-label="Refresh"
+          aria-label={t("Refresh")}
           disabled={!online || refreshing}
           onClick={onRefresh}
           style={{ width: 34, height: 34, borderRadius: 999, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, border: 0, opacity: online ? 1 : 0.4 }}
@@ -271,7 +271,7 @@ export function RecentActivityCard({
         <button
           type="button"
           className="hit"
-          aria-label={open ? "Show less" : "Show more"}
+          aria-label={open ? t("Show less") : t("Show more")}
           aria-expanded={open}
           onClick={toggle}
           style={{ width: 34, height: 34, borderRadius: 999, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, border: 0, transform: open ? "rotate(180deg)" : "none" }}
@@ -289,8 +289,8 @@ export function RecentActivityCard({
           onClick={open ? onSeeAll : toggle}
           style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "center", gap: 4, padding: "11px 0 13px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), fontWeight: 700, color: c.pDark, cursor: "pointer", background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, minHeight: 44 }}
         >
-          {open ? "See all activity" : `Show ${Math.max(week.length - 3, 0)} more and this week's totals`}
-          <ChevronRight size={13} aria-hidden />
+          {open ? t("See all activity") : t("Show {n} more and this week's totals", { n: Math.max(week.length - 3, 0) })}
+          <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
         </button>
       )}
     </section>
@@ -299,16 +299,16 @@ export function RecentActivityCard({
 
 type Filter = "all" | ActivityKind;
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "booking", label: "Bookings" },
-  { value: "cancel", label: "Cancellations" },
-  { value: "join", label: "Joins" },
-  { value: "end", label: "Ended" },
-  { value: "check_in", label: "Check-ins" },
-  { value: "order", label: "Orders" },
-  { value: "payment", label: "Payments" },
-  { value: "appointment", label: "Appointments" },
-  { value: "review", label: "Reviews" },
+  { value: "all", label: tk("All") },
+  { value: "booking", label: tk("Bookings") },
+  { value: "cancel", label: tk("Cancellations") },
+  { value: "join", label: tk("Joins") },
+  { value: "end", label: tk("Ended") },
+  { value: "check_in", label: tk("Check-ins") },
+  { value: "order", label: tk("Orders") },
+  { value: "payment", label: tk("Payments") },
+  { value: "appointment", label: tk("Appointments") },
+  { value: "review", label: tk("Reviews") },
 ];
 
 /** OURS-DA-states #6: the "See all activity" screen (last 30 days, filter). */
@@ -319,22 +319,22 @@ export function ActivityScreen({ c, events, now, today, onBack, newIds }: { c: D
   const shown = filter === "all" ? events : events.filter((e) => e.type === filter);
   // Only the kinds this caller receives (each kind is gated by its permission on the server).
   const kinds = new Set(events.map((e) => e.type));
-  const options = FILTERS.filter((f) => f.value === "all" || kinds.has(f.value));
+  const options = FILTERS.filter((f) => f.value === "all" || kinds.has(f.value)).map((f) => ({ ...f, label: f.value === "check_in" ? tx("Check-ins", "entries") : t(f.label) }));
   return (
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
-        <button type="button" aria-label="Back" onClick={onBack} style={{ display: "flex", width: 40, height: 40, marginInlineStart: -8, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, background: "none", border: 0 }}>
-          <ChevronLeft size={20} aria-hidden />
+        <button type="button" aria-label={t("Back")} onClick={onBack} style={{ display: "flex", width: 40, height: 40, marginInlineStart: -8, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, background: "none", border: 0 }}>
+          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: textPx(11), fontWeight: 700, color: c.faint, margin: 0, lineHeight: 1.5 }}>Dashboard</p>
-          <h1 style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.02em", lineHeight: linePx(30), margin: 0, color: c.ink }}>Recent activity</h1>
-          <p style={{ fontSize: textPx(12.5), color: c.faint, marginTop: 2, lineHeight: linePx(18), marginBottom: 0 }}>Last 30 days</p>
+          <p style={{ fontSize: textPx(11), fontWeight: 700, color: c.faint, margin: 0, lineHeight: 1.5 }}>{t("Dashboard")}</p>
+          <h1 style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.02em", lineHeight: linePx(30), margin: 0, color: c.ink }}>{t("Recent activity")}</h1>
+          <p style={{ fontSize: textPx(12.5), color: c.faint, marginTop: 2, lineHeight: linePx(18), marginBottom: 0 }}>{t("Last 30 days")}</p>
         </div>
         <button
           ref={setAnchor}
           type="button"
-          aria-label="Filter"
+          aria-label={t("Filter")}
           aria-haspopup="menu"
           onClick={() => setMenuOpen(true)}
           style={{ display: "flex", width: 44, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, background: c.card, border: `1px solid ${c.border}`, flexShrink: 0 }}
