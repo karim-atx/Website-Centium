@@ -15,6 +15,8 @@ import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { CLOSED_OPENING_MENU, HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
 import PostOpeningSheet from "./PostOpeningSheet";
+import { HiringCreditsCard } from "../../../components/premium/HiringCreditsCard";
+import { useHiringCredits } from "../../../components/premium/usePlanLevel";
 import { HUB_TABS, bannerStub, countLine, deleteDialogOf, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
 
 // Market + Share 3.0 · W4 · B-MA.8 Hiring hub (Business Hiring Screens
@@ -79,6 +81,8 @@ export default function HubPage() {
   const [delError, setDelError] = useState<string | null>(null);
   const [justPosted, setJustPosted] = useState<string | null>(null);
   const id = biz.canHire ? biz.businessId : null;
+  // Round G1 (#15): the hiring credit balance and packs, only when credits_on.
+  const { credits } = useHiringCredits(id);
 
   const openings = useHiringRead(() => (id ? fetchMyOpenings(id, tab) : null), [id, tab]);
   // "Team" alone until my_team answers.
@@ -199,6 +203,8 @@ export default function HubPage() {
           <span aria-hidden style={{ position: "absolute", insetInlineEnd: 69, bottom: -7, width: 14, height: 14, borderRadius: 999, background: m.page }} />
         </button>
       ) : null}
+
+      <HiringCreditsCard credits={credits} className="mb-3" />
 
       <div data-hub-track style={{ display: "grid", gridTemplateColumns: biz.isOwner ? "1fr 1fr" : "1fr", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
         <button type="button" onClick={() => navigate(HIRING_ROUTES.team)} className="tap market-focus" style={trackBtn}>
