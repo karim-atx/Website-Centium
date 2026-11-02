@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { fetchNeedsDateOfBirth } from "../../services/profile";
 import { DobInline } from "./DobInline";
+import { t } from "../../i18n/core";
 
 const DISMISS_KEY = (userId: string) => `centium:dob-prompt-dismissed:${userId}`;
 
@@ -67,12 +68,12 @@ export const DobPromptCard: React.FC<{
       <div className={className}>
         <DobInline
           setup
-          title="Add your date of birth"
-          body="It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support."
+          title={t("Add your date of birth")}
+          body={t("It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support.")}
           onSaved={() => setNeeds({ userId: authUserId, value: false })}
           after={
             <button type="button" onClick={dismiss} className="tap self-start min-h-[44px] text-[11.5px] font-bold text-primary-deep-text">
-              Not now
+              {t("Not now")}
             </button>
           }
         />
@@ -83,8 +84,8 @@ export const DobPromptCard: React.FC<{
     <div className={className}>
       <DobInline
         tile={tile}
-        title="Add your date of birth"
-        body="It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support."
+        title={t("Add your date of birth")}
+        body={t("It keeps your age, calorie targets and health suggestions right. Check it before saving; to change it later, contact support.")}
         onSaved={() => setNeeds({ userId: authUserId, value: false })}
       />
       <button
@@ -92,7 +93,7 @@ export const DobPromptCard: React.FC<{
         onClick={dismiss}
         className="tap mt-1.5 w-full text-center text-xs font-semibold text-charcoal-soft"
       >
-        Not now
+        {t("Not now")}
       </button>
     </div>
   );

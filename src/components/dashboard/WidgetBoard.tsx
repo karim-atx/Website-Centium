@@ -12,6 +12,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx, linePx } from "../../theme/textSize";
 import { useWidgetConfigSync } from "./useWidgetConfigSync";
+import { t, tk, tx } from "../../i18n/core";
 
 // HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
 function useWidgetColumns() {
@@ -35,20 +36,20 @@ const Lotus: PickerIcon = ({ size = 12, style }) => <LotusGlyph size={size} stro
  * [light, dark] from each HO1 table; Water and Food keep their repo tints.
  */
 const allWidgetTypes: { type: WidgetType; label: string; icon: PickerIcon; tint: [string, string]; ink: [string, string] }[] = [
-  { type: "steps", label: "Steps", icon: Footprints, tint: ["#EAF1E4", "rgb(var(--metric-steps-tint))"], ink: ["#55733F", "rgb(var(--metric-steps-main))"] },
-  { type: "weight", label: "Weight", icon: WeightScaleIcon, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--metric-weight-tint))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--metric-weight-main))"] },
-  { type: "water", label: "Water", icon: Droplet, tint: ["rgba(143,192,232,.17)", "rgba(143,192,232,.17)"], ink: ["#3F6F98", "#9CC8EE"] },
-  { type: "sleep", label: "Sleep", icon: Moon, tint: ["#E8F2F0", "rgb(var(--metric-sleep-tint))"], ink: ["#3E716D", "rgb(var(--metric-sleep-main))"] },
-  { type: "nutrition", label: "Food", icon: Utensils, tint: ["rgb(var(--th-aea1dc) / .16)", "rgb(var(--th-aea1dc) / .16)"], ink: ["rgb(var(--c-primary-deep-text))", "rgb(var(--c-primary-deep-text))"] },
-  { type: "workout", label: "Workout", icon: Dumbbell, tint: ["#EDEFF3", "rgb(var(--c-widget-workout-tint))"], ink: ["#5F6878", "#B8C0CE"] },
+  { type: "steps", label: tk("Steps"), icon: Footprints, tint: ["#EAF1E4", "rgb(var(--metric-steps-tint))"], ink: ["#55733F", "rgb(var(--metric-steps-main))"] },
+  { type: "weight", label: tk("Weight"), icon: WeightScaleIcon, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--metric-weight-tint))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--metric-weight-main))"] },
+  { type: "water", label: tk("Water"), icon: Droplet, tint: ["rgba(143,192,232,.17)", "rgba(143,192,232,.17)"], ink: ["#3F6F98", "#9CC8EE"] },
+  { type: "sleep", label: tk("Sleep"), icon: Moon, tint: ["#E8F2F0", "rgb(var(--metric-sleep-tint))"], ink: ["#3E716D", "rgb(var(--metric-sleep-main))"] },
+  { type: "nutrition", label: tk("Food"), icon: Utensils, tint: ["rgb(var(--th-aea1dc) / .16)", "rgb(var(--th-aea1dc) / .16)"], ink: ["rgb(var(--c-primary-deep-text))", "rgb(var(--c-primary-deep-text))"] },
+  { type: "workout", label: tk("Workout"), icon: Dumbbell, tint: ["#EDEFF3", "rgb(var(--c-widget-workout-tint))"], ink: ["#5F6878", "#B8C0CE"] },
   // V10 (QA 10.0): "Add a heart rate widget that syncs with the one found
   // in health metrics."
-  { type: "heartRate", label: "Heart rate", icon: HeartPulse, tint: ["#F7E2E2", "rgb(var(--metric-heart-rate-tint))"], ink: ["#962F2F", "rgb(var(--metric-heart-rate-main))"] },
-  { type: "habits", label: "Habits", icon: CircleCheck, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--thi-c3b3fb))"] },
-  { type: "journal", label: "Journal", icon: BookOpen, tint: ["#F8F0DC", "#3A342C"], ink: ["#8A6418", "#DCBB7F"] },
-  { type: "meditation", label: "Meditation", icon: Lotus, tint: ["#E3F0EC", "#293339"], ink: ["#3F7A6B", "#93C1B9"] },
+  { type: "heartRate", label: tk("Heart rate"), icon: HeartPulse, tint: ["#F7E2E2", "rgb(var(--metric-heart-rate-tint))"], ink: ["#962F2F", "rgb(var(--metric-heart-rate-main))"] },
+  { type: "habits", label: tk("Habits"), icon: CircleCheck, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--th-303141))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--thi-c3b3fb))"] },
+  { type: "journal", label: tk("Journal"), icon: BookOpen, tint: ["#F8F0DC", "#3A342C"], ink: ["#8A6418", "#DCBB7F"] },
+  { type: "meditation", label: tk("Meditation"), icon: Lotus, tint: ["#E3F0EC", "#293339"], ink: ["#3F7A6B", "#93C1B9"] },
   // HO1.W11: only offered when the cycle section is offered and the tracker is on.
-  { type: "cycle", label: "Cycle", icon: CycleCalendarIcon, tint: ["#FBEDF2", "rgb(var(--metric-cycle-tint))"], ink: ["#B8607F", "rgb(var(--metric-cycle-main))"] },
+  { type: "cycle", label: tk("Cycle"), icon: CycleCalendarIcon, tint: ["#FBEDF2", "rgb(var(--metric-cycle-tint))"], ink: ["#B8607F", "rgb(var(--metric-cycle-main))"] },
 ];
 
 /** One picker row (OURS-home-shell picker #2-#3). The S / L chips choose the size; the row adds it. */
@@ -63,14 +64,14 @@ const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean
         </span>
         <span className="min-w-0">
           <span className="block truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(18), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-            {item.label}
+            {t(item.label)}
           </span>
           <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(15), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>
-            Small or large
+            {t("Small or large")}
           </span>
         </span>
       </button>
-      <span className="flex shrink-0" style={{ gap: 6 }} role="radiogroup" aria-label={`${item.label} widget size`}>
+      <span className="flex shrink-0" style={{ gap: 6 }} role="radiogroup" aria-label={t("{widget} widget size", { widget: t(item.label) })}>
         {(["small", "large"] as const).map((s) => {
           const on = size === s;
           return (
@@ -79,7 +80,7 @@ const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean
               type="button"
               role="radio"
               aria-checked={on}
-              aria-label={s === "small" ? "Small" : "Large"}
+              aria-label={s === "small" ? t("Small") : t("Large")}
               onClick={() => setSize(s)}
               className="tap grid place-items-center rounded-full"
               style={{
@@ -91,7 +92,7 @@ const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean
                 background: dark ? (on ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)") : on ? "#FFFFFF" : "rgba(255,255,255,0.6)",
               }}
             >
-              {s === "small" ? "S" : "L"}
+              {s === "small" ? tx("S", "widget size") : tx("L", "widget size")}
             </button>
           );
         })}
@@ -451,7 +452,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
           className="uppercase"
           style={{ margin: 0, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: dark ? "rgb(var(--th-8a8698))" : "rgb(var(--th-9a94b3))" }}
         >
-          Today
+          {t("Today")}
         </p>
         <button
           onClick={() => setEditMode((v) => !v)}
@@ -459,11 +460,11 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
         >
           {editMode ? (
             <>
-              <Check size={11} /> Done
+              <Check size={11} /> {t("Done")}
             </>
           ) : (
             <>
-              <Pencil size={11} /> Edit
+              <Pencil size={11} /> {t("Edit")}
             </>
           )}
         </button>
@@ -526,7 +527,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
             className="tap h-[114px] rounded-[15px] flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
           >
             <Plus size={20} />
-            <span style={{ fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 700 }}>Add widget</span>
+            <span style={{ fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 700 }}>{t("Add widget")}</span>
           </button>
         )}
       </div>
@@ -553,22 +554,22 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
         </div>
       )}
 
-      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title="Add a widget">
+      <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)} title={t("Add a widget")}>
         <div className="flex flex-col" style={{ gap: 8 }}>
-          {availableToAdd.map((t) => (
+          {availableToAdd.map((w) => (
             <PickerRow
-              key={t.type}
-              item={t}
+              key={w.type}
+              item={w}
               dark={dark}
               onAdd={(size) => {
-                addWidget(t.type, size);
+                addWidget(w.type, size);
                 setPickerOpen(false);
               }}
             />
           ))}
           {availableToAdd.length === 0 && (
             <p className="text-center py-6" style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
-              All available widgets are already on your board.
+              {t("All available widgets are already on your board.")}
             </p>
           )}
         </div>

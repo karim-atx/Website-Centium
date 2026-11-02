@@ -18,21 +18,21 @@ import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ProReminders } from "../../components/client-forms/ProReminders";
+import { t, tk } from "../../i18n/core";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return tk("Good morning");
+  if (hour < 18) return tk("Good afternoon");
+  return tk("Good evening");
 }
 
 export default function Home() {
   const {
     user,
-    t,
     premiumPlan,
     recoverySensitive,
     recoveryModePending,
@@ -70,7 +70,9 @@ export default function Home() {
         <div>
           {/* HO1.1 #1 (Home shell context): 19/28.5 700 ls -0.6. */}
           <h1 className="font-display text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal flex items-center gap-1.5">
-            {t(getGreeting())}, {user.firstName}
+            {t(getGreeting())}
+            {t(", ")}
+            {user.firstName}
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
         </div>
@@ -109,14 +111,14 @@ export default function Home() {
         >
           <HeartHandshake size={17} className="shrink-0 mt-0.5" style={{ color: dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-5f5093))" }} />
           <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-charcoal mb-0.5">You're in a recovery-sensitive experience</p>
+            <p className="text-[13px] font-bold text-charcoal mb-0.5">{t("You're in a recovery-sensitive experience")}</p>
             <p className="text-[11px] leading-[16px] font-medium text-charcoal-soft">
-              Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile. Nothing you've logged is ever lost.
+              {t("Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile. Nothing you've logged is ever lost.")}
             </p>
           </div>
           <button
             onClick={() => setRecoverySensitiveIntroSeen(true)}
-            aria-label="Dismiss"
+            aria-label={t("Dismiss")}
             className="tap relative text-charcoal-faint shrink-0"
           >
             <span aria-hidden className="absolute left-1/2 top-1/2 w-11 h-11 -translate-x-1/2 -translate-y-1/2" />
@@ -142,7 +144,7 @@ export default function Home() {
       {/* Task X follow-up: streaks wait for the account's recovery setting
           on a browser with no local copy of it. */}
       {recoveryModePending ? (
-        <NumberPlaceholder height={STREAKS_PLACEHOLDER_HEIGHT} label="Streaks" className="mb-[13px]" />
+        <NumberPlaceholder height={STREAKS_PLACEHOLDER_HEIGHT} label={t("Streaks")} className="mb-[13px]" />
       ) : (
         !recoverySensitive && <StreaksBar />
       )}
@@ -159,11 +161,11 @@ export default function Home() {
                 <Store size={18} />
               </div>
               <div>
-                <p className="text-sm font-semibold">{user.businessName || "Your business"} on Centium</p>
-                <p className="text-xs text-cream/60">Business tools are an early preview</p>
+                <p className="text-sm font-semibold">{t("{name} on Centium", { name: user.businessName || t("Your business") })}</p>
+                <p className="text-xs text-cream/60">{t("Business tools are an early preview")}</p>
               </div>
             </div>
-            <ChevronRight size={18} className="text-cream/60" />
+            <ChevronRight size={18} className="text-cream/60 rtl:-scale-x-100" />
           </div>
         </Card>
       )}
@@ -192,11 +194,11 @@ export default function Home() {
         <div className="flex items-center gap-3 min-w-0">
           <Sparkles size={16} className="text-berry shrink-0" />
           <div className="min-w-0">
-            <p className="text-[12.5px] font-bold text-charcoal">Connect with a professional</p>
-            <p className="text-[10px] font-medium text-team-rose-ink mt-0.5">Dietitians, trainers, doctors &amp; more</p>
+            <p className="text-[12.5px] font-bold text-charcoal">{t("Connect with a professional")}</p>
+            <p className="text-[10px] font-medium text-team-rose-ink mt-0.5">{t("Dietitians, trainers, doctors & more")}</p>
           </div>
         </div>
-        <ArrowRight size={15} className="text-berry shrink-0" />
+        <ArrowRight size={15} className="text-berry shrink-0 rtl:-scale-x-100" />
       </button>
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />
@@ -239,7 +241,7 @@ function HomeBell() {
     <button
       type="button"
       onClick={() => navigate("/app/notifications")}
-      aria-label={unread > 0 ? `Notifications, ${unreadBadge(unread)} unread` : "Notifications"}
+      aria-label={unread > 0 ? t("Notifications, {unread} unread", { unread: unreadBadge(unread) }) : t("Notifications")}
       className="tap relative w-9 h-9 rounded-full flex items-center justify-center text-charcoal shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
     >
       <Bell size={20} strokeWidth={1.9} aria-hidden />

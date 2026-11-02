@@ -3,11 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Dumbbell, Play } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { nextRoutine } from "../../../services/workout/nextRoutine";
-import { DAY_SHORT, mondayFirstWeek, mondayIndex } from "../../../utils/week";
+import { mondayFirstWeek } from "../../../utils/week";
+import { t, tn } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 import { MUSCLE_GROUP_LABEL } from "../../../utils/muscleGroups";
 import { WorkoutSessionSheet } from "../../workout/WorkoutSessionSheet";
 import { useAssignedDays, useWorkoutWeek } from "./data";
 import { DoneStatus, HomeCard, HomeKeyframes, Hit44, homeColors, Line, linePx, stop, textPx, useHomeMode } from "./kit";
+import { weekLetters } from "./weekLetters";
 
 // HO1.W6 Workout (small, large) and HO1.W6·e. Colours: HO1.W6 table, fixed in
 // every theme (V6-60); dark #262932* / #B8C0CE*. V6-121: Play / Pick ink in
@@ -61,7 +64,7 @@ const WeekDots: React.FC<{ days: boolean[]; todayIndex: number; dark: boolean; h
   const ringNotDone = emptyFrame || hc ? `rgb(var(--c-charcoal) / ${hc ? 0.3 : 0.18})` : dark ? "rgba(245,243,250,0.18)" : "#C9C9CC";
   return (
     <span className="flex" style={{ gap: 3 }} aria-hidden>
-      {["M", "T", "W", "T", "F", "S", "S"].map((l, i) => (
+      {weekLetters().map((l, i) => (
         <span key={i} className="flex flex-col items-center" style={{ width: 12, gap: 2 }}>
           <span
             className="block rounded-full"
@@ -115,7 +118,9 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
     !done && selectedDate === today && ww && ww.scheduled > 0 && assigned && !assigned.some((a) => a.day === today)
       ? assigned.map((a) => ({ ...a, routine: routines.find((r) => r.id === a.routineId) })).find((a) => a.day > today && a.routine)
       : undefined;
-  const restNext = nextAssigned ? `Next: ${nextAssigned.routine!.name} · ${DAY_SHORT[mondayIndex(new Date(`${nextAssigned.day}T12:00:00`).getDay())]}` : null;
+  const restNext = nextAssigned
+    ? t("Next: {name} · {day}", { name: nextAssigned.routine!.name, day: new Date(`${nextAssigned.day}T12:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" }) })
+    : null;
   const routes = () => navigate("/app/workout");
 
   // HO1.W6·e: nothing planned and nothing done.
@@ -127,12 +132,12 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
           editMode={editMode}
           colors={colors}
           icon={Dumbbell}
-          label="Workout"
+          label={t("Workout")}
           state="empty"
-          emptyTitle="No workout planned"
-          emptyHint="Pick a routine"
+          emptyTitle={t("No workout planned")}
+          emptyHint={t("Pick a routine")}
           onOpen={routes}
-          ariaLabel="Workout, no workout planned. Pick a routine"
+          ariaLabel={t("Workout, no workout planned. Pick a routine")}
         />
       );
     }
@@ -142,10 +147,10 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={Dumbbell}
-        label="Workout"
+        label={t("Workout")}
         innerActions
         onOpen={routes}
-        ariaLabel="Workout, no workout planned. Pick a routine to start this week"
+        ariaLabel={t("Workout, no workout planned. Pick a routine to start this week")}
         bodyGap={21.2}
         // The whole body is the full-width graphic row (ring | text | Pick).
         graphicHeight={66}
@@ -156,8 +161,8 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
               <Ring done={sessionsThisWeek} total={ww?.scheduled ?? 0} label={ringLabel} dark={dark} empty={!ww?.scheduled} />
             </span>
             <span className="flex-1 min-w-0" style={{ marginInlineStart: 12 }}>
-              <Line style={{ fontSize: textPx(14), lineHeight: linePx(18.2), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>No workout planned</Line>
-              <Line style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>Pick a routine to start this week</Line>
+              <Line style={{ fontSize: textPx(14), lineHeight: linePx(18.2), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>{t("No workout planned")}</Line>
+              <Line style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>{t("Pick a routine to start this week")}</Line>
               <span className="block" style={{ marginTop: 5 }}>
                 <WeekDots days={weekDays} todayIndex={todayIndex} dark={dark} hc={hc} emptyFrame />
               </span>
@@ -178,7 +183,7 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
               }}
             >
               <Hit44 />
-              Pick
+              {t("Pick")}
             </button>
           </span>
         }
@@ -192,8 +197,8 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   const muscles = Array.from(new Set((routine?.exercises ?? []).flatMap((e) => e.muscleGroups ?? [])))
     .slice(0, 2)
     .map((m) => MUSCLE_GROUP_LABEL[m]);
-  const line = [`${exercises} exercise${exercises === 1 ? "" : "s"}`, minutes ? `${minutes} min` : null].filter(Boolean).join(" · ");
-  const lineLarge = [line, muscles.length ? muscles.join(", ") : null].filter(Boolean).join(" · ");
+  const line = [tn(exercises, "{n} exercise", "{n} exercises"), minutes ? t("{n} min", { n: minutes }) : null].filter(Boolean).join(" · ");
+  const lineLarge = [line, muscles.length ? muscles.join(t(", ")) : null].filter(Boolean).join(" · ");
 
   // Ring: exercises done of the session's exercises. Done: all; running or
   // paused: the exercises with a completed set; not started: 0.
@@ -216,13 +221,13 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={Dumbbell}
-        label="Workout"
+        label={t("Workout")}
         onOpen={routes}
-        ariaLabel={`Workout, rest day. ${restNext}`}
+        ariaLabel={t("Workout, rest day. {next}", { next: restNext })}
         bodyGap={20.2}
         context={
           <span className="block" style={{ width: "100%" }} data-rest-day>
-            <Line style={{ fontSize: textPx(17), lineHeight: linePx(18.7), fontWeight: 700, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>Rest day</Line>
+            <Line style={{ fontSize: textPx(17), lineHeight: linePx(18.7), fontWeight: 700, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>{t("Rest day")}</Line>
             <Line style={{ marginTop: 5.9, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: c.ink }}>{restNext}</Line>
           </span>
         }
@@ -237,10 +242,10 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={Dumbbell}
-        label="Workout"
+        label={t("Workout")}
         onOpen={routes}
-        ariaLabel={`Workout, ${name}${done ? ", done" : ""}, ${line}`}
-        headerRight={done ? <DoneStatus label="Done" dark={dark} /> : undefined}
+        ariaLabel={done ? t("Workout, {name}, done, {line}", { name, line }) : t("Workout, {name}, {line}", { name, line })}
+        headerRight={done ? <DoneStatus label={t("Done")} dark={dark} /> : undefined}
         // Title 17/18.7 at 51.2 (header ends 31: gap 20.2); text 10/13 at 75.8.
         bodyGap={20.2}
         context={
@@ -261,11 +266,15 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
         editMode={editMode}
         colors={colors}
         icon={Dumbbell}
-        label="Workout"
+        label={t("Workout")}
         innerActions
         onOpen={routes}
-        ariaLabel={`Workout, ${name}${done ? ", done today" : ""}, ${lineLarge}, ${doneCount} of ${exercises} exercises`}
-        headerRight={done ? <DoneStatus label="Done today" dark={dark} /> : undefined}
+        ariaLabel={
+          done
+            ? tn(exercises, "Workout, {name}, done today, {line}, {done} of {n} exercise", "Workout, {name}, done today, {line}, {done} of {n} exercises", { name, line: lineLarge, done: doneCount })
+            : tn(exercises, "Workout, {name}, {line}, {done} of {n} exercise", "Workout, {name}, {line}, {done} of {n} exercises", { name, line: lineLarge, done: doneCount })
+        }
+        headerRight={done ? <DoneStatus label={t("Done today")} dark={dark} /> : undefined}
         // Title 20/22 at 90, 52.3 (gap 19.3); ring 16, 56.5; text 79.3; dots 97.3; play 304, 68.5.
         bodyGap={19.3}
         graphicHeight={66.2}
@@ -284,7 +293,7 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
             <button
               type="button"
               tabIndex={editMode ? -1 : 0}
-              aria-label={done ? `Open ${name}` : inProgress ? `Resume ${name}` : `Start ${name}`}
+              aria-label={done ? t("Open {name}", { name }) : inProgress ? t("Resume {name}", { name }) : t("Start {name}", { name })}
               {...stop(startOrResume)}
               className="tap relative shrink-0 grid place-items-center rounded-full"
               style={{ marginTop: 16.2, width: 38, height: 38, background: dark ? "#B8C0CE" : "#5F6878" }}

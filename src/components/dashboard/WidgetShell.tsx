@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { X, Maximize2, Minimize2, GripVertical } from "lucide-react";
 import type { WidgetSize } from "../../types";
 import { useIsDark } from "../../hooks/useIsDark";
+import { t } from "../../i18n/core";
 
 interface WidgetShellProps {
   size: WidgetSize;
@@ -165,7 +166,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
                   touchAction: "manipulation",
                 }}
-                aria-label="Resize widget"
+                aria-label={t("Resize widget")}
               >
                 {size === "small" ? <Maximize2 size={11} /> : <Minimize2 size={11} />}
               </button>
@@ -185,7 +186,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
                   touchAction: "manipulation",
                 }}
-                aria-label="Remove widget"
+                aria-label={t("Remove widget")}
               >
                 <X size={11} strokeWidth={3} />
               </button>
@@ -199,7 +200,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
             <div
               onPointerDown={onGripPointerDown}
               role="button"
-              aria-label="Drag to reorder"
+              aria-label={t("Drag to reorder")}
               style={{
                 position: "absolute",
                 bottom: 7,

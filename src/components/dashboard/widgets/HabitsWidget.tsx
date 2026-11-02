@@ -7,6 +7,7 @@ import { habitIcon } from "../../../utils/icons";
 import { useHabitColours, type HabitColourKey } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, homeColors, Line, linePx, textPx, useHomeMode, useLoadingTimeout } from "./kit";
 import { inlineScrolled } from "../../../utils/inlineScroll";
+import { t } from "../../../i18n/core";
 
 // HO1.W8 Habits (small), OURS-home-large-widgets §B (large) and
 // OURS-home-habits-empty. The purple follows the theme primary (th-/thi-);
@@ -76,7 +77,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
           <span
             key={p}
             className="grid shrink-0 content-start"
-            aria-label={pages.length > 1 ? `Habits page ${p + 1} of ${pages.length}` : undefined}
+            aria-label={pages.length > 1 ? t("Habits page {page} of {pages}", { page: p + 1, pages: pages.length }) : undefined}
             style={{ width: 200, gridTemplateColumns: "1fr 1fr", columnGap: 6, rowGap: 5, scrollSnapAlign: "start" }}
           >
             {items.map((h) => {
@@ -105,7 +106,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
                       background: done ? deep : "transparent",
                       border: done ? "none" : `1.5px solid ${dark ? "rgb(var(--thi-c3b3fb) / 0.3)" : "rgb(var(--thi-5f5093) / 0.3)"}`,
                     }}
-                    aria-label={done ? "Done" : "Not done"}
+                    aria-label={done ? t("Done") : t("Not done")}
                   >
                     {done && <Check size={9} strokeWidth={3} style={{ color: dark ? "#1C1F28" : "#FFFFFF" }} aria-hidden />}
                   </span>
@@ -120,7 +121,7 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
         // (hint left, dots right; release review O1). Dots keep top 91.
         <span className="absolute flex items-center justify-between" style={{ insetInlineStart: 0, insetInlineEnd: 0, top: 87.5, height: 11, gap: 10 }}>
           <span className="whitespace-nowrap" style={{ fontSize: textPx(8.5), lineHeight: linePx(11), fontWeight: 600, color: deep, opacity: dark ? 1 : 0.68 }}>
-            For more habits, swipe.
+            {t("For more habits, swipe.")}
           </span>
           <span className="flex shrink-0" style={{ gap: 3 }} aria-hidden>
             {pages.map((_, i) => (
@@ -155,14 +156,14 @@ export const HabitsWidget: React.FC<{ size: "small" | "large"; editMode: boolean
         editMode={editMode}
         colors={colors}
         icon={CircleCheck}
-        label="Habits"
+        label={t("Habits")}
         state={state}
-        emptyTitle="No habits yet"
-        emptyHint={isLarge ? "Add a habit to see it here" : "Add a habit"}
+        emptyTitle={t("No habits yet")}
+        emptyHint={isLarge ? t("Add a habit to see it here") : t("Add a habit")}
         onRetry={() => void reloadHabits()}
         // S1: MO1.1.1.1 Add habit is the Mind owner's screen; until it has a deep link, MO1.1.1 Habits.
         onOpen={open}
-        ariaLabel={state === "empty" ? "Habits, no habits yet. Add a habit" : undefined}
+        ariaLabel={state === "empty" ? t("Habits, no habits yet. Add a habit") : undefined}
       />
     );
   }
@@ -170,7 +171,7 @@ export const HabitsWidget: React.FC<{ size: "small" | "large"; editMode: boolean
   const done = habits.map((h) => isDone(h, selectedDate, today));
   const count = done.filter(Boolean).length;
   const all = count === habits.length;
-  const context = all ? "All done today" : "habits done today";
+  const context = all ? t("All done today") : t("habits done today");
 
   return (
     <>
@@ -180,14 +181,14 @@ export const HabitsWidget: React.FC<{ size: "small" | "large"; editMode: boolean
         editMode={editMode}
         colors={colors}
         icon={CircleCheck}
-        label="Habits"
+        label={t("Habits")}
         onOpen={open}
-        ariaLabel={`Habits, ${count} of ${habits.length} done today`}
+        ariaLabel={t("Habits, {count} of {total} done today", { count, total: habits.length })}
         value={<FadeValue k={count} value={count} />}
-        unit={`of ${habits.length}`}
+        unit={t("of {n}", { n: habits.length })}
         // Small: value 43 (gap 12), segments 73, context 85. Large: value 52.5 (gap 19.5), segments 92.5 (110 wide), context 104.5; grid 142, 47.
         bodyGap={isLarge ? 19.5 : 12}
-        headerRight={isLarge ? <HeaderPill ink={ink} dark={dark}>{`${count} of ${habits.length} today`}</HeaderPill> : undefined}
+        headerRight={isLarge ? <HeaderPill ink={ink} dark={dark}>{t("{count} of {total} today", { count, total: habits.length })}</HeaderPill> : undefined}
         graphic={<Segments done={done} colours={habits.map((h) => colourOf?.[h.id])} width={isLarge ? 110 : "100%"} dark={dark} hc={hc} />}
         graphicHeight={6}
         context={<Line>{context}</Line>}

@@ -11,6 +11,9 @@ import { range12 } from "../../utils/time12";
 import type { ClientCalendarEvent } from "../../services/calendar";
 import { PlaylistCard } from "../music/PlaylistCard";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
+
+const REPEATS: Record<string, string> = { daily: tk("Repeats daily"), weekly: tk("Repeats weekly"), monthly: tk("Repeats monthly") };
 
 /**
  * OURS-Calendar-event-detail: the read-only sheet for an event this account
@@ -65,7 +68,7 @@ export const EventDetailSheet: React.FC<{
     day: "numeric",
   });
   const href = normaliseLink(e.url);
-  const repeat = e.repeat !== "none" ? `Repeats ${e.repeat}` : null;
+  const repeat = e.repeat !== "none" ? (REPEATS[e.repeat] ? t(REPEATS[e.repeat]) : `Repeats ${e.repeat}`) : null;
 
   return (
     <BottomSheet open onClose={onClose} title={e.title}>
@@ -74,7 +77,7 @@ export const EventDetailSheet: React.FC<{
           <span aria-hidden className="w-[3px] h-8 rounded-full shrink-0" style={{ background: bar }} />
           <p className="text-[14px] leading-[20px] font-semibold text-charcoal">
             {dateLabel}
-            <span className="block">{e.allDay ? "All day" : range12(e.startTime, e.endTime)}</span>
+            <span className="block">{e.allDay ? t("All day") : range12(e.startTime, e.endTime)}</span>
           </p>
         </div>
 
@@ -93,24 +96,24 @@ export const EventDetailSheet: React.FC<{
               status === "accepted" ? "text-primary-dark" : status === "declined" ? "text-charcoal-faint" : "text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]"
             )}
           >
-            {status === "accepted" ? "Going" : status === "declined" ? "Declined" : "Invitation"}
+            {status === "accepted" ? t("Going") : status === "declined" ? t("Declined") : t("Invitation")}
           </p>
         ) : e.assignmentSourced ? (
           <p className="flex items-center gap-1 text-[11px] font-semibold text-teal-dark dark:text-teal-deep-text">
-            <Dumbbell size={11} aria-hidden /> Scheduled by your coach
+            <Dumbbell size={11} aria-hidden /> {t("Scheduled by your coach")}
           </p>
         ) : booked ? (
           <p className="flex items-center gap-1 text-[11px] font-semibold text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]">
-            <Ticket size={11} aria-hidden /> Booked with {booked.businessName}
+            <Ticket size={11} aria-hidden /> {t("Booked with {name}", { name: booked.businessName })}
           </p>
         ) : bookingMade ? (
           <p className="flex items-center gap-1 text-[11px] font-semibold text-[color:var(--gold-pill-ink)] dark:text-[#CAB082]">
-            <Ticket size={11} aria-hidden /> Added by a booking
+            <Ticket size={11} aria-hidden /> {t("Added by a booking")}
           </p>
         ) : null}
         {/* B3 (PB-O-62, ATXB3): a booking's event changes only through the booking. */}
         {(booked || bookingMade) && !e.invite && (
-          <p className="text-[12px] leading-4 text-charcoal-faint">To change or cancel it, change the booking.</p>
+          <p className="text-[12px] leading-4 text-charcoal-faint">{t("To change or cancel it, change the booking.")}</p>
         )}
 
         {e.notes && (
@@ -120,7 +123,7 @@ export const EventDetailSheet: React.FC<{
         )}
 
         {/* Round E: the session's playlist. */}
-        {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading="Session playlist" style={{ marginTop: 4 }} />}
+        {e.playlistUrl && <PlaylistCard url={e.playlistUrl} heading={t("Session playlist")} style={{ marginTop: 4 }} />}
 
         {href && (
           <a
@@ -140,31 +143,31 @@ export const EventDetailSheet: React.FC<{
             onClick={() => onOpenAttachment(e.attachmentPath!)}
             className="tap flex items-center gap-1 text-[12px] font-semibold text-primary-deep-text self-start"
           >
-            <Paperclip size={11} aria-hidden /> Open attachment
+            <Paperclip size={11} aria-hidden /> {t("Open attachment")}
           </button>
         )}
 
         {booked && !booked.businessActive && (
           <p className="text-[12px] leading-4 italic text-charcoal-faint">
-            {booked.businessName} is no longer listed on Explore. Your booking still stands.
+            {t("{name} is no longer listed on Explore. Your booking still stands.", { name: booked.businessName })}
           </p>
         )}
 
         {e.invite && (
           <>
-            {!online && <p className="text-[12px] leading-4 text-charcoal-faint">You're offline.</p>}
+            {!online && <p className="text-[12px] leading-4 text-charcoal-faint">{t("You're offline.")}</p>}
             <div className="flex gap-2 mt-2">
               <CtaButton
                 size="sheet"
                 variant="secondary"
-                label={status === "declined" ? "Declined" : "Decline"}
+                label={status === "declined" ? t("Declined") : t("Decline")}
                 icon={<X size={15} aria-hidden />}
                 disabled={!online || responding || status === "declined"}
                 onClick={() => onRespond(false)}
               />
               <CtaButton
                 size="sheet"
-                label={status === "accepted" ? "Going" : "Accept"}
+                label={status === "accepted" ? t("Going") : t("Accept")}
                 icon={<Check size={15} aria-hidden />}
                 disabled={!online || responding || status === "accepted"}
                 onClick={() => onRespond(true)}
@@ -179,7 +182,7 @@ export const EventDetailSheet: React.FC<{
         {e.invite && status === "accepted" && onInviteAlert && (
           <div className="mt-2 min-w-0">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
-              <Bell size={12} aria-hidden /> Your reminder
+              <Bell size={12} aria-hidden /> {t("Your reminder")}
             </span>
             <button
               type="button"
@@ -187,7 +190,7 @@ export const EventDetailSheet: React.FC<{
               disabled={!online || alertSaving}
               aria-haspopup="menu"
               aria-expanded={!!alertAnchor}
-              aria-label={`Your reminder, ${alertLabel(e.invite.alert)}`}
+              aria-label={t("Your reminder, {value}", { value: alertLabel(e.invite.alert) })}
               className="tap w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal flex items-center justify-between gap-2 text-start disabled:opacity-60"
             >
               <span className="truncate">{alertLabel(e.invite.alert)}</span>
@@ -197,7 +200,7 @@ export const EventDetailSheet: React.FC<{
               open={!!alertAnchor}
               onClose={() => setAlertAnchor(null)}
               anchor={alertAnchor}
-              options={ALERT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              options={ALERT_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
               selected={e.invite.alert}
               onSelect={(v) => {
                 setAlertAnchor(null);
@@ -214,12 +217,12 @@ export const EventDetailSheet: React.FC<{
             onClick={onViewBooking}
             className="tap min-h-11 self-start text-[13px] font-bold text-primary-deep-text"
           >
-            View booking
+            {t("View booking")}
           </button>
         )}
         {onRate && (
           <button type="button" onClick={onRate} className="tap min-h-11 self-start text-[13px] font-bold text-primary-deep-text">
-            Rate this class
+            {t("Rate this class")}
           </button>
         )}
       </div>

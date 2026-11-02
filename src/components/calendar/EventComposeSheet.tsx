@@ -13,6 +13,7 @@ import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, t
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { PlaylistField } from "../music/PlaylistField";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
@@ -44,10 +45,10 @@ export interface EventDraft {
 }
 
 const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
-  { value: "none", label: "Never" },
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
+  { value: "none", label: tk("Never") },
+  { value: "daily", label: tk("Daily") },
+  { value: "weekly", label: tk("Weekly") },
+  { value: "monthly", label: tk("Monthly") },
 ];
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -111,7 +112,7 @@ export function TimeField({
         type="button"
         onClick={open ? onClose : onOpen}
         aria-expanded={open}
-        aria-label={`${label}, ${fieldTime(value)}`}
+        aria-label={t("{label}, {time}", { label, time: fieldTime(value) })}
         className={`tap ${fieldClass} flex items-center justify-between text-start`}
       >
         <span className="tabular-nums">{fieldTime(value)}</span>
@@ -125,13 +126,13 @@ export function TimeField({
             <WheelPicker
               columns={[
                 {
-                  label: "Hours",
+                  label: t("Hours"),
                   value: parts.hour,
                   options: HOURS.map((h) => ({ value: h, label: String(h), disabled: tooEarly({ ...parts, hour: h }) })),
                   onChange: (v) => set({ hour: Number(v) }),
                 },
                 {
-                  label: "Minutes",
+                  label: t("Minutes"),
                   value: parts.minute,
                   options: (minuteStep === 5 ? minuteOptions(parts.minute) : stepOptions(minuteStep, parts.minute)).map((m) => ({
                     value: m,
@@ -141,9 +142,9 @@ export function TimeField({
                   onChange: (v) => set({ minute: Number(v) }),
                 },
                 {
-                  label: "AM or PM",
+                  label: t("AM or PM"),
                   value: parts.meridiem,
-                  options: MERIDIEMS.map((m) => ({ value: m, label: m, disabled: tooEarly({ ...parts, meridiem: m }) })),
+                  options: MERIDIEMS.map((m) => ({ value: m, label: t(m), disabled: tooEarly({ ...parts, meridiem: m }) })),
                   onChange: (v) => set({ meridiem: v as Meridiem }),
                 },
               ]}
@@ -202,36 +203,36 @@ export const EventComposeSheet: React.FC<{
         setEndsAnchor(null);
         onClose();
       }}
-      title={editing ? "Edit Event" : "New Event"}
+      title={editing ? t("Edit Event") : t("New Event")}
     >
       <div className="space-y-4 animate-fade-slide-up">
         <label className="block">
-          <span className={LABEL}>Title</span>
+          <span className={LABEL}>{t("Title")}</span>
           <input
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-            placeholder="Doctor's appointment"
+            placeholder={t("Doctor's appointment")}
             className={`${FIELD} placeholder:text-charcoal-faint`}
           />
         </label>
 
         <label className="block">
-          <span className={LABEL}>Location</span>
+          <span className={LABEL}>{t("Location")}</span>
           <input
             value={draft.location}
             onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
-            placeholder="Clinic, gym, video call…"
+            placeholder={t("Clinic, gym, video call…")}
             className={`${FIELD} placeholder:text-charcoal-faint`}
           />
         </label>
 
         <div className="grid grid-cols-2 gap-3 items-end">
           <div className="min-w-0">
-            <span className={LABEL}>Date</span>
+            <span className={LABEL}>{t("Date")}</span>
             <button
               type="button"
               onClick={() => setDateOpen(true)}
-              aria-label={`Date, ${new Date(`${draft.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
+              aria-label={t("Date, {date}", { date: new Date(`${draft.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric", year: "numeric" }) })}
               className={`tap ${FIELD} flex items-center justify-between text-start`}
             >
               <span className="tabular-nums">{dateLabel(draft.date)}</span>
@@ -239,14 +240,14 @@ export const EventComposeSheet: React.FC<{
             </button>
           </div>
           <div className="h-10 rounded-xl bg-cream-soft flex items-center justify-between px-3">
-            <span className="text-sm font-semibold text-charcoal">All day</span>
+            <span className="text-sm font-semibold text-charcoal">{t("All day")}</span>
             <Toggle
               checked={draft.allDay}
               onChange={(v) => {
                 setWheel(null);
                 setDraft((d) => ({ ...d, allDay: v }));
               }}
-              label="All day"
+              label={t("All day")}
             />
           </div>
         </div>
@@ -254,7 +255,7 @@ export const EventComposeSheet: React.FC<{
         {!draft.allDay && (
           <div className="grid grid-cols-2 gap-3">
             <TimeField
-              label="Starts"
+              label={t("Starts")}
               value={draft.startTime}
               open={wheel === "start"}
               onOpen={() => setWheel("start")}
@@ -262,7 +263,7 @@ export const EventComposeSheet: React.FC<{
               onChange={setStart}
             />
             <TimeField
-              label="Ends"
+              label={t("Ends")}
               value={draft.endTime}
               open={wheel === "end"}
               onOpen={() => setWheel("end")}
@@ -274,7 +275,7 @@ export const EventComposeSheet: React.FC<{
         )}
 
         <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">{t("Color")}</span>
           {/* MO1.6.4 / MO1.6.4.2 (2x frame): twelve 32 circles, 8 apart
               (pitch 40, x 42 → 122), wrapping into a row of eight and a row
               of four, the rows 8 apart (pitch 40, y 1063 → 1143). */}
@@ -284,7 +285,7 @@ export const EventComposeSheet: React.FC<{
                 key={c}
                 type="button"
                 onClick={() => setDraft((d) => ({ ...d, color: c }))}
-                aria-label={`Color ${c}`}
+                aria-label={t("Color {c}", { c })}
                 aria-pressed={draft.color === c}
                 className="tap w-8 h-8 shrink-0 rounded-full flex items-center justify-center"
               >
@@ -314,24 +315,24 @@ export const EventComposeSheet: React.FC<{
         <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
-              <Repeat size={12} aria-hidden /> Repeat
+              <Repeat size={12} aria-hidden /> {t("Repeat")}
             </span>
             <button
               type="button"
               onClick={(e) => setRepeatAnchor(e.currentTarget)}
               aria-haspopup="menu"
               aria-expanded={!!repeatAnchor}
-              aria-label={`Repeat, ${REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}`}
+              aria-label={t("Repeat, {value}", { value: t(REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never") })}
               className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
-              <span className="truncate">{REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never"}</span>
+              <span className="truncate">{t(REPEAT_OPTIONS.find((r) => r.value === draft.repeat)?.label ?? "Never")}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
             <PopupMenu
               open={!!repeatAnchor}
               onClose={() => setRepeatAnchor(null)}
               anchor={repeatAnchor}
-              options={REPEAT_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+              options={REPEAT_OPTIONS.map((r) => ({ value: r.value, label: t(r.label) }))}
               selected={draft.repeat}
               onSelect={(v) => {
                 // A one-off has no end (the CHECK refuses one).
@@ -342,14 +343,14 @@ export const EventComposeSheet: React.FC<{
           </div>
           <div className="min-w-0">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">
-              <Bell size={12} aria-hidden /> Alert
+              <Bell size={12} aria-hidden /> {t("Alert")}
             </span>
             <button
               type="button"
               onClick={(e) => setAlertAnchor(e.currentTarget)}
               aria-haspopup="menu"
               aria-expanded={!!alertAnchor}
-              aria-label={`Alert, ${alertLabel(draft.alert)}`}
+              aria-label={t("Alert, {value}", { value: alertLabel(draft.alert) })}
               className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
               <span className="truncate">{alertLabel(draft.alert)}</span>
@@ -361,7 +362,7 @@ export const EventComposeSheet: React.FC<{
               anchor={alertAnchor}
               align="right"
               backdrop={false}
-              options={ALERT_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+              options={ALERT_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))}
               selected={draft.alert}
               onSelect={(v) => {
                 setDraft((d) => ({ ...d, alert: v }));
@@ -378,16 +379,20 @@ export const EventComposeSheet: React.FC<{
             (nothing before the first date). */}
         {draft.repeat !== "none" && (
           <div className="min-w-0">
-            <span className={LABEL}>Ends</span>
+            <span className={LABEL}>{t("Ends")}</span>
             <button
               type="button"
               onClick={(e) => setEndsAnchor(e.currentTarget)}
               aria-haspopup="menu"
               aria-expanded={!!endsAnchor}
-              aria-label={`Repeat ends, ${draft.repeatUntil ? new Date(`${draft.repeatUntil}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "long", day: "numeric", year: "numeric" }) : "never"}`}
+              aria-label={
+                draft.repeatUntil
+                  ? t("Repeat ends, {date}", { date: new Date(`${draft.repeatUntil}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "long", day: "numeric", year: "numeric" }) })
+                  : t("Repeat ends, never")
+              }
               className={`tap ${FIELD} flex items-center justify-between gap-2 text-start`}
             >
-              <span className="truncate tabular-nums">{draft.repeatUntil ? `On ${dateLabel(draft.repeatUntil)}` : "Never"}</span>
+              <span className="truncate tabular-nums">{draft.repeatUntil ? t("On {date}", { date: dateLabel(draft.repeatUntil) }) : t("Never")}</span>
               <ChevronDown size={14} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
             <PopupMenu
@@ -395,8 +400,8 @@ export const EventComposeSheet: React.FC<{
               onClose={() => setEndsAnchor(null)}
               anchor={endsAnchor}
               options={[
-                { value: "never", label: "Never" },
-                { value: "date", label: "On a date" },
+                { value: "never", label: t("Never") },
+                { value: "date", label: t("On a date") },
               ]}
               selected={draft.repeatUntil ? "date" : "never"}
               onSelect={(v) => {
@@ -409,12 +414,12 @@ export const EventComposeSheet: React.FC<{
         )}
 
         <label className="block">
-          <span className={LABEL}>Notes</span>
+          <span className={LABEL}>{t("Notes")}</span>
           <textarea
             value={draft.notes}
             onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
             rows={3}
-            placeholder="Anything else to remember…"
+            placeholder={t("Anything else to remember…")}
             className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
         </label>
@@ -429,7 +434,7 @@ export const EventComposeSheet: React.FC<{
         )}
 
         <label className="block">
-          <span className={LABEL}>Link</span>
+          <span className={LABEL}>{t("Link")}</span>
           <span className={`${FIELD} flex items-center gap-2`}>
             <LinkIcon size={15} strokeWidth={1.75} className="text-charcoal-faint shrink-0" />
             <input
@@ -439,13 +444,13 @@ export const EventComposeSheet: React.FC<{
               autoCorrect="off"
               value={draft.url}
               onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
-              placeholder="Add a link"
+              placeholder={t("Add a link")}
               aria-invalid={linkError || undefined}
               className="flex-1 min-w-0 h-full bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </span>
           {linkError && (
-            <span className="mt-1.5 block text-xs font-semibold text-status-high">Links need to be a web address (http or https).</span>
+            <span className="mt-1.5 block text-xs font-semibold text-status-high">{t("Links need to be a web address (http or https).")}</span>
           )}
         </label>
 
@@ -454,7 +459,7 @@ export const EventComposeSheet: React.FC<{
         {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}
 
         <Button fullWidth size="lg" onClick={onSave} disabled={!draft.title.trim() || saving}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Save event"}
+          {saving ? t("Saving…") : editing ? t("Save changes") : t("Save event")}
         </Button>
 
         {/* Decision 23 (item 118): the Foundations destructive text action
@@ -467,7 +472,7 @@ export const EventComposeSheet: React.FC<{
             onClick={onDelete}
             className="tap w-full min-h-11 text-center text-[13px] font-bold text-status-high disabled:opacity-40"
           >
-            {confirmDelete ? "Tap again to confirm" : "Delete event"}
+            {confirmDelete ? t("Tap again to confirm") : t("Delete event")}
           </button>
         )}
       </div>
@@ -475,7 +480,7 @@ export const EventComposeSheet: React.FC<{
       <CalendarPickerSheet
         open={dateOpen}
         onClose={() => setDateOpen(false)}
-        title="Date"
+        title={t("Date")}
         selectedDate={draft.date}
         today={todayIso}
         // A first date after the chosen end would be refused: the end goes.
@@ -484,7 +489,7 @@ export const EventComposeSheet: React.FC<{
       <CalendarPickerSheet
         open={endsDateOpen}
         onClose={() => setEndsDateOpen(false)}
-        title="Repeat ends"
+        title={t("Repeat ends")}
         selectedDate={draft.repeatUntil ?? draft.date}
         today={todayIso}
         minDate={draft.date}

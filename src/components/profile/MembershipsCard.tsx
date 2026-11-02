@@ -32,6 +32,7 @@ import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../
 import { GRANTED_LABEL } from "../../services/venues/consoleLogic";
 import { Check, ChevronRight, Dumbbell, LogOut, MoreVertical, Plus, Store, Trash2, X } from "lucide-react";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The member's side of a business membership: answer an invitation, redeem a
 // code, leave. MO1.5 / MO1.5.1 layout (R15, batch C, C8).
@@ -162,7 +163,7 @@ export const MembershipsCard: React.FC = () => {
       if (!result.ok || !gyms.ok) {
         // Short, beside its Try again (lead, Batch 2); offline keeps its own line.
         const msg = !result.ok ? result.message : gyms.ok ? null : gyms.message;
-        setError(msg === OFFLINE_MESSAGE ? msg : "Couldn't load your memberships.");
+        setError(msg === OFFLINE_MESSAGE ? msg : t("Couldn't load your memberships."));
         if (result.ok) setMemberships(result.memberships);
         return;
       }
@@ -267,14 +268,14 @@ export const MembershipsCard: React.FC = () => {
             setCode(e.target.value.toUpperCase());
             if (redeemNote && !redeemNote.ok) setRedeemNote(null);
           }}
-          placeholder="Member code"
-          aria-label="Member code"
+          placeholder={t("Member code")}
+          aria-label={t("Member code")}
           // Foundations Inputs (MO1.5 row 3, measured: 255 × 44, radius 12):
           // height 44, radius 12, padding 0 14, value 14/600.
           className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <Button className="shrink-0" variant={current?.value ? "outline" : "primary"} onClick={() => void check()} disabled={!code.trim() || checking || redeeming}>
-          {checking ? "Checking…" : "Check code"}
+          {checking ? t("Checking…") : t("Check code")}
         </Button>
       </div>
       {current?.value && (
@@ -286,7 +287,7 @@ export const MembershipsCard: React.FC = () => {
             </p>
           ))}
           <Button className="mt-3" fullWidth onClick={() => void redeem()} disabled={redeeming}>
-            {redeeming ? "Joining…" : "Join"}
+            {redeeming ? t("Joining…") : t("Join")}
           </Button>
         </div>
       )}
@@ -319,15 +320,15 @@ export const MembershipsCard: React.FC = () => {
       </span>
       <div className="min-w-0 flex-1">
         {/* MO1.5.1 anatomy row 3: title 15/700. */}
-        <p className="text-[15px] font-bold text-charcoal truncate">{m.businessName ?? "A business"}</p>
+        <p className="text-[15px] font-bold text-charcoal truncate">{m.businessName ?? t("A business")}</p>
         <p className="text-xs text-charcoal-faint truncate">
           {m.planName ? `${m.planName} · ` : ""}
           {m.status === "ended" && m.endedAt
-            ? `Ended ${dateLabel(m.endedAt)}`
+            ? t("Ended {date}", { date: dateLabel(m.endedAt) })
             : m.status === "pending"
-            ? `Invited ${dateLabel(m.invitedAt)}`
+            ? t("Invited {date}", { date: dateLabel(m.invitedAt) })
             : m.respondedAt
-            ? `Since ${dateLabel(m.respondedAt)}`
+            ? t("Since {date}", { date: dateLabel(m.respondedAt) })
             : dateLabel(m.invitedAt)}
         </p>
       </div>
@@ -341,7 +342,7 @@ export const MembershipsCard: React.FC = () => {
         <button
           type="button"
           onClick={(e) => setMenuFor({ membership: m, anchor: e.currentTarget })}
-          aria-label={`Options for ${m.businessName ?? "this membership"}`}
+          aria-label={m.businessName ? t("Options for {name}", { name: m.businessName }) : t("Options for this membership")}
           aria-haspopup="menu"
           aria-expanded={menuFor?.membership.id === m.id}
           className="tap w-8 h-11 -my-1 -me-2 rounded-lg flex items-center justify-center text-charcoal-soft shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
@@ -357,7 +358,7 @@ export const MembershipsCard: React.FC = () => {
     // "Ends {date}" survives a reload.
     const ends = endsOn[m.id] ?? (m.cancelAtPeriodEnd && m.expiresOn ? m.expiresOn : undefined);
     const lines = terms.get(m.id);
-    const tag = ends ? { label: `Ends ${dayMonthYear(ends)}`, tone: "muted" as const } : membershipTag(m);
+    const tag = ends ? { label: t("Ends {date}", { date: dayMonthYear(ends) }), tone: "muted" as const } : membershipTag(m);
     // Explicit per status (MB-05): only a running membership can be ended here.
     const canEnd = m.status === "active" && !ends;
     return (
@@ -384,7 +385,7 @@ export const MembershipsCard: React.FC = () => {
         <button
           type="button"
           onClick={(e) => setGymMenu({ membership: m, anchor: e.currentTarget })}
-          aria-label={`Options for ${m.gymName}`}
+          aria-label={t("Options for {name}", { name: m.gymName })}
           aria-haspopup="menu"
           aria-expanded={gymMenu?.membership.id === m.id}
           className="tap w-8 h-11 me-2 rounded-lg flex items-center justify-center text-charcoal-soft shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
@@ -402,7 +403,7 @@ export const MembershipsCard: React.FC = () => {
           line, 0.12em, no rule, inset 4 (glyphs from x 20.5), 8 above the
           card. Pre-R1 ink kept (light-colour rule). */}
       <p id="memberships-label" className="px-1 mb-2 text-[10.5px] leading-[14px] font-bold uppercase tracking-[0.12em] text-charcoal-faint">
-        Memberships
+        {t("Memberships")}
       </p>
 
       {error && (
@@ -418,7 +419,7 @@ export const MembershipsCard: React.FC = () => {
             }}
             className="tap min-h-11 px-3 shrink-0 rounded-xl text-xs font-bold text-primary-dark"
           >
-            Try again
+            {t("Try again")}
           </button>
         </div>
       )}
@@ -439,7 +440,7 @@ export const MembershipsCard: React.FC = () => {
         // MO1.5 row 3 (2x frame): radius 18, padding 14; the helper 10
         // under the field.
         <Card padded={false} className="!rounded-[18px] p-3.5">
-          {codeBox("Got a code from a gym or studio? Enter it and check what it comes with before you join.")}
+          {codeBox(t("Got a code from a gym or studio? Enter it and check what it comes with before you join."))}
         </Card>
       ) : (
         // MO1.5.1: 8 between the rows (2x frame: 783 → 800).
@@ -450,11 +451,11 @@ export const MembershipsCard: React.FC = () => {
               {m.status === "active" ? (
                 <SwipeActions
                   radius={18}
-                  keyboardLabel={`${m.businessName ?? "Membership"}. Press left arrow for End membership`}
+                  keyboardLabel={t("{name}. Press left arrow for End membership", { name: m.businessName ?? t("Membership") })}
                   actions={[
                     {
                       key: "end",
-                      label: "End membership",
+                      label: t("End membership"),
                       // Foundations swipe-row (Membership card): a Trash2 16 tile.
                       icon: <Trash2 size={16} />,
                       onClick: () => setEnding(m),
@@ -478,14 +479,14 @@ export const MembershipsCard: React.FC = () => {
                   <CtaButton
                     size="page"
                     variant="secondary"
-                    label="Decline"
+                    label={t("Decline")}
                     icon={<X size={15} aria-hidden />}
                     disabled={busyId === m.id}
                     onClick={() => void answer(m.id, false)}
                   />
                   <CtaButton
                     size="page"
-                    label="Accept"
+                    label={t("Accept")}
                     icon={<Check size={15} aria-hidden />}
                     disabled={busyId === m.id}
                     onClick={() => void answer(m.id, true)}
@@ -496,7 +497,7 @@ export const MembershipsCard: React.FC = () => {
           ))}
 
           {joinOpen ? (
-            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox("Check what the code comes with before you join.")}</Card>
+            <Card padded={false} className="!rounded-[18px] p-3.5">{codeBox(t("Check what the code comes with before you join."))}</Card>
           ) : (
             <button
               type="button"
@@ -508,8 +509,8 @@ export const MembershipsCard: React.FC = () => {
               <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
                 <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
-              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Join another gym or studio</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
+              <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{t("Join another gym or studio")}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
             </button>
           )}
         </div>
@@ -526,7 +527,7 @@ export const MembershipsCard: React.FC = () => {
         anchor={menuFor?.anchor ?? null}
         width={200}
         rowLineHeight={16}
-        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
+        options={[{ value: "end", label: t("End membership"), icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
         onSelect={() => {
           const m = menuFor?.membership ?? null;
           setMenuFor(null);
@@ -540,7 +541,7 @@ export const MembershipsCard: React.FC = () => {
         anchor={gymMenu?.anchor ?? null}
         width={200}
         rowLineHeight={16}
-        options={[{ value: "end", label: "End membership", icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
+        options={[{ value: "end", label: t("End membership"), icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]}
         onSelect={() => {
           const m = gymMenu?.membership ?? null;
           setGymMenu(null);
@@ -552,17 +553,19 @@ export const MembershipsCard: React.FC = () => {
       <CentredPopup
         open={!!gymEnding}
         onClose={() => !gymBusy && setGymEnding(null)}
-        title="End your membership?"
+        title={t("End your membership?")}
         icon={<LogOut size={22} />}
         body={
           gymEnding?.expiresOn
-            ? `Your pass keeps working until ${dayMonthYear(gymEnding.expiresOn)}, then your membership at ${gymEnding.gymName} ends. The gym can see that you ended it.`
-            : `Your membership at ${gymEnding?.gymName ?? "this gym"} ends today.`
+            ? t("Your pass keeps working until {date}, then your membership at {gym} ends. The gym can see that you ended it.", { date: dayMonthYear(gymEnding.expiresOn), gym: gymEnding.gymName })
+            : gymEnding?.gymName
+              ? t("Your membership at {gym} ends today.", { gym: gymEnding.gymName })
+              : t("Your membership at this gym ends today.")
         }
       >
         {gymEnding && terms.get(gymEnding.id) && (
           <p className="mb-3 text-center text-xs font-semibold text-charcoal-soft">
-            Your plan's terms: {terms.get(gymEnding.id)!.join(" · ")}.
+            {t("Your plan's terms: {terms}.", { terms: terms.get(gymEnding.id)!.join(" · ") })}
           </p>
         )}
         {gymError && <p role="alert" className="mb-3 text-xs font-semibold text-status-high">{gymError}</p>}
@@ -573,7 +576,7 @@ export const MembershipsCard: React.FC = () => {
             disabled={gymBusy}
             className="tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"
           >
-            {gymBusy ? "Ending…" : `End on ${dayMonthYear(gymEnding.expiresOn)}`}
+            {gymBusy ? t("Ending…") : t("End on {date}", { date: dayMonthYear(gymEnding.expiresOn) })}
           </button>
         )}
         <button
@@ -582,7 +585,7 @@ export const MembershipsCard: React.FC = () => {
           disabled={gymBusy}
           className={gymEnding?.expiresOn ? "tap mt-3 w-full text-center text-sm font-semibold text-status-high disabled:opacity-60" : "tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"}
         >
-          {gymEnding?.expiresOn ? "End it today instead (your pass stops now)" : gymBusy ? "Ending…" : "End membership"}
+          {gymEnding?.expiresOn ? t("End it today instead (your pass stops now)") : gymBusy ? t("Ending…") : t("End membership")}
         </button>
         <button
           type="button"
@@ -590,16 +593,16 @@ export const MembershipsCard: React.FC = () => {
           disabled={gymBusy}
           className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft"
         >
-          Keep membership
+          {t("Keep membership")}
         </button>
       </CentredPopup>
 
       <CentredPopup
         open={!!ending}
         onClose={() => busyId === null && setEnding(null)}
-        title="End this membership?"
+        title={t("End this membership?")}
         icon={<LogOut size={22} />}
-        body={`You'll stop being a member of ${ending?.businessName ?? "this business"}.`}
+        body={ending?.businessName ? t("You'll stop being a member of {name}.", { name: ending.businessName }) : t("You'll stop being a member of this business.")}
       >
         {/* The shared destructive fill, as the account-deletion confirm. */}
         <button
@@ -608,7 +611,7 @@ export const MembershipsCard: React.FC = () => {
           disabled={busyId !== null}
           className="tap w-full rounded-[14px] h-12 bg-status-high text-white dark:text-[#0D0B1A] text-[14px] font-bold disabled:opacity-60"
         >
-          {busyId ? "Ending…" : "End membership"}
+          {busyId ? t("Ending…") : t("End membership")}
         </button>
         <button
           type="button"
@@ -616,7 +619,7 @@ export const MembershipsCard: React.FC = () => {
           disabled={busyId !== null}
           className="tap mt-3 w-full text-center text-sm font-semibold text-charcoal-soft"
         >
-          Keep membership
+          {t("Keep membership")}
         </button>
       </CentredPopup>
     </section>

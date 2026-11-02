@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { CentredPopup } from "../ui/CentredPopup";
+import { t } from "../../i18n/core";
 
 /**
  * OURS · which occurrences a change to a repeating event applies to (MO1.6
@@ -31,14 +32,14 @@ export const RepeatScopePopup: React.FC<{
   const del = mode === "delete";
   const choices: { scope: RepeatScope; label: string }[] = del
     ? [
-        { scope: "one", label: "Delete this event only" },
-        { scope: "following", label: "Delete this and following" },
-        { scope: "all", label: "Delete all events" },
+        { scope: "one", label: t("Delete this event only") },
+        { scope: "following", label: t("Delete this and following") },
+        { scope: "all", label: t("Delete all events") },
       ]
     : [
-        { scope: "one", label: "This event only" },
-        { scope: "following", label: "This and following events" },
-        { scope: "all", label: "All events" },
+        { scope: "one", label: t("This event only") },
+        { scope: "following", label: t("This and following events") },
+        { scope: "all", label: t("All events") },
       ];
 
   return (
@@ -47,7 +48,7 @@ export const RepeatScopePopup: React.FC<{
       onClose={() => {
         if (!busy) onCancel();
       }}
-      title={del ? "Delete a repeating event" : "Change a repeating event"}
+      title={del ? t("Delete a repeating event") : t("Change a repeating event")}
       geometry="ours"
       align="start"
       describeBody
@@ -56,11 +57,11 @@ export const RepeatScopePopup: React.FC<{
       className="!p-5 dark:!shadow-none"
       body={
         <span className="block text-[12.5px] leading-[18.8px] font-normal">
-          {del ? "Which events do you want to delete?" : "Which events should these changes apply to?"}
+          {del ? t("Which events do you want to delete?") : t("Which events should these changes apply to?")}
         </span>
       }
     >
-      <div className="flex flex-col gap-2" role="group" aria-label={del ? "Delete which events" : "Apply changes to"}>
+      <div className="flex flex-col gap-2" role="group" aria-label={del ? t("Delete which events") : t("Apply changes to")}>
         {choices.map((c) => (
           <button
             key={c.scope}
@@ -80,7 +81,7 @@ export const RepeatScopePopup: React.FC<{
           onClick={onCancel}
           className="tap w-full min-h-11 text-[14px] leading-[21px] font-bold text-charcoal-soft disabled:opacity-60"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </div>
     </CentredPopup>

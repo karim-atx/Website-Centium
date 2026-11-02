@@ -8,6 +8,7 @@ import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import { Users, User as UserIcon, ChevronRight, Settings, MessageCircle, CalendarDays } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
+import { t, tk } from "../../i18n/core";
 import BusinessMoreIndex from "../business-more/BusinessMoreIndex";
 import ProfessionalMore from "../pro/more/ProfessionalMore";
 
@@ -75,24 +76,24 @@ function PersonalMore() {
   // Community is for adults (Database ATX55): an under-18 gets the other two
   // tiles, two to the row.
   const tiles = [
-    { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/app/professionals" },
-    forumAllowed && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
-    { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
+    { icon: Users, label: tk("Professionals"), desc: tk("Trainers, dietitians & doctors"), to: "/app/professionals" },
+    forumAllowed && { icon: CommunityLeafIcon, label: tk("Community"), desc: tk("Forum discussions & fitness courses"), to: "/app/forum" },
+    { icon: ExploreLeafIcon, label: tk("Explore"), desc: tk("Gyms, classes & the marketplace"), to: "/app/marketplace" },
   ].filter(Boolean) as Entry[];
 
   // The grouped list: the client frame's five rows, in its order.
   const rows: Entry[] = [
-    { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
-    { icon: CalendarDays, label: "Calendar", desc: "Your events, synced with your professional & gym", to: "/app/calendar" },
-    { icon: MessageCircle, label: "Messages", desc: "Chat with your professionals", to: "/app/messages" },
+    { icon: UserIcon, label: tk("Profile"), desc: tk("Your account & settings"), to: "/app/profile" },
+    { icon: CalendarDays, label: tk("Calendar"), desc: tk("Your events, synced with your professional & gym"), to: "/app/calendar" },
+    { icon: MessageCircle, label: tk("Messages"), desc: tk("Chat with your professionals"), to: "/app/messages" },
     // Approved decision 9: the handover's reward wording.
-    { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
-    { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
+    { icon: ReferralLeafIcon, label: tk("Referral"), desc: tk("Share your code, earn rewards"), onClick: () => setReferralOpen(true) },
+    { icon: Settings, label: tk("Settings"), desc: tk("Appearance, notifications & more"), to: "/app/settings" },
   ];
 
   return (
     <div>
-      <p className="mb-[13px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">More</p>
+      <p className="mb-[13px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">{t("More")}</p>
 
       <>
           {/* THE BRAIN IN DARK MODE. The asset is drawn for the light card: its
@@ -124,33 +125,33 @@ function PersonalMore() {
             <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
               <span className="flex items-center" style={{ gap: 14 }}>
                 <span className="text-th-32544d dark:text-th-d5eae5" style={{ fontSize: textPx(38), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
-                  Mind
+                  {t("Mind")}
                 </span>
-                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5" />
+                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5 rtl:-scale-x-100" />
               </span>
               <span className="block text-th-869595 dark:text-th-a5bdb9" style={{ marginTop: 12, maxWidth: 160, fontSize: textPx(17), fontWeight: 500, lineHeight: linePx(22) }}>
-                Habits, journal &amp; meditation
+                {t("Habits, journal & meditation")}
               </span>
             </span>
           </button>
 
           <div className={tiles.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 7 }}>
-            {tiles.map((t) => (
+            {tiles.map((tile) => (
               <button
-                key={t.label}
-                onClick={() => go(t)}
+                key={tile.label}
+                onClick={() => go(tile)}
                 className="tap flex flex-col items-center text-center bg-th-ebf5f2 dark:bg-th-a2c8c2/[0.12] animate-fade-slide-up"
                 style={{ minHeight: 131, borderRadius: 14, padding: "18px 6px 9px" }}
               >
                 <span className="flex items-center justify-center shrink-0" style={{ width: 48, height: 48, borderRadius: 12, background: "rgb(var(--th-4f8f8a))" }}>
-                  <t.icon size={30} strokeWidth={1.25} absoluteStrokeWidth className="text-white" />
+                  <tile.icon size={30} strokeWidth={1.25} absoluteStrokeWidth className="text-white" />
                 </span>
                 <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 10, gap: 2, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16) }}>
-                  {t.label}
-                  <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
+                  {t(tile.label)}
+                  <ChevronRight size={12} strokeWidth={2.6} className="shrink-0 rtl:-scale-x-100" />
                 </span>
                 <span className="text-th-8a9796 dark:text-th-9cb0ad" style={{ marginTop: 2, fontSize: textPx(10), lineHeight: linePx(14) }}>
-                  {t.desc}
+                  {t(tile.desc!)}
                 </span>
               </button>
             ))}
@@ -180,10 +181,10 @@ function PersonalMore() {
             </span>
             <span className="flex-1 min-w-0">
               <span className="block text-charcoal" style={{ fontSize: textPx(12), fontWeight: 700, lineHeight: linePx(16) }}>
-                {r.label}
+                {t(r.label)}
               </span>
               <span className="block truncate text-th-9a94b3" style={{ marginTop: 5, fontSize: textPx(10), lineHeight: linePx(13) }}>
-                {r.desc}
+                {t(r.desc!)}
               </span>
             </span>
             <span className="flex items-center gap-2 shrink-0">
@@ -191,7 +192,7 @@ function PersonalMore() {
                   back for every account, the client's MO1 rows included
                   (decision 23 item 307's 18 tall primary pill). */}
               {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
-              <ChevronRight size={14} className="text-th-9a94b3" />
+              <ChevronRight size={14} className="text-th-9a94b3 rtl:-scale-x-100" />
             </span>
           </button>
         ))}
@@ -216,10 +217,10 @@ function PersonalMore() {
                 the second line 3px off the bottom edge (a wrap artifact; the
                 frame note keeps Premium unchanged), and one line gives the
                 same 60. */}
-            <p className="text-[10px] text-white/60">AI logging, deeper insights &amp; rewards</p>
+            <p className="text-[10px] text-white/60">{t("AI logging, deeper insights & rewards")}</p>
           </div>
         </div>
-        <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0" />
+        <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0 rtl:-scale-x-100" />
       </button>
 
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />

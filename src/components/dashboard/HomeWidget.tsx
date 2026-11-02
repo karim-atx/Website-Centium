@@ -12,6 +12,7 @@ import { textPx } from "../../theme/textSize";
 import { useIsDark } from "../../hooks/useIsDark";
 import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
 import { Toast } from "../ui/Toast";
+import { t, tk, tn } from "../../i18n/core";
 import { CycleWidget } from "./widgets/CycleWidget";
 import { StepsWidget } from "./widgets/StepsWidget";
 import { WeightWidget } from "./widgets/WeightWidget";
@@ -156,7 +157,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   const pillFg = dark
     ? overGoal ? WATER_DARK.goldPillFg : WATER_DARK.pillFg
     : overGoal ? "#8B5900" : atOrAboveGoal ? "#003874" : "#004376";
-  const subLabel = atOrAboveGoal ? "Goal reached!" : `${((waterGoalMl - water) / 1000).toFixed(1)} L to go`;
+  const subLabel = atOrAboveGoal ? t("Goal reached!") : t("{n} L to go", { n: ((waterGoalMl - water) / 1000).toFixed(1) });
 
   return (
     <div
@@ -252,13 +253,13 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
         className="absolute uppercase"
         style={{ insetInlineStart: 25, top: 19, margin: 0, fontSize: textPx(11), fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
       >
-        Water
+        {t("Water")}
       </p>
       <p
         className="absolute tabular-nums"
         style={{ insetInlineStart: 25, top: 37, margin: 0, fontSize: textPx(29), fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
       >
-        {(water / 1000).toFixed(1)} L
+        {t("{n} L", { n: (water / 1000).toFixed(1) })}
       </p>
       <p
         className="absolute"
@@ -315,8 +316,8 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       <span className="absolute flex items-stretch" style={{ insetInlineEnd: 21, top: 82, gap: 8 }}>
         <span style={{ width: 1, background: "#FFFFFF", flex: "none" }} />
         <span className="flex flex-col justify-center" style={{ fontSize: textPx(11), fontWeight: 500, lineHeight: 1.16, color: goalColor }}>
-          <span>{(waterGoalMl / 1000).toFixed(1)} L</span>
-          <span>Goal</span>
+          <span>{t("{n} L", { n: (waterGoalMl / 1000).toFixed(1) })}</span>
+          <span>{t("Goal")}</span>
         </span>
       </span>
     </div>
@@ -455,13 +456,13 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(143,192,232,.17)",
             <>
-              <p className={`${capsLabel} text-[#3F6F98] dark:text-[#9CC8EE]`}>Water</p>
+              <p className={`${capsLabel} text-[#3F6F98] dark:text-[#9CC8EE]`}>{t("Water")}</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
-                  {(water / 1000).toFixed(1)} L
+                  {t("{n} L", { n: (water / 1000).toFixed(1) })}
                 </span>
                 <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-[#3F6F98] dark:text-[#9CC8EE]">
-                  of {(waterGoalMl / 1000).toFixed(1)} L
+                  {t("of {n} L", { n: (waterGoalMl / 1000).toFixed(1) })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -472,13 +473,13 @@ export const HomeWidget: React.FC<{
                   type="button"
                   onClick={quickAdd}
                   disabled={addingWater}
-                  aria-label={`Add ${WATER_QUICK_ADD_ML} ml of water`}
+                  aria-label={t("Add {n} ml of water", { n: WATER_QUICK_ADD_ML })}
                   className="relative shrink-0 h-[26px] px-2 rounded-full text-[10px] font-bold text-white whitespace-nowrap disabled:opacity-60"
                   style={{ background: "#3F6F98", touchAction: "manipulation" }}
                 >
                   {/* a 44px hit area around the visible pill */}
                   <span aria-hidden className="absolute -inset-[9px]" />
-                  +{WATER_QUICK_ADD_ML} ml
+                  {t("+{n} ml", { n: WATER_QUICK_ADD_ML })}
                 </button>
               </div>
             </>
@@ -493,7 +494,7 @@ export const HomeWidget: React.FC<{
     // ----------------------------------------------------------- Nutrition
     case "nutrition": {
       const onClick = () => navigate("/app/food");
-      if (recoveryModePending) return pendingCard("rgb(var(--th-aea1dc) / .16)", "Food");
+      if (recoveryModePending) return pendingCard("rgb(var(--th-aea1dc) / .16)", t("Food"));
       if (recoverySensitive) {
         // Recovery-sensitive mode: the same neutral summary the Food tab
         // shows — what was logged, never calories or macros.
@@ -503,14 +504,14 @@ export const HomeWidget: React.FC<{
           shell(
             "rgb(var(--th-aea1dc) / .16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <p className="text-[12px] font-semibold text-charcoal leading-snug">
-                  {logged === 0 ? "Nothing logged yet today" : `${logged} item${logged === 1 ? "" : "s"} logged today`}
+                  {logged === 0 ? t("Nothing logged yet today") : tn(logged, "{n} item logged today", "{n} items logged today")}
                 </p>
                 {isLarge && (
                   <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">
-                    Meals, notes, and how you're feeling, no calorie counting required.
+                    {t("Meals, notes, and how you're feeling, no calorie counting required.")}
                   </p>
                 )}
               </div>
@@ -519,9 +520,9 @@ export const HomeWidget: React.FC<{
         );
       }
       const macros = [
-        { label: "Protein", color: "rgb(var(--c-team-lavender-deep))", consumed: totals.protein, target: targets.protein },
-        { label: "Carbs", color: "rgb(var(--c-team-lavender))", consumed: totals.carbs, target: targets.carbs },
-        { label: "Fat", color: "rgb(var(--c-teal))", consumed: totals.fat, target: targets.fat },
+        { label: tk("Protein"), color: "rgb(var(--c-team-lavender-deep))", consumed: totals.protein, target: targets.protein },
+        { label: tk("Carbs"), color: "rgb(var(--c-team-lavender))", consumed: totals.carbs, target: targets.carbs },
+        { label: tk("Fat"), color: "rgb(var(--c-teal))", consumed: totals.fat, target: targets.fat },
       ];
       const kcalLeft = Math.max(0, Math.round(targets.calories - totals.calories));
       if (!isLarge) {
@@ -534,13 +535,13 @@ export const HomeWidget: React.FC<{
           shell(
             "rgb(var(--th-aea1dc) / .16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
                   {Math.round(totals.calories)}
                 </span>
                 <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-primary-deep-text/[0.78] dark:text-primary-deep-text">
-                  of {targets.calories} kcal
+                  {t("of {n} kcal", { n: targets.calories })}
                 </span>
               </div>
               <span className="block h-[5px] rounded-full bg-charcoal/[0.08] overflow-hidden">
@@ -556,13 +557,13 @@ export const HomeWidget: React.FC<{
           "rgb(var(--th-aea1dc) / .16)",
           <>
             <div className="flex items-center justify-between gap-2.5">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
               <span className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
                 <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {Math.round(totals.calories)}
                 </span>
                 <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">
-                  of {targets.calories} kcal
+                  {t("of {n} kcal", { n: targets.calories })}
                   {/* The large widget has the room to say whose number this
                       is; the small one shows the figure alone, and the Food
                       tab it opens onto carries the same note. */}
@@ -573,14 +574,14 @@ export const HomeWidget: React.FC<{
                   )}
                 </span>
               </span>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>{kcalLeft} kcal left</span>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>{t("{n} kcal left", { n: kcalLeft })}</span>
             </div>
             <div className="flex-1 flex flex-col justify-evenly min-h-0 mt-2">
               {macros.map((m) => (
                 <div key={m.label} className="flex items-center gap-[9px]">
                   <span className="flex items-center gap-[5px] w-[62px] shrink-0 text-[10px] font-bold text-charcoal">
                     <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: m.color }} />
-                    {m.label}
+                    {t(m.label)}
                   </span>
                   <span className="flex-1 min-w-0 block h-[13px] rounded-[5px] bg-charcoal/[0.07] overflow-hidden">
                     <span
@@ -589,7 +590,7 @@ export const HomeWidget: React.FC<{
                     />
                   </span>
                   <span className="w-14 shrink-0 text-end text-[9px] text-primary-deep-text/[0.68] dark:text-primary-deep-text tabular-nums">
-                    {Math.round(m.consumed)} / {Math.round(m.target)}g
+                    {t("{consumed} / {target}g", { consumed: Math.round(m.consumed), target: Math.round(m.target) })}
                   </span>
                 </div>
               ))}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { getMfaStatus } from "../../services/mfa";
 import { ShieldCheck, X } from "lucide-react";
+import { t } from "../../i18n/core";
 
 // A nudge, and nothing more.
 //
@@ -69,22 +70,22 @@ export const TwoFactorNudge: React.FC = () => {
         <ShieldCheck size={16} className="text-primary-dark" />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-charcoal">Add an extra layer of security</p>
+        <p className="text-sm font-semibold text-charcoal">{t("Add an extra layer of security")}</p>
         <p className="text-xs text-charcoal-faint leading-relaxed mt-0.5">
-          Turn on two-factor authentication so a password alone can't sign in to your account.
+          {t("Turn on two-factor authentication so a password alone can't sign in to your account.")}
         </p>
         <button
           onClick={() => navigate("/app/settings/two-factor")}
           className="tap mt-2 text-xs font-bold text-primary"
         >
-          Set it up
+          {t("Set it up")}
         </button>
       </div>
       {/* Dismissal is permanent on this device and reversible from Settings ›
           Two-factor authentication. */}
       <button
         onClick={() => setTwoFactorNudgeDismissed(true)}
-        aria-label="Dismiss this reminder"
+        aria-label={t("Dismiss this reminder")}
         className="tap text-charcoal-faint shrink-0"
       >
         <X size={15} />

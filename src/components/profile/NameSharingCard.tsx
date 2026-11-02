@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Activity, UserRound } from "lucide-react";
 import { Toggle } from "../ui/Toggle";
+import { t } from "../../i18n/core";
 import { useApp } from "../../context/AppContext";
 import {
   fetchMyNameSharing,
   fetchMyOutcomeShares,
-  memberNumberLabel,
   shareMyNameWithBusiness,
   shareMyOutcomesWithBusiness,
 } from "../../services/business-members";
@@ -61,7 +61,7 @@ const SharingCard: React.FC<{
       {error && <p className="mt-2 text-xs font-semibold text-status-high">{error}</p>}
       <div className="mt-2 divide-y divide-charcoal/[0.06]">
         {rows.map((row) => {
-          const name = names.get(row.businessId) ?? "A gym or studio";
+          const name = names.get(row.businessId) ?? t("A gym or studio");
           return (
             <div key={row.businessId} className="flex items-center gap-3 min-h-[56px] py-2">
               <span className="w-8 h-8 rounded-[10px] bg-primary-pale flex items-center justify-center shrink-0 text-primary-dark" aria-hidden>
@@ -107,24 +107,24 @@ export const NameSharingCard: React.FC<{ names: Map<string, string> }> = ({ name
     <>
       <SharingCard
         names={names}
-        title="Your name"
-        body="Gyms and studios see your member number unless you choose to show your first name."
+        title={t("Your name")}
+        body={t("Gyms and studios see your member number unless you choose to show your first name.")}
         icon={<UserRound size={16} strokeWidth={1.75} />}
         rows={nameRows}
-        sub={(r) => (r.on ? "Sees your first name" : `Sees you as ${memberNumberLabel(r.memberNumber)}`)}
-        switchLabel={(name) => `Show my first name to ${name}`}
+        sub={(r) => (r.on ? t("Sees your first name") : t("Sees you as Member #{number}", { number: String(r.memberNumber).padStart(4, "0") }))}
+        switchLabel={(name) => t("Show my first name to {name}", { name })}
         save={shareMyNameWithBusiness}
         onSaved={set(setNameRows)}
       />
       {progressRows && (
         <SharingCard
           names={names}
-          title="Your progress"
-          body="Let a gym or studio count your progress in its group reports. It only sees totals for groups of 5 or more, never your own figures or whether you're included."
+          title={t("Your progress")}
+          body={t("Let a gym or studio count your progress in its group reports. It only sees totals for groups of 5 or more, never your own figures or whether you're included.")}
           icon={<Activity size={16} strokeWidth={1.75} />}
           rows={progressRows}
-          sub={(r) => (r.on ? "Counted in their group reports" : "Not shared")}
-          switchLabel={(name) => `Count my progress in ${name}'s group reports`}
+          sub={(r) => (r.on ? t("Counted in their group reports") : t("Not shared"))}
+          switchLabel={(name) => t("Count my progress in {name}'s group reports", { name })}
           save={shareMyOutcomesWithBusiness}
           onSaved={set(setProgressRows)}
         />

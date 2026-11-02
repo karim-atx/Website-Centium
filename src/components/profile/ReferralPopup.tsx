@@ -162,7 +162,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   const shareCode = async () => {
     if (!myCode) return;
     // Points only (BR): no discount is promised to the friend either.
-    const text = `Join me on Centium with my referral code ${myCode}.`;
+    const text = t("Join me on Centium with my referral code {code}.", { code: myCode });
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({ title: "Centium", text });
@@ -251,7 +251,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
     <CentredPopup
       open={open}
       onClose={onClose}
-      title={colleague ? "Refer a colleague" : "Invite friends"}
+      title={colleague ? t("Refer a colleague") : t("Invite friends")}
       titleSize={19}
       className="!px-[18px] !pt-[22px] !pb-[18px]"
       icon={<Gift size={23} strokeWidth={1.75} />}
@@ -261,13 +261,13 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
           // PLAN S4: the chip right of the label (10.5 / 700, primary-pale
           // fill, primary-accent ink, r999, padding 2 8).
           <div className="flex items-center gap-2 mb-2.5">
-            <p className="text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">Rewards</p>
+            <p className="text-[10.5px] leading-[14px] font-bold text-charcoal-faint uppercase tracking-wide">{t("Rewards")}</p>
             <span className="rounded-full bg-primary-pale text-primary-accent text-[10.5px] leading-[14px] font-bold" style={{ padding: "2px 8px" }}>
-              Ambassador
+              {t("Ambassador")}
             </span>
           </div>
         ) : (
-          label("Rewards")
+          label(t("Rewards"))
         )}
         <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
           {/* BR (Karim, 2026-10-27): POINTS ONLY. No bill ever applied the
@@ -276,7 +276,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
               are read by nothing and billing is in the app stores. So neither
               is promised until billing applies them, and the friend row is
               gone. B3: the figure is referral_summary's referrer_points. */}
-          {[{ icon: Sparkles, who: "You", what: rewardLine(summary?.referrerPoints, colleague) }].map((row, i) => (
+          {[{ icon: Sparkles, who: t("You"), what: rewardLine(summary?.referrerPoints, colleague) }].map((row, i) => (
             <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
               {/* MO1.10 (2x frame): a 32 r10 #F0EDF9 tile (x 102–165) with
                   the glyph in #7D67D9 (new popup, decision 22). */}
@@ -295,14 +295,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             they are written to the referrer's points_ledger, shown under "from referrals" on both
             tier cards. What they are for is a tier and, so far, nothing else. */}
         <p className="mt-2 text-[12px] text-charcoal-faint">{t(REFERRAL_RULE_LINE)}</p>
-        {colleague && <p className="mt-2 text-[12px] text-charcoal-faint">Clients and colleagues can both use your code.</p>}
-        <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
+        {colleague && <p className="mt-2 text-[12px] text-charcoal-faint">{t("Clients and colleagues can both use your code.")}</p>}
+        <p className="mt-2 text-[12px] text-charcoal-faint">{t("Points count toward your tier. Rewards for points are coming soon.")}</p>
 
         {/* MO1.10 (2x frame): 14 between the note and "Your code"; the code
             box 48 tall, radius 12, the code 16/800 (cap 11.5) spaced 0.18em;
             the Copy button radius 12. Decision 23 (item 25): the frame's 1px
             #E4E4E3 hairline (charcoal 12% on white) in light, as in dark. */}
-        <div className="mt-3.5">{label("Your code")}</div>
+        <div className="mt-3.5">{label(t("Your code"))}</div>
         {summary && !myCode ? (
           // No code minted yet (referral_summary's code is NULL). Not drawn
           // on the board: one full-width button in the Share code style.
@@ -313,7 +313,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
               disabled={minting}
               className={`tap w-full h-12 rounded-[14px] ${filled} text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40`}
             >
-              {minting ? "Getting your code…" : "Get my code"}
+              {minting ? t("Getting your code…") : t("Get my code")}
             </button>
             {mintError && <p role="alert" className="text-[11px] text-status-high mt-2">{mintError}</p>}
           </>
@@ -331,14 +331,14 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
                   className={`flex-1 min-w-0 h-12 rounded-xl bg-cream-soft flex items-center justify-center text-[13px] text-charcoal-faint ${summaryError ? "" : "animate-skeleton-pulse"}`}
                   aria-busy={!summaryError || undefined}
                 >
-                  {summaryError ? "Unavailable" : ""}
+                  {summaryError ? t("Unavailable") : ""}
                 </span>
               )}
               <button
                 type="button"
                 onClick={() => void copyCode()}
                 disabled={!myCode}
-                aria-label="Copy"
+                aria-label={t("Copy")}
                 className={`tap w-12 h-12 rounded-xl ${filled} flex items-center justify-center shrink-0 disabled:opacity-40`}
               >
                 {copied ? <Check size={18} strokeWidth={1.75} /> : <Copy size={18} strokeWidth={1.75} />}
@@ -348,7 +348,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
               <p role="alert" className="text-[11px] text-status-high mt-2">
                 {summaryError}{" "}
                 <button type="button" onClick={loadSummary} className="tap font-bold underline">
-                  Try again
+                  {t("Try again")}
                 </button>
               </p>
             )}
@@ -360,7 +360,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
               className={`tap mt-2 w-full h-12 rounded-[14px] ${filled} text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40`}
             >
               <Share size={16} strokeWidth={1.75} aria-hidden />
-              {copied ? "Code copied" : "Share code"}
+              {copied ? t("Code copied") : t("Share code")}
             </button>
           </>
         )}
@@ -398,7 +398,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             }}
             className="tap mt-1 text-[12px] font-bold text-primary-accent"
           >
-            See points history
+            {t("See points history")}
           </button>
         )}
 
@@ -416,9 +416,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
           </div>
         ) : ambEntry ? (
           <p className="mt-3 text-[12px] text-charcoal-faint">
-            Share Centium often?{" "}
+            {t("Share Centium often?")}{" "}
             <button type="button" onClick={() => setApplyOpen(true)} className="tap text-[12px] font-bold text-primary-accent">
-              Apply to be an ambassador
+              {t("Apply to be an ambassador")}
             </button>
           </p>
         ) : null}
@@ -426,7 +426,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
         {/* MO1.10 (2x frame): the rule 16 under the block above (y 1290 →
             1330) and 14 above "Have a code?". */}
         <div className="mt-4 pt-3.5 border-t border-charcoal/[0.06]">
-          {label("Have a code?")}
+          {label(t("Have a code?"))}
           {appliedMessage ? (
             // MO1.10.1: the success row replaces the code box.
             // MO1.10.1 (2x frame): 48 tall (y 1408–1503), radius 12, #E4F0EE
@@ -442,7 +442,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
             // in the field's place, then Cancel / Confirm (48, r14, gap 8).
             <div className="animate-fade-slide-up">
               <div className="min-h-12 rounded-xl bg-primary-pale px-3.5 py-2.5 flex flex-col justify-center">
-                <p className="text-sm font-semibold text-primary-deep-text">{invite.referrerFirstName} invited you</p>
+                <p className="text-sm font-semibold text-primary-deep-text">{t("{name} invited you", { name: invite.referrerFirstName })}</p>
                 <p className="text-xs text-primary-dark">{previewOfferLine(invite)}</p>
               </div>
               <div className="flex gap-2 mt-2">
@@ -452,7 +452,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
                   disabled={busy}
                   className="tap flex-1 h-12 rounded-[14px] bg-primary-pale text-primary-accent text-[14px] font-bold disabled:opacity-60"
                 >
-                  Cancel
+                  {t("Cancel")}
                 </button>
                 <button
                   type="button"
@@ -460,7 +460,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
                   disabled={busy}
                   className={`tap flex-1 h-12 rounded-[14px] text-[14px] font-bold disabled:opacity-60 ${filled}`}
                 >
-                  {busy ? "Applying…" : "Confirm"}
+                  {busy ? t("Applying…") : t("Confirm")}
                 </button>
               </div>
             </div>
@@ -473,8 +473,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
                   setResult(null);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && !busy && void lookUp()}
-                placeholder="Enter a code"
-                aria-label="A friend's referral code"
+                placeholder={t("Enter a code")}
+                aria-label={t("A friend's referral code")}
                 aria-invalid={(result && !result.success) || undefined}
                 // MO1.10 (2x frame): 48 tall, radius 12, #F5F5F6 (y 1408–1503);
                 // MO1.10.2: the border turns danger on a refusal. Decision 23
@@ -496,7 +496,7 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
                 disabled={!codeDraft.trim() || busy}
                 className="tap h-12 px-5 rounded-xl bg-primary-pale text-primary-accent text-[13px] font-bold shrink-0 disabled:pointer-events-none"
               >
-                {busy ? "…" : "Apply"}
+                {busy ? "…" : t("Apply")}
               </button>
             </div>
           )}

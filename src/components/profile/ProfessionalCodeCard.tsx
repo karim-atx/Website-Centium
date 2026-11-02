@@ -6,6 +6,7 @@ import { CtaButton } from "../ui/PinnedCta";
 import { useApp } from "../../context/AppContext";
 import { previewClientCode, redeemClientCode, type ClientCodePreview } from "../../services/redemption";
 import type { ProfessionalSubtype } from "../../types";
+import { t } from "../../i18n/core";
 
 // MO1.5 "Professionals" card (R15, batch C, C7): connect with a professional
 // by the client code they generated, from Profile. Until now that was only
@@ -34,10 +35,10 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
     const result = await previewClientCode(entered);
     setBusy(false);
     if (result.status === "error") return setNote({ text: result.message });
-    if (result.status === "not_found") return setNote({ text: "Code not found. Check it and try again." });
-    if (result.data.redeemed) return setNote({ text: "That code has already been used." });
+    if (result.status === "not_found") return setNote({ text: t("Code not found. Check it and try again.") });
+    if (result.data.redeemed) return setNote({ text: t("That code has already been used.") });
     if (result.data.expiresAt && new Date(result.data.expiresAt).getTime() < Date.now()) {
-      return setNote({ text: "That code has expired. Ask for a new one." });
+      return setNote({ text: t("That code has expired. Ask for a new one.") });
     }
     setFound(result.data);
   };
@@ -60,7 +61,7 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
         linkedProfessionalSubtype: found.professionalSubtype as ProfessionalSubtype,
       });
     }
-    setNote({ text: `You're connected with ${found.professionalFirstName}. Nothing is shared until you turn it on.`, ok: true });
+    setNote({ text: t("You're connected with {name}. Nothing is shared until you turn it on.", { name: found.professionalFirstName }), ok: true });
     setFound(null);
     setCode("");
     onConnected();
@@ -74,18 +75,18 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
       <CentredPopup
         open={!!found}
         onClose={() => !busy && setFound(null)}
-        title={`Connect with ${found?.professionalFirstName ?? "this professional"}?`}
+        title={found?.professionalFirstName ? t("Connect with {name}?", { name: found.professionalFirstName }) : t("Connect with this professional?")}
         icon={<UserPlus size={22} />}
-        body="They'll see that you're their client. Nothing else is shared until you turn it on."
+        body={t("They'll see that you're their client. Nothing else is shared until you turn it on.")}
       >
-        <CtaButton size="page" label={busy ? "Connecting…" : "Connect"} disabled={busy} onClick={() => void connect()} />
+        <CtaButton size="page" label={busy ? t("Connecting…") : t("Connect")} disabled={busy} onClick={() => void connect()} />
         <button
           type="button"
           onClick={() => setFound(null)}
           disabled={busy}
           className="tap mt-3 w-full min-h-11 text-center text-sm font-semibold text-charcoal-soft"
         >
-          Cancel
+          {t("Cancel")}
         </button>
       </CentredPopup>
       <div className="flex items-center gap-2">
@@ -96,14 +97,14 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
             setNote(null);
           }}
           onKeyDown={(e) => e.key === "Enter" && void check()}
-          placeholder="Professional code"
-          aria-label="Professional code"
+          placeholder={t("Professional code")}
+          aria-label={t("Professional code")}
           // Foundations Inputs (MO1.5 row 4, as the member code field):
           // height 44, radius 12, padding 0 14, value 14/600.
           className="flex-1 min-w-0 h-11 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm font-semibold text-charcoal placeholder:font-normal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <Button onClick={() => void check()} disabled={!code.trim() || busy}>
-          {busy ? "…" : "Connect"}
+          {busy ? "…" : t("Connect")}
         </Button>
       </div>
       {note ? (
@@ -112,7 +113,7 @@ export const ProfessionalCodeCard: React.FC<{ onConnected: () => void; className
         </p>
       ) : (
         <p className="mt-2.5 text-xs text-charcoal-faint">
-          Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.
+          {t("Got a code from a trainer, dietitian or doctor? Enter it here to connect and start sharing data.")}
         </p>
       )}
     </div>
