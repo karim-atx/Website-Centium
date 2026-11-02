@@ -70,23 +70,16 @@ const food: Catalogue = {
   "You're offline. Your diary will load when you reconnect.": "أنت غير متصل. سيُحمَّل سجلك عند عودة الاتصال.",
   "Today, loading": "اليوم، جارٍ التحميل",
   "Nothing logged yet today": "لم تسجّل شيئًا اليوم بعد",
-  "{n} items logged today": {
-    zero: "لا عناصر مسجّلة اليوم",
-    one: "عنصر واحد مسجّل اليوم",
-    two: "عنصران مسجّلان اليوم",
-    few: "{n} عناصر مسجّلة اليوم",
-    many: "{n} عنصرًا مسجّلًا اليوم",
-    other: "{n} عنصر مسجّل اليوم",
-  },
+  "{n} items logged today": { zero: "لم يُسجَّل شيء اليوم", one: "سُجّل عنصر واحد اليوم", two: "سُجّل عنصران اليوم", few: "سُجّلت {n} عناصر اليوم", many: "سُجّل {n} عنصرًا اليوم", other: "سُجّل {n} عنصر اليوم" },
   // note: recovery-sensitive wording (no numbers shown)
-  "Meals, notes, and how you're feeling, no calorie counting required.": "الوجبات والملاحظات وشعورك، من دون الحاجة إلى عدّ السعرات.",
+  "Meals, notes, and how you're feeling, no calorie counting required.": "الوجبات والملاحظات وشعورك، من دون حساب السعرات.",
   "Open Nutrient Summary": "فتح ملخّص العناصر الغذائية",
   // note: health wording (calorie target)
   "of {n} kcal": "من {n} سعرة",
   // note: health wording (calories over the target)
   "{n} over": "{n} فوق الهدف",
   // note: health wording (calories left)
-  "{n} left": "{n} متبقية",
+  "{n} left": "متبقٍّ {n}",
   "{value} / {target}g": "{value} / {target} غ",
   // note: health wording (reference intake, shown under the calorie target)
   "General reference: add your details for a personal target": "مرجع عام: أضف بياناتك للحصول على هدف شخصي",
@@ -253,7 +246,7 @@ const food: Catalogue = {
   "1 can (330 ml)": "علبة واحدة (330 مل)",
   "Could not add that product.": "تعذّرت إضافة هذا المنتج.",
   "Add to catalog": "إضافة إلى القائمة",
-  "Scan again": "المسح مرة أخرى",
+  "Scan again": "إعادة المسح",
   "Enter it myself": "إدخاله بنفسي",
   "per 100 g": "لكل 100 غ",
   "Use this product": "استخدام هذا المنتج",
@@ -405,7 +398,7 @@ const food: Catalogue = {
   "Per serving. Leave anything you do not have blank.": "لكل حصة. اترك فارغًا كل ما لا تعرفه.",
   "{n} set": "معبّأ: {n}",
   Traditional: "تقليدي",
-  Drinks: "مشروبات",
+  Drinks: "المشروبات",
   Restaurant: "مطعم",
   Homemade: "منزلي",
   Ingredients: "المكوّنات",

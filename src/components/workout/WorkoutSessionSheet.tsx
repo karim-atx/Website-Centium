@@ -830,7 +830,7 @@ export const WorkoutSessionSheet: React.FC<{
               className="flex items-center uppercase"
               style={{ padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
             >
-              <span style={{ width: 58 }}>{t("Set")}</span>
+              <span style={{ width: 58 }}>{tx("Set", "workout")}</span>
               <span className="flex-1">{t("Weight (kg)")}</span>
               <span className="flex-1" style={{ marginInlineStart: 8 }}>{t("Reps")}</span>
               <span style={{ width: 75 }} />

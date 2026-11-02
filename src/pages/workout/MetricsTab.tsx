@@ -421,7 +421,7 @@ export default function MetricsTab() {
 
       <MetricCard
         icon="/metrics/balance.png"
-        title={t("Balance")}
+        title={tx("Balance", "training")}
         right={
           totalSets === 0 ? (
             <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("No sets yet")}</span>

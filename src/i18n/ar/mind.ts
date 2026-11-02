@@ -31,7 +31,7 @@ export const FILES: string[] = [
 // Achievements «الإنجازات», Meditation «التأمل», as the app's navigation
 // says. A streak is «سلسلة»; a journal entry «تدوينة» and a folder «مجلد»;
 // a badge «شارة»; an achievement's level «المستوى» (Bronze «برونزي», Silver
-// «فضي», Gold «ذهبي»); the points tier «فئة» (the tier names come from the
+// «فضي», Gold «ذهبي»); the points tier «مستوى» (as the member screens; the tier names come from the
 // database and stay English, like achievement titles and descriptions and
 // the meditation, pose and breathing content, F13). The breathing phases
 // («شهيق»، «ثبات»، «زفير») are UI words, translated; the pattern names and
@@ -43,8 +43,8 @@ const mind: Catalogue = {
   // == Mind hub ==
   "Habits, journalling & meditation": "العادات واليوميات والتأمل",
   Achievements: "الإنجازات",
-  "Written today": "كُتبت تدوينة اليوم",
-  "Not written today": "لم تُكتب تدوينة اليوم",
+  "Written today": "كتبت اليوم",
+  "Not written today": "لم تكتب اليوم",
   "{a} of {b}": "{a} من {b}",
   // note: wellbeing (meditation time), neutral.
   "{time} today": "{time} اليوم",
@@ -54,7 +54,7 @@ const mind: Catalogue = {
   "Today's habits": "عادات اليوم",
   "done today": "أُنجزت اليوم",
   days: { zero: "يوم", one: "يوم", two: "يومان", few: "أيام", many: "يومًا", other: "يوم" },
-  "Personal best": "أفضل رقم شخصي",
+  "Personal best": "رقم قياسي شخصي",
   "View all habits": "عرض كل العادات",
   "Auto-tracked": "تتبّع تلقائي",
   Logging: "التسجيل",
@@ -209,13 +209,13 @@ const mind: Catalogue = {
   // == Achievements ==
   "Loading your achievements…": "جارٍ تحميل إنجازاتك…",
   "You're offline. Showing your last saved achievements.": "أنت غير متصل. نعرض آخر إنجازات محفوظة لديك.",
-  "{tier} tier": "فئة {tier}",
+  "{tier} tier": "مستوى {tier}",
   pts: "نقطة",
   "+{n} pts": "+{n} نقطة",
   "of {n}": "من {n}",
   earned: "مُحقَّقة",
   "{n} to {tier}": "{n} حتى {tier}",
-  "Highest tier": "أعلى فئة",
+  "Highest tier": "أعلى مستوى",
   "Rewards for your points are coming soon.": "مكافآت نقاطك قادمة قريبًا.",
   "Recently unlocked": "فُتحت مؤخرًا",
   ", Locked": "، مقفلة",
@@ -231,7 +231,7 @@ const mind: Catalogue = {
   "Achievement unlocked: {title}. Open details": "إنجاز جديد: {title}. فتح التفاصيل",
   Bronze: "برونزي",
   Silver: "فضي",
-  Consistency: "المواظبة",
+  Consistency: "الالتزام",
   Explorer: "الاستكشاف",
 
   // == Meditation ==

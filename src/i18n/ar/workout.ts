@@ -306,7 +306,7 @@ const workout: Catalogue = {
   "Main set type": "نوع المجموعة الرئيسية",
   Steady: "ثابت",
   Intervals: "فترات متقطعة",
-  Repeats: "عدد المرات",
+  Repeats: "التكرار",
   "Interval repeats": "عدد مرات الفترات",
   Work: "فترة الجهد",
   "Cool-down": "التهدئة",
@@ -502,7 +502,7 @@ const workout: Catalogue = {
   "{n} of {total}": "{n} من {total}",
   "Swapped for {name}": "استُبدل بـ{name}",
   "{name} sees the swap.": "يرى {name} الاستبدال.",
-  Set: "المجموعة",
+  Set: "تحديد",
   "Weight (kg)": "الوزن (kg)",
   "{n} asked for · the rest are yours if you want them.": "المطلوب: {n} · والباقي لك إن أردت.",
   "Add set": "إضافة مجموعة",
@@ -677,11 +677,11 @@ const workout: Catalogue = {
   "Options for {name}": "خيارات {name}",
   "Drag {name}": "سحب {name}",
   "Select {name}": "تحديد {name}",
-  "Move up": "نقل للأعلى",
-  "Move down": "نقل للأسفل",
+  "Move up": "نقل لأعلى",
+  "Move down": "نقل لأسفل",
   "Settings for {name}": "إعدادات {name}",
   "Pick exercises that sit next to each other.": "اختر تمارين متجاورة.",
-  "{n} selected": "المحدد: {n}",
+  "{n} selected": "تم اختيار {n}",
   "Group as…": "تجميع كـ…",
   "Group|action": "تجميع",
   "{n} blocks": { zero: "لا كتل", one: "كتلة واحدة", two: "كتلتان", few: "{n} كتل", many: "{n} كتلة", other: "{n} كتلة" },
@@ -791,7 +791,7 @@ const workout: Catalogue = {
   "One-rep maxes": "أقصى وزن لتكرار واحد",
   "All {n}": "الكل ({n})",
   "Share your {name} personal best": "شارك رقمك القياسي في {name}",
-  Balance: "التوازن",
+  Balance: "الرصيد",
   "No sets yet": "لا مجموعات بعد",
   "{group}-heavy lately": "تركيز على {group} مؤخرًا",
   "Full breakdown": "التفصيل الكامل",
@@ -815,6 +815,9 @@ const workout: Catalogue = {
   "Reading deleted.": "حُذفت القراءة.",
   // note: recovery-sensitive mode (safety wording; hooks/useHideNumbers RECOVERY_HIDDEN_LINE)
   "Hidden in recovery-sensitive mode. You can change this in Profile.": "مخفي في الوضع المراعي للتعافي. يمكنك تغيير ذلك من الملف الشخصي.",
+  // Round G clash fix: the same English with another meaning in this area.
+  "Balance|training": "التوازن",
+  "Set|workout": "المجموعة",
 };
 
 export default workout;
