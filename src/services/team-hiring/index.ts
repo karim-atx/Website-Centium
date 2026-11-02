@@ -236,7 +236,7 @@ export async function fetchMyWork(): Promise<MarketResult<WorkItem[]>> {
         seen.add(key);
         const dur = num(s.duration_min);
         const cap = num(s.capacity);
-        const tail = [dur != null ? t("{n} min", { n: dur }) : null, cap != null ? tn(cap, "{n} spot", "{n} spots") : null].filter(Boolean);
+        const tail = [dur != null ? tn(dur, "{n} min", "{n} min") : null, cap != null ? tn(cap, "{n} spot", "{n} spots") : null].filter(Boolean);
         classes.push({
           title: str(s.title) ?? "",
           weekday: type === "class_slot" ? null : day,

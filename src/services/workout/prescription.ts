@@ -57,7 +57,7 @@ export function formatSeconds(total: number): string {
   if (total < 60) return t("{n} s", { n: total });
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
-  return seconds === 0 ? t("{n} min", { n: minutes }) : t("{m} min {s} s", { m: minutes, s: seconds });
+  return seconds === 0 ? tn(minutes, "{n} min", "{n} min") : t("{m} min {s} s", { m: minutes, s: seconds });
 }
 
 /** Metres as "800 m" or "5 km" — km only when it divides exactly. */
@@ -135,7 +135,7 @@ export function formatEndurancePlan(plan: EndurancePlan): string {
  */
 function formatLegacyCardio(ex: Exercise): string {
   const parts: string[] = [];
-  if (ex.cardioDurationMin) parts.push(t("{n} min", { n: ex.cardioDurationMin }));
+  if (ex.cardioDurationMin) parts.push(tn(ex.cardioDurationMin, "{n} min", "{n} min"));
   if (ex.cardioDistanceKm) parts.push(t("{n} km", { n: ex.cardioDistanceKm }));
   if (ex.cardioPaceMinPerKm) parts.push(t("@ {pace} min/km", { pace: ex.cardioPaceMinPerKm }));
   if (ex.cardioInclinePct) parts.push(t("{n}% incline", { n: ex.cardioInclinePct }));
