@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import clsx from "clsx";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Clock3, Sparkles } from "lucide-react";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { ObStatus, ObSkeleton, ObTip, Shapes } from "../shell";
 import { BizFrame, type BizFooter } from "./BizFrame";
@@ -59,7 +59,13 @@ export const StatusLoading: React.FC<{ footer: BizFooter }> = ({ footer }) => (
   </BizFrame>
 );
 
-export const PendingScreen: React.FC<{ name: string; submittedAt: string | null; footer: BizFooter }> = ({ name, submittedAt, footer }) => {
+export const PendingScreen: React.FC<{
+  name: string;
+  submittedAt: string | null;
+  footer: BizFooter;
+  /** Round G1 fixes: the plan's first charge is still unpaid (awaiting_payment, only with business_plans_on), so approval waits for it. */
+  planUnpaid?: { line: string | null } | null;
+}> = ({ name, submittedAt, footer, planUnpaid }) => {
   const s = submittedLabel(submittedAt);
   return (
     <BizFrame footer={footer}>
@@ -70,6 +76,13 @@ export const PendingScreen: React.FC<{ name: string; submittedAt: string | null;
         title={t("We're reviewing {name}", { name })}
         body={t("Usually 1 to 2 working days. We'll message and email you.")}
       />
+      {/* undrawn (Round G, no handover) */}
+      {planUnpaid && (
+        <ObTip icon={Clock3} heading={t("Your plan payment is pending.")} tone="warn" margin="0 0 16px" role="status">
+          {t("Your verification is approved once your plan is paid.")}
+          {planUnpaid.line ? ` ${planUnpaid.line}` : ""}
+        </ObTip>
+      )}
       <Timeline
         items={[
           { title: t("Submitted"), desc: s.line, value: s.day, state: "done" },

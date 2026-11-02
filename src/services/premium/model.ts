@@ -75,6 +75,8 @@ export interface MyPremium {
   monthlyPrice: number | null;
   yearlyPrice: number | null;
   trialDays: number | null;
+  /** The professional's first name or the gym's name, for Premium through them (G1 fixes); else null. */
+  fromName: string | null;
 }
 
 type Row = Record<string, unknown>;
@@ -133,6 +135,7 @@ export function parseMyPremium(data: unknown): MyPremium {
     monthlyPrice: numOrNull(r?.monthly_price),
     yearlyPrice: numOrNull(r?.yearly_price),
     trialDays: numOrNull(r?.trial_days),
+    fromName: strOrNull(r?.from_name)?.trim() ?? null,
   };
 }
 
@@ -141,7 +144,7 @@ export function parseMyPremium(data: unknown): MyPremium {
 /** The member Premium work and the passes: only when premium_on is known to be true. */
 export const premiumOn = (p: Pick<MyPremium, "premiumOn"> | Pick<Switches, "premiumOn"> | null | undefined): boolean => p?.premiumOn === true;
 
-/** The plan levels, pay-first and hiring credits: only when business_plans_on is known to be true. */
+/** The plan levels, choosing a level first and hiring credits: only when business_plans_on is known to be true. */
 export const businessPlansOn = (s: Pick<Switches, "businessPlansOn"> | null | undefined): boolean => s?.businessPlansOn === true;
 
 /** The Premium badge (decision G9): the member's own screens and share cards, with the switch on and Premium held. */
@@ -217,24 +220,24 @@ export const trialSeenKey = (userId: string) => `centium-premium-trial-seen:${us
 // ---- the member's status card (EA) ----
 
 export type MemberStatus =
-  | { kind: "professional_pass"; endsAt: string | null }
-  | { kind: "gym_pass"; endsAt: string | null }
+  | { kind: "professional_pass"; endsAt: string | null; fromName: string | null }
+  | { kind: "gym_pass"; endsAt: string | null; fromName: string | null }
   | { kind: "comp"; endsAt: string | null }
   | { kind: "store"; endsAt: string | null; isTrial: boolean }
   | null;
 
 /**
  * Which status card the member sees, if any. Only with the switch on and
- * Premium held. my_premium() carries no giver's name (a Database need), so
- * the card never invents one.
+ * Premium held. A pass carries the giver's name from my_premium().from_name
+ * (G1 fixes), or null, and then the card falls back to today's wording.
  */
 export function memberStatus(p: MyPremium | null | undefined): MemberStatus {
   if (!showPremiumBadge(p) || !p) return null;
   switch (p.source) {
     case "professional_pass":
-      return { kind: "professional_pass", endsAt: p.endsAt };
+      return { kind: "professional_pass", endsAt: p.endsAt, fromName: p.fromName };
     case "gym_pass":
-      return { kind: "gym_pass", endsAt: p.endsAt };
+      return { kind: "gym_pass", endsAt: p.endsAt, fromName: p.fromName };
     case "admin_comp":
       return { kind: "comp", endsAt: p.endsAt };
     case "store":
@@ -244,8 +247,27 @@ export function memberStatus(p: MyPremium | null | undefined): MemberStatus {
   }
 }
 
-/** The status card's title. Never a price on a pass. */
+/**
+ * The giver line on a pass: "Premium from {name}", or null (no name, or not
+ * a pass). The name is user data, so the card renders it in <bdi>
+ * (giverLineParts splits the sentence around it).
+ */
+export function memberStatusGiver(s: NonNullable<MemberStatus>): string | null {
+  if ((s.kind === "professional_pass" || s.kind === "gym_pass") && s.fromName) return s.fromName;
+  return null;
+}
+
+/** "Premium from {name}" split around the name, in the app's language, so the name can sit in <bdi>. */
+export function giverLineParts(): { before: string; after: string } {
+  const mark = "\u0000";
+  const [before = "", after = ""] = t("Premium from {name}", { name: mark }).split(mark);
+  return { before, after };
+}
+
+/** The status card's title. Never a price on a pass. With a giver's name it reads "Premium from {name}". */
 export function memberStatusTitle(s: NonNullable<MemberStatus>): string {
+  const giver = memberStatusGiver(s);
+  if (giver) return t("Premium from {name}", { name: giver });
   switch (s.kind) {
     case "professional_pass":
       return t("Premium from your professional");
@@ -369,8 +391,15 @@ export interface PlanLevelPrice {
 
 export interface PlanLevel {
   businessPlansOn: boolean;
-  mustPayFirst: boolean;
+  /** A business created under the switch must choose a level before it goes on onboarding (G1 fixes). */
+  mustChooseLevel: boolean;
   planActive: boolean;
+  /** A level is chosen and its plan charge awaits payment (pending or failed). */
+  awaitingPayment: boolean;
+  pendingChargeId: string | null;
+  pendingAmount: number | null;
+  pendingSeatBlocks: number | null;
+  pendingBillingPeriod: PlanPeriod | null;
   seatBlocks: number | null;
   billingPeriod: PlanPeriod | null;
   renewsAt: string | null;
@@ -397,8 +426,13 @@ export function parseLevel(data: unknown): PlanLevel | null {
   if (!r) return null;
   return {
     businessPlansOn: bool(r.business_plans_on),
-    mustPayFirst: bool(r.must_pay_first),
+    mustChooseLevel: bool(r.must_choose_level),
     planActive: bool(r.plan_active),
+    awaitingPayment: bool(r.awaiting_payment),
+    pendingChargeId: strOrNull(r.pending_charge_id),
+    pendingAmount: numOrNull(r.pending_amount),
+    pendingSeatBlocks: numOrNull(r.pending_seat_blocks),
+    pendingBillingPeriod: period(r.pending_billing_period),
     seatBlocks: numOrNull(r.seat_blocks),
     billingPeriod: period(r.billing_period),
     renewsAt: strOrNull(r.renews_at),
@@ -418,11 +452,76 @@ export function planLevelName(p: Pick<PlanLevelPrice, "seatBlocks" | "seats">, b
 /** The wording key recorded with "Start now" (purchase_confirmations). */
 export const PLAN_START_WORDING_KEY = "business_plan.start_now";
 
-/** Pay-first: the business must start its plan before it can go live. Only on the switch. */
-export const mustPayFirst = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && l.mustPayFirst;
+/** A business created under the switch chooses a level before the venue and verification steps. Only on the switch. */
+export const mustChooseLevel = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && l.mustChooseLevel;
+
+/** A level is chosen and its first plan charge awaits payment; verification approval waits for it. Only on the switch. */
+export const awaitingPlanPayment = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && !l.planActive && l.awaitingPayment;
 
 /** The gentle renewal card. */
 export const choiceDue = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && l.choiceDue;
+
+/**
+ * The open plan charge's level and amount: "Base + 5 seats · $89, billed
+ * monthly". The level's seat count comes from business_plan_level_prices()
+ * when it has loaded (else "Base + 1 seat block"). Null with nothing known.
+ */
+export function pendingPlanLine(l: PlanLevel | null | undefined, prices: PlanLevelPrice[] | null | undefined): string | null {
+  if (!l) return null;
+  const list = prices ?? [];
+  const base = list.find((p) => p.seatBlocks === 0) ?? null;
+  const blocks = l.pendingSeatBlocks;
+  const row = blocks === null ? null : (list.find((p) => p.seatBlocks === blocks) ?? { seatBlocks: blocks, seats: 0 });
+  const name = row ? planLevelName(row, row.seats > 0 ? base : null) : null;
+  const price = formatPremiumPrice(l.pendingAmount);
+  const amount = price
+    ? l.pendingBillingPeriod === "monthly"
+      ? t("{price}, billed monthly", { price })
+      : l.pendingBillingPeriod === "yearly"
+        ? t("{price}, billed yearly", { price })
+        : price
+    : null;
+  const line = [name, amount].filter(Boolean).join(" · ");
+  return line || null;
+}
+
+/** The business home's plan card: choose a level, the first payment pending, or the renewal choice. Null: no card (today). */
+export type PlanHomeCard = "choose" | "awaiting_payment" | "choice_due" | null;
+
+export function planHomeCard(l: PlanLevel | null | undefined): PlanHomeCard {
+  if (mustChooseLevel(l)) return "choose";
+  if (awaitingPlanPayment(l)) return "awaiting_payment";
+  if (choiceDue(l)) return "choice_due";
+  return null;
+}
+
+/**
+ * Business onboarding's plan step (Karim, G fixes): shown in front of the
+ * venue ("Where") step and every step after it while the business must
+ * choose a level, and kept on screen after "Start now" until the owner
+ * carries on, so the open charge and how to pay it are shown.
+ *
+ * - "plan": the plan step;
+ * - "loading": the plan step's skeleton (the switch is on for the owner and
+ *   the business's answer is still coming);
+ * - "skip": today's step. The switch off, unknown or loading, no business
+ *   row yet (offline), or a level already chosen.
+ */
+export type PlanStepGate = "plan" | "loading" | "skip";
+
+export function onboardingPlanStep(input: {
+  switches: Pick<Switches, "businessPlansOn"> | null | undefined;
+  businessId: string | null | undefined;
+  level: PlanLevel | null | undefined;
+  levelLoading: boolean;
+  /** "Start now" succeeded on this screen and the owner hasn't carried on yet. */
+  justChosen: boolean;
+}): PlanStepGate {
+  if (input.justChosen) return "plan";
+  if (!input.businessId) return "skip";
+  if (input.levelLoading) return businessPlansOn(input.switches) ? "loading" : "skip";
+  return mustChooseLevel(input.level) ? "plan" : "skip";
+}
 
 // ---- hiring credits ----
 
@@ -470,11 +569,15 @@ export function premiumCodeMessage(code: string | null | undefined, opts: { deta
     case "ATXQ1":
       return t("That's part of Centium Premium.");
     case "ATXQ3":
-      return /venue/i.test(opts.message ?? "")
-        ? t("Start your business plan before you add a venue.")
-        : /verification/i.test(opts.message ?? "")
-          ? t("Start your business plan before you submit your verification.")
-          : t("Start your business plan first.");
+      // G1 fixes: "choose your business plan before you %" (a venue or the
+      // verification), and approval waits for the plan to be paid.
+      return /\bnot paid\b/i.test(opts.message ?? "")
+        ? t("Your verification is approved once your plan is paid.")
+        : /venue/i.test(opts.message ?? "")
+          ? t("Choose your business plan before you add a venue.")
+          : /verification/i.test(opts.message ?? "")
+            ? t("Choose your business plan before you submit your verification.")
+            : t("Choose your business plan first.");
     case "ATXQ4":
       return t("No hiring credit free. A role offer needs one.");
     case "ATXQ6":
