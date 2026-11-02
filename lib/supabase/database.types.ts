@@ -30251,6 +30251,21 @@ export type Database = {
           total_count: number
         }[]
       }
+      my_points_ledger: {
+        Args: { p_before?: string; p_before_id?: string; p_limit?: number }
+        Returns: {
+          amount: number
+          created_at: string
+          day: string
+          description: string
+          expires_at: string
+          id: string
+          multiplier: number
+          ref_label: string
+          reversed_source: Database["public"]["Enums"]["points_source"]
+          source: Database["public"]["Enums"]["points_source"]
+        }[]
+      }
       my_points_summary: {
         Args: never
         Returns: {

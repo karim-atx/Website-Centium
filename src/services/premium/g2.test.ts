@@ -33,6 +33,7 @@ import {
   showWaitlistPriority,
 } from "./g2.ts";
 import { premiumCodeMessage, type FreeLimits, type MyPremium } from "./model.ts";
+import { parseLedgerRows } from "../points/pointsModel.ts";
 
 const LIMITS: FreeLimits = { history_days: 14, barcode_scans_per_day: 3, own_routines: 3, habits: 3, recipes: 10, locked_journal_folders: 1 };
 const base: MyPremium = {
@@ -47,6 +48,7 @@ const base: MyPremium = {
   monthlyPrice: 9.99,
   yearlyPrice: 99.99,
   trialDays: 7,
+  fromName: null,
 };
 const off: MyPremium = { ...base, premiumOn: false, limits: null, mayPromptUpgrade: false };
 const premium: MyPremium = { ...base, premium: true, limits: null, mayPromptUpgrade: false };
@@ -179,6 +181,17 @@ test("2x points: a doubled row only with the switch on; the quiet line for a fre
   assert.equal(showDoubled(base, 2), true);
   assert.equal(showDoubled(off, 2), false);
   assert.equal(showDoubled(base, 1), false);
+  // G fixes: the mark reads my_points_ledger's own multiplier, row by row.
+  const [doubled, single, older] = parseLedgerRows([
+    { id: "a", amount: 20, source: "log_food", created_at: "2026-11-02T10:00:00Z", multiplier: 2 },
+    { id: "b", amount: 10, source: "log_food", created_at: "2026-11-01T10:00:00Z", multiplier: 1 },
+    { id: "c", amount: 10, source: "log_food", created_at: "2026-10-31T10:00:00Z" },
+  ]);
+  assert.deepEqual([doubled.multiplier, single.multiplier, older.multiplier], [2, 1, 1]);
+  assert.equal(showDoubled(base, doubled.multiplier), true);
+  assert.equal(showDoubled(base, single.multiplier), false);
+  assert.equal(showDoubled(base, older.multiplier), false);
+  assert.equal(showDoubled(off, doubled.multiplier), false);
   assert.equal(showDoublePointsLine(base, false), true);
   assert.equal(showDoublePointsLine(base, true), false);
   assert.equal(showDoublePointsLine(premium, false), false);
