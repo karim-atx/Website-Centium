@@ -108,7 +108,7 @@ const findpros: Catalogue = {
   "Coaches and instructors": "المدرّبون والمرشدون",
   "personal trainer": "مدرّب شخصي",
   dietitian: "أخصائي تغذية علاجية",
-  physiotherapist: "أخصائي علاج فيزيائي",
+  physiotherapist: "أخصائي العلاج الفيزيائي",
   doctor: "طبيب",
   nutritionist: "أخصائي تغذية",
   "coach or instructor": "مدرّب أو مرشد",
