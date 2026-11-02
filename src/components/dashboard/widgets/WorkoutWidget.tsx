@@ -197,7 +197,7 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   const muscles = Array.from(new Set((routine?.exercises ?? []).flatMap((e) => e.muscleGroups ?? [])))
     .slice(0, 2)
     .map((m) => MUSCLE_GROUP_LABEL[m]);
-  const line = [tn(exercises, "{n} exercise", "{n} exercises"), minutes ? t("{n} min", { n: minutes }) : null].filter(Boolean).join(" · ");
+  const line = [tn(exercises, "{n} exercise", "{n} exercises"), minutes ? tn(minutes, "{n} min", "{n} min") : null].filter(Boolean).join(" · ");
   const lineLarge = [line, muscles.length ? muscles.join(t(", ")) : null].filter(Boolean).join(" · ");
 
   // Ring: exercises done of the session's exercises. Done: all; running or

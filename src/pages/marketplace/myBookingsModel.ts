@@ -14,7 +14,7 @@
 import { formatShortDate } from "../../utils/date";
 import { formatPrice } from "../../utils/price";
 import { time12 } from "../../utils/time12";
-import { getLanguage, t, tk, tx } from "../../i18n/core";
+import { getLanguage, t, tk, tx, tn } from "../../i18n/core";
 import { reviewMetaTail, targetOf, type PastBooking, type ReviewTarget } from "../../services/instructor-reviews/model";
 
 export type BookingsTab = "memberships" | "upcoming" | "past";
@@ -102,7 +102,7 @@ const minutesBetween = (a: Date, b: Date) => Math.max(0, Math.round((b.getTime()
 /** "Fri, Oct 16 · 6:30 PM · 45 min" (+ " · $35"). */
 export function sessionMeta(start: Date, end: Date | null, price?: number | null): string {
   const parts = [dayLine(start), clock(start)];
-  if (end && end > start) parts.push(t("{n} min", { n: minutesBetween(start, end) }));
+  if (end && end > start) parts.push(tn(minutesBetween(start, end), "{n} min", "{n} min"));
   if (price !== undefined && price !== null && price > 0) parts.push(formatPrice(price));
   return parts.join(" · ");
 }

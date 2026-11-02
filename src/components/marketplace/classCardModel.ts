@@ -45,7 +45,7 @@ export function durationMinutes(start: string | null | undefined, end: string | 
 /** "45 min" (the board's form, minutes always: "60 min"); "" when unknown. */
 export function durationText(start: string | null | undefined, end: string | null | undefined): string {
   const d = durationMinutes(start, end);
-  return d === null ? "" : t("{n} min", { n: d });
+  return d === null ? "" : tn(d, "{n} min", "{n} min");
 }
 
 const atMidnight = (iso: string) => new Date(`${iso}T00:00:00`);
