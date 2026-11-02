@@ -1,9 +1,12 @@
 import type { BizKind } from "../../../components/business-more/kind";
 import type { BusinessRole } from "./teamData";
 import { Activity, ClipboardList, Dumbbell, ShoppingBag, UserCog, UserRoundCheck, type LucideIcon } from "lucide-react";
+import { t, tk } from "../../../i18n/core";
 
 // Per-type words (AN5-001 O11, AN5-005 O3, AN5-065 O5; HANDOVER §3
-// vocabulary: Store uses "staff", Classes clients, Gym members).
+// vocabulary: Store uses "staff", Classes clients, Gym members). The nouns
+// stay English (screens pick a whole sentence per kind for Arabic); the
+// labels are catalogue keys shown through t().
 
 export interface Vocab {
   kind: BizKind;
@@ -25,10 +28,10 @@ export function vocabFor(kind: BizKind): Vocab {
       singular: "staff member",
       aSingular: "a staff member",
       plural: "staff",
-      activeLabel: "Active staff",
+      activeLabel: tk("Active staff"),
       teamWord: "team",
-      emptyTitle: "No staff yet",
-      emptyBody: "Add the people who help run your store.",
+      emptyTitle: tk("No staff yet"),
+      emptyBody: tk("Add the people who help run your store."),
       payers: "customers",
     };
   return {
@@ -36,10 +39,10 @@ export function vocabFor(kind: BizKind): Vocab {
     singular: "instructor",
     aSingular: "an instructor",
     plural: "instructors",
-    activeLabel: "Active instructors",
+    activeLabel: tk("Active instructors"),
     teamWord: "team",
-    emptyTitle: "No instructors yet",
-    emptyBody: "Add the professionals who run your classes. Their fill rates, repeat bookings and teaching load appear here once they teach.",
+    emptyTitle: tk("No instructors yet"),
+    emptyBody: tk("Add the professionals who run your classes. Their fill rates, repeat bookings and teaching load appear here once they teach."),
     payers: kind === "classes" ? "clients" : "members",
   };
 }
@@ -49,12 +52,12 @@ export function vocabFor(kind: BizKind): Vocab {
 // offered; Manager comes from the OP1 role table (V6-161); Store gets Shop
 // assistant.
 export const ROLE_LABEL: Record<BusinessRole, string> = {
-  instructor: "Instructor",
-  trainer: "Personal trainer",
-  front_desk: "Front desk",
-  manager: "Manager",
-  staff: "Staff",
-  shop_assistant: "Shop assistant",
+  instructor: tk("Instructor"),
+  trainer: tk("Personal trainer"),
+  front_desk: tk("Front desk"),
+  manager: tk("Manager"),
+  staff: tk("Staff"),
+  shop_assistant: tk("Shop assistant"),
 };
 
 export const ROLE_ICON: Record<BusinessRole, LucideIcon> = {
@@ -66,7 +69,8 @@ export const ROLE_ICON: Record<BusinessRole, LucideIcon> = {
   shop_assistant: ShoppingBag,
 };
 
-export const roleLabel = (r: BusinessRole): string => ROLE_LABEL[r] ?? "Staff";
+/** A role's name in the app's language (ROLE_LABEL holds the English). */
+export const roleLabel = (r: BusinessRole): string => t(ROLE_LABEL[r] ?? "Staff");
 
 export function rolesFor(kind: BizKind): BusinessRole[] {
   return kind === "store" ? ["shop_assistant", "front_desk", "manager"] : ["instructor", "trainer", "front_desk", "manager"];

@@ -21,6 +21,7 @@ import {
 } from "./model";
 import { fetchAllRenewalsDue } from "../front-desk";
 import type { RenewalDue } from "../front-desk/frontDeskLogic";
+import { t, tk } from "../../i18n/core";
 
 export * from "./model";
 
@@ -72,7 +73,9 @@ const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
   message: isOffline(error) ? OFFLINE_MESSAGE : fallback,
 });
 
-const LOAD_FAIL = "Couldn't load revenue.";
+// Messages stay English here (screens compare against OFFLINE_MESSAGE) and
+// show through t() on the screen.
+const LOAD_FAIL = tk("Couldn't load revenue.");
 
 interface VenueRow {
   gym_id: string;
@@ -147,7 +150,7 @@ async function membershipsOf(gymId: string): Promise<Result<PaymentRecord[]>> {
         dueOn: m.started_on,
         who: m.member_label,
         isMinor: !!m.member_is_minor,
-        item: m.plan_name ?? "Membership",
+        item: m.plan_name ?? t("Membership"),
         membershipStatus: m.status,
         startedOn: m.started_on,
         expiresOn: m.expires_on,
@@ -211,7 +214,7 @@ async function bookingsOf(
         dueOn: (c?.event_date as string | null) ?? null,
         who: names.get(b.client_id as string) ?? null,
         isMinor: false,
-        item: (c?.title as string | null) ?? "Class",
+        item: (c?.title as string | null) ?? t("Class"),
         membershipStatus: null,
         startedOn: null,
         expiresOn: null,
@@ -314,7 +317,7 @@ export async function markPaid(
     return {
       ok: false,
       code: error.code,
-      message: "Couldn't record the payment. Try again.",
+      message: tk("Couldn't record the payment. Try again."),
     };
   }
   return { ok: true, value: true };
@@ -326,7 +329,7 @@ export async function markPaid(
 const isMissingFunction = (e: { code?: string }) =>
   e.code === "PGRST202" || e.code === "42883";
 
-const OWED_FAIL = "Couldn't load money owed.";
+const OWED_FAIL = tk("Couldn't load money owed.");
 
 export interface MoneyOwedPage {
   rows: MoneyOwedRow[];
@@ -426,8 +429,8 @@ export async function fetchPaymentSettings(businessId: string): Promise<PaymentS
 export async function retryPayment(paymentId: string): Promise<Result<true>> {
   const { error } = await rpc<string>("retry_payment", { p_payment_id: paymentId });
   if (error) {
-    if (error.code === "ATX02") return { ok: false, code: error.code, message: "Already retrying." };
-    return fail(error, "Couldn't start the retry. Try again.");
+    if (error.code === "ATX02") return { ok: false, code: error.code, message: tk("Already retrying.") };
+    return fail(error, tk("Couldn't start the retry. Try again."));
   }
   return { ok: true, value: true };
 }
@@ -443,7 +446,7 @@ export async function unmarkPaymentPaid(
   });
   if (error) {
     if (isMissingFunction(error))
-      return { ok: false, pending: true, code: error.code, message: "Undo isn't available yet." };
+      return { ok: false, pending: true, code: error.code, message: tk("Undo isn't available yet.") };
     console.error("[revenue] Could not undo mark paid:", error.message);
     return {
       ok: false,
@@ -467,7 +470,7 @@ export async function sendPaymentReminder(
   });
   if (error) {
     if (isMissingFunction(error))
-      return { ok: false, pending: true, code: error.code, message: "Reminders aren't available yet." };
+      return { ok: false, pending: true, code: error.code, message: tk("Reminders aren't available yet.") };
     console.error("[revenue] Could not send a payment reminder:", error.message);
     return {
       ok: false,
@@ -487,8 +490,8 @@ export async function sendPaymentReminder(
 // keep the records' sums. Dates go as the business-local days the readers
 // take (YYYY-MM-DD); null is all time.
 
-const REV_FAIL = "Couldn't load revenue.";
-const TX_FAIL = "Couldn't load transactions.";
+const REV_FAIL = tk("Couldn't load revenue.");
+const TX_FAIL = tk("Couldn't load transactions.");
 
 export interface ReaderPage<T> {
   rows: T[];
@@ -652,7 +655,7 @@ export async function fetchLedgerPayment(
     .eq("id", paymentId);
   if (p.error) {
     console.error("[revenue] Could not read the payment:", p.error.message);
-    return fail(p.error, "Couldn't load this payment.");
+    return fail(p.error, tk("Couldn't load this payment."));
   }
   const row = (p.data ?? []).find((x) => x.business_id === businessId);
   if (!row) return { ok: true, value: null };
@@ -662,7 +665,7 @@ export async function fetchLedgerPayment(
     .eq("payment_id", paymentId);
   if (r.error) {
     console.error("[revenue] Could not read refunds:", r.error.message);
-    return fail(r.error, "Couldn't load this payment.");
+    return fail(r.error, tk("Couldn't load this payment."));
   }
   // The readers date in the business's timezone (UTC when unset): the detail does too.
   const b = await db.from("business_profiles").select("timezone").eq("id", businessId);
@@ -685,7 +688,7 @@ export async function fetchLedgerPayment(
     });
     if (l.error) {
       console.error("[revenue] Could not read the person's label:", l.error.message);
-      return fail(l.error, "Couldn't load this payment.");
+      return fail(l.error, tk("Couldn't load this payment."));
     }
     label = String(l.data ?? "Member");
   }
@@ -732,7 +735,7 @@ export async function recordRefund(
   });
   if (error) {
     if (isMissingFunction(error))
-      return { ok: false, pending: true, code: error.code, message: "Refunds aren't available yet." };
+      return { ok: false, pending: true, code: error.code, message: tk("Refunds aren't available yet.") };
     console.error("[revenue] Could not record a refund:", error.message);
     return {
       ok: false,
@@ -803,7 +806,7 @@ export async function fetchPaidHistory(
     .limit(limit);
   if (p.error) {
     console.error("[revenue] Could not read the paid history:", p.error.message);
-    return fail(p.error, "Couldn't load the recent payments.");
+    return fail(p.error, tk("Couldn't load the recent payments."));
   }
   const b = await db.from("business_profiles").select("timezone").eq("id", businessId);
   const tz = (!b.error && (b.data?.[0]?.timezone as string | null)) || "UTC";

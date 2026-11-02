@@ -3,6 +3,7 @@ import { ChevronDown, ChevronLeft, CircleAlert, CircleCheck, Loader, Star, WifiO
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { initialsOf } from "./model";
+import { t } from "../../../i18n/core";
 
 // AN5 building blocks shared by every Team page and sheet (AnTeamV6 and
 // TeamFlowsV4 values; classes in an5.css).
@@ -137,7 +138,7 @@ export const Strip: React.FC<{ offline?: boolean; text: string; onRetry?: () => 
     <p className="an5-strip-t">{text}</p>
     {onRetry && !offline && (
       <button type="button" className="an5-strip-btn tap" onClick={onRetry}>
-        Retry
+        {t("Retry")}
       </button>
     )}
   </div>

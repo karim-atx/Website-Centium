@@ -21,6 +21,8 @@ import {
   mondayOf,
 } from "../../pages/business-analytics/analyticsRange";
 import { isMaskedLabel } from "../venues/consoleLogic";
+import { getLanguage, t, tk, tx } from "../../i18n/core";
+import { ARABIC_LOCALE } from "../../i18n/format";
 
 export type PayMethod = "cash" | "whish";
 export type PayStatus = "pending" | "paid" | "refunded";
@@ -131,28 +133,49 @@ export const moneyK = (v: number) =>
 /** The device-calendar day (YYYY-MM-DD) of an ISO timestamp. */
 export const dayOf = (ts: string) => isoOf(new Date(ts));
 
+// In Arabic the same dates come from Intl (Arabic month and day names,
+// Western digits, i18n/format); English keeps its own words exactly.
+const inArabic = () => getLanguage() === "ar";
+const arDate = (d: Date, o: Intl.DateTimeFormatOptions) => d.toLocaleDateString(ARABIC_LOCALE, o);
+
 export const dMon = (iso: string) => {
   const d = dateOf(iso);
+  if (inArabic()) return arDate(d, { day: "numeric", month: "long" });
   return `${MON[d.getMonth()]} ${d.getDate()}`;
 };
-export const ddd = (iso: string) => DOW[dateOf(iso).getDay()];
+export const ddd = (iso: string) =>
+  inArabic() ? arDate(dateOf(iso), { weekday: "long" }) : DOW[dateOf(iso).getDay()];
 /** "Mon, Sep 21" */
-export const dddDMon = (iso: string) => `${ddd(iso)}, ${dMon(iso)}`;
+export const dddDMon = (iso: string) => `${ddd(iso)}${inArabic() ? "، " : ", "}${dMon(iso)}`;
 /** "Saturday, November 1" */
 export const longDay = (iso: string) => {
   const d = dateOf(iso);
+  if (inArabic()) return arDate(d, { weekday: "long", day: "numeric", month: "long" });
   return `${DAY[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}`;
 };
 /** "March 2025" */
 export const monthYear = (iso: string) => {
   const d = dateOf(iso);
+  if (inArabic()) return arDate(d, { month: "long", year: "numeric" });
   return `${MONTH[d.getMonth()]} ${d.getFullYear()}`;
+};
+/** "September": the month alone. */
+export const monthName = (iso: string) => {
+  const d = dateOf(iso);
+  return inArabic() ? arDate(d, { month: "long" }) : MONTH[d.getMonth()];
+};
+/** "Sep 2025" (the short month in English). */
+export const monShortYear = (iso: string) => {
+  const d = dateOf(iso);
+  return inArabic() ? arDate(d, { month: "long", year: "numeric" }) : `${MON[d.getMonth()]} ${d.getFullYear()}`;
 };
 
 /** "Oct 6 to 12", "Oct 27 to Nov 2" */
 export function spanLabel(from: string, to: string): string {
   const a = dateOf(from);
   const b = dateOf(to);
+  if (inArabic())
+    return t("{from} to {to}", { from: a.getMonth() !== b.getMonth() ? dMon(from) : String(a.getDate()), to: dMon(to) });
   return `${MON[a.getMonth()]} ${a.getDate()} to ${a.getMonth() !== b.getMonth() ? MON[b.getMonth()] + " " : ""}${b.getDate()}`;
 }
 
@@ -176,8 +199,8 @@ export interface StreamDef {
 }
 
 export const STREAMS: StreamDef[] = [
-  { key: "membership", label: "Memberships" },
-  { key: "class", label: "Class bookings" },
+  { key: "membership", label: tk("Memberships") },
+  { key: "class", label: tk("Class bookings") },
 ];
 
 /**
@@ -185,19 +208,19 @@ export const STREAMS: StreamDef[] = [
  * types (recorded_revenue_by_stream groups by price_type).
  */
 export const STREAM_LABEL: Record<string, string> = {
-  membership: "Memberships",
-  class: "Class bookings",
-  class_pack: "Class packs",
-  intro_offer: "Intro offers",
-  drop_in: "Drop-ins",
-  day_pass: "Day passes",
-  intro_week: "Intro weeks",
-  product: "Products",
-  delivery: "Delivery",
-  appointment: "Appointments",
-  other: "Other",
+  membership: tk("Memberships"),
+  class: tk("Class bookings"),
+  class_pack: tk("Class packs"),
+  intro_offer: tk("Intro offers"),
+  drop_in: tk("Drop-ins"),
+  day_pass: tk("Day passes"),
+  intro_week: tk("Intro weeks"),
+  product: tk("Products"),
+  delivery: tk("Delivery"),
+  appointment: tk("Appointments"),
 };
-export const streamLabel = (key: string) => STREAM_LABEL[key] ?? "Other";
+/** A stream's name in the app's language. */
+export const streamLabel = (key: string) => (STREAM_LABEL[key] ? t(STREAM_LABEL[key]) : tx("Other", "revenue stream"));
 
 export interface DaySeries {
   days: string[];
@@ -498,16 +521,31 @@ export function labelIsName(label: string, memberNumber: number | null): boolean
 }
 
 const PRICE_TYPE_ITEM: Record<string, string> = {
-  membership: "Membership",
-  class_pack: "Class pack",
-  drop_in: "Drop-in",
-  day_pass: "Day pass",
-  intro_offer: "Intro offer",
-  intro_week: "Intro week",
-  product: "Product",
-  delivery: "Delivery",
-  appointment: "Appointment",
+  membership: tk("Membership"),
+  class_pack: tk("Class pack"),
+  drop_in: tk("Drop-in"),
+  day_pass: tk("Day pass"),
+  intro_offer: tk("Intro offer"),
+  intro_week: tk("Intro week"),
+  product: tk("Product"),
+  delivery: tk("Delivery"),
+  appointment: tk("Appointment"),
 };
+const priceTypeItem = (priceType: string) => (PRICE_TYPE_ITEM[priceType] ? t(PRICE_TYPE_ITEM[priceType]) : t("Payment"));
+
+/**
+ * A payer label as shown: the masked forms ("Member #0003", "Member",
+ * "Guest") in the app's language, a shared first name as given. The raw
+ * label stays on the item (isMaskedLabel reads it).
+ */
+export function labelText(label: string): string {
+  const l = label.trim();
+  if (l === "Guest") return t("Guest");
+  if (l === "Member") return t("Member");
+  const m = /^Member #(\d+)$/.exec(l);
+  if (m) return t("Member #{n}", { n: m[1] });
+  return label;
+}
 
 /**
  * The item a money_owed row is for: the plan name or class title the revenue
@@ -540,7 +578,7 @@ export function owedItemFromRow(
     overdue: row.days_overdue ?? 0,
     remindersSent: Number(row.reminders_sent ?? 0),
     lastReminderAt: row.last_reminder_at,
-    item: rec?.item ?? PRICE_TYPE_ITEM[row.price_type] ?? "Payment",
+    item: rec?.item ?? priceTypeItem(row.price_type),
     startedOn: rec?.startedOn ?? null,
   };
 }
@@ -583,8 +621,8 @@ export function owedFromRecords(
 
 /** "Reminders sent" (AN14-044 row 2): "None yet", or "2, last 12 Oct". */
 export function remindersLine(sent: number, lastAt: string | null): string {
-  if (sent <= 0) return "None yet";
-  return `${sent}${lastAt ? `, last ${dMon(dayOf(lastAt))}` : ""}`;
+  if (sent <= 0) return t("None yet");
+  return lastAt ? t("{n}, last {date}", { n: sent, date: dMon(dayOf(lastAt)) }) : String(sent);
 }
 
 /** Which mark-paid function records this item; null when none exists for its kind. */
@@ -616,24 +654,24 @@ export function describePaymentRefusal(
   const msg = error.message ?? "";
   switch (error.code ?? "") {
     case "ATX08":
-      if (/no such payment/i.test(msg)) return "That payment isn't there any more.";
-      if (action === "remind") return "They don't have a Centium account, so there's no one to message.";
-      return serverSentence(msg, "Couldn't undo that. Try again.");
+      if (/no such payment/i.test(msg)) return t("That payment isn't there any more.");
+      if (action === "remind") return t("They don't have a Centium account, so there's no one to message.");
+      return serverSentence(msg, t("Couldn't undo that. Try again."));
     case "ATX96":
-      return "They've blocked messages from your business.";
+      return t("They've blocked messages from your business.");
     case "ATX02":
-      return "You've sent a lot of reminders in the last hour. Try again later.";
+      return t("You've sent a lot of reminders in the last hour. Try again later.");
     case "ATX09":
-      return "You need the Revenue permission to do this.";
+      return t("You need the Revenue permission to do this.");
     case "22023":
       return serverSentence(
         msg,
-        action === "remind" ? "Couldn't send the reminder. Try again." : "Couldn't undo that. Try again.",
+        action === "remind" ? t("Couldn't send the reminder. Try again.") : t("Couldn't undo that. Try again."),
       );
     default:
       return action === "remind"
-        ? "Couldn't send the reminder. Try again."
-        : "Couldn't undo that. Try again.";
+        ? t("Couldn't send the reminder. Try again.")
+        : t("Couldn't undo that. Try again.");
   }
 }
 
@@ -663,7 +701,7 @@ export function renewalAmountOf(rec: PaymentRecord, due?: { renewalPrice?: numbe
 
 /** A renewal's amount: the price, "Plan price" for a grant whose price isn't known, else "Not available". */
 export const renewalAmountText = (r: { rec: PaymentRecord; amount: number | null }): string =>
-  r.amount !== null ? money(r.amount) : r.rec.granted ? "Plan price" : "Not available";
+  r.amount !== null ? money(r.amount) : r.rec.granted ? t("Plan price") : t("Not available");
 
 export interface RenewalWeek {
   label: string;
@@ -724,7 +762,7 @@ export function renewalWeeks(rows: RenewalRow[], today: string): RenewalWeek[] {
       (r) => r.on >= from && r.on <= sunday && r.on <= end,
     );
     weeks.push({
-      label: i === 0 ? "This week" : `Week ${i + 1}`,
+      label: i === 0 ? t("This week") : t("Week {n}", { n: i + 1 }),
       from: mon,
       to: sunday,
       rows: list,
@@ -803,7 +841,7 @@ export function byPlan(records: PaymentRecord[], p: Period): PlanRow[] {
   for (const r of records) {
     if (!dated(r) || !inRange(dayOf(r.paidAt as string), p.from, p.to))
       continue;
-    const label = r.kind === "membership" ? r.item : "Drop-ins (no plan)";
+    const label = r.kind === "membership" ? r.item : t("Drop-ins (no plan)");
     const cur = by.get(label) ?? { value: 0, n: 0, prices: new Set<number>() };
     cur.value += r.amount as number;
     cur.n += 1;
@@ -983,8 +1021,8 @@ export function readerTotals(
 
 /** The plan row's name: the null plan is "Classes and other"; a deleted plan has no name left. */
 export function planLabel(r: Pick<PlanReaderRow, "plan_id" | "plan_name">): string {
-  if (r.plan_id === null) return "Classes and other";
-  return r.plan_name ?? "Deleted plan";
+  if (r.plan_id === null) return t("Classes and other");
+  return r.plan_name ?? t("Deleted plan");
 }
 
 /** Revenue by membership plan from recorded_revenue_by_plan, in the server's order. Never drops the null-plan row. */
@@ -1005,13 +1043,13 @@ export function recordedPlans(rows: PlanReaderRow[]): PlanRow[] {
  */
 export function recordedStreams(rows: StreamReaderRow[], plans: PlanReaderRow[]): StreamRow[] {
   return rows.map((r) => {
-    const details: StreamDetail[] = [{ label: "Payments", value: String(n0(r.payments)) }];
+    const details: StreamDetail[] = [{ label: t("Payments"), value: String(n0(r.payments)) }];
     if (r.price_type === "membership")
       for (const p of plans)
         if (p.plan_id !== null) details.push({ label: planLabel(p), value: money(n0(p.net)) });
     const refunded = n0(r.refunded);
     if (refunded > 0)
-      details.push({ label: "Refunded", value: "−" + moneyCents(refunded), bad: true });
+      details.push({ label: t("Refunded"), value: "−" + moneyCents(refunded), bad: true });
     return { key: r.price_type, label: streamLabel(r.price_type), value: n0(r.net), details };
   });
 }
@@ -1132,6 +1170,8 @@ export type TxFilter = "all" | "whish" | "cash" | "issues";
 export const ISSUE_STATUSES: LedgerStatus[] = ["pending", "failed", "refunded"];
 
 export type TxPill = "Paid" | "Owed" | "Refunded" | "Part refunded" | "Failed" | "Void";
+/** The pill words and TxStatus words as catalogue keys; screens show them through t(). */
+export const TX_PILL_WORDS: TxPill[] = [tk("Paid"), tk("Owed"), tk("Refunded"), tk("Part refunded"), tk("Failed"), tk("Void")];
 
 export interface TxItem {
   /** Route key: the payment id (ledger) or the record key (before B8). */
@@ -1163,7 +1203,7 @@ export function txPill(status: LedgerStatus, refunded: number): TxPill {
 
 /** The item word for a ledger row: the plan name or class title the records hold, else the price type's word. */
 export function ledgerItem(priceType: string, rec: Pick<PaymentRecord, "item"> | undefined): string {
-  return rec?.item ?? PRICE_TYPE_ITEM[priceType] ?? "Payment";
+  return rec?.item ?? priceTypeItem(priceType);
 }
 
 /** A ledger row's record key (membership / class booking), to find its plan name or class title. */
@@ -1234,13 +1274,13 @@ export function parseRefundAmount(
   text: string,
   max: number,
 ): { ok: true; value: number } | { ok: false; message: string } {
-  const t = text.trim().replace(/^\$/, "").replace(/,/g, "").trim();
-  if (!t) return { ok: false, message: "Enter an amount." };
-  if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(t))
-    return { ok: false, message: "Enter an amount in dollars and cents, like 7.50." };
-  const value = Math.round(Number(t) * 100) / 100;
-  if (value <= 0) return { ok: false, message: "Enter an amount above $0." };
-  if (value > max + 1e-9) return { ok: false, message: `You can refund up to ${moneyCents(max)}.` };
+  const s = text.trim().replace(/^\$/, "").replace(/,/g, "").trim();
+  if (!s) return { ok: false, message: t("Enter an amount.") };
+  if (!/^(\d+(\.\d{1,2})?|\.\d{1,2})$/.test(s))
+    return { ok: false, message: t("Enter an amount in dollars and cents, like 7.50.") };
+  const value = Math.round(Number(s) * 100) / 100;
+  if (value <= 0) return { ok: false, message: t("Enter an amount above $0.") };
+  if (value > max + 1e-9) return { ok: false, message: t("You can refund up to {amount}.", { amount: moneyCents(max) }) };
   return { ok: true, value };
 }
 
@@ -1248,17 +1288,21 @@ export function parseRefundAmount(
 export function describeRefundRefusal(error: { code?: string; message?: string }): string {
   switch (error.code ?? "") {
     case "ATX08":
-      return "That payment isn't there any more.";
+      return t("That payment isn't there any more.");
     case "ATX09":
-      return "You need the Revenue permission to do this.";
+      return t("You need the Revenue permission to do this.");
     case "22023": {
       // "that would refund 20.00, more than the 15.00 paid (0.00 already refunded)": the figures as money.
       const m = /would refund ([\d.]+), more than the ([\d.]+) paid \(([\d.]+) already refunded\)/.exec(error.message ?? "");
       if (m)
-        return `That would refund ${moneyCents(Number(m[1]))}, more than the ${moneyCents(Number(m[2]))} paid (${moneyCents(Number(m[3]))} already refunded).`;
-      return serverSentence(error.message, "Couldn't record the refund. Try again.");
+        return t("That would refund {amount}, more than the {paid} paid ({refunded} already refunded).", {
+          amount: moneyCents(Number(m[1])),
+          paid: moneyCents(Number(m[2])),
+          refunded: moneyCents(Number(m[3])),
+        });
+      return serverSentence(error.message, t("Couldn't record the refund. Try again."));
     }
     default:
-      return "Couldn't record the refund. Try again.";
+      return t("Couldn't record the refund. Try again.");
   }
 }

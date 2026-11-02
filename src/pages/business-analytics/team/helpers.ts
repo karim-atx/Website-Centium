@@ -2,6 +2,7 @@ import { personUsesSeat } from "../../../services/business-team/seats";
 import type { TeamPerson } from "./teamData";
 import type { TeamState } from "./useTeam";
 import type { Vocab } from "./vocab";
+import { t, tn } from "../../../i18n/core";
 
 // Small helpers shared by the Team index and section (kept out of component files for fast refresh).
 
@@ -29,8 +30,12 @@ const daysAgo = (iso: string, today: string): number =>
 
 export const sentAgo = (iso: string, today: string): string => {
   const n = daysAgo(iso, today);
-  return n === 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
+  return n === 0 ? t("today") : n === 1 ? t("yesterday") : tn(n, "{n} day ago", "{n} days ago");
 };
 
 export const errText = (e: "offline" | "error", vocab: Vocab) =>
-  e === "offline" ? `You're offline. Showing your ${vocab.teamWord} as of the last update.` : `Couldn't load your ${vocab.teamWord}. Check your connection and try again.`;
+  e === "offline"
+    ? vocab.kind === "store"
+      ? t("You're offline. Showing your staff as of the last update.")
+      : t("You're offline. Showing your team as of the last update.")
+    : t("Couldn't load your team. Check your connection and try again.");

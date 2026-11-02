@@ -59,6 +59,8 @@ import { useRevenue } from "./revenueContext";
 import { useMoneyOwed } from "./useMoneyOwed";
 import { usePaidHistory } from "./usePaidHistory";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
+import { t, tn } from "../../../i18n/core";
+import { labelText, monthName } from "../../../services/business-revenue/model";
 
 // Money owed (AN14-035 / -037 to -043, PaySeeAllV2 kind "owed"), the owed
 // detail (AN14-044 / -089), the Mark as paid pop-up and toast (AN14-046,
@@ -84,21 +86,7 @@ const PAY_CHIP = (o: OwedItem) => {
   return { t: c.long, bg: v("soft"), ink: v("ink-soft") };
 };
 
-const MONTH = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-const monthOf = (iso: string) => MONTH[Number(iso.slice(5, 7)) - 1];
+const monthOf = (iso: string) => monthName(iso);
 
 /** What Mark as paid needs to know about the item being marked. */
 export interface MarkSubject {
@@ -114,7 +102,7 @@ const subjectOf = (o: OwedItem): MarkSubject | null => {
   const target = markTarget(o);
   return target
     ? {
-        label: o.label,
+        label: labelText(o.label),
         amount: o.amount,
         item: o.item,
         membership: o.sourceKind === "membership",
@@ -144,12 +132,12 @@ export function useMarkPaid(
         bg: "rgb(var(--c-status-good-bg))",
         ink: "rgb(var(--c-status-good))",
       }}
-      title={rec ? `Mark ${amount} from ${rec.label} as paid?` : ""}
+      title={rec ? t("Mark {amount} from {name} as paid?", { amount, name: rec.label }) : ""}
       subtitle={
         err
           ? undefined
           : rec
-            ? `Records that you received ${amount} in cash for ${rec.item}${rec.membership && rec.dueOn ? ", " + monthOf(rec.dueOn) : ""}.`
+            ? t("Records that you received {amount} in cash for {item}.", { amount, item: rec.membership && rec.dueOn ? t("{item}, {month}", { item: rec.item, month: monthOf(rec.dueOn) }) : rec.item })
             : undefined
       }
       extra={
@@ -159,11 +147,11 @@ export function useMarkPaid(
             className="text-[13px] font-bold mt-[6px]"
             style={{ color: "#C0392B" }}
           >
-            {err}
+            {t(err)}
           </p>
         ) : undefined
       }
-      confirmLabel="Mark as paid"
+      confirmLabel={t("Mark as paid")}
       busy={busy}
       onCancel={() => {
         if (busy) return;
@@ -185,7 +173,7 @@ export function useMarkPaid(
         offerPromotionUsed({ kind: done.target.kind === "membership" ? "membership" : "class_booking", sourceId: done.target.id });
         onDone(
           done,
-          `${money(done.amount)} from ${done.label} marked as paid. Removed from Money owed.`,
+          t("{amount} from {name} marked as paid. Removed from Money owed.", { amount: money(done.amount), name: done.label }),
         );
         reload();
       }}
@@ -222,7 +210,7 @@ export function useSendReminder(onSent: () => void) {
     navigate("/app/messages", { state: { threadId: t.threadId } });
   };
 
-  const due = item?.dueOn ? `, due ${dddDMon(item.dueOn)}` : "";
+  const due = item?.dueOn ? dddDMon(item.dueOn) : null;
   const ui = (
     <>
       <ConfirmCard
@@ -235,12 +223,14 @@ export function useSendReminder(onSent: () => void) {
           bg: "rgb(var(--c-primary-pale))",
           ink: "rgb(var(--c-primary-dark))",
         }}
-        title={item ? `Send ${item.label} a reminder?` : ""}
+        title={item ? t("Send {name} a reminder?", { name: labelText(item.label) }) : ""}
         subtitle={
           err
             ? undefined
             : item
-              ? `They get a private message from your business: ${money(item.amount)} owed for ${item.item}${due}.`
+              ? due
+                ? t("They get a private message from your business: {amount} owed for {item}, due {date}.", { amount: money(item.amount), item: item.item, date: due })
+                : t("They get a private message from your business: {amount} owed for {item}.", { amount: money(item.amount), item: item.item })
               : undefined
         }
         extra={
@@ -250,11 +240,11 @@ export function useSendReminder(onSent: () => void) {
               className="text-[13px] font-bold mt-[6px]"
               style={{ color: "#C0392B" }}
             >
-              {err}
+              {t(err)}
             </p>
           ) : undefined
         }
-        confirmLabel="Send reminder"
+        confirmLabel={t("Send reminder")}
         busy={busy}
         onCancel={() => {
           if (busy) return;
@@ -274,7 +264,7 @@ export function useSendReminder(onSent: () => void) {
           const done = item;
           setItem(null);
           setToast({
-            msg: `Reminder sent to ${done.label}.`,
+            msg: t("Reminder sent to {name}.", { name: labelText(done.label) }),
             personId: done.personId,
           });
           onSent();
@@ -282,14 +272,14 @@ export function useSendReminder(onSent: () => void) {
       />
       <Toast
         open={!!toast}
-        message={toast?.msg ?? ""}
+        message={toast ? t(toast.msg) : ""}
         variant="business"
         shape="market"
         duration={4000}
         action={
           toast?.personId
             ? {
-                label: "Open chat",
+                label: t("Open chat"),
                 onClick: () => {
                   const p = toast.personId as string;
                   setToast(null);
@@ -339,7 +329,7 @@ export function useRouteToast(onUndone: () => void): {
     toast: (
       <Toast
         open={!!msg}
-        message={msg ?? ""}
+        message={msg ? t(msg) : ""}
         variant="business"
         shape="market"
         duration={4000}
@@ -354,7 +344,7 @@ export function useRouteToast(onUndone: () => void): {
                     return;
                   }
                   setPaidKey(null);
-                  setMsg(`${money(u.amount)} from ${u.label} is back in Money owed.`);
+                  setMsg(t("{amount} from {name} is back in Money owed.", { amount: money(u.amount), name: u.label }));
                   onUndone();
                 });
               }
@@ -396,26 +386,26 @@ export const OwedListPage: React.FC = () => {
   const empty = all.length === 0 && item === "all" && method === "all";
 
   const itemOpts = [
-    { value: "all", label: "All items", header: "Item type" },
+    { value: "all", label: t("All items"), header: t("Item type") },
     {
       value: "membership",
       // money_owed puts class packs with classes, so this one is plans only (user, 14 Oct).
-      label: kind === "classes" ? "Plans" : "Memberships",
+      label: kind === "classes" ? t("Plans") : t("Memberships"),
     },
     {
       value: "class",
-      label: kind === "classes" ? "Classes and packs" : "Classes",
+      label: kind === "classes" ? t("Classes and packs") : t("Classes"),
     },
   ];
   const ctrls = [
     {
       key: "sort",
       icon: ArrowDownUp,
-      label: sort === "overdue" ? "Most overdue" : "Largest amount",
+      label: sort === "overdue" ? t("Most overdue") : t("Largest amount"),
       menuLeft: 0,
       options: [
-        { value: "amount", label: "Largest amount", header: "Sort by" },
-        { value: "overdue", label: "Most overdue" },
+        { value: "amount", label: t("Largest amount"), header: t("Sort by") },
+        { value: "overdue", label: t("Most overdue") },
       ],
       selected: [sort],
       onPick: (x: string) => setSort(x as OwedSort),
@@ -425,15 +415,15 @@ export const OwedListPage: React.FC = () => {
       icon: SlidersHorizontal,
       label:
         method === "cash"
-          ? "Cash"
+          ? t("Cash")
           : item !== "all"
             ? (itemOpts.find((o) => o.value === item)?.label ?? "")
-            : "All methods",
+            : t("All methods"),
       menuLeft: 108,
       active: filtered,
       options: [
-        { value: "m:all", label: "All methods", header: "Method" },
-        { value: "m:cash", label: "Cash" },
+        { value: "m:all", label: t("All methods"), header: t("Method") },
+        { value: "m:cash", label: t("Cash") },
         { value: "m:whish", label: "Whish", disabled: true, soon: true },
         ...itemOpts.map((o) => ({ ...o, value: "i:" + o.value })),
       ],
@@ -447,25 +437,25 @@ export const OwedListPage: React.FC = () => {
 
   // PaySeeAllV2 boxLine: "Oldest: …, 21 days overdue. Reminders go out as
   // private messages." The second sentence only once reminders exist.
-  const reminders = owed.live ? " Reminders go out as private messages." : "";
+  const reminders = owed.live ? " " + t("Reminders go out as private messages.") : "";
   let line: string;
-  if (empty) line = "Nobody owes you anything right now.";
+  if (empty) line = t("Nobody owes you anything right now.");
   else if (oldest && oldest.overdue > 0)
-    line = `Oldest: ${oldest.label}, ${oldest.overdue} ${oldest.overdue === 1 ? "day" : "days"} overdue.${reminders}`;
-  else line = `None are overdue yet.${reminders}`;
+    line = tn(oldest.overdue, "Oldest: {name}, {n} day overdue.", "Oldest: {name}, {n} days overdue.", { name: labelText(oldest.label) }) + reminders;
+  else line = t("None are overdue yet.") + reminders;
 
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader
-        crumb="Revenue · Payments"
-        title="Money owed"
+        crumb={`${t("Revenue")} · ${t("Payments")}`}
+        title={t("Money owed")}
         onBack={() => navigate(`${REVENUE_BASE}/payments`)}
       />
       {!online && <OfflineLine at={loadedAt} />}
       {owed.error && !owed.items.length && !owed.live ? (
-        <ErrorLine message="Couldn't load money owed." onRetry={owed.reload} />
+        <ErrorLine message={t("Couldn't load money owed.")} onRetry={owed.reload} />
       ) : owed.loading ? (
-        <div role="status" aria-label="Loading">
+        <div role="status" aria-label={t("Loading")}>
           <div
             className="rounded-[22px] p-[16px] grid grid-cols-2 gap-[16px]"
             style={{
@@ -484,12 +474,12 @@ export const OwedListPage: React.FC = () => {
         <>
           <PayBoxes
             boxes={[
-              { l: "Total owed", v: money(total), faint: empty },
+              { l: t("Total owed"), v: money(total), faint: empty },
               {
                 l: vocab.peopleCap,
                 v: String(list.length),
                 faint: empty,
-                d: method === "cash" ? "cash only" : null,
+                d: method === "cash" ? t("cash only") : null,
                 dTone: "neutral",
               },
             ]}
@@ -503,42 +493,42 @@ export const OwedListPage: React.FC = () => {
             count={
               empty
                 ? undefined
-                : `${list.length} ${list.length === 1 ? vocab.person : vocab.people}`
+                : vocab.count(list.length)
             }
           />
           {empty ? (
             <PayEmpty
-              title="Nothing owed"
+              title={t("Nothing owed")}
               body={
                 owed.denied
-                  ? "Money owed shows here for people with the Revenue permission."
-                  : "Everyone is paid up. Unpaid cash and memberships due show here."
+                  ? t("Money owed shows here for people with the Revenue permission.")
+                  : t("Everyone is paid up. Unpaid cash and memberships due show here.")
               }
             />
           ) : list.length === 0 ? (
             <PayEmpty
               title={
-                method === "cash" ? "Nothing owed in cash" : "Nothing owed here"
+                method === "cash" ? t("Nothing owed in cash") : t("Nothing owed here")
               }
-              body="Try another filter."
+              body={t("Try another filter.")}
             />
           ) : (
             <PayList
               rows={list.map((o) => ({
                 key: o.key,
                 who: o.who,
-                title: o.label,
+                title: labelText(o.label),
                 sub:
                   o.sourceKind === "membership" && o.dueOn
                     ? `${o.item} · ${monthOf(o.dueOn)}`
-                    : `${o.item}${o.dueOn ? ", " + dMon(o.dueOn) : ""}`,
+                    : o.dueOn ? t("{item}, {month}", { item: o.item, month: dMon(o.dueOn) }) : o.item,
                 chip: PAY_CHIP(o),
-                s2: o.method === "whish" ? "Expects Whish" : "Expects cash",
+                s2: o.method === "whish" ? t("Expects Whish") : t("Expects cash"),
                 amt: money(o.amount),
                 action: canRemind(o)
                   ? {
                       icon: MessageCircle,
-                      name: `Follow up with ${o.label}`,
+                      name: t("Follow up with {name}", { name: labelText(o.label) }),
                       onClick: () => remind.open(o),
                     }
                   : undefined,
@@ -558,7 +548,7 @@ export const OwedListPage: React.FC = () => {
 };
 
 const DetailLoading: React.FC = () => (
-  <div className="pt-[12px] pb-[120px]" role="status" aria-label="Loading">
+  <div className="pt-[12px] pb-[120px]" role="status" aria-label={t("Loading")}>
     <div
       className="rounded-[22px] pt-[18px] px-[16px] pb-[16px] flex flex-col items-center gap-[8px]"
       style={{ background: v("card"), border: `1px solid ${v("border")}` }}
@@ -598,8 +588,8 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
   if (owed.error && !o)
     return (
       <div className="pt-[12px] pb-[120px]">
-        <PayHeader crumb="Money owed" title="Payment" onBack={() => navigate(back)} />
-        <ErrorLine message="Couldn't load this payment." onRetry={owed.reload} />
+        <PayHeader crumb={t("Money owed")} title={t("Payment")} onBack={() => navigate(back)} />
+        <ErrorLine message={t("Couldn't load this payment.")} onRetry={owed.reload} />
       </div>
     );
   if (owed.loading) return <DetailLoading />;
@@ -607,35 +597,35 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
 
   const sub =
     o.sourceKind === "membership" && o.startedOn
-      ? `Member since ${monthYear(o.startedOn)}`
+      ? t("Member since {date}", { date: monthYear(o.startedOn) })
       : o.item;
   const c = owedChip(o);
   const chip = c.late
     ? { t: c.long, bg: v("caution-bg"), ink: v("pay-caution") }
-    : { t: "Unpaid, cash", bg: v("caution-bg"), ink: v("pay-caution") };
+    : { t: t("Unpaid, cash"), bg: v("caution-bg"), ink: v("pay-caution") };
   const facts = [
     {
-      l: "Item",
+      l: t("Item"),
       v:
         o.sourceKind === "membership" && o.dueOn
           ? `${o.item} · ${monthOf(o.dueOn)}`
           : o.item,
     },
     ...(o.dueOn
-      ? [{ l: o.overdue > 0 ? "Was due" : "Due", v: dddDMon(o.dueOn) }]
+      ? [{ l: o.overdue > 0 ? t("Was due") : t("Due"), v: dddDMon(o.dueOn) }]
       : []),
     {
-      l: "Expected method",
-      v: o.method === "whish" ? "Whish" : "Cash at the desk",
+      l: t("Expected method"),
+      v: o.method === "whish" ? "Whish" : t("Cash at the desk"),
     },
-    ...(owed.live ? [{ l: "Reminders sent", v: remindersLine(o.remindersSent, o.lastReminderAt) }] : []),
+    ...(owed.live ? [{ l: t("Reminders sent"), v: remindersLine(o.remindersSent, o.lastReminderAt) }] : []),
   ];
   const hist: HistRow[] =
     o.overdue > 0 && o.dueOn
       ? [
           {
-            t: "Not paid at the desk",
-            s: "Cash payments can't be retried",
+            t: t("Not paid at the desk"),
+            s: t("Cash payments can't be retried"),
             d: dMon(o.dueOn),
             kind: "warn",
           },
@@ -650,7 +640,7 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
     ...(canMark && subject
       ? [
           {
-            t: "Mark as paid",
+            t: t("Mark as paid"),
             icon: BadgeCheck,
             primary: true,
             onClick: () => mark.open(subject),
@@ -661,7 +651,7 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
     ...(canRemind(o)
       ? [
           {
-            t: "Send reminder",
+            t: t("Send reminder"),
             icon: MessageCircle,
             onClick: () => remind.open(o),
           },
@@ -671,18 +661,18 @@ export const OwedDetailPage: React.FC<{ itemKey: string }> = ({ itemKey }) => {
 
   return (
     <div className="pt-[12px] pb-[120px]">
-      <PayHeader crumb="Money owed" title={o.label} onBack={() => navigate(back)} />
+      <PayHeader crumb={t("Money owed")} title={labelText(o.label)} onBack={() => navigate(back)} />
       <PayDetail
         who={o.who}
-        name={o.label}
+        name={labelText(o.label)}
         sub={sub}
         amt={money(o.amount)}
         chip={chip}
         facts={facts}
-        histTitle="Recent payments"
+        histTitle={t("Recent payments")}
         hist={hist}
         actions={actions}
-        note="Cash payments are recorded by hand. Whish payments are coming."
+        note={t("Cash payments are recorded by hand. Whish payments are coming.")}
       />
       {mark.ui}
       {remind.ui}
@@ -713,11 +703,11 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
     return (
       <div className="pt-[12px] pb-[120px]">
         <PayHeader
-          crumb="Revenue · Transactions"
-          title="Payment"
+          crumb={`${t("Revenue")} · ${t("Transactions")}`}
+          title={t("Payment")}
           onBack={() => navigate(back)}
         />
-        <ErrorLine message="Couldn't load this payment." onRetry={reload} />
+        <ErrorLine message={t("Couldn't load this payment.")} onRetry={reload} />
       </div>
     );
   if (loading && !data) return <DetailLoading />;
@@ -730,7 +720,7 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   const sub =
     rec.kind === "membership"
       ? rec.startedOn
-        ? `Member since ${monthYear(rec.startedOn)}`
+        ? t("Member since {date}", { date: monthYear(rec.startedOn) })
         : rec.item
       : rec.item;
   let chip: { t: string; bg: string; ink: string };
@@ -738,18 +728,18 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
     const c = owedChip(owedItem);
     chip = c.late
       ? { t: c.long, bg: v("caution-bg"), ink: v("pay-caution") }
-      : { t: "Unpaid, cash", bg: v("caution-bg"), ink: v("pay-caution") };
+      : { t: t("Unpaid, cash"), bg: v("caution-bg"), ink: v("pay-caution") };
   } else if (rec.status === "paid")
     chip = {
-      t: dated(rec) ? `Paid ${dMon(dayOf(rec.paidAt as string))}` : "Paid",
+      t: dated(rec) ? t("Paid {date}", { date: dMon(dayOf(rec.paidAt as string)) }) : t("Paid"),
       bg: v("good-bg"),
       ink: v("good"),
     };
-  else chip = { t: "Refunded", bg: v("soft"), ink: v("ink-soft") };
+  else chip = { t: t("Refunded"), bg: v("soft"), ink: v("ink-soft") };
 
   const facts = [
     {
-      l: "Item",
+      l: t("Item"),
       v:
         rec.kind === "membership" && rec.dueOn
           ? `${rec.item} · ${monthOf(rec.dueOn)}`
@@ -758,25 +748,25 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
     ...(rec.dueOn
       ? [
           {
-            l: unpaid && owedItem.overdue > 0 ? "Was due" : "Due",
+            l: unpaid && owedItem.overdue > 0 ? t("Was due") : t("Due"),
             v: dddDMon(rec.dueOn),
           },
         ]
       : []),
     {
-      l: unpaid ? "Expected method" : "Method",
-      v: rec.method === "whish" ? "Whish" : "Cash at the desk",
+      l: unpaid ? t("Expected method") : t("Method"),
+      v: rec.method === "whish" ? "Whish" : t("Cash at the desk"),
     },
     ...(rec.status === "paid" && !dated(rec)
-      ? [{ l: "Paid on", v: "Not shared yet" }]
+      ? [{ l: t("Paid on"), v: t("Not shared yet") }]
       : []),
   ];
   const hist: HistRow[] =
     unpaid && owedItem.overdue > 0 && rec.dueOn
       ? [
           {
-            t: "Not paid at the desk",
-            s: "Cash payments can't be retried",
+            t: t("Not paid at the desk"),
+            s: t("Cash payments can't be retried"),
             d: dMon(rec.dueOn),
             kind: "warn",
           },
@@ -786,7 +776,7 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
   return (
     <div className="pt-[12px] pb-[120px]">
       <PayHeader
-        crumb="Revenue · Transactions"
+        crumb={`${t("Revenue")} · ${t("Transactions")}`}
         title={name}
         onBack={() => navigate(back)}
       />
@@ -798,13 +788,13 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         amtInk={rec.status === "refunded" ? v("faint") : undefined}
         chip={chip}
         facts={facts}
-        histTitle="Recent payments"
+        histTitle={t("Recent payments")}
         hist={hist}
         actions={
           unpaid && canMark
             ? [
                 {
-                  t: "Mark as paid",
+                  t: t("Mark as paid"),
                   icon: BadgeCheck,
                   primary: true,
                   onClick: () =>
@@ -822,7 +812,7 @@ export const PaymentDetailPage: React.FC<{ recKey: string }> = ({ recKey }) => {
         }
         note={
           unpaid
-            ? "Cash payments are recorded by hand. Whish payments are coming."
+            ? t("Cash payments are recorded by hand. Whish payments are coming.")
             : undefined
         }
       />
