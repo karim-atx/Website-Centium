@@ -10,9 +10,10 @@
 // allergies {text, allergen?, severity}, diets {text, restriction?},
 // medications {name}, injuries {description}, weight {kg}.
 
-import { ALLERGENS, SEVERITIES, allergenLabel, type Allergen, type AllergySeverity } from "../nutrition/clientNutritionModel";
+import { ALLERGENS, SEVERITIES, allergenLabel, severityLabel, type Allergen, type AllergySeverity } from "../nutrition/clientNutritionModel";
 import { dietLabel, dietaryRestrictionOptions, type DietaryRestriction } from "../../utils/dietaryRestrictions";
 import type { MedicationRoute } from "../../types";
+import { t, tk } from "../../i18n/core";
 
 export type ProposalField = "allergies" | "dietary_restrictions" | "medications" | "injuries" | "weight";
 export type ProposalStatus = "pending" | "confirmed" | "declined";
@@ -31,11 +32,11 @@ export const asProposalField = (v: unknown): ProposalField | null => (FIELDS.inc
 
 /** The card's small caps label. */
 export const FIELD_LABEL: Record<ProposalField, string> = {
-  allergies: "Allergy",
-  dietary_restrictions: "Diet",
-  medications: "Medication",
-  injuries: "Injury",
-  weight: "Weight",
+  allergies: tk("Allergy"),
+  dietary_restrictions: tk("Diet"),
+  medications: tk("Medication"),
+  injuries: tk("Injury"),
+  weight: tk("Weight"),
 };
 
 /**
@@ -52,11 +53,11 @@ export function offeredProposals(list: ProfileProposal[], hideNumbers: boolean):
 // ---------------------------------------------------------------------------
 
 export const MEDICATION_ROUTES: { value: MedicationRoute; label: string }[] = [
-  { value: "oral", label: "Oral" },
-  { value: "injectable", label: "Injectable" },
-  { value: "topical", label: "Topical" },
-  { value: "inhaled", label: "Inhaled" },
-  { value: "other", label: "Other" },
+  { value: "oral", label: tk("Oral") },
+  { value: "injectable", label: tk("Injectable") },
+  { value: "topical", label: tk("Topical") },
+  { value: "inhaled", label: tk("Inhaled") },
+  { value: "other", label: tk("Other") },
 ];
 
 export type DietKind = "restriction" | "preference";
@@ -105,32 +106,32 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function shapeValue(d: ProposalDraft, today: string): ShapedValue {
   switch (d.field) {
     case "allergies": {
-      if (!d.allergen) return { ok: false, problem: "Choose the allergen." };
-      if (d.note.trim().length > 200) return { ok: false, problem: "Keep the note under 200 characters." };
+      if (!d.allergen) return { ok: false, problem: tk("Choose the allergen.") };
+      if (d.note.trim().length > 200) return { ok: false, problem: tk("Keep the note under 200 characters.") };
       return { ok: true, value: { allergen: d.allergen, severity: d.severity, note: d.note.trim() } };
     }
     case "dietary_restrictions":
-      if (!d.restriction) return { ok: false, problem: "Choose the diet." };
+      if (!d.restriction) return { ok: false, problem: tk("Choose the diet.") };
       return { ok: true, value: { restriction: d.restriction, kind: d.kind } };
     case "medications": {
       const name = d.name.trim();
-      if (!name) return { ok: false, problem: "Add the medication's name." };
-      if (name.length > 120) return { ok: false, problem: "Keep the name under 120 characters." };
-      if (d.dose.trim().length > 120) return { ok: false, problem: "Keep the dose under 120 characters." };
-      if (d.notes.trim().length > 500) return { ok: false, problem: "Keep the notes under 500 characters." };
+      if (!name) return { ok: false, problem: tk("Add the medication's name.") };
+      if (name.length > 120) return { ok: false, problem: tk("Keep the name under 120 characters.") };
+      if (d.dose.trim().length > 120) return { ok: false, problem: tk("Keep the dose under 120 characters.") };
+      if (d.notes.trim().length > 500) return { ok: false, problem: tk("Keep the notes under 500 characters.") };
       return { ok: true, value: { name, dose: d.dose.trim(), route: d.route, notes: d.notes.trim() } };
     }
     case "injuries": {
       const description = d.description.trim();
-      if (!description) return { ok: false, problem: "Describe the injury." };
-      if (description.length > 300) return { ok: false, problem: "Keep the description under 300 characters." };
-      if (d.bodyArea.trim().length > 60) return { ok: false, problem: "Keep the body area under 60 characters." };
-      if (d.since && (!ISO_DATE.test(d.since) || d.since > today)) return { ok: false, problem: "Choose a date that isn't in the future." };
+      if (!description) return { ok: false, problem: tk("Describe the injury.") };
+      if (description.length > 300) return { ok: false, problem: tk("Keep the description under 300 characters.") };
+      if (d.bodyArea.trim().length > 60) return { ok: false, problem: tk("Keep the body area under 60 characters.") };
+      if (d.since && (!ISO_DATE.test(d.since) || d.since > today)) return { ok: false, problem: tk("Choose a date that isn't in the future.") };
       return { ok: true, value: { description, body_area: d.bodyArea.trim(), since: d.since } };
     }
     case "weight": {
       const kg = Number(d.kg.trim().replace(",", "."));
-      if (!d.kg.trim() || !Number.isFinite(kg) || kg < 20 || kg > 500) return { ok: false, problem: "Enter a weight from 20 to 500 kg." };
+      if (!d.kg.trim() || !Number.isFinite(kg) || kg < 20 || kg > 500) return { ok: false, problem: tk("Enter a weight from 20 to 500 kg.") };
       return { ok: true, value: { kg: Math.round(kg * 10) / 10 } };
     }
   }
@@ -140,15 +141,15 @@ export function shapeValue(d: ProposalDraft, today: string): ShapedValue {
 export function proposalTitle(d: ProposalDraft): string {
   switch (d.field) {
     case "allergies":
-      return d.allergen ? `${allergenLabel(d.allergen)} allergy` : d.text.trim() || "An allergy";
+      return d.allergen ? t("{allergen} allergy", { allergen: t(allergenLabel(d.allergen)) }) : d.text.trim() || t("An allergy");
     case "dietary_restrictions":
-      return dietaryRestrictionOptions.find((o) => o.value === d.restriction)?.label ?? (d.text.trim() || "A diet");
+      return (d.restriction ? dietLabel(d.restriction) : "") || d.text.trim() || t("A diet");
     case "medications":
-      return d.name.trim() || "A medication";
+      return d.name.trim() || t("A medication");
     case "injuries":
-      return d.description.trim() || "An injury";
+      return d.description.trim() || t("An injury");
     case "weight":
-      return d.kg.trim() ? `Weight ${d.kg.trim()} kg` : "Weight";
+      return d.kg.trim() ? t("Weight {kg} kg", { kg: d.kg.trim() }) : t("Weight");
   }
 }
 
@@ -183,28 +184,29 @@ export function confirmedAnswerRow(a: Pick<ConfirmedAnswer, "field" | "value">):
   const v = a.value;
   switch (a.field) {
     case "allergies": {
-      const name = isAllergen(v.allergen) ? `${allergenLabel(v.allergen)} allergy` : str(v.note).trim() || "An allergy";
-      return { title: isSeverity(v.severity) ? `${name}, ${v.severity}` : name, where: "Dietary needs card" };
+      const name = isAllergen(v.allergen) ? t("{allergen} allergy", { allergen: t(allergenLabel(v.allergen)) }) : str(v.note).trim() || t("An allergy");
+      return { title: isSeverity(v.severity) ? t("{allergy}, {severity}", { allergy: name, severity: t(severityLabel(v.severity)).toLowerCase() }) : name, where: t("Dietary needs card") };
     }
     case "dietary_restrictions": {
-      const label = dietLabel(str(v.restriction)) || "A diet";
-      return { title: v.kind === "preference" ? `${label} (preference)` : label, where: "Dietary needs card" };
+      const label = dietLabel(str(v.restriction)) || t("A diet");
+      return { title: v.kind === "preference" ? t("{diet} (preference)", { diet: label }) : label, where: t("Dietary needs card") };
     }
     case "medications": {
-      const name = str(v.name).trim() || "A medication";
+      const name = str(v.name).trim() || t("A medication");
       const dose = str(v.dose).trim();
-      return { title: dose ? `${name}, ${dose}` : name, where: "Medications" };
+      return { title: dose ? t("{name}, {dose}", { name, dose }) : name, where: t("Medications") };
     }
     case "injuries": {
       const area = str(v.body_area).trim();
-      const what = str(v.description).trim() || "An injury";
+      const what = str(v.description).trim() || t("An injury");
       const since = str(v.since).trim();
       const year = SINCE_YEAR.exec(since)?.[1] ?? since;
-      return { title: `${area ? `${area}: ` : ""}${what}${year ? `, ${year}` : ""}`, where: "Profile and programme notes" };
+      const title = area ? (year ? t("{area}: {what}, {year}", { area, what, year }) : t("{area}: {what}", { area, what })) : year ? t("{what}, {year}", { what, year }) : what;
+      return { title, where: t("Profile and programme notes") };
     }
     case "weight": {
       const kg = str(v.kg).trim();
-      return { title: kg ? `${kg} kg` : "Weight", where: "Weight" };
+      return { title: kg ? t("{kg} kg", { kg }) : t("Weight"), where: t("Weight") };
     }
   }
 }

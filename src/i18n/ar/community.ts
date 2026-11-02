@@ -7,6 +7,9 @@ import type { Catalogue } from "../core";
 // file, and that no English is left outside t() in their JSX.
 export const FILES: string[] = [
   "pages/community/Community.tsx",
+  "services/forum/rules.ts",
+  "services/client-forms/proposals.ts",
+  "services/appointments/model.ts",
   "components/forum/age.ts",
   "components/forum/categoryColour.ts",
   "components/forum/forumColor.ts",
@@ -535,6 +538,49 @@ const community: Catalogue = {
   "Cash at the visit": "نقدًا عند الزيارة", // same Arabic as bizops
   "Cancel appointment": "إلغاء الموعد", // same Arabic as bizops
   "Cancel this appointment?": "إلغاء هذا الموعد؟", // same Arabic as bizops
+  // == EH final · forum refusals (services/forum/rules describeForumError, now in Arabic at the source) ==
+  "Your access to the community forum is paused until {date}.": "وصولك إلى منتدى المجتمع متوقف مؤقتًا حتى {date}.",
+  "Your access to the community forum is paused for now.": "وصولك إلى منتدى المجتمع متوقف مؤقتًا حاليًا.",
+  "Professionals post under their own name.": "ينشر المختصون بأسمائهم.",
+  "This can no longer be edited. Posts can be edited for 30 minutes after posting.": "لم يعد بالإمكان تعديل هذا. يمكن تعديل المنشورات خلال 30 دقيقة من نشرها.",
+  "This couldn't be withdrawn. It may already have been removed.": "تعذّر سحب هذا. ربما أُزيل بالفعل.",
+  "That photo couldn't be attached. Add it again.": "تعذّر إرفاق هذه الصورة. أضفها مرة أخرى.",
+  "That post isn't available any more.": "لم يعد هذا المنشور متاحًا.",
+  "You've reached the limit of 5 posts an hour. Try again later.": "بلغت الحد المسموح، وهو 5 منشورات في الساعة. حاول لاحقًا.",
+  "You've reached the limit of 20 replies an hour. Try again later.": "بلغت الحد المسموح، وهو 20 ردًا في الساعة. حاول لاحقًا.",
+  "Too many photos were started in the last hour. Try again later.": "بدأ رفع صور كثيرة خلال الساعة الماضية. حاول لاحقًا.",
+
+  // == EH final · "Add these to your profile?" and the professional's "Added to {first}'s profile" (services/client-forms/proposals) ==
+  "Choose the allergen.": "اختر مسبّب الحساسية.", // note: health wording
+  "Keep the note under 200 characters.": "اجعل الملاحظة أقل من 200 حرف.",
+  "Choose the diet.": "اختر النظام الغذائي.",
+  "Add the medication's name.": "أضف اسم الدواء.", // note: health wording
+  "Keep the name under 120 characters.": "اجعل الاسم أقل من 120 حرفًا.",
+  "Keep the dose under 120 characters.": "اجعل الجرعة أقل من 120 حرفًا.", // note: health wording
+  "Keep the notes under 500 characters.": "اجعل الملاحظات أقل من 500 حرف.",
+  "Describe the injury.": "صف الإصابة.", // note: health wording
+  "Keep the description under 300 characters.": "اجعل الوصف أقل من 300 حرف.",
+  "Keep the body area under 60 characters.": "اجعل منطقة الجسم أقل من 60 حرفًا.", // note: health wording
+  "Choose a date that isn't in the future.": "اختر تاريخًا ليس في المستقبل.",
+  "Enter a weight from 20 to 500 kg.": "أدخل وزنًا من 20 إلى 500 كغ.", // note: health wording
+  "An allergy": "حساسية", // note: health wording (a card title when the allergen isn't known)
+  "A diet": "نظام غذائي",
+  "A medication": "دواء", // note: health wording
+  "An injury": "إصابة", // note: health wording
+  "Weight {kg} kg": "الوزن {kg} كغ", // note: health wording
+  "Dietary needs card": "بطاقة الاحتياجات الغذائية",
+  "{diet} (preference)": "{diet} (تفضيل)",
+  "{name}, {dose}": "{name}، {dose}", // note: health wording (a medication and its dose)
+  "{area}: {what}": "{area}: {what}", // note: health wording (an injury and where)
+  "{area}: {what}, {year}": "{area}: {what}، {year}", // note: health wording
+  "{what}, {year}": "{what}، {year}", // note: health wording
+  "Profile and programme notes": "الملف الشخصي وملاحظات البرنامج",
+
+  // == EH final · a business booking for a client (services/appointments bookForErrorMessage) ==
+  "You can book for your own clients only: people seen in the last 90 days.": "يمكنك الحجز لعملائك فقط: الأشخاص الذين زاروك خلال آخر 90 يومًا.",
+  "That time is no longer free. Pick another.": "لم يعد هذا الوقت متاحًا. اختر وقتًا آخر.",
+  "That service isn't available. Check it's shown for booking.": "هذه الخدمة غير متاحة. تأكد من أنها معروضة للحجز.",
+  "That person isn't on your team any more. Pick another.": "لم يعد هذا الشخص في فريقك. اختر شخصًا آخر.",
 };
 
 export default community;

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeForumError, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
 import { contactRefusal } from "../moderation/text";
+import { t, tk } from "../../i18n/core";
 
 // The shared forum (Database 630f2cd, 27141fa, df67bd8).
 //
@@ -20,11 +21,11 @@ import { contactRefusal } from "../moderation/text";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
 
-const GENERIC = "Something went wrong. Try again.";
+const GENERIC = tk("Something went wrong. Try again.");
 
 function fail(error: { code?: string; message?: string }, action: ForumAction): { ok: false; message: string; code?: string } {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  return { ok: false, message: describeForumError(error, action) ?? GENERIC, code: error.code };
+  return { ok: false, message: describeForumError(error, action) ?? t(GENERIC), code: error.code };
 }
 
 // ---------------------------------------------------------------------------

@@ -105,7 +105,8 @@ export function playlistFieldMessage(url: string): { ok: true; service: Playlist
     return { ok: false, message: tk("Only Spotify, Apple Music and YouTube Music links work here.") };
   }
   const service = HOSTS[hostOf(url) ?? ""];
-  return { ok: false, message: `That's a ${service ? SERVICE_LABEL[service] : "music"} link, but not a playlist or an album.` };
+  // A whole sentence in the app's language (PlaylistField shows it as is; never parsed).
+  return { ok: false, message: service ? t("That's a {service} link, but not a playlist or an album.", { service: SERVICE_LABEL[service] }) : tk("That's a music link, but not a playlist or an album.") };
 }
 
 /** The server's refusal as a sentence (a save raises ATXN0, ATXN1 or ATXN2). */
