@@ -36,7 +36,6 @@ export function JournalPrompts({ onWrite, className = "" }: { onWrite: (heading:
             <Sparkles size={13} aria-hidden />
             {t("Today's prompt")}
           </p>
-          {/* Content: the prompt is English data until the Database loads Karim's approved Arabic. */}
           <p className="mt-1.5 text-[15px] leading-[22px] font-semibold text-charcoal [overflow-wrap:anywhere]">{prompt.text}</p>
           <button
             type="button"
@@ -85,7 +84,6 @@ function PromptLibrarySheet({ onClose, onPick }: { onClose: () => void; onPick: 
                 const open = g.prompts.filter((p) => !p.locked && p.text);
                 return (
                   <section key={g.key} aria-label={g.title}>
-                    {/* Content: the group title is English data until the Database loads Karim's approved Arabic. */}
                     <p className="mb-1.5 text-[12.5px] font-bold text-charcoal">{g.title}</p>
                     {open.length === 0 ? (
                       <LockedRow feature="journal_prompts" title={g.title} meta={tn(g.prompts.length, "{n} prompt", "{n} prompts")} />

@@ -177,7 +177,7 @@ export default function HireConfirmDialog({
           {t(shownNote.text)}
         </p>
       ) : null}
-      {showBuy && credits ? <BuyInApp product="hiring_credits" price1={credits.price1} price3={credits.price3} compact className="mt-3 text-start" /> : null}
+      {showBuy && credits ? <BuyInApp product="hiring_credits" compact className="mt-3 text-start" /> : null}
     </CentredDialog>
   );
 }

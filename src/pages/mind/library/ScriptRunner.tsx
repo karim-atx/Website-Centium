@@ -103,7 +103,6 @@ export function ScriptRunner({ slug, contentId, script, minutes }: { slug: strin
     <div data-g3="script-runner">
       <div className="rounded-2xl bg-cream-card shadow-soft px-4 py-5">
         <p className="text-[11px] font-bold text-charcoal-faint">{t("Step {n} of {total}", { n: at.index + 1, total: steps.length })}</p>
-        {/* Content: the script is English data until the Database loads Karim's approved Arabic. */}
         <p aria-live="polite" className="mt-2 min-h-[96px] text-[17px] leading-[26px] font-semibold text-charcoal [overflow-wrap:anywhere]">
           {steps[at.index].text}
         </p>

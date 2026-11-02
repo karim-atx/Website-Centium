@@ -169,8 +169,8 @@ export function SubscriptionPage() {
   // ("$X a year" on a yearly plan). The console seat says who owns the
   // business, with or without RV-06.
   const isOwner = billing.isOwner;
-  // Round G1 (#15), G fixes 2: the plan levels and "Buy in the Centium app"
-  // (levels are bought in the app only), only while business_plans_on is true
+  // Round G1 (#15), G fixes 3: the owner chooses the plan level here and
+  // buys it in the Centium app, only while business_plans_on is true
   // for this business; off (or loading) the page is today's.
   const planLevel = usePlanLevel(billing.businessId);
   const levelsOn = !!planLevel.level?.businessPlansOn;
@@ -282,7 +282,7 @@ export function SubscriptionPage() {
               actions={planCharge || levelsOn ? [] : [{ label: t(UPGRADE_ACTION_LABEL), icon: Mail, primary: true, onClick: () => (window.location.href = upgradeMailto()) }]}
             />
           )}
-          {levelsOn && <BusinessPlanLevels level={planLevel.level} isOwner={isOwner} />}
+          {levelsOn && billing.businessId && <BusinessPlanLevels businessId={billing.businessId} level={planLevel.level} isOwner={isOwner} onChanged={planLevel.reload} />}
           {active && isOwner && (
             <>
               {period.error ? (

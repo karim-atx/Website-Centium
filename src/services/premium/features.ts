@@ -8,7 +8,7 @@
 // features of Premium, so they are not in this table.
 
 import { t, tk, tn } from "../../i18n/core";
-import type { FreeLimits } from "./model";
+import { formatPremiumPrice, type FreeLimits } from "./model";
 
 export type PremiumFeature =
   // Free up to a limit, then Premium.
@@ -119,4 +119,19 @@ export function freeAllowanceText(key: PremiumFeature, limits: FreeLimits | null
     default:
       return null;
   }
+}
+
+/**
+ * Hiring credits' prices (Karim's G10): 1 credit $39, 3 credits $99. Credits
+ * are bought only in the Centium app, and the App Store or Google Play sets
+ * the real price the owner pays; these are the prices shown on the web, and
+ * my_hiring_credits() no longer returns any.
+ */
+export const HIRING_CREDIT_PRICES = { one: 39, three: 99 } as const;
+
+/** "$39 for 1 hiring credit, $99 for 3", through i18n/format (formatPremiumPrice). */
+export function hiringCreditPricesText(): string {
+  const one = formatPremiumPrice(HIRING_CREDIT_PRICES.one) ?? "";
+  const three = formatPremiumPrice(HIRING_CREDIT_PRICES.three) ?? "";
+  return t("{one} for 1 hiring credit, {three} for 3", { one, three });
 }

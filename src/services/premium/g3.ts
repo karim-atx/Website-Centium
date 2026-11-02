@@ -11,9 +11,11 @@
 //   - with the switch off (premium_on false, still loading, a call answering
 //     ATXQ0, or a Database without the function), NONE OF G3 SHOWS: every
 //     decision here reads a missing answer as "hidden";
-//   - the content is English data (like exercise names) until the Database
-//     loads Karim's approved Arabic. Only the UI labels around it go through
-//     t(); the parsers below never translate a content field.
+//   - the content comes from the Database in the member's language
+//     (app_preferences.language; G fixes 3), with the same ids, slugs and
+//     numbers in either. Only the UI labels around it go through t(); the
+//     parsers below never translate a content field, and the readers re-read
+//     when the language changes (contentCacheKey).
 
 import { t, tk, tn } from "../../i18n/core";
 import { isMissingFunction } from "./g2";
@@ -38,6 +40,13 @@ const ymd = (v: unknown): string | null => (typeof v === "string" && /^\d{4}-\d{
 
 /** G3 may show at all: the switch known to be on (loading and unknown read as off). */
 export const g3On = (p: Pick<MyPremium, "premiumOn"> | null | undefined): boolean => p?.premiumOn === true;
+
+/**
+ * The key a G3 answer is kept under: the account, the app language and what
+ * was asked. The content answers in the member's language (G fixes 3), so
+ * switching language never keeps the other language's copy.
+ */
+export const contentCacheKey = (userId: string | null | undefined, language: string, key = ""): string => `${userId ?? ""}|${language}|${key}`;
 
 /** ATXQ0 from a G3 call: the switch is off for the caller. */
 export function isSwitchOff(e: Err): boolean {
@@ -81,7 +90,7 @@ export interface ContentLines {
   sessionSupport: string | null;
 }
 
-/** premium_content_lines(): key, text. Content (English data). */
+/** premium_content_lines(): key, text. Content, in the member's language. */
 export function parseContentLines(data: unknown): ContentLines {
   const by = new Map(rowsOf(data).map((r) => [str(r.key), str(r.text)] as const));
   return {
