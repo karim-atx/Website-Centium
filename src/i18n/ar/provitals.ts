@@ -95,12 +95,12 @@ const provitals: Catalogue = {
   "{woke}; {deep} in the second half of the night.": "{woke}؛ {deep} في النصف الثاني من الليل.", // note: health wording; {woke} and {deep} are the phrases above
 
   // == Vitals: tabs and empty states ==
-  "Heart rate": "معدل النبض", // note: health wording; the member screens' form (eh-health has «معدل القلب»)
+  "Heart rate": "معدل القلب", // note: health wording
   "Calories burned": "السعرات المحروقة",
   "{firstName} shares vitals with you, but nothing has been logged yet.": "يشارك {firstName} علاماته الحيوية معك، لكن لم يُسجَّل شيء بعد.",
   "No blood pressure shared yet": "لم يُشارَك ضغط الدم بعد",
   "This fills in when {firstName} shares blood pressure with you.": "يمتلئ هذا عندما يشارك {firstName} ضغط الدم معك.",
-  "No heart rate shared yet": "لم يُشارَك معدل النبض بعد",
+  "No heart rate shared yet": "لم يُشارَك معدل القلب بعد",
   "This fills in when {firstName} shares Activity and vitals with you.": "يمتلئ هذا عندما يشارك {firstName} النشاط والعلامات الحيوية معك.",
   "No weight shared yet": "لم يُشارَك الوزن بعد",
   "This fills in when {firstName} shares weight with you.": "يمتلئ هذا عندما يشارك {firstName} الوزن معك.",
