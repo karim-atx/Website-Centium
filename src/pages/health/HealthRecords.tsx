@@ -27,6 +27,8 @@ import type { Injury } from "../../services/injuries";
 import { MarkerPage } from "../../components/health/records/MarkerPage";
 import { UploadChoiceSheet } from "../../components/health/records/UploadChoiceSheet";
 import { useLabResults } from "../../components/health/records/useLabResults";
+import { DoctorSummaryEntry } from "./doctor/DoctorSummaryEntry";
+import { CompareReports } from "../../components/health/records/premium/CompareReports";
 import { useHealthMode, hairline, fieldFill, fmtDate, ConfirmPopup, PINNED_FILL, REPORT_NAME_DEFAULT, INK, INK_FAINT } from "../../components/health/records/kit";
 import { resultKey } from "../../services/labs/results";
 import { fetchLinkedProfessionals, fetchMyGrants } from "../../services/consent";
@@ -503,6 +505,8 @@ export default function HealthRecords() {
           highlight={highlight}
         />
       )}
+      {/* Round G3: comparing two reports (nothing while the Premium switch is off). */}
+      {tab === "labs" && <CompareReports panels={labResults.panels} className="mb-3" />}
       {tab === "labs" && (
         <LabsTab
           reports={labReports}
@@ -529,6 +533,8 @@ export default function HealthRecords() {
           onDelete={setDeleteImaging}
         />
       )}
+      {/* Round G3: the doctor summary (nothing while the Premium switch is off). */}
+      {tab === "history" && <DoctorSummaryEntry className="mb-3" />}
       {tab === "history" && (
         <HistoryTab
           loading={!fresh}

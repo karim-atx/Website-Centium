@@ -221,6 +221,8 @@ test("the features table: Karim's G5 keys, one prompt line each, numbers only fr
     "journal_prompts", "online_food_search", "lab_report_scanning", "report_comparison", "biomarker_trends", "doctor_summary", "ai_voice_food_logging",
     // Round G2: the prompt for an offer kept for Premium members.
     "premium_offers",
+    // Round G3: the Monday weekly review and its target suggestions.
+    "weekly_review",
   ];
   assert.deepEqual(PREMIUM_FEATURES.map((f) => f.key), keys);
   assert.deepEqual(PREMIUM_FEATURES.filter((f) => f.kind === "premium_only").map((f) => f.key), keys.slice(8));

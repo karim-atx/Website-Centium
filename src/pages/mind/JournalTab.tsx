@@ -35,6 +35,7 @@ import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "..
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
 import { appLocale } from "../../i18n/format";
+import { JournalPrompts } from "./journal/JournalPrompts";
 
 type FolderOption = "rename" | "move" | "lock" | "unlock" | "delete";
 
@@ -294,6 +295,14 @@ export default function JournalTab() {
   const startNew = () => {
     if (targetShut && targetFolder) askPassword("write", targetFolder, openCompose);
     else openCompose();
+  };
+
+  // Round G3: a journal prompt opens a new entry with the prompt as its heading.
+  const writeFromPrompt = (heading: string) => {
+    setEditingEntry(null);
+    setTitle(heading);
+    setText("");
+    startNew();
   };
 
   const save = async (afterUnlock = false) => {
@@ -590,6 +599,9 @@ export default function JournalTab() {
           </button>
         </div>
       )}
+
+      {/* Round G3: journal prompts (nothing while the Premium switch is off). */}
+      {journalFolders.length > 0 && <JournalPrompts onWrite={writeFromPrompt} />}
 
       {/* K9: a failed Lock stays an inline line. */}
       {lockError && (

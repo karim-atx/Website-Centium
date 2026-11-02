@@ -32,6 +32,7 @@ const AREAS = [
   ["certificates", "Your certificates (Courses)"],
   ["premium", "Round G1: Premium, passes, business plan levels and hiring credits"],
   ["premium2", "Round G2: free limits, the full export and Premium perks"],
+  ["premium3", "Round G3: Premium content (programmes, meditations, journal prompts) and the Premium readers"],
 ];
 
 const rows = [];
