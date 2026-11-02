@@ -11,6 +11,7 @@ import { todayLocal } from "../../utils/date";
 import { range12 } from "../../utils/time12";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { textPx, linePx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 // Release 3 · CU16 v2 "Your care plan (new page)", re-homed on v6 Health
 // (route /app/health/care-plan, from the Health records row). Values from the
@@ -43,7 +44,7 @@ export default function CarePlan() {
   const back = useBack();
   const online = useOnline();
   const { dark, hc } = useHealthMode();
-  const t = tok(dark);
+  const tc = tok(dark);
   const [load, setLoad] = useState<Load>({ state: "loading" });
 
   const fetchPlan = useCallback(async () => {
@@ -67,35 +68,34 @@ export default function CarePlan() {
         <button
           type="button"
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
         >
-          <ChevronLeft size={18} strokeWidth={2} style={{ color: t.chS }} aria-hidden />
+          <ChevronLeft size={18} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: tc.chS }} aria-hidden />
         </button>
         <div className="min-w-0 flex-1" style={{ paddingTop: 2 }}>
-          <h1 style={{ fontSize: textPx(19), lineHeight: linePx(28.5), fontWeight: 700, letterSpacing: "-0.03em", color: INK }}>Your care plan</h1>
+          <h1 style={{ fontSize: textPx(19), lineHeight: linePx(28.5), fontWeight: 700, letterSpacing: "-0.03em", color: INK }}>{t("Your care plan")}</h1>
           {plan && (
-            <p data-care-plan-from style={{ marginTop: 3, fontSize: textPx(11), lineHeight: linePx(15), color: hc ? INK_FAINT : t.chT }}>
-              From {fromLine(plan.professionalName, plan.professionalRole, plan.roleIsSpecialty)} · reviewed{" "}
-              {shortDay(localIsoDay(plan.publishedAt))}
+            <p data-care-plan-from style={{ marginTop: 3, fontSize: textPx(11), lineHeight: linePx(15), color: hc ? INK_FAINT : tc.chT }}>
+              {t("From {name} · reviewed {date}", { name: fromLine(plan.professionalName, plan.professionalRole, plan.roleIsSpecialty), date: shortDay(localIsoDay(plan.publishedAt)) })}
             </p>
           )}
         </div>
       </div>
 
       {load.state === "loading" && (
-        <div aria-busy="true" aria-label="Loading your care plan" className="flex flex-col" style={{ gap: 12 }}>
+        <div aria-busy="true" aria-label={t("Loading your care plan")} className="flex flex-col" style={{ gap: 12 }}>
           <Skel w="100%" h={62} r={20} />
           <Skel w="40%" h={12} />
           <Skel w="100%" h={120} r={20} />
         </div>
       )}
 
-      {load.state === "error" && <RetryCard message={online ? load.message : OFFLINE_MESSAGE} onRetry={() => void fetchPlan()} />}
+      {load.state === "error" && <RetryCard message={online ? load.message : t(OFFLINE_MESSAGE)} onRetry={() => void fetchPlan()} />}
 
       {load.state === "ready" && !plan && (
-        <EmptyCard icon={ClipboardPlus} title="No care plan yet" body="When a professional shares a care plan with you, it shows here." />
+        <EmptyCard icon={ClipboardPlus} title={t("No care plan yet")} body={t("When a professional shares a care plan with you, it shows here.")} />
       )}
 
       {plan && groups && (
@@ -106,23 +106,23 @@ export default function CarePlan() {
             <div
               data-care-plan-review
               className="flex items-center"
-              style={{ gap: 10, borderRadius: 20, padding: "12px 14px", marginBottom: 12, background: t.prPale, border: hc ? `1px solid ${t.bCard}` : undefined }}
+              style={{ gap: 10, borderRadius: 20, padding: "12px 14px", marginBottom: 12, background: tc.prPale, border: hc ? `1px solid ${tc.bCard}` : undefined }}
             >
-              <CalendarClock size={18} strokeWidth={1.75} style={{ color: t.prDeep }} aria-hidden className="shrink-0" />
+              <CalendarClock size={18} strokeWidth={1.75} style={{ color: tc.prDeep }} aria-hidden className="shrink-0" />
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: textPx(13.5), lineHeight: linePx(19), fontWeight: 700, color: INK }}>
-                  Next review {shortDay(plan.nextFollowUp.dueOn)}
+                  {t("Next review {date}", { date: shortDay(plan.nextFollowUp.dueOn) })}
                 </span>
-                <ReviewLine followUp={plan.nextFollowUp} color={t.chS} />
+                <ReviewLine followUp={plan.nextFollowUp} color={tc.chS} />
               </span>
             </div>
           )}
 
-          {groups.goal.length > 0 && <ItemSection label="Your goals" icon={Target} items={groups.goal} />}
-          {groups.recommendation.length > 0 && <ItemSection label={`What ${first} recommends`} icon={Lightbulb} items={groups.recommendation} />}
-          {groups.monitoring.length > 0 && <ItemSection label={`What ${first} keeps an eye on`} icon={Activity} items={groups.monitoring} showRange />}
+          {groups.goal.length > 0 && <ItemSection label={t("Your goals")} icon={Target} items={groups.goal} />}
+          {groups.recommendation.length > 0 && <ItemSection label={t("What {name} recommends", { name: first })} icon={Lightbulb} items={groups.recommendation} />}
+          {groups.monitoring.length > 0 && <ItemSection label={t("What {name} keeps an eye on", { name: first })} icon={Activity} items={groups.monitoring} showRange />}
           {plan.items.length === 0 && (
-            <EmptyCard icon={ClipboardPlus} title="Nothing to show yet" body={`${first} hasn't added anything you can see to this plan yet.`} />
+            <EmptyCard icon={ClipboardPlus} title={t("Nothing to show yet")} body={t("{name} hasn't added anything you can see to this plan yet.", { name: first })} />
           )}
         </>
       )}
@@ -140,7 +140,7 @@ function ReviewLine({ followUp, color }: { followUp: NonNullable<MyCarePlan["nex
   if (ev) {
     const day = relativeDay(ev.day, todayLocal());
     const time = ev.allDay ? "" : range12(ev.start, ev.end);
-    when = time ? `${day} at ${time}` : day;
+    when = time ? t("{day} at {time}", { day, time }) : day;
     // Sentence-initial without a note: "Today at …".
     if (!note) when = when.charAt(0).toUpperCase() + when.slice(1);
   }
@@ -161,15 +161,15 @@ function ReviewLine({ followUp, color }: { followUp: NonNullable<MyCarePlan["nex
  */
 function ItemSection({ label, icon: Icon, items, showRange }: { label: string; icon: LucideIcon; items: CarePlanItem[]; showRange?: boolean }) {
   const { dark } = useHealthMode();
-  const t = tok(dark);
+  const tc = tok(dark);
   return (
     <section>
-      <div style={{ marginBottom: 10, paddingBottom: 7.5, borderBottom: `1.5px solid ${t.pr}` }}>
+      <div style={{ marginBottom: 10, paddingBottom: 7.5, borderBottom: `1.5px solid ${tc.pr}` }}>
         <h2 className="uppercase" style={{ fontSize: textPx(11), lineHeight: linePx(14), fontWeight: 600, letterSpacing: "0.14em", color: INK_FAINT }}>
           {label}
         </h2>
       </div>
-      <div style={{ background: t.card, border: `1px solid ${t.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
+      <div style={{ background: tc.card, border: `1px solid ${tc.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
         {items.map((item, i) => {
           const range = showRange ? rangeText(item.thresholdLow, item.thresholdHigh) : "–";
           return (
@@ -177,10 +177,10 @@ function ItemSection({ label, icon: Icon, items, showRange }: { label: string; i
               key={item.id}
               data-care-plan-item={item.kind}
               className="flex items-center"
-              style={{ gap: 12, padding: "11px 0", borderBottom: i < items.length - 1 ? `1px solid ${t.b06}` : "none" }}
+              style={{ gap: 12, padding: "11px 0", borderBottom: i < items.length - 1 ? `1px solid ${tc.b06}` : "none" }}
             >
-              <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: t.tile }}>
-                <Icon size={16} strokeWidth={1.75} style={{ color: t.prAccent }} />
+              <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: tc.tile }}>
+                <Icon size={16} strokeWidth={1.75} style={{ color: tc.prAccent }} />
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block" style={{ fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 600, color: INK, overflowWrap: "anywhere" }}>

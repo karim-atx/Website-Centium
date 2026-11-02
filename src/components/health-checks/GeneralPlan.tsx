@@ -25,6 +25,7 @@ import { fetchNotificationPrefs } from "../../services/preferences";
 import { hairAt, isoDay } from "../health/log/LogSheetParts";
 import { CheckTile, InfoBox } from "./HealthCheckParts";
 import { CheckFormPopup, CheckReminderSheet, HideOrDeletePopup, HiddenChecksSheet, MarkDonePopup, type CheckOption } from "./HealthCheckPopups";
+import { t, tn, tx } from "../../i18n/core";
 
 // HE1.8 "Your health checks" (health-b-handover.md 79-203), the general
 // plan of the neutral /app/health/checks route, and the pregnancy schedule
@@ -65,11 +66,11 @@ const HeaderRow: React.FC<{ title: string; onBack: () => void; menu?: React.Reac
       <button
         type="button"
         onClick={onBack}
-        aria-label="Back"
+        aria-label={t("Back")}
         className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
         style={{ width: 36, height: 36 }}
       >
-        <ChevronLeft size={20} className="text-charcoal-soft" aria-hidden />
+        <ChevronLeft size={20} className="text-charcoal-soft rtl:-scale-x-100" aria-hidden />
       </button>
       <h1 className="flex-1 min-w-0 text-charcoal line-clamp-2" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5 }}>
         {title}
@@ -135,9 +136,9 @@ export function GeneralPlan() {
         <Bell size={17} aria-hidden strokeWidth={1.9} />
       </span>
       <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: "20.3px", fontWeight: 600 }}>
-        Set a personal reminder
+        {t("Set a personal reminder")}
       </span>
-      <ChevronRight size={17} className="absolute text-charcoal-faint" style={{ insetInlineEnd: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
+      <ChevronRight size={17} className="absolute text-charcoal-faint rtl:-scale-x-100" style={{ insetInlineEnd: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
     </button>
   );
 
@@ -173,7 +174,7 @@ export function GeneralPlan() {
         {next && (
           <div className="bg-cream-card" style={{ ...card, marginTop: 12, padding: "12px 14px" }}>
             <p className="text-charcoal-faint" style={{ margin: 0, fontSize: textPx(11), lineHeight: "14px", fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>
-              Coming up
+              {t("Coming up")}
             </p>
             <p className="text-charcoal" style={{ margin: "4px 0 0", fontSize: textPx(13.5), lineHeight: "18px", fontWeight: 600 }}>
               {PREGNANCY_CHECKS_COPY.comingUp(next.weekLabel, next.short)}
@@ -189,12 +190,12 @@ export function GeneralPlan() {
                 </p>
                 {done.has(c.id) && (
                   <span className="flex items-center whitespace-nowrap" style={{ ...sub, fontWeight: 700, gap: 3, color: STATUS_INK.good[dark ? 1 : 0] }}>
-                    <Check size={12} aria-hidden /> {PREGNANCY_CHECKS_COPY.done}
+                    <Check size={12} aria-hidden /> {t(PREGNANCY_CHECKS_COPY.done)}
                   </span>
                 )}
                 {c.id === "every" && (
                   <span className="whitespace-nowrap tabular-nums text-charcoal-faint" style={sub}>
-                    {latestBpDay ? SCREENING_COPY.lastChecked(formatShortDate(new Date(`${latestBpDay}T00:00:00`), { day: "numeric", month: "short", year: "numeric" })) : SCREENING_COPY.notYet}
+                    {latestBpDay ? t("Last checked {date}", { date: formatShortDate(new Date(`${latestBpDay}T00:00:00`), { day: "numeric", month: "short", year: "numeric" }) }) : t(SCREENING_COPY.notYet)}
                   </span>
                 )}
               </div>
@@ -242,7 +243,7 @@ export function GeneralPlan() {
         return {
           id: c.id,
           name: c.name,
-          frequency: c.intervalMonths === 12 ? "Every year" : `Every ${c.intervalMonths} months`,
+          frequency: c.intervalMonths === 12 ? t("Every year") : tn(c.intervalMonths ?? 0, "Every {n} month", "Every {n} months"),
           cadence,
           custom: true,
           state: checkState(cadence, doneOn, today),
@@ -268,7 +269,7 @@ export function GeneralPlan() {
 
   const hideNow = async (row: Row) => {
     const r = await (row.custom ? checkStoreActions.deleteCustom(row.id) : checkStoreActions.hide(row.id));
-    if (r.ok && !row.custom) setToast({ message: "Check hidden.", undo: () => void checkStoreActions.show(row.id) });
+    if (r.ok && !row.custom) setToast({ message: t("Check hidden."), undo: () => void checkStoreActions.show(row.id) });
     return r;
   };
 
@@ -285,7 +286,7 @@ export function GeneralPlan() {
           <button
             type="button"
             onClick={() => setMarkFor(row)}
-            aria-label={done ? `${row.name}: done. Change or undo` : `Mark ${row.name} as done`}
+            aria-label={done ? t("{name}: done. Change or undo", { name: row.name }) : t("Mark {name} as done", { name: row.name })}
             className="tap relative shrink-0 grid place-items-center rounded-full before:absolute before:-inset-[10px] before:content-['']"
             style={{
               width: 24,
@@ -311,21 +312,21 @@ export function GeneralPlan() {
         <div className="shrink-0 flex flex-col items-end text-end" style={{ gap: 2 }}>
           <span className="flex items-center whitespace-nowrap" style={{ gap: 3, color: ink, ...sub, fontWeight: 700 }}>
             <StatusIcon size={12} aria-hidden strokeWidth={2.4} />
-            {row.state.word}
+            {t(row.state.word)}
           </span>
           {row.state.last !== null && (
             <span className="whitespace-nowrap tabular-nums" style={sub}>
-              <span className="text-charcoal-faint">Last</span> <span className="text-charcoal-soft">{row.state.last}</span>
+              <span className="text-charcoal-faint">{t("Last")}</span> <span className="text-charcoal-soft">{t(row.state.last)}</span>
             </span>
           )}
           {row.state.next !== null && (
             <span className="flex items-center whitespace-nowrap tabular-nums" style={{ ...sub, gap: 3 }}>
-              <span className="text-charcoal-faint">Next</span> <span className="text-charcoal-soft">{row.state.next}</span>
+              <span className="text-charcoal-faint">{tx("Next", "next due")}</span> <span className="text-charcoal-soft">{t(row.state.next)}</span>
               {row.hasReminder && (
                 <button
                   type="button"
                   onClick={() => openReminder(row)}
-                  aria-label={`Reminder for ${row.name}`}
+                  aria-label={t("Reminder for {name}", { name: row.name })}
                   className="tap relative grid place-items-center text-th-7d6bb5 dark:text-primary-deep-text before:absolute before:-inset-[16px] before:content-['']"
                 >
                   <Bell size={11} aria-hidden />
@@ -347,8 +348,8 @@ export function GeneralPlan() {
         keyboardLabel={row.name}
         onLongPress={(el) => setRowMenu({ row, anchor: el })}
         actions={[
-          { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => setFormFor({ editing: row }) },
-          { key: "delete", label: row.custom ? "Delete" : "Hide", icon: <Trash2 size={16} />, destructive: true, onClick: () => setHideFor(row) },
+          { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => setFormFor({ editing: row }) },
+          { key: "delete", label: row.custom ? t("Delete") : t("Hide"), icon: <Trash2 size={16} />, destructive: true, onClick: () => setHideFor(row) },
         ]}
       >
         {body}
@@ -359,7 +360,7 @@ export function GeneralPlan() {
   return (
     <div style={{ paddingBottom: ready ? 176 : 96 }}>
       <HeaderRow
-        title={SCREENING_COPY.cardTitle}
+        title={t(SCREENING_COPY.cardTitle)}
         onBack={() => (window.history.length > 1 ? back() : navigate("/app/health"))}
         menu={
           ready ? (
@@ -367,7 +368,7 @@ export function GeneralPlan() {
               ref={menuBtn}
               type="button"
               onClick={() => setMenuOpen(true)}
-              aria-label="More options"
+              aria-label={t("More options")}
               aria-haspopup="menu"
               className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
               style={{ width: 36, height: 36, marginInlineEnd: -7.5 }}
@@ -389,13 +390,13 @@ export function GeneralPlan() {
       </InfoBox>
 
       {rows.length > 0 ? (
-        <section className="bg-cream-card overflow-hidden" style={{ ...card, marginTop: 12 }} aria-label="Your checks">
+        <section className="bg-cream-card overflow-hidden" style={{ ...card, marginTop: 12 }} aria-label={t("Your checks")}>
           {rows.map(rowView)}
         </section>
       ) : (
         <div className="text-center" style={{ marginTop: 24 }}>
           <p className="text-charcoal-soft" style={{ margin: 0, fontSize: textPx(13), lineHeight: "19.5px" }}>
-            {noAge && hiddenRows.length === 0 ? "Add your date of birth in Profile to see checks for your age." : "No checks to show. Add a check you want to keep track of."}
+            {noAge && hiddenRows.length === 0 ? t("Add your date of birth in Profile to see checks for your age.") : t("No checks to show. Add a check you want to keep track of.")}
           </p>
           {hiddenRows.length > 0 && (
             <button
@@ -404,7 +405,7 @@ export function GeneralPlan() {
               className="tap text-th-7d6bb5 dark:text-primary-deep-text"
               style={{ marginTop: 6, minHeight: 32, fontSize: textPx(13), lineHeight: "19.5px", fontWeight: 700 }}
             >
-              Show hidden checks
+              {t("Show hidden checks")}
             </button>
           )}
         </div>
@@ -412,9 +413,9 @@ export function GeneralPlan() {
 
       {store.status === "error" && (
         <p role="alert" className="text-status-high" style={{ margin: "10px 0 0", fontSize: textPx(12), lineHeight: "17.4px", fontWeight: 600 }}>
-          {online ? "Couldn't load your checks." : OFFLINE_MESSAGE}{" "}
+          {online ? t("Couldn't load your checks.") : t(OFFLINE_MESSAGE)}{" "}
           <button type="button" onClick={store.retry} className="tap underline" style={{ fontWeight: 700 }}>
-            Retry
+            {t("Retry")}
           </button>
         </p>
       )}
@@ -424,7 +425,7 @@ export function GeneralPlan() {
       {ready && (
         <PinnedCta
           primary={{
-            label: "Add a check",
+            label: t("Add a check"),
             icon: <Plus size={16} aria-hidden />,
             onClick: () => setFormFor({ editing: null }),
             style: { background: "rgb(var(--c-fill-pinned))" },
@@ -465,7 +466,7 @@ export function GeneralPlan() {
             if (!r.ok) return r;
             id = r.id ?? null;
           }
-          if (!id) return { ok: false, message: "Couldn't save. Try again." };
+          if (!id) return { ok: false, message: t("Couldn't save. Try again.") };
           const steps: Promise<{ ok: boolean; message?: string }>[] = [];
           if (otherName === null || editingCustom) steps.push(doneOn ? checkStoreActions.markDone(id, doneOn) : checkStoreActions.undoDone(id));
           // Shown again if it had been hidden and is chosen from the list.
@@ -501,7 +502,7 @@ export function GeneralPlan() {
         onClose={() => setMenuOpen(false)}
         anchor={menuEl}
         width={172}
-        options={[{ value: "hidden", label: `Hidden checks (${hiddenRows.length})` }]}
+        options={[{ value: "hidden", label: t("Hidden checks ({n})", { n: hiddenRows.length }) }]}
         onSelect={() => {
           setMenuOpen(false);
           setHiddenOpen(true);
@@ -513,9 +514,9 @@ export function GeneralPlan() {
         anchor={rowMenu?.anchor ?? null}
         width={172}
         options={[
-          { value: "edit", label: "Edit" },
-          { value: "hide", label: rowMenu?.row.custom ? "Delete" : "Hide", destructive: !!rowMenu?.row.custom },
-          ...(ready ? [{ value: "remind", label: "Set a reminder" }] : []),
+          { value: "edit", label: t("Edit") },
+          { value: "hide", label: rowMenu?.row.custom ? t("Delete") : t("Hide"), destructive: !!rowMenu?.row.custom },
+          ...(ready ? [{ value: "remind", label: t("Set a reminder") }] : []),
         ]}
         onSelect={(v) => {
           const row = rowMenu?.row;

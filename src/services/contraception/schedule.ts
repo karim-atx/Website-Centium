@@ -1,4 +1,5 @@
 import type { Enums } from "../../../lib/supabase/database.types";
+import { tk } from "../../i18n/core";
 
 // Where a contraceptive method is in its schedule.
 //
@@ -167,45 +168,45 @@ export function validatePlan(plan: PlanShape): string | null {
   const { method } = plan;
 
   if (isPill(method)) {
-    if (!plan.packStartDate) return "Enter the date you started this pack.";
+    if (!plan.packStartDate) return tk("Enter the date you started this pack.");
     if (plan.activeDays == null || plan.activeDays < 20 || plan.activeDays > 28) {
-      return "Active days should be between 20 and 28.";
+      return tk("Active days should be between 20 and 28.");
     }
     if (plan.breakDays == null || plan.breakDays < 0 || plan.breakDays > 7) {
-      return "Break days should be between 0 and 7.";
+      return tk("Break days should be between 0 and 7.");
     }
     const total = plan.activeDays + plan.breakDays;
-    if (total < 21 || total > 35) return "A pack should be between 21 and 35 days in total.";
+    if (total < 21 || total > 35) return tk("A pack should be between 21 and 35 days in total.");
     return null;
   }
   if (method === "ring") {
-    if (!plan.insertedOn) return "Enter the date the ring went in.";
+    if (!plan.insertedOn) return tk("Enter the date the ring went in.");
     if (plan.weeksIn == null || plan.weeksIn < 1 || plan.weeksIn > 4) {
-      return "Weeks in should be between 1 and 4.";
+      return tk("Weeks in should be between 1 and 4.");
     }
     if (plan.weeksOut == null || plan.weeksOut < 0 || plan.weeksOut > 2) {
-      return "Weeks out should be between 0 and 2.";
+      return tk("Weeks out should be between 0 and 2.");
     }
     return null;
   }
   if (method === "patch") {
-    if (!plan.firstAppliedOn) return "Enter the date you put the first patch on.";
+    if (!plan.firstAppliedOn) return tk("Enter the date you put the first patch on.");
     if (plan.changeWeekday == null || plan.changeWeekday < 0 || plan.changeWeekday > 6) {
-      return "Choose the day of the week you change it.";
+      return tk("Choose the day of the week you change it.");
     }
     return null;
   }
   if (method === "injection") {
-    if (!plan.lastGivenOn) return "Enter the date of your last injection.";
+    if (!plan.lastGivenOn) return tk("Enter the date of your last injection.");
     if (plan.intervalWeeks == null || plan.intervalWeeks < 4 || plan.intervalWeeks > 16) {
-      return "The interval should be between 4 and 16 weeks.";
+      return tk("The interval should be between 4 and 16 weeks.");
     }
     return null;
   }
   if (isDevice(method)) {
-    if (!plan.insertedOn) return "Enter the date it was fitted.";
-    if (!plan.replaceBy) return "Enter the date it should be replaced by.";
-    if (plan.replaceBy <= plan.insertedOn) return "The replace-by date must be after it was fitted.";
+    if (!plan.insertedOn) return tk("Enter the date it was fitted.");
+    if (!plan.replaceBy) return tk("Enter the date it should be replaced by.");
+    if (plan.replaceBy <= plan.insertedOn) return tk("The replace-by date must be after it was fitted.");
     return null;
   }
   return null;

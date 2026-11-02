@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { fetchClinicalSources, groupSources, type SourceGroup } from "../../services/sources";
+import { t } from "../../i18n/core";
 
 /**
  * Sources and guidelines (/app/health/sources): every source in the
@@ -31,11 +32,11 @@ export default function HealthSources() {
 
   return (
     <div className="pb-8">
-      <PageHeader title="Sources and guidelines" showBack onBack={() => navigate("/app/health")} />
+      <PageHeader title={t("Sources and guidelines")} showBack onBack={() => navigate("/app/health")} />
       <HealthDisclaimer className="!text-start mb-4" />
 
-      {state.kind === "loading" && <p className="text-[13px] text-charcoal-faint">Loading…</p>}
-      {state.kind === "error" && <p className="text-[13px] text-charcoal-faint">Couldn't load the sources. Please try again.</p>}
+      {state.kind === "loading" && <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>}
+      {state.kind === "error" && <p className="text-[13px] text-charcoal-faint">{t("Couldn't load the sources. Please try again.")}</p>}
       {state.kind === "ready" &&
         state.groups.map((g) => (
           <section key={g.feature} className="mb-5" aria-labelledby={`sources-${g.feature}`}>

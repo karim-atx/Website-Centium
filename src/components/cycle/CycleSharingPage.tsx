@@ -8,6 +8,7 @@ import { fetchProfessionalRoles, roleColours, type ProRole } from "../../service
 import type { AccessCategory } from "../../services/consent";
 import * as G from "../../services/cycle/guidance";
 import { CycleHelp, CycleRow, CycleSection, CycleTitleRow, Skeleton, type, useCycleMode } from "./cycleUi";
+import { t } from "../../i18n/core";
 
 // HE1.10.b.3 "Who can see your cycle": the two cycle sharing categories, one
 // section each, one row per connected professional. A SECOND VIEW OF THE SAME
@@ -40,12 +41,12 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
   }, [ids]);
 
   const unsavedHere = unsaved.filter((u) => u.category === "cycle_phase" || u.category === "pregnancy");
-  const nameOf = (id: string) => professionals.find((p) => p.professionalId === id)?.name ?? "your professional";
+  const nameOf = (id: string) => professionals.find((p) => p.professionalId === id)?.name ?? t("your professional");
 
   return (
     <div className="animate-fade-slide-up" style={{ paddingBottom: 96 }} data-cycle-page="sharing">
       <FixedHeader paddingBottom={10}>
-        <CycleTitleRow title={G.SHARING_TITLE} onBack={onBack} sub />
+        <CycleTitleRow title={t(G.SHARING_TITLE)} onBack={onBack} sub />
       </FixedHeader>
       <p className="text-charcoal-soft" style={type(12.5, 19.4, 400, { marginTop: 4 })}>
         {G.SHARING_INTRO}
@@ -54,7 +55,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
       {error && (
         <p role="alert" className="flex items-start text-status-high" style={{ gap: 6, marginTop: 12, ...type(12, 16, 600) }}>
           <CircleAlert size={13} className="shrink-0" style={{ marginTop: 1.5 }} aria-hidden />
-          {error}
+          {t(error)}
         </p>
       )}
       {unsavedHere.length > 0 && (
@@ -63,8 +64,12 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
             <p key={`${u.professionalId}:${u.category}`} className="flex items-start text-status-high" style={{ gap: 6, ...type(12, 16, 600) }}>
               <CircleAlert size={13} className="shrink-0" style={{ marginTop: 1.5 }} aria-hidden />
               <span>
-                {CATEGORIES.find((c) => c.category === u.category)?.label} is still {u.requested ? "not " : ""}shared with {nameOf(u.professionalId)}.
-                Set it again to retry.
+                {(() => {
+                  const vars = { label: t(CATEGORIES.find((c) => c.category === u.category)?.label ?? ""), name: nameOf(u.professionalId) };
+                  return u.requested
+                    ? t("{label} is still not shared with {name}. Set it again to retry.", vars)
+                    : t("{label} is still shared with {name}. Set it again to retry.", vars);
+                })()}
               </span>
             </p>
           ))}
@@ -72,7 +77,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
       )}
 
       {loading ? (
-        <div style={{ marginTop: 20 }} aria-busy="true" aria-label="Loading">
+        <div style={{ marginTop: 20 }} aria-busy="true" aria-label={t("Loading")}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex items-center" style={{ gap: 14, padding: "12px 0" }}>
               <Skeleton width={36} height={36} radius={18} />
@@ -87,7 +92,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
         // OURS-cycle-empty-states #8.
         <div className="text-center" style={{ marginTop: 40 }}>
           <p className="text-charcoal-soft" style={type(13, 19.5, 400)}>
-            {G.SHARING_NONE}
+            {t(G.SHARING_NONE)}
           </p>
           <button
             type="button"
@@ -95,13 +100,13 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
             className="tap text-primary-dark"
             style={{ marginTop: 6, minHeight: 44, ...type(13, 19.5, 700) }}
           >
-            {G.SHARING_FIND}
+            {t(G.SHARING_FIND)}
           </button>
         </div>
       ) : (
         CATEGORIES.map(({ category, label, description }, ci) => (
-          <CycleSection key={category} label={label} style={{ marginTop: ci === 0 ? 20 : 32 }}>
-            <CycleHelp style={{ marginTop: 2 }}>{description}</CycleHelp>
+          <CycleSection key={category} label={t(label)} style={{ marginTop: ci === 0 ? 20 : 32 }}>
+            <CycleHelp style={{ marginTop: 2 }}>{t(description)}</CycleHelp>
             {professionals.map((pro, i) => {
               const role = roles[pro.professionalId];
               const c = roleColours(role?.subtype ?? null, dark);
@@ -123,7 +128,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
                   title={
                     <>
                       {pro.name}
-                      {savedKey === key && <span className="sr-only"> saved</span>}
+                      {savedKey === key && <span className="sr-only"> {t("Saved")}</span>}
                     </>
                   }
                   subtitle={role?.role ?? undefined}
@@ -134,7 +139,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
                       if (saving === key) return;
                       void toggle(pro.professionalId, category, v);
                     },
-                    label: `Share ${label.toLowerCase()} with ${pro.name}`,
+                    label: t("Share {label} with {name}", { label: t(label).toLowerCase(), name: pro.name }),
                   }}
                   className="[&>span:nth-child(2)>span:first-child]:truncate"
                 />
@@ -146,7 +151,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
 
       {!loading && professionals.length > 0 && (
         <p className="text-center text-charcoal-faint" style={type(11, 16, 400, { marginTop: 24 })}>
-          {G.SHARING_MIRRORED}
+          {t(G.SHARING_MIRRORED)}
         </p>
       )}
     </div>

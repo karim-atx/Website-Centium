@@ -8,6 +8,7 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useHealthChecks } from "../../context/healthChecksStore";
 import { COPY } from "../../services/health-checks/guidance";
+import { t } from "../../i18n/core";
 
 /**
  * The Profile → Safety & content switch. Adults only: somebody known to be
@@ -39,14 +40,14 @@ export function HealthChecksSetting() {
     setBusy(false);
     setConfirming(false);
     if (r.ok) setNote(null);
-    else setNote(r.reason === "adults-only" ? COPY.under18 : "Couldn't turn it on. Please try again.");
+    else setNote(r.reason === "adults-only" ? COPY.under18 : t("Couldn't turn it on. Please try again."));
   };
 
   const turnOff = async () => {
     setBusy(true);
     const ok = await checks.turnOff();
     setBusy(false);
-    setNote(ok ? COPY.turnedOff : "Couldn't turn it off. Please try again.");
+    setNote(ok ? COPY.turnedOff : t("Couldn't turn it off. Please try again."));
   };
 
   return (
@@ -82,10 +83,10 @@ export function HealthChecksSetting() {
           <p className="text-xs text-charcoal leading-relaxed">{COPY.turningOn}</p>
           <div className="mt-3 flex gap-2">
             <Button size="sm" disabled={busy} onClick={confirmOn}>
-              Turn on
+              {t("Turn on")}
             </Button>
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
-              Cancel
+              {t("Cancel")}
             </Button>
           </div>
         </div>
@@ -101,7 +102,7 @@ export function HealthChecksSetting() {
           className="tap mt-3 flex items-center gap-1 text-xs font-semibold text-primary-dark"
         >
           {COPY.planTitle}
-          <ChevronRight size={14} />
+          <ChevronRight size={14} className="rtl:-scale-x-100" />
         </button>
       )}
     </Card>

@@ -11,6 +11,7 @@ import {
 } from "../../services/pregnancy";
 import * as G from "../../services/pregnancy/guidance";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 // Counting movements.
 //
@@ -46,18 +47,18 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
   // the background with no session does not re-render once a second.
   useEffect(() => {
     if (!sessionId) return;
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, [sessionId]);
 
   // The write is debounced, because a baby that is moving gets tapped a lot
   // and one request per tap would be a request per second.
   useEffect(() => {
     if (!sessionId || kicks === 0) return;
-    const t = setTimeout(() => {
+    const id = setTimeout(() => {
       void saveKickSession(sessionId, kicks, null);
     }, 1200);
-    return () => clearTimeout(t);
+    return () => clearTimeout(id);
   }, [sessionId, kicks]);
 
   const start = async () => {
@@ -96,14 +97,14 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
 
   return (
     <CycleCard style={{ marginBottom: 12 }}>
-      <CapsLabel>{G.KICKS_TITLE}</CapsLabel>
+      <CapsLabel>{t(G.KICKS_TITLE)}</CapsLabel>
       <p className="mt-1 text-[11px] leading-relaxed text-charcoal-soft">{G.KICKS_EXPLAINER}</p>
 
       {sessionId ? (
         <div className="mt-3.5">
           <button
             onClick={() => setKicks((k) => k + 1)}
-            aria-label="Count a movement"
+            aria-label={t("Count a movement")}
             className="tap w-full rounded-2xl py-7 text-center"
             style={{ background: "rgba(184,115,90,0.12)" }}
           >
@@ -111,7 +112,7 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
               {kicks}
             </span>
             <span className="mt-1.5 block text-[11px] font-semibold text-charcoal-soft">
-              Tap each movement
+              {t("Tap each movement")}
             </span>
           </button>
           <div className="mt-2.5 flex items-center justify-between">
@@ -123,14 +124,14 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
               disabled={busy}
               className="tap text-[11.5px] font-semibold text-primary-dark disabled:opacity-40"
             >
-              Finish
+              {t("Finish")}
             </button>
           </div>
         </div>
       ) : (
         <div className="mt-3.5">
           <Button fullWidth variant="secondary" disabled={busy || !authUserId} onClick={() => void start()}>
-            Start counting
+            {t("Start counting")}
           </Button>
         </div>
       )}
@@ -139,7 +140,7 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
         {G.KICKS_CHANGE_NOTE}
       </p>
 
-      {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{error}</p>}
+      {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{t(error)}</p>}
 
       {sessions.length > 0 && (
         <div className="mt-3.5 border-t border-charcoal/8 pt-3 space-y-1.5">
@@ -162,7 +163,7 @@ export const KickCounter: React.FC<{ pregnancyId: string }> = ({ pregnancyId }) 
                   })}
                 </span>
                 <span className="text-charcoal font-semibold tabular-nums">
-                  {s.kicks} movement{s.kicks === 1 ? "" : "s"}
+                  {tn(s.kicks, "{n} movement", "{n} movements")}
                   {secs !== null && ` · ${formatDuration(secs)}`}
                 </span>
               </div>

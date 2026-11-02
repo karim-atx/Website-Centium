@@ -15,6 +15,8 @@ import { textPx, linePx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { clock12 } from "../../utils/time12";
 import { supabase } from "../../../lib/supabase/client";
+import { t } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
 
 // HO1.1 "Add metric popup" (home-handover.md, HO1.1; checklist
 // design-handover/v5-partB/frame-check/HO1.1.md). A centred card over Home.
@@ -109,15 +111,13 @@ const CheckCircleGlyph: React.FC = () => (
   </svg>
 );
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "Today · 7:05 AM", or "Thu, Oct 1 · 7:12 AM" for another day (12-hour rule). */
 function readingTime(recordedAt: string, isToday: boolean): string {
   const d = new Date(recordedAt);
   const clock = clock12(d);
-  if (isToday) return `Today · ${clock}`;
-  return `${WEEKDAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()} · ${clock}`;
+  if (isToday) return t("Today · {date}", { date: clock });
+  return `${d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" })} · ${clock}`;
 }
 
 /** The local day's [start, end) as ISO instants. */
@@ -241,7 +241,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   };
   const rowTitle: React.CSSProperties = { display: "block", fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 600, color: INK };
   const rowCaption: React.CSSProperties = { display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 400, color: am("caption") };
-  const chevron = <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />;
+  const chevron = <ChevronRight size={12} strokeWidth={2.2} className="rtl:-scale-x-100" style={{ color: am("icon"), flex: "none" }} />;
 
   const weightLoading = !weightHidden && weight === undefined && !!authUserId;
   const weightValue = !weightHidden && weight ? weight : null;
@@ -290,12 +290,12 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               whiteSpace: "nowrap",
             }}
           >
-            Add Metric
+            {t("Add Metric")}
           </p>
           {/* 26 ring inside a 44 x 44 target, the ring where the handover draws it. */}
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t("Close")}
             className="tap absolute flex items-center justify-center"
             style={{ insetInlineEnd: 3, top: -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
           >
@@ -311,7 +311,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         {/* Scrolls only on a screen too short to fit the card. */}
         <div className="min-h-0 overflow-y-auto" style={{ background: am("card"), borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
-            <p style={{ ...labelStyle, margin: 0 }}>WATER</p>
+            <p style={{ ...labelStyle, margin: 0 }}>{t("WATER")}</p>
             <div style={{ textAlign: "end" }}>
               <p
                 style={{
@@ -324,10 +324,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                {(water / 1000).toFixed(2)}L
+                {t("{n}L", { n: (water / 1000).toFixed(2) })}
               </p>
               <p style={{ margin: "3px 0 0", fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: am("caption") }}>
-                of {(waterGoalMl / 1000).toFixed(1)}L goal
+                {t("of {n}L goal", { n: (waterGoalMl / 1000).toFixed(1) })}
               </p>
             </div>
           </div>
@@ -341,21 +341,21 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           >
             <WaterRowGlyph />
             <span className="flex-1 min-w-0">
-              <span style={rowTitle}>Log water</span>
-              <span style={rowCaption}>Add a drink to this day</span>
+              <span style={rowTitle}>{t("Log water")}</span>
+              <span style={rowCaption}>{t("Add a drink to this day")}</span>
             </span>
             {chevron}
           </button>
 
           <div className="grid grid-cols-2 gap-[10px]" style={{ marginBottom: 13 }}>
             <div className="min-w-0">
-              <p style={labelStyle}>{isToday ? "WEIGHT TODAY" : "WEIGHT FOR THIS DAY"}</p>
+              <p style={labelStyle}>{isToday ? t("WEIGHT TODAY") : t("WEIGHT FOR THIS DAY")}</p>
               <button
                 onClick={() => setWeightSheetOpen(true)}
                 // LogWeightSheet renders nothing in recovery-sensitive mode
                 // (HE1.7.1 K1), so the box does not pretend to open it.
                 disabled={weightHidden}
-                aria-label={weightValue ? undefined : "Log weight"}
+                aria-label={weightValue ? undefined : t("Log weight")}
                 className="tap flex items-center w-full text-start box-border"
                 style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 10px", height: 42, gap: 8 }}
               >
@@ -382,7 +382,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                         }}
                       >
                         {weightValue.value.toFixed(1)}
-                        <span style={{ fontSize: textPx(11), fontWeight: 400, color: am("caption"), marginInlineStart: 2 }}>kg</span>
+                        <span style={{ fontSize: textPx(11), fontWeight: 400, color: am("caption"), marginInlineStart: 2 }}>{t("kg")}</span>
                       </span>
                       {weightValue.recordedAt && (
                         <span
@@ -402,7 +402,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     </>
                   ) : (
                     <span className="truncate" style={{ display: "block", fontSize: textPx(15), lineHeight: linePx(18), fontWeight: 700, color: INK, whiteSpace: "nowrap" }}>
-                      Log weight
+                      {t("Log weight")}
                     </span>
                   )}
                 </span>
@@ -410,28 +410,28 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               </button>
             </div>
             <div className="min-w-0">
-              <p style={labelStyle}>ADD RECORDS</p>
+              <p style={labelStyle}>{t("ADD RECORDS")}</p>
               <button
                 onClick={handleAddRecords}
-                aria-label="Add records"
+                aria-label={t("Add records")}
                 className="tap flex items-center w-full text-start box-border"
                 style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 8px", height: 42, gap: 7 }}
               >
                 <Camera size={21} strokeWidth={1.8} style={{ color: am("icon"), flex: "none" }} />
                 <span className="flex-1 min-w-0">
                   <span className="truncate" style={{ display: "block", fontSize: textPx(8.5), lineHeight: linePx(12.8), fontWeight: 600, color: INK, whiteSpace: "nowrap" }}>
-                    Add Photo / Upload File
+                    {t("Add Photo / Upload File")}
                   </span>
                   <span className="truncate" style={{ display: "block", fontSize: textPx(7.5), fontWeight: 400, color: am("caption"), whiteSpace: "nowrap" }}>
-                    Lab results, reports, etc.
+                    {t("Lab results, reports, etc.")}
                   </span>
                 </span>
-                <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />
+                <ChevronRight size={12} strokeWidth={2.2} className="rtl:-scale-x-100" style={{ color: am("icon"), flex: "none" }} />
               </button>
             </div>
           </div>
 
-          <p style={labelStyle}>BLOOD PRESSURE</p>
+          <p style={labelStyle}>{t("BLOOD PRESSURE")}</p>
           <button
             onClick={() => setBpSheetOpen(true)}
             className="tap w-full flex items-center gap-[9px] text-start"
@@ -444,17 +444,17 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   {/* V6-140: the logged state keeps the repo copy (category + pulse). */}
                   <span style={{ display: "block", fontSize: textPx(15), fontWeight: 700, color: INK }}>
                     {bpLatest.systolic}/{bpLatest.diastolic}
-                    <span style={{ fontSize: textPx(11), fontWeight: 500, color: am("caption") }}> mmHg</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 500, color: am("caption") }}> {t("mmHg")}</span>
                   </span>
                   <span style={{ display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), color: am("label") }}>
                     {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
-                    {bpLatest.pulse != null && ` · ${bpLatest.pulse} bpm`}
+                    {bpLatest.pulse != null && ` · ${t("{n} bpm", { n: bpLatest.pulse })}`}
                   </span>
                 </>
               ) : (
                 <>
-                  <span style={rowTitle}>Add a reading</span>
-                  <span style={rowCaption}>Nothing recorded for this day</span>
+                  <span style={rowTitle}>{t("Add a reading")}</span>
+                  <span style={rowCaption}>{t("Nothing recorded for this day")}</span>
                 </>
               )}
             </span>
@@ -468,15 +468,14 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           >
             {!offline && <CheckCircleGlyph />}
             <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: am(offline ? "alertInk" : "stripInk") }}>
-              {offline ? "You're offline. Entries save when you reconnect." : "Your entries are saved automatically."}
+              {offline ? t("You're offline. Entries save when you reconnect.") : t("Your entries are saved automatically.")}
             </span>
           </div>
 
           {/* Steps, sleep and calories burned are not manually loggable and
               nothing syncs them either: device sync is not built. */}
           <p style={{ margin: "13px 4px 2px", fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400, color: am("caption"), textAlign: "center" }}>
-            Steps, sleep and calories burned would come from a connected device. Device sync isn't
-            available yet.
+            {t("Steps, sleep and calories burned would come from a connected device. Device sync isn't available yet.")}
           </p>
         </div>
       </div>

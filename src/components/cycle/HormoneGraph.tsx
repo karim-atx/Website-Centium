@@ -3,7 +3,7 @@ import { curvePoints, hormoneCurves, HORMONES, type Hormone } from "../../servic
 import { HORMONE_DISCLAIMER, HORMONE_EXPLAINER, HORMONE_LABEL, HORMONE_TITLE } from "../../services/cycle/guidance";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
-import { isRtl } from "../../i18n/core";
+import { isRtl, t } from "../../i18n/core";
 
 // The typical hormone pattern, scaled to this user's cycle (HE1.10 #29-#37).
 //
@@ -58,9 +58,9 @@ export const HormoneGraph: React.FC<{
   return (
     <div>
       <p className="uppercase text-primary-deep-text" style={{ fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 800, letterSpacing: 1.3 }}>
-        {HORMONE_TITLE}{" "}
+        {t(HORMONE_TITLE)}{" "}
         <span className="normal-case text-charcoal-faint" style={{ fontWeight: 600, letterSpacing: 0 }}>
-          · {HORMONE_DISCLAIMER}
+          · {t(HORMONE_DISCLAIMER)}
         </span>
       </p>
       <p className="text-charcoal-faint" style={{ marginTop: 2, marginBottom: 8, fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 400 }}>
@@ -74,7 +74,11 @@ export const HormoneGraph: React.FC<{
         preserveAspectRatio="none"
         style={{ display: "block", overflow: "visible", marginTop: 12 }}
         role="img"
-        aria-label={`${HORMONE_TITLE}, ${HORMONE_DISCLAIMER}${markerX !== null && !hideDayLabel ? `. Day ${selectedDay} marked` : ""}`}
+        aria-label={
+          markerX !== null && !hideDayLabel
+            ? t("{title}, {disclaimer}. Day {n} marked", { title: t(HORMONE_TITLE), disclaimer: t(HORMONE_DISCLAIMER), n: selectedDay as number })
+            : t("{title}, {disclaimer}", { title: t(HORMONE_TITLE), disclaimer: t(HORMONE_DISCLAIMER) })
+        }
       >
         {/* Ovulation, the one landmark the curves are built around (repo): dashed. */}
         <line x1={ovuX} y1={0} x2={ovuX} y2={PLOT} stroke="rgb(var(--c-charcoal))" strokeOpacity={0.18} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
@@ -111,7 +115,7 @@ export const HormoneGraph: React.FC<{
               fontWeight: 700,
             }}
           >
-            Day {selectedDay}
+            {t("Day {n}", { n: selectedDay as number })}
           </span>
         </div>
       )}
@@ -120,7 +124,7 @@ export const HormoneGraph: React.FC<{
         {HORMONES.map((h) => (
           <span key={h} className="inline-flex items-center uppercase" style={{ gap: 4, color: colors[h], fontSize: textPx(8), lineHeight: linePx(12), fontWeight: 800, letterSpacing: 0.8 }}>
             <span aria-hidden style={{ width: 8, height: 2, borderRadius: 1, background: colors[h] }} />
-            {HORMONE_LABEL[h]}
+            {t(HORMONE_LABEL[h])}
           </span>
         ))}
       </div>

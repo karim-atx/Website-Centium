@@ -12,6 +12,7 @@ import { WheelPicker, type WheelOption } from "../../../components/ui/WheelPicke
 import { HealthPopup } from "../../../components/health/metric/HealthPopup";
 import { hairline, mc, metricIconInk, useHealthMode } from "../../../components/health/metric/MetricKit";
 import { HR_ALERT_COPY, HR_ALERT_DEFAULTS, REVIEWED } from "../../../services/health-metrics/clinicalCopy";
+import { t, tk } from "../../../i18n/core";
 
 // OURS-health-hr-alert-settings (/app/health/heart-rate/alerts), from the
 // HE1.5.a "Alert settings" action and the HE1.5 ⋮ menu.
@@ -73,7 +74,7 @@ function HeartRateAlertsScreen() {
     void saveHrAlertSettings(authUserId, { enabled: next.enabled, highBpm: next.high, lowBpm: next.low, minutes: HR_ALERT_DEFAULTS.minutes }).then((ok) => {
       if (!ok) {
         setS(before);
-        setToast("Couldn't save. Try again.");
+        setToast(tk("Couldn't save. Try again."));
       }
     });
   };
@@ -126,8 +127,8 @@ function HeartRateAlertsScreen() {
     <div style={{ paddingBottom: 96 }} data-hr-alerts>
       <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
         <div className="flex items-center" style={{ gap: 4, height: 36, marginInlineStart: -8 }}>
-          <button type="button" onClick={back} aria-label="Back" className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36 }}>
-            <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+          <button type="button" onClick={back} aria-label={t("Back")} className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36 }}>
+            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
           <h1 className="flex-1 min-w-0 line-clamp-2" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5, color: "rgb(var(--c-charcoal))" }}>
             {HR_ALERT_COPY.settingsTitle}
@@ -147,17 +148,17 @@ function HeartRateAlertsScreen() {
           {tile(HeartPulse)}
           <span className="flex-1 min-w-0">
             <span className="block" style={title}>
-              Alerts
+              {t("Alerts")}
             </span>
             <span className="block" style={meta}>
-              {s.enabled ? "On" : "Off"}
+              {s.enabled ? t("On") : t("Off")}
             </span>
           </span>
-          <Toggle checked={s.enabled} onChange={(v) => save({ ...s, enabled: v })} label="Alerts" disabled={offline} />
+          <Toggle checked={s.enabled} onChange={(v) => save({ ...s, enabled: v })} label={t("Alerts")} disabled={offline} />
         </div>
-        {valueRow("high", ArrowUpToLine, "High alert", String(s.high), "bpm")}
-        {valueRow("low", ArrowDownToLine, "Low alert", String(s.low), "bpm")}
-        {valueRow("for", Clock, "For at least", `${HR_ALERT_DEFAULTS.minutes} min`, "")}
+        {valueRow("high", ArrowUpToLine, t("High alert"), String(s.high), t("bpm"))}
+        {valueRow("low", ArrowDownToLine, t("Low alert"), String(s.low), t("bpm"))}
+        {valueRow("for", Clock, t("For at least"), t("{n} min", { n: HR_ALERT_DEFAULTS.minutes }), "")}
       </section>
 
       <button
@@ -170,9 +171,9 @@ function HeartRateAlertsScreen() {
           <Bell size={21} strokeWidth={1.5} style={{ color: hc && !dark ? "#4B3BA0" : dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))" }} />
         </span>
         <span className="flex-1 text-start" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-          Notifications
+          {t("Notifications")}
         </span>
-        <ChevronRight size={17} style={{ color: "rgb(var(--c-charcoal-faint))" }} aria-hidden />
+        <ChevronRight size={17} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-faint))" }} aria-hidden />
       </button>
       <p style={{ marginTop: 6, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: "rgb(var(--c-charcoal-soft))" }}>{HR_ALERT_COPY.quietHours}</p>
 
@@ -189,10 +190,10 @@ function HeartRateAlertsScreen() {
           darkBackground: mc("heart-rate", "tint"),
           icon: editing === "low" ? <ArrowDownToLine size={18} strokeWidth={1.5} style={{ color: metricIconInk("heart-rate", dark) }} /> : <ArrowUpToLine size={18} strokeWidth={1.5} style={{ color: metricIconInk("heart-rate", dark) }} />,
         }}
-        title={editing === "low" ? "Low alert" : "High alert"}
-        secondary={{ label: "Cancel", onClick: () => setEditing(null) }}
+        title={editing === "low" ? t("Low alert") : t("High alert")}
+        secondary={{ label: t("Cancel"), onClick: () => setEditing(null) }}
         primary={{
-          label: "Save",
+          label: t("Save"),
           onClick: () => {
             if (editing === "high") save({ ...s, high: draft });
             if (editing === "low") save({ ...s, low: draft });
@@ -203,11 +204,11 @@ function HeartRateAlertsScreen() {
         <div style={{ marginTop: 14 }}>
           <WheelPicker
             variant="partB"
-            columns={[{ label: editing === "low" ? "Low alert in bpm" : "High alert in bpm", options: editing === "low" ? LOW_OPTIONS : HIGH_OPTIONS, value: draft, bandWidth: 120, unit: "bpm", onChange: (v) => setDraft(Number(v)) }]}
+            columns={[{ label: editing === "low" ? t("Low alert in bpm") : t("High alert in bpm"), options: editing === "low" ? LOW_OPTIONS : HIGH_OPTIONS, value: draft, bandWidth: 120, unit: t("bpm"), onChange: (v) => setDraft(Number(v)) }]}
           />
         </div>
       </HealthPopup>
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
   );
 }

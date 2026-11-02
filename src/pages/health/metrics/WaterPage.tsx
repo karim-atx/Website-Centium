@@ -11,6 +11,7 @@ import { clock12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
 import { waterCard } from "../../../components/share/client/clientCardModel";
+import { t, tn } from "../../../i18n/core";
 import {
   CapsLabel,
   ChartCard,
@@ -40,6 +41,9 @@ import {
   relativeDayTitle,
   shortDate,
   dayLabel,
+  dayWord,
+  longDate,
+  monthLong,
   previousPeriod,
   stepAnchor,
   valuesIn,
@@ -72,7 +76,7 @@ import {
 // metric_goals through AppContext (setWaterGoal, metricGoalOn). Units: the
 // shared B3 preference.
 
-const MONTH_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 const DAY_LIMIT_ML = 5000;
 const pctOf = (ml: number, goal: number) => Math.round((ml / goal) * 100);
 
@@ -138,7 +142,7 @@ export default function WaterPage() {
     }
     const before = waterByDate[day] ?? 0;
     if (before + deltaMl > DAY_LIMIT_ML) {
-      setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
+      setToast({ message: t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 }) });
       return false;
     }
     const result = await addWater(deltaMl, day);
@@ -157,7 +161,7 @@ export default function WaterPage() {
   const queueDrink = (ml: number, requestId?: string) => {
     if (!authUserId) return;
     if ((waterByDate[today] ?? 0) + ml > DAY_LIMIT_ML) {
-      setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
+      setToast({ message: t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 }) });
       return;
     }
     enqueueLog(authUserId, { kind: "water", ml, day: today, loggedAt: new Date().toISOString() }, requestId);
@@ -172,13 +176,14 @@ export default function WaterPage() {
       return null;
     }
     if ((waterByDate[today] ?? 0) + ml > DAY_LIMIT_ML) {
-      setToast({ message: `That's more than ${DAY_LIMIT_ML / 1000} L today. Check the amount.` });
+      setToast({ message: t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 }) });
       return null;
     }
     const r = await logWaterDrink(ml, new Date(), requestId);
     if (!r.ok) {
       if (isOfflineFailure(r)) queueDrink(ml, requestId);
-      else setToast({ message: r.overCap ? r.message : SAVE_FAILED });
+      // The server's cap message is "That's more than 5 L today. Check the amount." (services/health-log/waterIntakes); the same sentence from the catalogue.
+      else setToast({ message: r.overCap ? t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 }) : SAVE_FAILED });
       return null;
     }
     drinksRead.reload();
@@ -188,7 +193,7 @@ export default function WaterPage() {
   const quickAdd = (ml: number) => {
     let id: string | null = null;
     void addDrink(ml, {
-      message: `${ml} ml added`,
+      message: t("{n} ml added", { n: ml }),
       undo: () => {
         // Undo still needs a connection (the server row to remove).
         if (browserOffline()) return setToast({ message: OFFLINE_ACTION });
@@ -219,8 +224,8 @@ export default function WaterPage() {
         text: {
           value: v.num,
           unit: v.unit,
-          lines: [`of ${vt(goal)} goal`, `${vt(Math.max(0, goal - total))} to go`],
-          pill: reached ? "Goal reached" : anchor === today ? `${pctOf(total, goal)}% today` : `${pctOf(total, goal)}% of goal`,
+          lines: [t("of {n} goal", { n: vt(goal) }), t("{n} to go", { n: vt(Math.max(0, goal - total)) })],
+          pill: reached ? t("Goal reached") : anchor === today ? t("{pct}% today", { pct: pctOf(total, goal) }) : t("{pct}% of goal", { pct: pctOf(total, goal) }),
         },
       };
     }
@@ -230,55 +235,75 @@ export default function WaterPage() {
     const m = Number(p.start.slice(5, 7));
     let lines: string[];
     if (range === "week") {
-      lines = [current ? "avg a day this week" : `avg a day in ${periodLabel(p)}`, `${rows.length} of 7 days logged`];
+      lines = [current ? t("avg a day this week") : t("avg a day in {period}", { period: periodLabel(p) }), t("{n} of {span} days logged", { n: rows.length, span: 7 })];
     } else if (range === "month") {
       const span = current ? Number(today.slice(8)) : daysInMonth(y, m);
-      lines = [`avg a day in ${MONTH_LONG[m - 1]}`, `${rows.length} of ${span} days logged`];
+      lines = [t("avg a day in {month}", { month: monthLong(m) }), t("{n} of {span} days logged", { n: rows.length, span })];
     } else {
       const months = [...new Set(rows.map((r) => Number(r.date.slice(5, 7))))].sort((a1, b1) => a1 - b1);
       lines = [
-        `avg a day in ${y}`,
-        months.length === 0 ? "No days logged" : months.length === 1 ? `${monthShort(months[0])} logged` : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])} logged`,
+        t("avg a day in {year}", { year: y }),
+        months.length === 0
+          ? t("No days logged")
+          : months.length === 1
+            ? t("{month} logged", { month: monthShort(months[0]) })
+            : t("{start} to {end} logged", { start: monthShort(months[0]), end: monthShort(months[months.length - 1]) }),
       ];
     }
     return {
       pct: a / goal,
-      text: { value: v.num, unit: v.unit, lines, pill: a >= goal && a > 0 ? "Goal reached" : `${pctOf(a, goal)}% of goal` },
+      text: { value: v.num, unit: v.unit, lines, pill: a >= goal && a > 0 ? t("Goal reached") : t("{pct}% of goal", { pct: pctOf(a, goal) }) },
     };
   })();
 
   // ---- chart card ---------------------------------------------------------
-  const chartTitle = current ? periodTitle(p, today) : range === "month" ? MONTH_LONG[Number(p.start.slice(5, 7)) - 1] : periodLabel(p);
+  const chartTitle = current ? periodTitle(p, today) : range === "month" ? monthLong(Number(p.start.slice(5, 7))) : periodLabel(p);
   const inkSwatch = mc("water", "ink");
-  const goalText = `Goal ${vt(goal)}`;
+  const goalText = t("Goal {n}", { n: vt(goal) });
   const empty = rows.length === 0;
-  const periodWord = range === "week" ? "week" : range === "month" ? "month" : "year";
+  const noWater = range === "week" ? t("No water logged this week") : range === "month" ? t("No water logged this month") : t("No water logged this year");
   let foot: string;
   let summary: string;
   let legend: { label: string; swatch: React.ReactNode }[];
   if (range === "day") {
     const total = byDay[anchor] ?? 0;
-    foot = total > 0 ? `${volume(total, unit, 1).num} of ${vt(goalOn(anchor))}${anchor === today ? " so far" : ""}${lastDrinkTime ? ` · last drink ${lastDrinkTime}` : ""}` : anchor === today ? "Nothing logged yet today" : "Nothing logged this day";
-    summary = `${anchor === today ? "Today's" : `${dayLabel(anchor)}'s`} water. ${(total / 1000).toFixed(1)} of ${(goal / 1000).toFixed(1)} litres.`;
+    const amount = { n: volume(total, unit, 1).num, goal: vt(goalOn(anchor)) };
+    foot =
+      total > 0
+        ? `${anchor === today ? t("{n} of {goal} so far", amount) : t("{n} of {goal}", amount)}${lastDrinkTime ? ` · ${t("last drink {time}", { time: lastDrinkTime })}` : ""}`
+        : anchor === today
+          ? t("Nothing logged yet today")
+          : t("Nothing logged this day");
+    summary = [
+      anchor === today ? t("Today's water.") : t("{day}'s water.", { day: dayLabel(anchor) }),
+      t("{n} of {goal} litres.", { n: (total / 1000).toFixed(1), goal: (goal / 1000).toFixed(1) }),
+    ].join(" ");
     legend = [
-      { label: "Intake so far", swatch: <IntakeSwatch /> },
-      ...(lastDrink ? [{ label: "Drink, ml", swatch: <LegendDot color={mc("water", "main")} /> }] : []),
-      { label: "Goal", swatch: <LegendDash color={inkSwatch} /> },
+      { label: t("Intake so far"), swatch: <IntakeSwatch /> },
+      ...(lastDrink ? [{ label: t("Drink, ml"), swatch: <LegendDot color={mc("water", "main")} /> }] : []),
+      { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
     ];
   } else if (range === "month") {
     const atGoal = rows.filter((r) => r.value >= goalOn(r.date)).length;
     const y = Number(p.start.slice(0, 4));
     const m = Number(p.start.slice(5, 7));
     const span = current ? Number(today.slice(8)) : daysInMonth(y, m);
-    foot = empty ? `No water logged this ${periodWord}` : `${rows.length} of ${span} days logged · ${atGoal} ${atGoal === 1 ? "day" : "days"} at goal`;
+    foot = empty ? noWater : `${t("{n} of {span} days logged", { n: rows.length, span })} · ${tn(atGoal, "{n} day at goal", "{n} days at goal")}`;
     const best = rows.reduce<{ date: string; value: number } | null>((b, r) => (!b || r.value > b.value ? r : b), null);
-    summary = empty
-      ? `Water in ${MONTH_LONG[m - 1]}. Nothing logged.`
-      : `Water in ${MONTH_LONG[m - 1]}. Average ${((mean ?? 0) / 1000).toFixed(1)} litres a day. Goal reached on ${atGoal} of ${span} days. Best day ${MONTH_LONG[m - 1]} ${Number(best!.date.slice(8))}, ${(best!.value / 1000).toFixed(1)} litres.`;
+    summary = (
+      empty
+        ? [t("Water in {month}.", { month: monthLong(m) }), t("Nothing logged.")]
+        : [
+            t("Water in {month}.", { month: monthLong(m) }),
+            t("Average {n} litres a day.", { n: ((mean ?? 0) / 1000).toFixed(1) }),
+            t("Goal reached on {n} of {span} days.", { n: atGoal, span }),
+            t("Best day {date}, {n} litres.", { date: longDate(best!.date), n: (best!.value / 1000).toFixed(1) }),
+          ]
+    ).join(" ");
     legend = [
-      { label: "At goal", swatch: <LegendDot color={mc("water", "main")} /> },
+      { label: t("At goal"), swatch: <LegendDot color={mc("water", "main")} /> },
       {
-        label: "Dot fills with % of goal",
+        label: t("Dot fills with % of goal"),
         swatch: (
           <span aria-hidden className="grid place-items-center rounded-full" style={{ width: 11, height: 11, border: `1px solid ${mc("water", "main")}` }}>
             <span className="rounded-full" style={{ width: 7, height: 7, background: mc("water", "main"), opacity: 0.6 }} />
@@ -287,28 +312,31 @@ export default function WaterPage() {
       },
     ];
   } else if (range === "week") {
-    foot = empty ? `No water logged this ${periodWord}` : `${rows.length} of 7 days logged · average ${vt(mean ?? 0)} a day`;
+    foot = empty ? noWater : t("{n} of 7 days logged · average {avg} a day", { n: rows.length, avg: vt(mean ?? 0) });
     const ahead = daysOf(p).filter((d) => d > today).length;
-    summary = `Water ${current ? "this week" : `in ${periodLabel(p)}`}. ${
-      empty ? "Nothing logged." : rows.map((r) => `${dayLabel(r.date).split(" ")[0]} ${(r.value / 1000).toFixed(1)} litres`).join(", ") + "."
-    } Goal ${(goal / 1000).toFixed(1)}.${ahead ? ` ${ahead} ${ahead === 1 ? "day" : "days"} ahead.` : ""}`;
+    summary = [
+      current ? t("Water this week.") : t("Water in {period}.", { period: periodLabel(p) }),
+      empty ? t("Nothing logged.") : rows.map((r) => t("{day} {n} litres", { day: dayWord(r.date), n: (r.value / 1000).toFixed(1) })).join(", ") + ".",
+      t("Goal {n}.", { n: (goal / 1000).toFixed(1) }),
+      ...(ahead ? [tn(ahead, "{n} day ahead.", "{n} days ahead.")] : []),
+    ].join(" ");
     legend = [
-      { label: "Intake", swatch: <LegendDot color={mc("water", "main")} /> },
-      { label: "Days ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={inkSwatch} /> },
+      { label: t("Intake"), swatch: <LegendDot color={mc("water", "main")} /> },
+      { label: t("Days ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
     ];
   } else {
     const y = Number(p.start.slice(0, 4));
     const months = [...new Set(rows.map((r) => Number(r.date.slice(5, 7))))].sort((a1, b1) => a1 - b1);
     const curM = Number(today.slice(5, 7));
     foot = empty
-      ? `No water logged this ${periodWord}`
-      : `${months.length === 1 ? monthShort(months[0]) : `${monthShort(months[0])} to ${monthShort(months[months.length - 1])}`}${current && months.includes(curM) ? ` · ${MONTH_LONG[curM - 1]} so far` : ""}`;
-    summary = `Water in ${y}. ${empty ? "Nothing logged." : `Average ${((mean ?? 0) / 1000).toFixed(1)} litres a day.`}`;
+      ? noWater
+      : `${months.length === 1 ? monthShort(months[0]) : t("{start} to {end}", { start: monthShort(months[0]), end: monthShort(months[months.length - 1]) })}${current && months.includes(curM) ? ` · ${t("{month} so far", { month: monthLong(curM) })}` : ""}`;
+    summary = [t("Water in {year}.", { year: y }), empty ? t("Nothing logged.") : t("Average {n} litres a day.", { n: ((mean ?? 0) / 1000).toFixed(1) })].join(" ");
     legend = [
-      { label: "Average a day", swatch: <LegendDot color={mc("water", "main")} /> },
-      { label: "Months ahead", swatch: <LegendGhost /> },
-      { label: "Goal", swatch: <LegendDash color={inkSwatch} /> },
+      { label: t("Average a day"), swatch: <LegendDot color={mc("water", "main")} /> },
+      { label: t("Months ahead"), swatch: <LegendGhost /> },
+      { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
     ];
   }
 
@@ -319,17 +347,17 @@ export default function WaterPage() {
       const lr = valuesIn(byDay, last);
       const la = avg(lr.map((r) => r.value));
       return [
-        { icon: History, value: la === null ? <StatEmpty /> : vt(la), label: "Last week avg" },
-        { icon: Target, value: lr.length === 0 ? <StatEmpty /> : `${lr.filter((r) => r.value >= goalOn(r.date)).length} of 7`, label: "Last week at goal" },
+        { icon: History, value: la === null ? <StatEmpty /> : vt(la), label: t("Last week avg") },
+        { icon: Target, value: lr.length === 0 ? <StatEmpty /> : t("{n} of {span}", { n: lr.filter((r) => r.value >= goalOn(r.date)).length, span: 7 }), label: t("Last week at goal") },
       ];
     }
     if (range === "month") {
-      const m = MONTH_LONG[Number(p.start.slice(5, 7)) - 1];
+      const m = monthLong(Number(p.start.slice(5, 7)));
       const best = rows.reduce<{ date: string; value: number } | null>((b, r) => (!b || r.value > b.value ? r : b), null);
       const k = rows.filter((r) => r.value >= goalOn(r.date)).length;
       return [
-        { icon: Target, value: empty ? <StatEmpty /> : `${k} ${k === 1 ? "day" : "days"}`, label: `At goal in ${m}` },
-        { icon: Award, value: best ? vt(best.value) : <StatEmpty />, label: best ? `Best day · ${shortDate(best.date)}` : "Best day" },
+        { icon: Target, value: empty ? <StatEmpty /> : tn(k, "{n} day", "{n} days"), label: t("At goal in {month}", { month: m }) },
+        { icon: Award, value: best ? vt(best.value) : <StatEmpty />, label: best ? t("Best day · {date}", { date: shortDate(best.date) }) : t("Best day") },
       ];
     }
     const y = Number(p.start.slice(0, 4));
@@ -339,8 +367,8 @@ export default function WaterPage() {
       if (v !== null && (bi < 0 || v > (monthAvgs[bi] as number))) bi = i;
     });
     return [
-      { icon: Award, value: bi < 0 ? <StatEmpty /> : vt(monthAvgs[bi] as number), label: bi < 0 ? "Best month" : `Best month · ${MONTH_LONG[bi]}` },
-      { icon: Target, value: String(rows.filter((r) => r.value >= goalOn(r.date)).length), label: `Days at goal in ${y}` },
+      { icon: Award, value: bi < 0 ? <StatEmpty /> : vt(monthAvgs[bi] as number), label: bi < 0 ? t("Best month") : t("Best month · {month}", { month: monthLong(bi + 1) }) },
+      { icon: Target, value: String(rows.filter((r) => r.value >= goalOn(r.date)).length), label: t("Days at goal in {year}", { year: y }) },
     ];
   })();
 
@@ -363,7 +391,7 @@ export default function WaterPage() {
           title: volumeText(k.ml, unit === "floz" ? "floz" : "ml", 0),
           meta: `${clock12(k.loggedAt)} · ${sourceName(k.source)}`,
           value: vt(total, 1),
-          sub: "running total",
+          sub: t("running total"),
           icon: Droplet,
           onEdit: k.source === "manual" ? () => setEditingDrink(k) : undefined,
           onDelete: k.source === "manual" ? () => setDeletingDrink(k) : undefined,
@@ -375,9 +403,9 @@ export default function WaterPage() {
       {
         key: historyDay,
         title: relativeDayTitle(historyDay, today),
-        meta: `${dayLabel(historyDay)} · Logged by you`,
+        meta: `${dayLabel(historyDay)} · ${t("Logged by you")}`,
         value: vt(total, 2),
-        sub: "day total",
+        sub: t("day total"),
         icon: Droplet,
         onEdit: () => setEditDay(historyDay),
         onDelete: () => setDeleteDay(historyDay),
@@ -394,8 +422,8 @@ export default function WaterPage() {
   const waterToday = byDay[today] ?? null;
   const shareButton = (
     <ShareEntryButton
-      label="Share your water"
-      disabledHint={waterToday === null ? "Nothing to share yet. Log your water first." : waterToday < goalOn(today) ? "Nothing to share yet. Reach your water goal first." : null}
+      label={t("Share your water")}
+      disabledHint={waterToday === null ? t("Nothing to share yet. Log your water first.") : waterToday < goalOn(today) ? t("Nothing to share yet. Reach your water goal first.") : null}
       onPress={() =>
         waterToday !== null &&
         share.open(waterCard({ date: today, ml: waterToday, goalMl: goalOn(today), drinks: drinks.filter((k) => k.day === today).length || null, unit: unit === "floz" ? "floz" : "ml" }))
@@ -406,18 +434,18 @@ export default function WaterPage() {
   return (
     <MetricPage
       metric="water"
-      title="Water"
+      title={t("Water")}
       headerAction={shareButton}
       range={range}
       onRangeChange={(r) => {
         setRange(r);
       }}
       menu={[
-        { value: "goal", label: "Edit daily goal", icon: <Target size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setGoalOpen(true) },
-        { value: "units", label: "Units", icon: <Ruler size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setUnitsOpen(true) },
-        { value: "date", label: "Go to date", icon: <CalendarDays size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setDateOpen(true) },
+        { value: "goal", label: t("Edit daily goal"), icon: <Target size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setGoalOpen(true) },
+        { value: "units", label: t("Units"), icon: <Ruler size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setUnitsOpen(true) },
+        { value: "date", label: t("Go to date"), icon: <CalendarDays size={17} style={{ color: "rgb(var(--th-7d6bb5))" }} />, onSelect: () => setDateOpen(true) },
       ]}
-      cta={{ label: "Log water", icon: <Plus size={16} />, onClick: () => setLogOpen(true) }}
+      cta={{ label: t("Log water"), icon: <Plus size={16} />, onClick: () => setLogOpen(true) }}
     >
       <WaterHero
         pct={hero.pct}
@@ -426,9 +454,9 @@ export default function WaterPage() {
         loading={loading}
         onQuickAdd={quickAdd}
         onCustom={() => setCustomOpen(true)}
-        ariaLabel={`${hero.text.value} ${hero.text.unit === "L" ? "litres" : hero.text.unit}, ${hero.text.lines.join(", ")}, ${hero.text.pill}`}
+        ariaLabel={`${hero.text.value} ${unit === "l" ? t("litres") : hero.text.unit}, ${hero.text.lines.join(", ")}, ${hero.text.pill}`}
       />
-      {!online && hasAny && <FreshnessLine offline>{OFFLINE_CACHED}</FreshnessLine>}
+      {!online && hasAny && <FreshnessLine offline>{t(OFFLINE_CACHED)}</FreshnessLine>}
 
       {loadFailed ? (
         <ErrorCard onRetry={retryMetrics} />
@@ -446,7 +474,7 @@ export default function WaterPage() {
           summary={summary}
         >
           {range === "day" ? (
-            <WaterDayChart totalMl={byDay[anchor] ?? 0} goalMl={goalOn(anchor)} isToday={anchor === today} label={vt(byDay[anchor] ?? 0)} goalLabel={`Goal ${vt(goalOn(anchor))}`} drinks={dayChartDrinks} />
+            <WaterDayChart totalMl={byDay[anchor] ?? 0} goalMl={goalOn(anchor)} isToday={anchor === today} label={vt(byDay[anchor] ?? 0)} goalLabel={t("Goal {n}", { n: vt(goalOn(anchor)) })} drinks={dayChartDrinks} />
           ) : range === "month" ? (
             <WaterMonthGrid
               period={p}
@@ -454,7 +482,9 @@ export default function WaterPage() {
               goalMl={goal}
               today={today}
               onDay={openDay}
-              dayLabel={(d, ml) => `${dayLabel(d)}, ${ml === null ? "nothing logged" : `${vt(ml)}, ${pctOf(ml, goal)}% of goal`}`}
+              dayLabel={(d, ml) =>
+                ml === null ? t("{date}, nothing logged", { date: dayLabel(d) }) : t("{date}, {n}, {pct}% of goal", { date: dayLabel(d), n: vt(ml), pct: pctOf(ml, goal) })
+              }
             />
           ) : (
             <GoalBarChart
@@ -463,7 +493,7 @@ export default function WaterPage() {
               bars={buildGoalBars(p, byDay, today)}
               goal={goal}
               goalLabel={goalText}
-              barLabel={(b) => (b.value === null ? `${b.key}, nothing logged` : `${b.key}, ${vt(b.value)}`)}
+              barLabel={(b) => (b.value === null ? t("{date}, nothing logged", { date: b.key }) : `${b.key}, ${vt(b.value)}`)}
             />
           )}
         </ChartCard>
@@ -471,8 +501,8 @@ export default function WaterPage() {
 
       <StatCard metric="water" stats={stats} valueSize={17} style={{ marginTop: 10 }} />
 
-      <CapsLabel>History</CapsLabel>
-      <HistoryCard metric="water" icon={Droplet} items={items} loading={loading} empty={historyDay === today ? "No drinks yet today" : "No drinks this day"} />
+      <CapsLabel>{t("History")}</CapsLabel>
+      <HistoryCard metric="water" icon={Droplet} items={items} loading={loading} empty={historyDay === today ? t("No drinks yet today") : t("No drinks this day")} />
 
       <WaterCustomPopup
         open={customOpen}
@@ -495,8 +525,8 @@ export default function WaterPage() {
       />
       <WaterEditPopup
         open={editingDrink !== null}
-        title="Edit drink"
-        wheelLabel="Drink in ml"
+        title={t("Edit drink")}
+        wheelLabel={t("Drink in ml")}
         dayTitle={editingDrink ? `${dayLabel(editingDrink.day)} · ${clock12(editingDrink.loggedAt)}` : ""}
         total={editingDrink?.ml ?? 0}
         onClose={() => setEditingDrink(null)}
@@ -531,7 +561,7 @@ export default function WaterPage() {
         onSave={(ml) => {
           setWaterGoal(ml);
           setGoalOpen(false);
-          setToast({ message: "Water goal saved" });
+          setToast({ message: t("Water goal saved") });
         }}
       />
       <WaterUnitsSheet open={unitsOpen} unit={unit} onClose={() => setUnitsOpen(false)} onChange={setUnit} />
@@ -541,7 +571,7 @@ export default function WaterPage() {
         selectedDate={anchor}
         today={today}
         maxDate={today}
-        title="Go to date"
+        title={t("Go to date")}
         variant="partB"
         markers={Object.keys(byDay)}
         onSelect={(d) => {
@@ -551,7 +581,7 @@ export default function WaterPage() {
       />
       <LogWaterSheet open={logOpen} onClose={() => setLogOpen(false)} onSaved={drinksRead.reload} />
       {share.sheet}
-      <Toast open={!!toast} message={toast?.message ?? ""} onUndo={toast?.undo ? () => { toast.undo?.(); setToast(null); } : undefined} onExpire={() => setToast(null)} />
+      <Toast open={!!toast} message={toast ? t(toast.message) : ""} onUndo={toast?.undo ? () => { toast.undo?.(); setToast(null); } : undefined} onExpire={() => setToast(null)} />
     </MetricPage>
   );
 }

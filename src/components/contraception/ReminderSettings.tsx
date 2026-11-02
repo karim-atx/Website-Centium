@@ -8,6 +8,7 @@ import * as G from "../../services/contraception/guidance";
 import { time12 } from "../../utils/time12";
 import { TimeWheel } from "../health/log/LogSheetParts";
 import { CycleHelp, CycleRow, CycleSection, OptionButton, type } from "../cycle/cycleUi";
+import { t } from "../../i18n/core";
 
 // Reminders (HE1.10.b.2 #25-#46): what is sent, when, and how much it says.
 //
@@ -50,7 +51,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
   // No settings row yet means nothing to switch.
   if (!cycleSettings) return null;
 
-  const fail = (m?: string | null) => onError?.(m ?? G.SAVE_FAILED);
+  const fail = (m?: string | null) => onError?.(m ?? t(G.SAVE_FAILED));
 
   const save = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]) => {
     setBusy(true);
@@ -89,12 +90,12 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
   const stored = (plan.reminderTime ?? "").slice(0, 5);
 
   return (
-    <CycleSection label={G.REMINDERS_TITLE} style={{ marginTop: 32 }}>
+    <CycleSection label={t(G.REMINDERS_TITLE)} style={{ marginTop: 32 }}>
       {!reminders && (
         <div className="flex" style={{ gap: 8, marginTop: 12 }}>
           <BellOff size={14} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginTop: 2 }} />
           <div className="min-w-0">
-            <CycleHelp>{!supported ? G.PUSH_UNSUPPORTED : pushAllowed === false ? G.PUSH_BLOCKED : G.PUSH_NEEDED}</CycleHelp>
+            <CycleHelp>{!supported ? t(G.PUSH_UNSUPPORTED) : pushAllowed === false ? G.PUSH_BLOCKED : t(G.PUSH_NEEDED)}</CycleHelp>
             {supported && pushAllowed !== false && (
               <button
                 type="button"
@@ -103,12 +104,12 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
                 className="tap text-primary-dark disabled:opacity-40"
                 style={{ minHeight: 36, ...type(13, 19.5, 700) }}
               >
-                {G.PUSH_ENABLE}
+                {t(G.PUSH_ENABLE)}
               </button>
             )}
             {pushError && (
               <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>
-                {pushError}
+                {t(pushError)}
               </p>
             )}
           </div>
@@ -119,8 +120,8 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
         <>
           <CycleRow
             icon={Bell}
-            title={G.PILL_REMINDER_LABEL}
-            subtitle={G.PILL_REMINDER_HELP}
+            title={t(G.PILL_REMINDER_LABEL)}
+            subtitle={t(G.PILL_REMINDER_HELP)}
             toggle={{
               checked: cycleSettings.pillReminder && reminders,
               disabled: busy || !reminders,
@@ -129,8 +130,8 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
           />
           <CycleRow
             icon={Clock}
-            title={G.REMINDER_TIME_LABEL}
-            value={stored ? time12(stored) : G.REMINDER_TIME_NOT_SET}
+            title={t(G.REMINDER_TIME_LABEL)}
+            value={stored ? time12(stored) : t(G.REMINDER_TIME_NOT_SET)}
             onClick={busy || !reminders ? undefined : () => {
               setDraftTime(parseTime(plan.reminderTime));
               setWheelOpen((o) => !o);
@@ -151,7 +152,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
                   className="tap text-primary-dark"
                   style={{ minHeight: 44, padding: "0 4px", ...type(13, 19.5, 700) }}
                 >
-                  Done
+                  {t("Done")}
                 </button>
               </div>
             </div>
@@ -160,8 +161,8 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
       )}
       <CycleRow
         icon={CalendarClock}
-        title={G.METHOD_REMINDER_LABEL}
-        subtitle={G.METHOD_REMINDER_HELP}
+        title={t(G.METHOD_REMINDER_LABEL)}
+        subtitle={t(G.METHOD_REMINDER_HELP)}
         toggle={{
           checked: cycleSettings.methodReminders && reminders,
           disabled: busy || !reminders,
@@ -171,9 +172,9 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
       />
 
       <p className="text-charcoal-faint" style={type(12, 18, 600, { marginTop: 14 })}>
-        {G.DETAIL_TITLE}
+        {t(G.DETAIL_TITLE)}
       </p>
-      <div className="flex" role="radiogroup" aria-label={G.DETAIL_TITLE} style={{ gap: 6, marginTop: 6 }}>
+      <div className="flex" role="radiogroup" aria-label={t(G.DETAIL_TITLE)} style={{ gap: 6, marginTop: 6 }}>
         {DETAILS.map((d) => (
           <OptionButton
             key={d}
@@ -184,14 +185,14 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
             disabled={busy}
             onClick={() => void save({ notificationDetail: d })}
           >
-            {G.DETAIL_LABEL[d]}
+            {t(G.DETAIL_LABEL[d])}
           </OptionButton>
         ))}
       </div>
       <CycleHelp style={{ marginTop: 6 }}>{G.DETAIL_HELP[cycleSettings.notificationDetail]}</CycleHelp>
       {/* The zone is set in general Settings (task T) and governs every
           reminder; the Cycle Settings Time zone row shows which. */}
-      <CycleHelp>{G.TIMEZONE_HELP}.</CycleHelp>
+      <CycleHelp>{t(G.TIMEZONE_HELP)}.</CycleHelp>
     </CycleSection>
   );
 };

@@ -11,6 +11,9 @@ import { initials } from "../professionals/typeColour";
 import { textPx, linePx } from "../../theme/textSize";
 import type { ImagingRecord } from "../../types";
 import { useHealthMode, hairline, fieldFill, tileFill, deepInk, fmtDate, fileKind, SheetCaps, Skel, ConfirmPopup, INK, INK_SOFT, INK_FAINT } from "./records/kit";
+import { t, tn } from "../../i18n/core";
+import { appLocale } from "../../i18n/format";
+import { imagingTypeLabel } from "./imagingTypes";
 
 // HE1.9.b.2 · Share {type}. V6-25: the canvas "Share Result" summary card is
 // retired for imaging; Export file shares or downloads the ORIGINAL file
@@ -34,7 +37,7 @@ export async function exportStoredFile(bucket: "medical-imaging" | "lab-reports"
     const file = new File([blob], name, { type: blob.type });
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
-        await navigator.share({ files: [file], title: "Health record · Centium" });
+        await navigator.share({ files: [file], title: t("Health record · Centium") });
         return { ok: true };
       } catch {
         // fall through to download
@@ -94,26 +97,27 @@ export const ShareImagingSheet: React.FC<{
   const sharedPros = (pros ?? []).filter((p) => sharedIds.has(p.professionalId));
   const openPros = (pros ?? []).filter((p) => !sharedIds.has(p.professionalId));
   const n = picked.size;
-  const pages = record.filePages ? `, ${record.filePages} page${record.filePages === 1 ? "" : "s"}` : "";
+  const typeLabel = imagingTypeLabel(record.type);
+  const kindText = kind === "PDF" ? (record.filePages ? tn(record.filePages, "PDF, {n} page", "PDF, {n} pages") : "PDF") : kind ? t("Photo") : null;
 
   const doExport = async () => {
     if (!record.filePath || exporting) return;
     setExporting(true);
     const r = await exportStoredFile("medical-imaging", record.filePath);
     setExporting(false);
-    if (!r.ok) onToast?.("Couldn't share. Try again.");
+    if (!r.ok) onToast?.(t("Couldn't share. Try again."));
   };
   const doShare = async () => {
     if (n === 0) return;
-    if (typeof navigator !== "undefined" && navigator.onLine === false) return onToast?.("You're offline. Try again when you're connected.");
+    if (typeof navigator !== "undefined" && navigator.onLine === false) return onToast?.(t("You're offline. Try again when you're connected."));
     setSharing(true);
     const ids = [...picked];
     const r = await shareImagingRecord(record.id, ids);
     setSharing(false);
-    if (!r.ok) return onToast?.("Couldn't share. Try again.");
+    if (!r.ok) return onToast?.(t("Couldn't share. Try again."));
     const first = (pros ?? []).find((p) => p.professionalId === ids[0]);
-    onToast?.(ids.length === 1 && first ? `Shared with ${first.name}` : `Shared with ${ids.length} professionals`);
-    setTick((t) => t + 1);
+    onToast?.(ids.length === 1 && first ? t("Shared with {name}", { name: first.name }) : tn(ids.length, "Shared with {n} professional", "Shared with {n} professionals"));
+    setTick((x) => x + 1);
   };
   const doStop = async () => {
     if (!stopFor) return;
@@ -121,10 +125,10 @@ export const ShareImagingSheet: React.FC<{
     setStopError(null);
     const r = await unshareImagingRecord(record.id, stopFor.professionalId);
     setStopBusy(false);
-    if (!r.ok) return setStopError("Couldn't save. Try again.");
-    onToast?.(`Stopped sharing with ${stopFor.name}.`);
+    if (!r.ok) return setStopError(t("Couldn't save. Try again."));
+    onToast?.(t("Stopped sharing with {name}.", { name: stopFor.name }));
     setStopFor(null);
-    setTick((t) => t + 1);
+    setTick((x) => x + 1);
   };
 
   const avatar = (p: LinkedProfessional) =>
@@ -141,13 +145,13 @@ export const ShareImagingSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={`Share ${record.type}`}
+        title={t("Share {name}", { name: typeLabel })}
         chrome="partB"
         tone={partBSheetTone(dark)}
         footerBottom={30}
         footer={
           <CtaButton
-            label={n === 0 ? "Share" : `Share with ${n} professional${n === 1 ? "" : "s"}`}
+            label={n === 0 ? t("Share") : tn(n, "Share with {n} professional", "Share with {n} professionals")}
             onClick={() => void doShare()}
             loading={sharing}
             disabled={n === 0 || !record.filePath}
@@ -158,10 +162,10 @@ export const ShareImagingSheet: React.FC<{
           <FileText size={20} style={{ color: deepInk(dark) }} aria-hidden />
           <span className="flex-1 min-w-0">
             <span className="block truncate" style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
-              {record.note ? `${record.type} · ${record.note}` : record.type}
+              {record.note ? `${typeLabel} · ${record.note}` : typeLabel}
             </span>
             <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
-              {[fmtDate(record.date), kind ? `${kind}${kind === "PDF" ? pages : ""}` : null].filter(Boolean).join(" · ")}
+              {[fmtDate(record.date), kindText].filter(Boolean).join(" · ")}
             </span>
           </span>
         </div>
@@ -169,7 +173,7 @@ export const ShareImagingSheet: React.FC<{
         {/* OURS-imaging-revoke: who has this file, Stop sharing. */}
         {sharedPros.length > 0 && (
           <>
-            <SheetCaps style={{ marginTop: 16 }}>Shared with</SheetCaps>
+            <SheetCaps style={{ marginTop: 16 }}>{t("Shared with")}</SheetCaps>
             {sharedPros.map((p) => {
               const at = shares.find((s) => s.professionalId === p.professionalId)?.sharedAt;
               return (
@@ -181,7 +185,7 @@ export const ShareImagingSheet: React.FC<{
                     </span>
                     {at && (
                       <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
-                        {`Shared ${fmtShort(at)}`}
+                        {t("Shared {date}", { date: fmtShort(at) })}
                       </span>
                     )}
                   </span>
@@ -194,7 +198,7 @@ export const ShareImagingSheet: React.FC<{
                     className="tap min-h-[44px] shrink-0"
                     style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: dark ? "#F09A8E" : "#C0392B" }}
                   >
-                    Stop sharing
+                    {t("Stop sharing")}
                   </button>
                 </div>
               );
@@ -202,7 +206,7 @@ export const ShareImagingSheet: React.FC<{
           </>
         )}
 
-        <SheetCaps style={{ marginTop: 16 }}>Share with a professional</SheetCaps>
+        <SheetCaps style={{ marginTop: 16 }}>{t("Share with a professional")}</SheetCaps>
         {pros === null ? (
           [0, 1].map((i) => (
             <div key={i} className="flex items-center" style={{ height: 56, gap: 12, borderTop: rule }}>
@@ -211,9 +215,9 @@ export const ShareImagingSheet: React.FC<{
             </div>
           ))
         ) : pros.length === 0 ? (
-          <p style={{ padding: "10px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT, borderTop: rule }}>No professionals connected yet.</p>
+          <p style={{ padding: "10px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT, borderTop: rule }}>{t("No professionals connected yet.")}</p>
         ) : openPros.length === 0 ? (
-          <p style={{ padding: "10px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT, borderTop: rule }}>Everyone you&apos;re connected with has this file.</p>
+          <p style={{ padding: "10px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT, borderTop: rule }}>{t("Everyone you're connected with has this file.")}</p>
         ) : (
           openPros.map((p) => {
             const on = picked.has(p.professionalId);
@@ -254,7 +258,7 @@ export const ShareImagingSheet: React.FC<{
           })
         )}
 
-        <SheetCaps style={{ marginTop: 16 }}>Export file</SheetCaps>
+        <SheetCaps style={{ marginTop: 16 }}>{t("Export file")}</SheetCaps>
         <button
           type="button"
           onClick={() => void doExport()}
@@ -267,24 +271,24 @@ export const ShareImagingSheet: React.FC<{
           </span>
           <span className="flex-1 min-w-0">
             <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 600, color: INK }}>
-              Export file
+              {t("Export file")}
             </span>
             <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), color: INK_FAINT }}>
-              {record.filePath ? "Download the file to this device" : "No file to export"}
+              {record.filePath ? t("Download the file to this device") : t("No file to export")}
             </span>
           </span>
-          <ChevronRight size={17} style={{ color: INK_FAINT }} aria-hidden />
+          <ChevronRight size={17} className="rtl:-scale-x-100" style={{ color: INK_FAINT }} aria-hidden />
         </button>
         <p className="flex items-center" style={{ marginTop: 16, gap: 6, fontSize: textPx(12), lineHeight: linePx(18), color: INK_SOFT }}>
-          <Lock size={13} aria-hidden /> Only the file you choose is shared.
+          <Lock size={13} aria-hidden /> {t("Only the file you choose is shared.")}
         </p>
       </BottomSheet>
       <ConfirmPopup
         open={stopFor !== null}
         geometry="ours"
-        title="Stop sharing this file?"
-        body={stopFor ? `${stopFor.name} can no longer open ${record.type}, ${fmtDate(record.date)}. Copies they already saved stay with them.` : ""}
-        confirmLabel="Stop sharing"
+        title={t("Stop sharing this file?")}
+        body={stopFor ? t("{name} can no longer open {file}, {date}. Copies they already saved stay with them.", { name: stopFor.name, file: typeLabel, date: fmtDate(record.date) }) : ""}
+        confirmLabel={t("Stop sharing")}
         busy={stopBusy}
         error={stopError}
         onCancel={() => setStopFor(null)}
@@ -297,5 +301,7 @@ export const ShareImagingSheet: React.FC<{
 /** "Aug 12" from a timestamp. */
 const fmtShort = (iso: string) => {
   const d = new Date(iso);
+  const loc = appLocale();
+  if (loc) return d.toLocaleDateString(loc, { month: "short", day: "numeric" });
   return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${d.getDate()}`;
 };

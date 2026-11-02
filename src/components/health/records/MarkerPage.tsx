@@ -37,6 +37,7 @@ import {
   INK_SOFT,
   INK_FAINT,
 } from "./kit";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 // HE1.9.1 · a marker's full page (from HE1.9.3 "View full history"): hero in
 // the primary tint (value 46 in its status colour, Below range, latest date
@@ -69,6 +70,7 @@ function useBoxWidth(): [(el: HTMLElement | null) => void, number | null] {
   return [ref, width];
 }
 const SPAN_DAYS: Record<Span, number | null> = { "6M": 183, "1Y": 365, All: null };
+const SPAN_LABEL: Record<Span, string> = { "6M": tk("6M"), "1Y": tk("1Y"), All: tk("All") };
 
 export const MarkerPage: React.FC<{
   marker: BloodMarker;
@@ -133,10 +135,10 @@ export const MarkerPage: React.FC<{
     if (r.ok) await reloadHealthRecords();
     setBusy(false);
     // Round D O12: offline, say it needs a connection.
-    if (!r.ok) return setError(browserOffline() ? OFFLINE_MESSAGE : "Couldn't delete. Try again.");
+    if (!r.ok) return setError(browserOffline() ? t(OFFLINE_MESSAGE) : t("Couldn't delete. Try again."));
     const wasMarker = deleting === "marker";
     setDeleting(null);
-    onToast(wasMarker ? "Marker deleted." : "Result deleted.");
+    onToast(wasMarker ? t("Marker deleted.") : t("Result deleted."));
     if (wasMarker || results.length === 1) onBack();
   };
 
@@ -164,7 +166,7 @@ export const MarkerPage: React.FC<{
           fontWeight: 700,
         }}
       >
-        {s}
+        {t(SPAN_LABEL[s])}
       </button>
     );
   };
@@ -183,11 +185,11 @@ export const MarkerPage: React.FC<{
         onBack={onBack}
         menuWidth={onShareWithProfessional ? 220 : undefined}
         menu={[
-          ...(onShare ? [{ key: "share", label: "Share", icon: <Share2 size={15} />, onSelect: onShare }] : []),
+          ...(onShare ? [{ key: "share", label: t("Share"), icon: <Share2 size={15} />, onSelect: onShare }] : []),
           ...(onShareWithProfessional
-            ? [{ key: "share-pro", label: "Share with a professional", icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }]
+            ? [{ key: "share-pro", label: t("Share with a professional"), icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }]
             : []),
-          { key: "delete", label: "Delete marker", icon: <Trash2 size={15} />, destructive: true, onSelect: () => setDeleting("marker") },
+          { key: "delete", label: t("Delete marker"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => setDeleting("marker") },
         ]}
       />
       {/* Hero */}
@@ -205,14 +207,14 @@ export const MarkerPage: React.FC<{
             </span>
           )}
         </div>
-        <p style={{ marginTop: 4, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: INK_FAINT }}>{`Latest · ${fmtDate(latest.date)} · ${reportLabel(latest)}`}</p>
+        <p style={{ marginTop: 4, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: INK_FAINT }}>{`${t("Latest")} · ${fmtDate(latest.date)} · ${reportLabel(latest)}`}</p>
         {hasRange && (
           <div ref={barBox} style={{ marginTop: 18 }}>
             <RangeBar value={latest.value} low={latest.rangeLow} high={latest.rangeHigh} status={status} width={barW} height={6} dot={14} border={2.2} labels="inrange" trackFill={dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.9)"} />
           </div>
         )}
         {hasRange && (
-          <p style={{ marginTop: 12, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK }}>{`Reference range ${rangeText(latest.rangeLow, latest.rangeHigh)} ${latest.unit}`}</p>
+          <p style={{ marginTop: 12, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK }}>{t("Reference range {range} {unit}", { range: rangeText(latest.rangeLow, latest.rangeHigh), unit: latest.unit })}</p>
         )}
         {remark && <p style={{ marginTop: hasRange ? 3 : 12, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>{remark}</p>}
       </section>
@@ -226,14 +228,14 @@ export const MarkerPage: React.FC<{
       {/* Chart card */}
       <ListCard style={{ marginTop: 12, padding: 14, overflow: "visible" }}>
         <div className="flex items-center justify-between">
-          <p style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: INK }}>All results</p>
-          <div role="tablist" aria-label="Period" className="flex" style={{ width: 150, height: 36, padding: 4, gap: 4, borderRadius: 12, background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f3f3fd))" }}>
+          <p style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: INK }}>{t("All results")}</p>
+          <div role="tablist" aria-label={tx("Period", "time span")} className="flex" style={{ width: 150, height: 36, padding: 4, gap: 4, borderRadius: 12, background: dark ? "rgb(var(--th-303141))" : "rgb(var(--th-f3f3fd))" }}>
             {(["6M", "1Y", "All"] as Span[]).map(spanBtn)}
           </div>
         </div>
         {shown.length === 0 ? (
           <p style={{ padding: "40px 0", textAlign: "center", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>
-            {span === "6M" ? "No results in the last 6 months." : "No results in the last year."}
+            {span === "6M" ? t("No results in the last 6 months.") : t("No results in the last year.")}
           </p>
         ) : (
           <div ref={chartBox} className="relative" style={{ marginTop: 14 }}>
@@ -246,7 +248,7 @@ export const MarkerPage: React.FC<{
               variant="full"
               selected={selected}
               onSelect={setSelected}
-              label={`${marker.name}, ${shown.length} results`}
+              label={tn(shown.length, "{marker}, {n} result", "{marker}, {n} results", { marker: marker.name })}
               noIconScale
             />
             {selected !== null && shown[selected] && (
@@ -265,28 +267,28 @@ export const MarkerPage: React.FC<{
         <div className="flex items-center" style={{ marginTop: 6, gap: "6px 14px" }}>
           <span className="flex items-center" style={{ gap: 6, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: INK_SOFT }}>
             <span aria-hidden style={{ width: 10, height: 10, borderRadius: 9999, border: `1.6px solid ${dark ? "rgb(var(--th-c3b3fb))" : "rgb(var(--th-7d6bb5))"}` }} />
-            Result
+            {t("Result")}
           </span>
           {!isThreshold && (
             <span className="flex items-center" style={{ gap: 6, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: INK_SOFT }}>
               <span aria-hidden style={{ width: 14, height: 10, borderRadius: 2, background: "rgb(var(--c-teal) / 0.22)" }} />
-              Reference range
+              {t("Reference range")}
             </span>
           )}
         </div>
         <p style={{ marginTop: 6, fontSize: textPx(10.5), lineHeight: linePx(15.8), color: INK_FAINT }}>
-          {`${latest.unit} · tap a point for details · ${results.length} result${results.length === 1 ? "" : "s"} since ${firstYear}`}
+          {`${latest.unit} · ${t("tap a point for details")} · ${tn(results.length, "{n} result since {year}", "{n} results since {year}", { year: firstYear ?? "" })}`}
         </p>
       </ListCard>
 
       {/* Stats */}
       <div className="flex" style={{ marginTop: 12, paddingTop: 12, borderTop: `0.5px solid ${hairline(dark, hc)}` }}>
-        {stat(avg ?? "–", "Average", statusColor(avg === null ? null : statOf(avg), dark), true)}
-        {stat(highest?.value ?? "–", "Highest", statusColor(highest ? statOf(highest.value) : null, dark))}
-        {stat(change === null ? "–" : change === 0 ? "0" : `${change < 0 ? "↓" : "↑"} ${Math.abs(change)}`, "Change vs last", INK)}
+        {stat(avg ?? "–", t("Average"), statusColor(avg === null ? null : statOf(avg), dark), true)}
+        {stat(highest?.value ?? "–", t("Highest"), statusColor(highest ? statOf(highest.value) : null, dark))}
+        {stat(change === null ? "–" : change === 0 ? "0" : `${change < 0 ? "↓" : "↑"} ${Math.abs(change)}`, t("Change vs last"), INK)}
       </div>
 
-      <SectionCaps>History</SectionCaps>
+      <SectionCaps>{t("History")}</SectionCaps>
       <ListCard>
         {[...results].reverse().map((r, i) => (
           <div key={r.id} style={{ borderTop: i ? rowRule(dark, hc) : undefined }}>
@@ -297,8 +299,8 @@ export const MarkerPage: React.FC<{
               edgeInset={8}
               keyboardLabel={`${r.value} ${r.unit}, ${fmtDate(r.date)}`}
               actions={[
-                { key: "edit", label: "Edit", icon: <Pencil size={16} />, onClick: () => setForm({ result: r }) },
-                { key: "delete", label: "Delete", icon: <Trash2 size={16} />, destructive: true, onClick: () => setDeleting(r) },
+                { key: "edit", label: t("Edit"), icon: <Pencil size={16} />, onClick: () => setForm({ result: r }) },
+                { key: "delete", label: t("Delete"), icon: <Trash2 size={16} />, destructive: true, onClick: () => setDeleting(r) },
               ]}
             >
               <div className="flex items-center" style={{ minHeight: 60, padding: "9px 14px", gap: 11, background: "rgb(var(--c-cream-card))" }}>
@@ -318,7 +320,7 @@ export const MarkerPage: React.FC<{
 
       <HealthDisclaimer className="mt-[18px]" />
 
-      <PinnedCta primary={{ label: "Add result", icon: <Plus size={16} />, onClick: () => setForm({ result: null }), style: PINNED_FILL }} />
+      <PinnedCta primary={{ label: t("Add result"), icon: <Plus size={16} />, onClick: () => setForm({ result: null }), style: PINNED_FILL }} />
 
       <ResultFormSheet
         open={form !== null}
@@ -334,15 +336,15 @@ export const MarkerPage: React.FC<{
         geometry="ours"
         busy={busy}
         error={error}
-        title={deleting === "marker" ? `Delete ${marker.name}?` : "Delete this result?"}
+        title={deleting === "marker" ? t("Delete {name}?", { name: marker.name }) : t("Delete this result?")}
         body={
           deleting === "marker"
-            ? `All ${results.length} result${results.length === 1 ? "" : "s"} for ${marker.name} are removed from every report. This can't be undone.`
+            ? tn(results.length, "All {n} result for {marker} are removed from every report. This can't be undone.", "All {n} results for {marker} are removed from every report. This can't be undone.", { marker: marker.name })
             : deleting
-              ? `${deleting.value} ${deleting.unit} from ${fmtDate(deleting.date)}. This can't be undone.`
+              ? t("{value} {unit} from {date}. This can't be undone.", { value: deleting.value, unit: deleting.unit, date: fmtDate(deleting.date) })
               : ""
         }
-        confirmLabel="Delete"
+        confirmLabel={t("Delete")}
         onCancel={() => {
           setDeleting(null);
           setError(null);

@@ -3,6 +3,7 @@ import { useApp } from "../../../context/AppContext";
 import { hideSyncedReading, useMetricRows, type RawMetricRow } from "../../../services/health-metrics/b1";
 import { HealthPopup } from "./HealthPopup";
 import { SAVE_FAILED } from "./MetricKit";
+import { t } from "../../../i18n/core";
 
 /**
  * Delete on a synced day (HA-12 / PB-H-03, V6-169; Database B1
@@ -24,11 +25,11 @@ export function useSyncedRemove(dbType: "steps" | "sleep" | "calories_burned" | 
     <HealthPopup
       open={day !== null}
       onClose={() => setDay(null)}
-      title="Remove from Centium?"
-      body={<p>{`It stays in ${sourceLabel}. Centium won't import it again.`}</p>}
-      secondary={{ label: "Cancel", onClick: () => setDay(null) }}
+      title={t("Remove from Centium?")}
+      body={<p>{t("It stays in {source}. Centium won't import it again.", { source: sourceLabel })}</p>}
+      secondary={{ label: t("Cancel"), onClick: () => setDay(null) }}
       primary={{
-        label: "Remove",
+        label: t("Remove"),
         tone: "destructive",
         onClick: async () => {
           const d = day;
@@ -48,7 +49,7 @@ export function useSyncedRemove(dbType: "steps" | "sleep" | "calories_burned" | 
     /** "Apple Health" etc. for a day's rows, "Logged by you" for manual, null when none. */
     sourceOf: (d: string) => {
       const r = rows.data.find((x) => x.day === d);
-      return r ? (r.source === "manual" ? "Logged by you" : r.source === "apple_health" ? "Apple Health" : r.source === "android_health" ? "Health Connect" : "WHOOP") : null;
+      return r ? (r.source === "manual" ? t("Logged by you") : r.source === "apple_health" ? "Apple Health" : r.source === "android_health" ? "Health Connect" : "WHOOP") : null;
     },
     popup,
   };

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 import { SCRUB_EARLIER, SCRUB_LATER } from "../../services/cycle/guidance";
 
 // The day scrubber (HE1.10 #22-#28, HE1.10.d #22-#28, S3).
@@ -55,7 +56,7 @@ export const CycleScrubber: React.FC<{
         ref={trackRef}
         role="slider"
         tabIndex={0}
-        aria-label="Move through the cycle"
+        aria-label={t("Move through the cycle")}
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={value}
@@ -108,13 +109,13 @@ export const CycleScrubber: React.FC<{
       </div>
       <div className="flex items-start justify-between" style={{ marginTop: 11, gap: 8 }}>
         <span className="text-charcoal-faint shrink-0" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
-          {SCRUB_EARLIER}
+          {t(SCRUB_EARLIER)}
         </span>
         <span className="text-charcoal-soft text-center min-w-0" data-scrub-label="" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
           {centreLabel}
         </span>
         <span className="text-charcoal-faint shrink-0" style={{ fontSize: textPx(10), lineHeight: linePx(15), fontWeight: 600 }}>
-          {SCRUB_LATER}
+          {t(SCRUB_LATER)}
         </span>
       </div>
     </div>

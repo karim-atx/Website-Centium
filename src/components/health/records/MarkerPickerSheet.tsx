@@ -5,6 +5,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { textPx, linePx } from "../../../theme/textSize";
 import { prefillRange, searchMarkers, type CatalogueMarker } from "../../../services/labs/catalogueLogic";
 import { useHealthMode, hairline, fieldFill, deepInk, rangeText, rowRule, SectionCaps, INK, INK_FAINT } from "./kit";
+import { t, tk } from "../../../i18n/core";
 
 // OURS-marker-picker: tapping a marker name on HE1.9.2.2 (or the Marker field
 // of OURS-add-result) opens the standard list as a search sheet; the unit and
@@ -12,13 +13,13 @@ import { useHealthMode, hairline, fieldFill, deepInk, rangeText, rowRule, Sectio
 // (repo MarkerEntryRow behaviour, kept: HE1.9.2.2 K4).
 
 const CATEGORY_LABEL: Record<string, string> = {
-  blood_count: "Blood count",
-  lipids: "Lipids",
-  liver: "Liver",
-  kidney: "Kidney",
-  hormones: "Hormones",
-  metabolic: "Metabolic",
-  other: "Other",
+  blood_count: tk("Blood count"),
+  lipids: tk("Lipids"),
+  liver: tk("Liver"),
+  kidney: tk("Kidney"),
+  hormones: tk("Hormones"),
+  metabolic: tk("Metabolic"),
+  other: tk("Other"),
 };
 const ORDER = ["blood_count", "lipids", "liver", "kidney", "hormones", "metabolic", "other"];
 
@@ -53,7 +54,7 @@ export const MarkerPickerSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={close} title="Choose a marker" chrome="partB" tone={partBSheetTone(dark)} size="tall">
+    <BottomSheet open={open} onClose={close} title={t("Choose a marker")} chrome="partB" tone={partBSheetTone(dark)} size="tall">
       <label
         className="flex items-center"
         style={{ height: 42, borderRadius: 12, padding: "0 12px", gap: 8, background: fieldFill(dark), border: `0.5px solid ${hairline(dark, hc, 0.06)}` }}
@@ -62,18 +63,18 @@ export const MarkerPickerSheet: React.FC<{
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search markers, e.g. HbA1c"
-          aria-label="Search markers"
+          placeholder={t("Search markers, e.g. HbA1c")}
+          aria-label={t("Search markers")}
           className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
           style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), color: INK }}
         />
       </label>
       {catalogue && groups.length === 0 && (
-        <p style={{ marginTop: 14, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{`No markers match '${q}'.`}</p>
+        <p style={{ marginTop: 14, fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("No markers match '{query}'.", { query: q })}</p>
       )}
       {groups.map((g) => (
         <section key={g.cat}>
-          <SectionCaps style={{ margin: "18px 0 6px" }}>{CATEGORY_LABEL[g.cat] ?? g.cat}</SectionCaps>
+          <SectionCaps style={{ margin: "18px 0 6px" }}>{CATEGORY_LABEL[g.cat] ? t(CATEGORY_LABEL[g.cat]) : g.cat}</SectionCaps>
           {g.items.map((m, i) => {
             const r = prefillRange(m, sex, m.canonicalUnit, null);
             const alias = matchedAlias(m);
@@ -109,7 +110,7 @@ export const MarkerPickerSheet: React.FC<{
         className="tap w-full text-start"
         style={{ minHeight: 48, marginTop: 10, padding: "0 2px", fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: deepInk(dark) }}
       >
-        {q ? `Other: "${q}"` : "Other (not on the list)"}
+        {q ? t("Other: \"{query}\"", { query: q }) : t("Other (not on the list)")}
       </button>
     </BottomSheet>
   );

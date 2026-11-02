@@ -4,8 +4,8 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, HeroPill, hairline, metricTextInk, useHealthMode } from "./MetricKit";
-import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
-import { isRtl } from "../../../i18n/core";
+import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
+import { isRtl, t } from "../../../i18n/core";
 
 // Weight trend (HE1.7 family): journey hero with the BMI row, the four range
 // charts and the Units sheet. Literal values from health-handover.md HE1.7 /
@@ -27,6 +27,10 @@ export { useWeightUnit };
 /** A kg value in the chosen unit, one decimal. */
 export const inUnit = (kg: number, u: WeightUnit) => (u === "lb" ? kg * LB_PER_KG : kg);
 export const fmtW = (kg: number, u: WeightUnit) => inUnit(kg, u).toFixed(1);
+/** The unit word shown ("kg" / "lb", translated; call at render time). */
+const unitWord = (u: WeightUnit) => (u === "lb" ? t("lb") : t("kg"));
+/** "74.0 kg" / "163.1 lb" (translated). */
+const wText = (kg: number, u: WeightUnit) => (u === "lb" ? t("{n} lb", { n: fmtW(kg, u) }) : t("{n} kg", { n: fmtW(kg, u) }));
 /** "↓ 0.3" / "↑ 0.2" / "0.0" (HE1.7 #63). */
 export const deltaW = (kg: number, u: WeightUnit) => {
   const v = Math.round(inUnit(kg, u) * 10) / 10;
@@ -36,12 +40,12 @@ export const deltaW = (kg: number, u: WeightUnit) => {
 export const WeightUnitsSheet: React.FC<{ open: boolean; unit: WeightUnit; onClose: () => void; onChange: (u: WeightUnit) => void }> = ({ open, unit, onClose, onChange }) => {
   const { dark } = useHealthMode();
   const options: { value: WeightUnit; label: string }[] = [
-    { value: "kg", label: "Kilograms" },
-    { value: "lb", label: "Pounds" },
+    { value: "kg", label: t("Kilograms") },
+    { value: "lb", label: t("Pounds") },
   ];
   return (
-    <BottomSheet open={open} onClose={onClose} title="Units" chrome="partB">
-      <div role="radiogroup" aria-label="Weight units" className="flex flex-wrap justify-center" style={{ gap: 8, paddingBottom: 24 }}>
+    <BottomSheet open={open} onClose={onClose} title={t("Units")} chrome="partB">
+      <div role="radiogroup" aria-label={t("Weight units")} className="flex flex-wrap justify-center" style={{ gap: 8, paddingBottom: 24 }}>
         {options.map((o) => {
           const on = o.value === unit;
           return (
@@ -95,9 +99,9 @@ export interface WeightHeroData {
   unit: WeightUnit;
 }
 
-/** WHO bands, the repo wording kept (V6-06: "normal weight"). */
+/** WHO bands, the repo wording kept (V6-06: "normal weight"); translated, call at render time. */
 export function bmiWord(bmi: number): string {
-  return bmi < 18.5 ? "underweight" : bmi < 25 ? "normal weight" : bmi < 30 ? "overweight" : "obese";
+  return bmi < 18.5 ? t("underweight") : bmi < 25 ? t("normal weight") : bmi < 30 ? t("overweight") : t("obese");
 }
 
 /**
@@ -141,6 +145,9 @@ export const WeightHero: React.FC<{
   // Without a goal, Now sits at the strip's right end (Start → Now only).
   const pos = hasGoal ? (data.journey as number) : data.startKg !== null && data.startKg !== data.nowKg ? 1 : 0;
   const pct = `${pos * 100}%`;
+  // Right to left: the strip runs from the right (the fill and dots are logical already).
+  const rtl = isRtl();
+  const centre = `translateX(${rtl ? 50 : -50}%)`;
   const fill = "rgb(var(--c-fill-pinned))";
   const dotDark = dark ? "rgb(var(--metric-weight-main))" : "rgb(var(--metric-weight-accent))";
   const primaryInk = hc && !dark ? "#4B3BA0" : ink;
@@ -161,7 +168,7 @@ export const WeightHero: React.FC<{
         <div className="flex items-start justify-between" style={{ gap: 10 }}>
           <div className="flex items-baseline" style={{ gap: 5 }}>
             <span style={{ fontSize: 40, lineHeight: "40px", fontWeight: 800, letterSpacing: -1.6, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{fmtW(data.nowKg, u)}</span>
-            <span style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: primaryInk }}>{u}</span>
+            <span style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: primaryInk }}>{unitWord(u)}</span>
           </div>
           {data.progress && (
             <HeroPill metric={K} color={primaryInk}>
@@ -176,7 +183,7 @@ export const WeightHero: React.FC<{
             <div className="relative" style={{ height: 18 }}>
               <span className="absolute start-0" style={num}>{fmtW(data.startKg, u)}</span>
               {pos > 0.12 && pos < 0.88 && (
-                <span className="absolute" style={{ ...num, left: pct, transform: "translateX(-50%)" }}>
+                <span className="absolute" style={{ ...num, insetInlineStart: pct, transform: centre }}>
                   {fmtW(data.nowKg, u)}
                 </span>
               )}
@@ -188,7 +195,7 @@ export const WeightHero: React.FC<{
             </div>
             <div className="relative" style={{ marginTop: 9, height: 8 }}>
               <div className="absolute inset-0" style={{ borderRadius: 4, background: dark ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.85)" }} />
-              <div className="absolute start-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: "left", animation: anim }} />
+              <div className="absolute start-0 top-0 bottom-0" data-wt-fill style={{ width: pct, borderRadius: 4, background: fill, transformOrigin: rtl ? "right" : "left", animation: anim }} />
               <span className="absolute" style={{ insetInlineStart: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dotDark }} />
               {hasGoal && (
                 <span
@@ -196,7 +203,7 @@ export const WeightHero: React.FC<{
                   style={{ insetInlineEnd: 0, top: -3, width: 14, height: 14, borderRadius: 9999, background: dark ? "#1C1F28" : "#FFFFFF", border: `1.6px dashed ${dotDark}`, boxSizing: "border-box" }}
                 />
               )}
-              <span className="absolute" style={{ left: pct, top: -7, width: 22, height: 22, marginInlineStart: -11, animation: anim }} data-wt-now>
+              <span className="absolute" style={{ insetInlineStart: pct, top: -7, width: 22, height: 22, marginInlineStart: -11, animation: anim }} data-wt-now>
                 {running && <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, animation: "wtRing 3s ease-out infinite" }} />}
                 <span className="absolute inset-0" style={{ borderRadius: 9999, background: fill, border: `3.8px solid ${dark ? "#1C1F28" : "#FFFFFF"}`, boxSizing: "border-box" }} />
               </span>
@@ -205,12 +212,12 @@ export const WeightHero: React.FC<{
               <span className="absolute start-0" style={{ ...lbl, color: primaryInk }}>{data.startLabel}</span>
               <span
                 className="absolute"
-                style={{ ...lbl, fontWeight: 700, color: primaryInk, ...(pos >= 0.88 ? { right: hasGoal ? 40 : 0 } : { left: pct, transform: "translateX(-50%)" }) }}
+                style={{ ...lbl, fontWeight: 700, color: primaryInk, ...(pos >= 0.88 ? { insetInlineEnd: hasGoal ? 40 : 0 } : { insetInlineStart: pct, transform: centre }) }}
               >
-                Now
+                {t("Now")}
               </span>
               {hasGoal ? (
-                <span className="absolute end-0" style={{ ...lbl, color: primaryInk }}>Goal</span>
+                <span className="absolute end-0" style={{ ...lbl, color: primaryInk }}>{t("Goal")}</span>
               ) : (
                 <button
                   type="button"
@@ -218,13 +225,13 @@ export const WeightHero: React.FC<{
                   className="tap absolute end-0 before:absolute before:-inset-y-[14px] before:-inset-x-1 before:content-['']"
                   style={{ ...lbl, fontWeight: 700, color: primaryInk, top: 0, display: pos >= 0.88 ? "none" : undefined }}
                 >
-                  Set a goal
+                  {t("Set a goal")}
                 </button>
               )}
             </div>
             {!hasGoal && pos >= 0.88 && (
               <button type="button" onClick={onSetGoal} className="tap" style={{ ...lbl, marginTop: 4, fontWeight: 700, color: primaryInk, minHeight: 24 }}>
-                Set a goal
+                {t("Set a goal")}
               </button>
             )}
           </div>
@@ -237,7 +244,7 @@ export const WeightHero: React.FC<{
             style={{ marginTop: 15, paddingTop: 10, gap: 10, borderTop: `0.5px solid ${dark ? "rgb(var(--metric-weight-main) / 0.15)" : "rgb(var(--metric-weight-accent) / 0.15)"}` }}
           >
             <span className="shrink-0 uppercase" style={{ fontSize: textPx(9), lineHeight: linePx(13.5), fontWeight: 700, letterSpacing: 1.8, color: primaryInk }}>
-              BMI
+              {t("BMI")}
             </span>
             {data.bmi.kind === "value" ? (
               <>
@@ -254,7 +261,7 @@ export const WeightHero: React.FC<{
                       borderRadius: 2,
                       marginInlineStart: -1.5,
                       background: dotDark,
-                      left: `calc((100% - 6px) * ${Math.min(40, Math.max(0, data.bmi.bmi)) / 40} + ${[18.5, 25, 30].filter((b) => data.bmi && data.bmi.kind === "value" && data.bmi.bmi >= b).length * 2}px)`,
+                      insetInlineStart: `calc((100% - 6px) * ${Math.min(40, Math.max(0, data.bmi.bmi)) / 40} + ${[18.5, 25, 30].filter((b) => data.bmi && data.bmi.kind === "value" && data.bmi.bmi >= b).length * 2}px)`,
                     }}
                   />
                 </span>
@@ -274,7 +281,7 @@ export const WeightHero: React.FC<{
               </>
             ) : (
               <span className="flex-1" style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
-                {data.bmi.text}
+                {t(data.bmi.text)}
               </span>
             )}
           </div>
@@ -329,7 +336,7 @@ export const WeightChart: React.FC<{
   // the labels follow). Day is a weight scale, not a time axis: as drawn.
   const rtl = isRtl();
   const mx = (v: number) => (rtl ? 326 - v : v);
-  const goalText = goalKg !== null ? `Goal ${fmtW(goalKg, unit)} ${unit}` : "";
+  const goalText = goalKg !== null ? t("Goal {weight}", { weight: wText(goalKg, unit) }) : "";
   const days = daysOf(period).filter((d) => byDay[d] !== undefined);
   const scaleVals = (vals: number[]) => {
     const all = goalKg !== null ? [...vals, goalKg] : vals;
@@ -352,15 +359,15 @@ export const WeightChart: React.FC<{
         {compare && (
           <g>
             <circle cx={x(compare.kg)} cy={52} r={8} fill={ring} stroke={main} strokeWidth={2} />
-            <text x={x(compare.kg)} y={34} textAnchor="middle" style={valLabel}>{`${fmtW(compare.kg, unit)} ${unit}`}</text>
+            <text x={x(compare.kg)} y={34} textAnchor="middle" style={valLabel}>{wText(compare.kg, unit)}</text>
             <text x={x(compare.kg)} y={76} textAnchor="middle" style={label(false)}>{compare.label}</text>
           </g>
         )}
         {todayKg !== undefined && (
           <g>
             <circle cx={x(todayKg)} cy={52} r={8} fill={main} />
-            <text x={x(todayKg)} y={34} textAnchor="middle" style={valLabel}>{`${fmtW(todayKg, unit)} ${unit}`}</text>
-            <text x={x(todayKg)} y={76} textAnchor="middle" style={{ ...label(true), fill: ink }}>{period.start === today ? "Today" : "This day"}</text>
+            <text x={x(todayKg)} y={34} textAnchor="middle" style={valLabel}>{wText(todayKg, unit)}</text>
+            <text x={x(todayKg)} y={76} textAnchor="middle" style={{ ...label(true), fill: ink }}>{period.start === today ? t("Today") : t("This day")}</text>
           </g>
         )}
         {[lo, (lo + hi) / 2, hi].map((v, i) => (
@@ -396,7 +403,7 @@ export const WeightChart: React.FC<{
         })}
         {all.map((d, i) => (
           <text key={`l${d}`} x={mx(25.4 + 46.6 * i)} y={139} textAnchor="middle" style={label(d === today)}>
-            {["S", "M", "T", "W", "T", "F", "S"][new Date(`${d}T12:00:00`).getDay()]}
+            {dowLetter(d)}
           </text>
         ))}
       </svg>
@@ -457,7 +464,7 @@ export const WeightChart: React.FC<{
       {startMonth !== null && startKg !== null && startKg !== undefined && (
         <g data-start>
           <circle cx={cx(startMonth) - (rtl ? -9 : 9)} cy={y(startKg)} r={5.5} fill={ink} />
-          <text x={cx(startMonth) - (rtl ? -9 : 9)} y={y(startKg) - 10} textAnchor="middle" style={{ ...valLabel, fill: ink }}>{`Start ${fmtW(startKg, unit)}`}</text>
+          <text x={cx(startMonth) - (rtl ? -9 : 9)} y={y(startKg) - 10} textAnchor="middle" style={{ ...valLabel, fill: ink }}>{t("Start {n}", { n: fmtW(startKg, unit) })}</text>
         </g>
       )}
       {months.filter((m) => m.ahead).map((m) => (
@@ -490,12 +497,12 @@ export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: s
   const line = <span style={{ width: 14, height: 2, background: main, display: "inline-block" }} />;
   const dash = <span style={{ width: 14, borderTop: `1.5px dashed ${ink}`, display: "inline-block" }} />;
   const out: { label: string; swatch: React.ReactNode }[] = [];
-  if (range === "month") out.push({ label: "Weigh-in", swatch: ring }, { label: "Smoothed trend", swatch: line });
-  if (range === "week") out.push({ label: "Weigh-in", swatch: dot }, { label: "Days ahead", swatch: ghost });
+  if (range === "month") out.push({ label: t("Weigh-in"), swatch: ring }, { label: t("Smoothed trend"), swatch: line });
+  if (range === "week") out.push({ label: t("Weigh-in"), swatch: dot }, { label: t("Days ahead"), swatch: ghost });
   if (range === "year") {
-    out.push({ label: "Monthly average", swatch: line });
+    out.push({ label: t("Monthly average"), swatch: line });
     if (startLabel) out.push({ label: startLabel, swatch: <span style={{ width: 8, height: 8, borderRadius: 9999, background: ink, display: "inline-block" }} /> });
   }
-  if (range !== "day" && hasGoal) out.push({ label: "Goal", swatch: dash });
+  if (range !== "day" && hasGoal) out.push({ label: t("Goal"), swatch: dash });
   return out;
 }

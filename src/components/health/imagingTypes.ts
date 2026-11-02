@@ -25,4 +25,14 @@
  * DEXA STAYS, because a DEXA scan is an imaging study: it is performed on a
  * machine, produces images, and reports densities rather than analytes.
  */
-export const imagingTypes = ["MRI", "X-ray", "Ultrasound", "CT scan", "ECG", "DEXA scan", "Other"];
+import { t, tk } from "../../i18n/core";
+
+// The stored imaging_type stays this English text (user data, matched by older
+// rows); only what is shown is translated.
+export const imagingTypes: string[] = [tk("MRI"), tk("X-ray"), tk("Ultrasound"), tk("CT scan"), tk("ECG"), tk("DEXA scan"), tk("Other")];
+
+/** A stored type as shown: one of ours translated ("X-Ray" matches "X-ray"), anything typed as written. */
+export function imagingTypeLabel(type: string): string {
+  const ours = imagingTypes.find((x) => x.toLowerCase() === type.toLowerCase());
+  return ours ? t(ours) : type;
+}

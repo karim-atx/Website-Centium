@@ -5,6 +5,7 @@ import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { textPx, linePx } from "../../../theme/textSize";
 import { PINNED_FILL_STYLE, metricTextInk, useHealthMode } from "./MetricKit";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 // HE1.2.1 "Step goal": the shared Part B log sheet shell (lavender header
 // with ×, pinned Save), measured from HE1.2.1.png: "Daily goal" 12.5/18.8
@@ -56,20 +57,20 @@ export const StepsGoalSheet: React.FC<{ open: boolean; goal: number; todaySteps:
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Step goal"
+      title={t("Step goal")}
       chrome="partB"
       footerBottom={30}
-      footer={<CtaButton label="Save" onClick={() => onSave(value)} style={PINNED_FILL_STYLE} />}
+      footer={<CtaButton label={t("Save")} onClick={() => onSave(value)} style={PINNED_FILL_STYLE} />}
     >
       <div className="flex flex-col items-center text-center">
-        <p style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Daily goal</p>
+        <p style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Daily goal")}</p>
         <p data-goal-value style={{ marginTop: 2, fontSize: 48, lineHeight: "52px", fontWeight: 800, letterSpacing: -1.6, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>
           {value.toLocaleString(appLocale("en-GB"))}
         </p>
         <p style={{ marginTop: 2, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: metricTextInk("steps", dark) }}>
-          {todaySteps !== null ? `steps a day · today ${todaySteps.toLocaleString(appLocale("en-GB"))} (${pct}%)` : "steps a day"}
+          {todaySteps !== null ? t("steps a day · today {n} ({pct}%)", { n: todaySteps.toLocaleString(appLocale("en-GB")), pct: pct ?? 0 }) : t("steps a day")}
         </p>
-        <div role="radiogroup" aria-label="Daily step goal" className="flex flex-wrap justify-center" style={{ marginTop: 16, gap: 8 }}>
+        <div role="radiogroup" aria-label={t("Daily step goal")} className="flex flex-wrap justify-center" style={{ marginTop: 16, gap: 8 }}>
           {CHIPS.map((c) => {
             const on = !custom && value === c;
             return (
@@ -91,14 +92,14 @@ export const StepsGoalSheet: React.FC<{ open: boolean; goal: number; todaySteps:
           })}
         </div>
         <button type="button" role="radio" aria-checked={custom} className={chipClass(custom)} style={{ ...chip(custom), marginTop: 8 }} onClick={() => setCustom(true)}>
-          Custom
+          {t("Custom")}
         </button>
         {!custom && (
-          <p style={{ marginTop: 14, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>Custom opens a wheel in steps of 500.</p>
+          <p style={{ marginTop: 14, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 400, color: "rgb(var(--c-charcoal-faint))" }}>{t("Custom opens a wheel in steps of 500.")}</p>
         )}
         {custom && (
           <div style={{ marginTop: 16, width: "100%" }}>
-            <WheelPicker variant="partB" columns={[{ label: "Daily step goal", options: OPTIONS, value, bandWidth: 120, onChange: (v) => setValue(Number(v)) }]} />
+            <WheelPicker variant="partB" columns={[{ label: t("Daily step goal"), options: OPTIONS, value, bandWidth: 120, onChange: (v) => setValue(Number(v)) }]} />
           </div>
         )}
       </div>

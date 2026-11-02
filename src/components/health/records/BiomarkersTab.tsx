@@ -21,11 +21,11 @@ import {
   RetryCard,
   EmptyCard,
   rowRule,
-  plural,
   INK,
   INK_SOFT,
   INK_FAINT,
 } from "./kit";
+import { t, tn, tx } from "../../../i18n/core";
 
 // HE1.9 · Biomarkers tab: the lavender info box (latest date and marker
 // count, the lab-range note, the sharing line → Connected professionals), the
@@ -98,12 +98,12 @@ export const BiomarkersTab: React.FC<{
       </div>
     );
   }
-  if (error && markers.length === 0) return <RetryCard message={professional ? "Couldn't load the results." : "Couldn't load your results."} onRetry={onRetry} />;
+  if (error && markers.length === 0) return <RetryCard message={professional ? t("Couldn't load the results.") : t("Couldn't load your results.")} onRetry={onRetry} />;
   if (markers.length === 0) {
     return (
       <div style={{ marginTop: 2 }}>
         {confirmation && <Confirmation {...confirmation} />}
-        <EmptyCard icon={Stethoscope} title={professional?.emptyTitle ?? "No lab results yet."} body={professional?.emptyBody ?? "Add a result, or scan a report, and its markers appear here."} />
+        <EmptyCard icon={Stethoscope} title={professional?.emptyTitle ?? t("No lab results yet.")} body={professional?.emptyBody ?? t("Add a result, or scan a report, and its markers appear here.")} />
       </div>
     );
   }
@@ -112,11 +112,11 @@ export const BiomarkersTab: React.FC<{
     if (sharing.names === null) return null;
     if (sharing.names.length === 0) {
       return (sharing.singleShares ?? 0) > 0
-        ? "Lab results aren't shared as a whole. Single results you share are listed in the banner above."
-        : "Not shared with professionals.";
+        ? t("Lab results aren't shared as a whole. Single results you share are listed in the banner above.")
+        : t("Not shared with professionals.");
     }
-    if (sharing.names.length === 1) return `Shared with ${sharing.names[0]}.`;
-    return `Shared with ${sharing.names.length} professionals.`;
+    if (sharing.names.length === 1) return t("Shared with {name}.", { name: sharing.names[0] });
+    return tn(sharing.names.length, "Shared with {n} professional.", "Shared with {n} professionals.");
   })();
   const capsStyle: React.CSSProperties = { fontSize: textPx(9), lineHeight: linePx(13.5), fontWeight: 700, letterSpacing: 1.3, textTransform: "uppercase", color: INK_FAINT };
 
@@ -125,21 +125,21 @@ export const BiomarkersTab: React.FC<{
       {confirmation && <Confirmation {...confirmation} />}
       {(
         <div style={{ margin: "2px 0 12px", borderRadius: 14, padding: "12px 14px", background: dark ? "rgb(var(--c-primary) / 0.12)" : "rgb(var(--th-9a8cd6) / 0.12)" }}>
-          <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>{`Latest results from ${fmtDate(latestDate)} · ${plural(markers.length, "marker")}`}</p>
-          <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>{professional ? "Reference ranges come from the lab report and can differ between labs." : "Reference ranges come from your lab report and can differ between labs."}</p>
+          <p style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: INK }}>{`${t("Latest results from {date}", { date: fmtDate(latestDate) })} · ${tn(markers.length, "{n} marker", "{n} markers")}`}</p>
+          <p style={{ marginTop: 5, fontSize: textPx(11), lineHeight: linePx(16), color: INK_SOFT }}>{professional ? t("Reference ranges come from the lab report and can differ between labs.") : t("Reference ranges come from your lab report and can differ between labs.")}</p>
           {sharedLine && (
             <p className="flex items-center flex-wrap" style={{ marginTop: 5, gap: 5, fontSize: textPx(11), lineHeight: linePx(16.5), color: INK_SOFT }}>
               <Lock size={11} aria-hidden />
               <span>{sharedLine}</span>
               <button type="button" onClick={onChangeSharing} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontWeight: 700, color: deepInk(dark) }}>
-                Change
+                {t("Change")}
               </button>
             </p>
           )}
         </div>
       )}
       {rows.length === 0 ? (
-        <p style={{ padding: "16px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{`No markers match '${q}'.`}</p>
+        <p style={{ padding: "16px 2px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("No markers match '{query}'.", { query: q })}</p>
       ) : (
         <ListCard>
           <div
@@ -147,10 +147,10 @@ export const BiomarkersTab: React.FC<{
             style={{ height: 30, padding: "0 14px", gap: 10, background: dark ? "#262932" : "#FAF9FD", borderBottom: `0.5px solid ${hc ? hairline(dark, hc) : dark ? "rgba(245,243,250,0.08)" : "#E5E7EB"}` }}
             aria-hidden
           >
-            <span style={{ ...capsStyle, width: 103 }}>Marker</span>
-            <span style={{ ...capsStyle, width: 62, textAlign: "end" }}>Range</span>
-            <span style={{ ...capsStyle, width: 66, textAlign: "end" }}>Result</span>
-            <span style={{ ...capsStyle, flex: 1, textAlign: "end" }}>Status</span>
+            <span style={{ ...capsStyle, width: 103 }}>{t("Marker")}</span>
+            <span style={{ ...capsStyle, width: 62, textAlign: "end" }}>{tx("Range", "reference range")}</span>
+            <span style={{ ...capsStyle, width: 66, textAlign: "end" }}>{t("Result")}</span>
+            <span style={{ ...capsStyle, flex: 1, textAlign: "end" }}>{t("Status")}</span>
           </div>
           <div role="list">
             {rows.map((m, i) => {
@@ -174,7 +174,15 @@ export const BiomarkersTab: React.FC<{
                     onClick={() => onOpen(m)}
                     className="tap w-full text-start block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
                     style={{ padding: "0 14px" }}
-                    aria-label={`${m.name}, ${m.value} ${m.unit}${!threshold && m.status ? `, ${m.status === "normal" ? "in range" : m.status === "low" ? "below range" : "above range"}` : ""}`}
+                    aria-label={
+                      !threshold && m.status
+                        ? m.status === "normal"
+                          ? t("{marker}, {value} {unit}, in range", { marker: m.name, value: m.value, unit: m.unit })
+                          : m.status === "low"
+                            ? t("{marker}, {value} {unit}, below range", { marker: m.name, value: m.value, unit: m.unit })
+                            : t("{marker}, {value} {unit}, above range", { marker: m.name, value: m.value, unit: m.unit })
+                        : `${m.name}, ${m.value} ${m.unit}`
+                    }
                   >
                     <span className="flex items-center" style={{ minHeight: 48, gap: 10 }}>
                       <span className="line-clamp-2" style={{ width: 103, fontSize: textPx(13.5), lineHeight: linePx(20.3), fontWeight: 600, color: INK }}>
@@ -219,7 +227,7 @@ const Confirmation: React.FC<{ count: number; name: string }> = ({ count, name }
     <div role="status" className="flex items-center" style={{ margin: "2px 0 10px", minHeight: 38.7, padding: "10px 12px", gap: 8, borderRadius: 12, background: dark ? "rgb(var(--th-293339))" : "rgb(var(--th-e7f2f0))" }}>
       <CheckCircle2 size={16} style={{ color: dark ? "rgb(var(--th-93c1b9))" : "rgb(var(--th-3c6b65))" }} aria-hidden />
       <span style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: dark ? "rgb(var(--th-93c1b9))" : "rgb(var(--th-3c6b65))" }}>
-        {`${count} result${count === 1 ? "" : "s"} added from ${name}`}
+        {tn(count, "{n} result added from {name}", "{n} results added from {name}", { name })}
       </span>
     </div>
   );

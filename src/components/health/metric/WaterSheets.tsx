@@ -8,6 +8,7 @@ import { HealthPopup } from "./HealthPopup";
 import { useWaterUnit, type WaterUnit } from "../../../services/preferences/units";
 import { PINNED_FILL_STYLE, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
 import { appLocale } from "../../../i18n/format";
+import { t, tx } from "../../../i18n/core";
 
 // Water's own sheets and popups (OURS-health-water-custom-popup,
 // OURS-health-overflow-menus #3 Units and #5 Water goal, OURS-health-delete-
@@ -26,14 +27,15 @@ export { useWaterUnit };
 /**
  * A volume in the chosen unit. `dp` is the litre precision (hero 1, History
  * 2, handover "1.6" / "1.60 L"); ml is whole, fl oz one decimal under 10.
+ * The unit is translated: call at render time.
  */
 export function volume(ml: number, unit: WaterUnit, dp = 1): { num: string; unit: string } {
-  if (unit === "ml") return { num: Math.round(ml).toLocaleString(appLocale("en-GB")), unit: "ml" };
+  if (unit === "ml") return { num: Math.round(ml).toLocaleString(appLocale("en-GB")), unit: t("ml") };
   if (unit === "floz") {
     const oz = ml / ML_PER_FLOZ;
-    return { num: oz < 10 ? oz.toFixed(1) : Math.round(oz).toLocaleString(appLocale("en-GB")), unit: "fl oz" };
+    return { num: oz < 10 ? oz.toFixed(1) : Math.round(oz).toLocaleString(appLocale("en-GB")), unit: t("fl oz") };
   }
-  return { num: (ml / 1000).toFixed(dp), unit: "L" };
+  return { num: (ml / 1000).toFixed(dp), unit: t("L") };
 }
 export const volumeText = (ml: number, unit: WaterUnit, dp = 1) => {
   const v = volume(ml, unit, dp);
@@ -69,12 +71,12 @@ export const WaterCustomPopup: React.FC<{ open: boolean; onClose: () => void; on
       open={open}
       onClose={onClose}
       tile={{ ...tile(dark), icon: <SlidersHorizontal size={18} strokeWidth={1.5} style={{ color: metricIconInk("water", dark) }} /> }}
-      title="Add a drink"
-      secondary={{ label: "Cancel", onClick: onClose }}
-      primary={{ label: "Add", onClick: () => onAdd(ml) }}
+      title={t("Add a drink")}
+      secondary={{ label: t("Cancel"), onClick: onClose }}
+      primary={{ label: t("Add"), onClick: () => onAdd(ml) }}
     >
       <div style={{ marginTop: 14 }}>
-        <WheelPicker variant="partB" columns={[{ label: "Amount in ml", options: DRINK_OPTIONS, value: ml, bandWidth: 120, unit: "ml", onChange: (v) => setMl(Number(v)) }]} />
+        <WheelPicker variant="partB" columns={[{ label: t("Amount in ml"), options: DRINK_OPTIONS, value: ml, bandWidth: 120, unit: t("ml"), onChange: (v) => setMl(Number(v)) }]} />
       </div>
     </HealthPopup>
   );
@@ -87,8 +89,8 @@ export const WaterEditPopup: React.FC<{ open: boolean; dayTitle: string; total: 
   total,
   onClose,
   onSave,
-  title = "Edit day total",
-  wheelLabel = "Day total in ml",
+  title = t("Edit day total"),
+  wheelLabel = t("Day total in ml"),
 }) => {
   const { dark } = useHealthMode();
   const [ml, setMl] = useState(total);
@@ -104,11 +106,11 @@ export const WaterEditPopup: React.FC<{ open: boolean; dayTitle: string; total: 
       tile={tile(dark)}
       title={title}
       meta={dayTitle}
-      secondary={{ label: "Cancel", onClick: onClose }}
-      primary={{ label: "Save", onClick: () => onSave(ml), disabled: ml === total }}
+      secondary={{ label: t("Cancel"), onClick: onClose }}
+      primary={{ label: t("Save"), onClick: () => onSave(ml), disabled: ml === total }}
     >
       <div style={{ marginTop: 14 }}>
-        <WheelPicker variant="partB" columns={[{ label: wheelLabel, options: TOTAL_OPTIONS, value: ml, bandWidth: 120, unit: "ml", onChange: (v) => setMl(Number(v)) }]} />
+        <WheelPicker variant="partB" columns={[{ label: wheelLabel, options: TOTAL_OPTIONS, value: ml, bandWidth: 120, unit: t("ml"), onChange: (v) => setMl(Number(v)) }]} />
       </div>
     </HealthPopup>
   );
@@ -120,10 +122,10 @@ export const WaterDeleteConfirm: React.FC<{ open: boolean; onClose: () => void; 
     open={open}
     onClose={onClose}
     role="alertdialog"
-    title="Delete this entry?"
-    body="This removes it from your history and totals."
-    secondary={{ label: "Cancel", onClick: onClose }}
-    primary={{ label: "Delete", onClick: onDelete, tone: "destructive" }}
+    title={tx("Delete this entry?", "health")}
+    body={t("This removes it from your history and totals.")}
+    secondary={{ label: t("Cancel"), onClick: onClose }}
+    primary={{ label: t("Delete"), onClick: onDelete, tone: "destructive" }}
   />
 );
 
@@ -140,19 +142,19 @@ export const WaterGoalSheet: React.FC<{ open: boolean; goal: number; onClose: ()
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Water goal"
+      title={t("Water goal")}
       chrome="partB"
       footerBottom={30}
-      footer={<CtaButton label="Save" onClick={() => onSave(ml)} style={PINNED_FILL_STYLE} />}
+      footer={<CtaButton label={t("Save")} onClick={() => onSave(ml)} style={PINNED_FILL_STYLE} />}
     >
       <div className="flex flex-col items-center text-center">
-        <p style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Daily goal</p>
+        <p style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Daily goal")}</p>
         <p style={{ marginTop: 4, fontSize: textPx(48), lineHeight: linePx(52), fontWeight: 800, letterSpacing: -1.6, fontVariantNumeric: "tabular-nums", color: "rgb(var(--c-charcoal))" }}>
           {(ml / 1000).toFixed(2)}
         </p>
-        <p style={{ marginTop: 2, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: metricTextInk("water", dark) }}>L a day</p>
+        <p style={{ marginTop: 2, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 600, color: metricTextInk("water", dark) }}>{t("L a day")}</p>
         <div style={{ marginTop: 16, width: "100%" }}>
-          <WheelPicker variant="partB" columns={[{ label: "Daily goal in litres", options: GOAL_OPTIONS, value: ml, bandWidth: 120, unit: "L", onChange: (v) => setMl(Number(v)) }]} />
+          <WheelPicker variant="partB" columns={[{ label: t("Daily goal in litres"), options: GOAL_OPTIONS, value: ml, bandWidth: 120, unit: t("L"), onChange: (v) => setMl(Number(v)) }]} />
         </div>
       </div>
     </BottomSheet>
@@ -163,13 +165,13 @@ export const WaterGoalSheet: React.FC<{ open: boolean; goal: number; onClose: ()
 export const WaterUnitsSheet: React.FC<{ open: boolean; unit: WaterUnit; onClose: () => void; onChange: (u: WaterUnit) => void }> = ({ open, unit, onClose, onChange }) => {
   const { dark } = useHealthMode();
   const options: { value: WaterUnit; label: string }[] = [
-    { value: "l", label: "Litres" },
-    { value: "ml", label: "Millilitres" },
-    { value: "floz", label: "Fluid ounces" },
+    { value: "l", label: t("Litres") },
+    { value: "ml", label: t("Millilitres") },
+    { value: "floz", label: t("Fluid ounces") },
   ];
   return (
-    <BottomSheet open={open} onClose={onClose} title="Units" chrome="partB">
-      <div role="radiogroup" aria-label="Water units" className="flex flex-wrap justify-center" style={{ gap: 8, paddingBottom: 24 }}>
+    <BottomSheet open={open} onClose={onClose} title={t("Units")} chrome="partB">
+      <div role="radiogroup" aria-label={t("Water units")} className="flex flex-wrap justify-center" style={{ gap: 8, paddingBottom: 24 }}>
         {options.map((o) => {
           const on = o.value === unit;
           return (

@@ -1,7 +1,7 @@
 import React from "react";
 import { formatMinutes12, hourLabel12 } from "../../../utils/time12";
 import { mc, metricTextInk, useHealthMode } from "./MetricKit";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t } from "../../../i18n/core";
 
 // HE1.3 #35 (Week) and HE1.3.m #37 (Month): floating bedtime-to-wake bars on
 // a clock axis with the usual-bedtime line (Database B1 sleep_details
@@ -145,7 +145,7 @@ export const SleepBedChart: React.FC<{
         <g data-usual-line>
           <line x1={mx(x0)} x2={mx(326)} y1={y(usualBed)} y2={y(usualBed)} stroke={line} strokeWidth={1.5} strokeDasharray="4 4" />
           <text x={mx(326)} y={y(usualBed) - 4.5} textAnchor="end" fontSize={10} fontWeight={700} fill={labelInk}>
-            {`Usual bedtime ${clockFromNoon(usualBed)}`}
+            {t("Usual bedtime {time}", { time: clockFromNoon(usualBed) })}
           </text>
         </g>
       )}
@@ -184,7 +184,7 @@ export const YearBedtimeLine: React.FC<{ months: (number | null)[] }> = ({ month
         <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={ink} />
       ))}
       <text x={mx(326)} y={19} textAnchor="end" fontSize={10} fontWeight={700} fill={metricTextInk("sleep", dark)}>
-        Avg bedtime
+        {t("Avg bedtime")}
       </text>
     </g>
   );

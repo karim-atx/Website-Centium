@@ -24,6 +24,7 @@ import { asNumber, draftRange, draftUsable, emptyMarker, numeric, type MarkerDra
 import { draftFromMarker } from "../MarkerEntryRow";
 import { MarkerPickerSheet } from "./MarkerPickerSheet";
 import { useHealthMode, fieldStyle, fmtDate, FieldLabel, HelpLine, INK, INK_FAINT } from "./kit";
+import { t, tx } from "../../../i18n/core";
 
 // OURS-add-result: HE1.9 ⋮ "Add manually", HE1.9.1 "+ Add result" and a
 // history row's swipe Edit. Lavender-header Part B sheet: Marker (picker, or
@@ -113,7 +114,7 @@ export const ResultFormSheet: React.FC<{
 
   const save = async () => {
     if (!draftUsable(draft) || !authUserId) return;
-    if (!online) return setToast("You're offline. Try again when you're connected.");
+    if (!online) return setToast(t("You're offline. Try again when you're connected."));
     setSaving(true);
     const range = draftRange(draft);
     let ok = false;
@@ -131,8 +132,8 @@ export const ResultFormSheet: React.FC<{
     }
     if (ok) await reloadHealthRecords();
     setSaving(false);
-    if (!ok) return setToast("Couldn't save. Try again.");
-    onSaved?.(result ? "Changes saved." : "Result added.");
+    if (!ok) return setToast(t("Couldn't save. Try again."));
+    onSaved?.(result ? t("Changes saved.") : t("Result added."));
     onClose();
   };
 
@@ -146,17 +147,17 @@ export const ResultFormSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={onClose}
-        title={result ? "Edit result" : "Add a result"}
+        title={result ? t("Edit result") : t("Add a result")}
         chrome="partB" tone={partBSheetTone(dark)}
         footerBottom={30}
-        footer={<CtaButton label={result ? "Save changes" : "Save result"} onClick={() => void save()} loading={saving} disabled={!draftUsable(draft)} />}
+        footer={<CtaButton label={result ? t("Save changes") : t("Save result")} onClick={() => void save()} loading={saving} disabled={!draftUsable(draft)} />}
       >
-        <FieldLabel>Marker</FieldLabel>
+        <FieldLabel>{t("Marker")}</FieldLabel>
         {markerFixed ? (
           <p style={{ ...fieldStyle(dark, hc, 600), display: "flex", alignItems: "center" }}>{draft.name}</p>
         ) : (
           <button type="button" onClick={() => setPickerOpen(true)} className="tap flex items-center justify-between text-start" style={{ ...fieldStyle(dark, hc, 600), color: draft.name ? INK : INK_FAINT }}>
-            {draft.name || "Choose a marker"}
+            {draft.name || t("Choose a marker")}
             <ChevronDown size={16} style={{ color: INK_FAINT }} aria-hidden />
           </button>
         )}
@@ -164,15 +165,15 @@ export const ResultFormSheet: React.FC<{
           <input
             value={draft.name}
             onChange={(e) => patch({ name: e.target.value })}
-            placeholder="Marker name, as on your report"
-            aria-label="Marker name"
+            placeholder={t("Marker name, as on your report")}
+            aria-label={t("Marker name")}
             className="outline-none"
             style={{ ...fieldStyle(dark, hc), marginTop: 8 }}
           />
         )}
-        <FieldLabel style={{ marginTop: 16 }}>Value</FieldLabel>
+        <FieldLabel style={{ marginTop: 16 }}>{t("Value")}</FieldLabel>
         <div className="flex items-center" style={{ gap: 10 }}>
-          <input value={draft.value} onChange={(e) => patch({ value: numeric(e.target.value) })} inputMode="decimal" placeholder="–" aria-label="Value" className="outline-none" style={box(80)} />
+          <input value={draft.value} onChange={(e) => patch({ value: numeric(e.target.value) })} inputMode="decimal" placeholder="–" aria-label={t("Value")} className="outline-none" style={box(80)} />
           {marker && marker.units.length > 1 ? (
             <button ref={unitRef} type="button" onClick={() => setUnitOpen(true)} className="tap flex items-center min-h-[44px]" style={{ gap: 3, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
               {draft.unit} <ChevronDown size={13} aria-hidden />
@@ -180,38 +181,38 @@ export const ResultFormSheet: React.FC<{
           ) : marker ? (
             <span style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{draft.unit}</span>
           ) : (
-            <input value={draft.unit} onChange={(e) => patch({ unit: e.target.value })} placeholder="Unit" aria-label="Unit" className="outline-none" style={box(90)} />
+            <input value={draft.unit} onChange={(e) => patch({ unit: e.target.value })} placeholder={t("Unit")} aria-label={t("Unit")} className="outline-none" style={box(90)} />
           )}
         </div>
         {askPhase && (
           <>
-            <FieldLabel style={{ marginTop: 16 }}>Cycle phase when the sample was taken</FieldLabel>
-            <select value={draft.phase ?? ""} onChange={(e) => e.target.value && setPhase(e.target.value as LabPhase)} aria-label="Cycle phase" className="outline-none" style={fieldStyle(dark, hc, 600)}>
+            <FieldLabel style={{ marginTop: 16 }}>{t("Cycle phase when the sample was taken")}</FieldLabel>
+            <select value={draft.phase ?? ""} onChange={(e) => e.target.value && setPhase(e.target.value as LabPhase)} aria-label={t("Cycle phase")} className="outline-none" style={fieldStyle(dark, hc, 600)}>
               <option value="" disabled>
-                Choose a phase
+                {t("Choose a phase")}
               </option>
               {LAB_PHASES.map((p) => (
                 <option key={p.value} value={p.value}>
-                  {p.label}
+                  {t(p.label)}
                 </option>
               ))}
             </select>
-            <HelpLine>The normal range depends on the phase.</HelpLine>
+            <HelpLine>{t("The normal range depends on the phase.")}</HelpLine>
           </>
         )}
-        <FieldLabel style={{ marginTop: 16 }}>Reference range</FieldLabel>
+        <FieldLabel style={{ marginTop: 16 }}>{t("Reference range")}</FieldLabel>
         <div className="flex items-center" style={{ gap: 8 }}>
-          <input value={draft.low} onChange={(e) => patch({ low: numeric(e.target.value), rangeFrom: "you" })} inputMode="decimal" placeholder="Low" aria-label="Range low" className="outline-none" style={box(80)} />
-          <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-soft))" }}>to</span>
-          <input value={draft.high} onChange={(e) => patch({ high: numeric(e.target.value), rangeFrom: "you" })} inputMode="decimal" placeholder="High" aria-label="Range high" className="outline-none" style={box(80)} />
+          <input value={draft.low} onChange={(e) => patch({ low: numeric(e.target.value), rangeFrom: "you" })} inputMode="decimal" placeholder={t("Low")} aria-label={t("Range low")} className="outline-none" style={box(80)} />
+          <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-soft))" }}>{tx("to", "range")}</span>
+          <input value={draft.high} onChange={(e) => patch({ high: numeric(e.target.value), rangeFrom: "you" })} inputMode="decimal" placeholder={t("High")} aria-label={t("Range high")} className="outline-none" style={box(80)} />
         </div>
         <HelpLine>
-          {draft.rangeFrom === "list" ? "Use the range printed on your report. Pre-filled from Centium's standard list." : "Enter the range printed on your report."}
-          {" If it gives only one limit, leave the other empty."}
-          {noRange && " The standard list has no range for this marker."}
+          {draft.rangeFrom === "list" ? t("Use the range printed on your report. Pre-filled from Centium's standard list.") : t("Enter the range printed on your report.")}
+          {` ${t("If it gives only one limit, leave the other empty.")}`}
+          {noRange && ` ${t("The standard list has no range for this marker.")}`}
         </HelpLine>
-        {draft.low && draft.high && Number(draft.low) > Number(draft.high) && <HelpLine error>The low end is higher than the high end.</HelpLine>}
-        <FieldLabel style={{ marginTop: 16 }}>Date</FieldLabel>
+        {draft.low && draft.high && Number(draft.low) > Number(draft.high) && <HelpLine error>{t("The low end is higher than the high end.")}</HelpLine>}
+        <FieldLabel style={{ marginTop: 16 }}>{t("Date")}</FieldLabel>
         <button type="button" onClick={() => setCalendarOpen(true)} className="tap flex items-center text-start" style={{ ...fieldStyle(dark, hc), gap: 8 }}>
           <CalendarDays size={15} style={{ color: INK_FAINT }} aria-hidden />
           {fmtDate(date)}

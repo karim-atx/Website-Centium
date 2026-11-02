@@ -34,6 +34,7 @@ import { fromLine, shortDay } from "../../services/care-plan/logic";
 import { activityByDay, localDay, syncState, useActivityDaily, useHealthSources, useDrinks, useMetricRows, useSleepSessions, whenText } from "../../services/health-metrics/b1";
 import { OFFLINE_CACHED, hairline, useHealthMode, useMetricsLoad } from "../../components/health/metric/MetricKit";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // HE1 · Health (v6 Part B, health-handover.md HE1; checklist
 // design-handover/v5-partB/frame-check/HE1.md). Replaces the History-style
@@ -65,10 +66,14 @@ const METRIC_ROUTE: Record<MetricReadings["type"], string> = {
 /** "6h 56m" (HE1 #31): the widget's own duration format. */
 const hm = (hours: number) => {
   const total = Math.round(hours * 60);
-  return `${Math.floor(total / 60)}h ${total % 60}m`;
+  return t("{h}h {m}m", { h: Math.floor(total / 60), m: total % 60 });
 };
 
-const NO_DEVICE = "No device connected";
+const NO_DEVICE = tk("No device connected");
+
+/** "A, B and C" in the app's language. */
+const joinAnd = (names: string[]) =>
+  names.length > 1 ? t("{items} and {last}", { items: names.slice(0, -1).join(t(", ")), last: names[names.length - 1] }) : names[0];
 
 export default function Health() {
   const {
@@ -95,7 +100,7 @@ export default function Health() {
   // outside their reference range under the Biomarkers row; kept as the row's
   // second line, only while something is flagged (main copy, verbatim).
   const flaggedMarkers = bloodMarkers.filter((m) => m.status && m.status !== "normal").map((m) => m.name);
-  const biomarkersSubtitle = flaggedMarkers.length > 0 ? `${flaggedMarkers.slice(0, 2).join(" and ")} suggested` : undefined;
+  const biomarkersSubtitle = flaggedMarkers.length > 0 ? t("{markers} suggested", { markers: joinAnd(flaggedMarkers.slice(0, 2)) }) : undefined;
   const hc = !!accessibility.highContrast;
   const online = useOnline();
   // O1 / O2: the health_metrics read state (AppContext), never a null value.
@@ -151,9 +156,9 @@ export default function Health() {
     };
   }, [user.accountType]);
   const carePlanSubtitle = carePlan
-    ? `From ${fromLine(carePlan.professionalName, carePlan.professionalRole, carePlan.roleIsSpecialty)}${
-        carePlan.nextFollowUp ? ` · next review ${shortDay(carePlan.nextFollowUp.dueOn)}` : ""
-      }`
+    ? carePlan.nextFollowUp
+      ? t("From {who} · next review {date}", { who: fromLine(carePlan.professionalName, carePlan.professionalRole, carePlan.roleIsSpecialty), date: shortDay(carePlan.nextFollowUp.dueOn) })
+      : t("From {who}", { who: fromLine(carePlan.professionalName, carePlan.professionalRole, carePlan.roleIsSpecialty) })
     : undefined;
 
   const go = (path: string) => navigate(path);
@@ -164,14 +169,14 @@ export default function Health() {
   // today) "No device connected". "Sources" follows each.
   const { data: sources } = useHealthSources();
   const syncLine = (() => {
-    if (sources.length === 0) return NO_DEVICE;
+    if (sources.length === 0) return t(NO_DEVICE);
     const off = sources.find((x) => syncState(x) === "access_off");
-    if (off) return `${off.name} access is off. Turn it on`;
-    if (sources.some((x) => syncState(x) === "error")) return "Couldn't sync. Try again";
+    if (off) return t("{name} access is off. Turn it on", { name: off.name });
+    if (sources.some((x) => syncState(x) === "error")) return t("Couldn't sync. Try again");
     const latest = sources.map((x) => x.lastSyncedAt).filter((x): x is string => !!x).sort().pop();
     const names = sources.map((x) => (x.provider === "whoop" ? "Whoop" : x.name));
-    const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
-    return latest ? `Synced ${localDay(latest) === today ? clock12(latest) : whenText(latest, today)} from ${list}` : `Connected: ${list}`;
+    const list = joinAnd(names);
+    return latest ? t("Synced {when} from {list}", { when: localDay(latest) === today ? clock12(latest) : whenText(latest, today), list }) : t("Connected: {list}", { list });
   })();
   const week = (type: MetricReadings["type"]) => withinDays(healthSeries[type], 7, today);
 
@@ -192,7 +197,7 @@ export default function Health() {
   // HA-06 (Database B1 sleep_details.bed_start / wake_end): last night's times
   // when a source recorded them; the weekly average otherwise (K9).
   const lastNight = useSleepSessions(today, today).data.find((x) => !x.isNap && x.bedStart && x.wakeEnd) ?? null;
-  const sleepContext = lastNight ? rangeClock12(lastNight.bedStart as string, lastNight.wakeEnd as string) : sleepAvg === null ? undefined : `${hm(sleepAvg)} avg this week`;
+  const sleepContext = lastNight ? rangeClock12(lastNight.bedStart as string, lastNight.wakeEnd as string) : sleepAvg === null ? undefined : t("{time} avg this week", { time: hm(sleepAvg) });
   // --- Calories burned (#35-#44): of the 2,600 kcal app constant.
   const KCAL_GOAL = 2600;
   const kcal = metricValues.caloriesBurned;
@@ -209,9 +214,9 @@ export default function Health() {
   const restSample = [...hrSamples].reverse().find((r) => r.context === "rest")?.value ?? null;
   const resting = restingToday ?? restSample;
   const hr = resting ?? metricValues.heartRate;
-  const hrWord = resting !== null ? "resting" : "latest";
+  const hrWord = resting !== null ? t("resting") : t("latest");
   const hrVals = hrSamples.map((r) => r.value);
-  const hrRange = hrVals.length > 1 ? `${Math.round(Math.min(...hrVals))} to ${Math.round(Math.max(...hrVals))}` : null;
+  const hrRange = hrVals.length > 1 ? t("{low} to {high}", { low: Math.round(Math.min(...hrVals)), high: Math.round(Math.max(...hrVals)) }) : null;
 
   // --- Blood pressure (#55-#64) and the safety card (K1-K3, K8).
   const bpLatest = bloodPressure[0] ?? null;
@@ -247,9 +252,9 @@ export default function Health() {
     const parts: string[] = [];
     if (startKg !== null && weightHistory.length > 1) {
       const d = weight - startKg;
-      parts.push(`${d > 0 ? "↑" : "↓"} ${Math.abs(d).toFixed(1)} kg since start`);
+      parts.push(t("{arrow} {n} kg since start", { arrow: d > 0 ? "↑" : "↓", n: Math.abs(d).toFixed(1) }));
     }
-    if (goalKg !== null) parts.push(`${Math.abs(weight - goalKg).toFixed(1)} kg to goal`);
+    if (goalKg !== null) parts.push(t("{n} kg to goal", { n: Math.abs(weight - goalKg).toFixed(1) }));
     return parts.length ? parts.join(" · ") : null;
   })();
 
@@ -272,9 +277,9 @@ export default function Health() {
       {/* #1-#3: title 19/28.5 700 ls-0.6; sync line 11/16.5 400 #5B5349 (dark
           #B8B3C7), m-top 3, with "Sources" 11/16.5 700 #7D6BB5 (dark #C3B3FB)
           → MO1.8 Devices. Web (decided): "No device connected · Sources". */}
-      <h1 style={{ fontSize: textPx(19), lineHeight: linePx(28.5), fontWeight: 700, letterSpacing: -0.6, color: "rgb(var(--c-charcoal))" }}>Health</h1>
+      <h1 style={{ fontSize: textPx(19), lineHeight: linePx(28.5), fontWeight: 700, letterSpacing: -0.6, color: "rgb(var(--c-charcoal))" }}>{t("Health")}</h1>
       <p style={{ marginTop: 3, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: "rgb(var(--c-charcoal-soft))" }}>
-        {online ? syncLine : OFFLINE_CACHED}
+        {online ? syncLine : t(OFFLINE_CACHED)}
         {online && (
           <>
             {" · "}
@@ -284,7 +289,7 @@ export default function Health() {
               className="tap relative inline before:absolute before:-inset-y-[14px] before:-inset-x-2 before:content-['']"
               style={{ fontWeight: 700, color: primaryText }}
             >
-              Sources
+              {t("Sources")}
             </button>
           </>
         )}
@@ -298,59 +303,59 @@ export default function Health() {
           className="flex items-center justify-between"
           style={{ marginTop: 10, borderRadius: 12, paddingBlock: "4px", paddingInline: "12px 4px", gap: 8, background: dark ? "#3C2A30" : "#FBE7E4" }}
         >
-          <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>Couldn't load your health data.</span>
+          <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>{t("Couldn't load your health data.")}</span>
           <button
             type="button"
             onClick={metricsLoad.retry}
             className="tap min-h-[44px] px-2"
             style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: dark ? "#F09A8E" : "#C0392B" }}
           >
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
 
-      <SectionCaps style={{ marginTop: 14 }}>Today</SectionCaps>
+      <SectionCaps style={{ marginTop: 14 }}>{t("Today")}</SectionCaps>
 
       <div className="grid grid-cols-2 items-stretch" style={{ gap: 8 }}>
         <MetricWidget
           preset="health"
           metric="water"
           icon={Droplet}
-          label="Water"
+          label={t("Water")}
           value={waterL}
           unit="L"
           graphic={<WaterBottleMini fraction={waterToday / waterGoalMl} dark={dark} />}
-          context={`of ${goalL} L goal`}
+          context={t("of {n} L goal", { n: goalL })}
           state={ld(waterToday > 0 ? "ready" : "empty")}
-          emptyHint="Tap + to log a drink"
-          ariaLabel={`Water, ${waterL} of ${goalL} litres today`}
+          emptyHint={t("Tap + to log a drink")}
+          ariaLabel={t("Water, {n} of {goal} litres today", { n: waterL, goal: goalL })}
           onClick={() => go("/app/health/water")}
         />
         <MetricWidget
           preset="health"
           metric="steps"
           icon={Footprints}
-          label="Steps"
+          label={t("Steps")}
           value={steps === null ? undefined : formatMetric("steps", steps)}
           graphic={steps === null ? undefined : <StepsArcMini fraction={steps / stepsGoal} dark={dark} />}
-          context={`of ${stepsGoal.toLocaleString(appLocale())} steps`}
+          context={t("of {n} steps", { n: stepsGoal.toLocaleString(appLocale()) })}
           state={ld(steps === null ? "empty" : "ready")}
-          emptyHint={NO_DEVICE}
-          ariaLabel={steps === null ? "Steps, no readings yet" : `Steps, ${formatMetric("steps", steps)} of ${stepsGoal.toLocaleString(appLocale())}`}
+          emptyHint={t(NO_DEVICE)}
+          ariaLabel={steps === null ? t("Steps, no readings yet") : t("Steps, {n} of {goal}", { n: formatMetric("steps", steps), goal: stepsGoal.toLocaleString(appLocale()) })}
           onClick={() => go("/app/health/steps")}
         />
         <MetricWidget
           preset="health"
           metric="sleep"
           icon={Moon}
-          label="Sleep"
+          label={t("Sleep")}
           value={sleep === null ? undefined : hm(sleep)}
           graphic={sleep === null ? undefined : <SleepArcMini dark={dark} />}
           context={sleepContext}
           state={ld(sleep === null ? "empty" : "ready")}
-          emptyHint={NO_DEVICE}
-          ariaLabel={sleep === null ? "Sleep, no readings yet" : `Sleep, ${hm(sleep)}`}
+          emptyHint={t(NO_DEVICE)}
+          ariaLabel={sleep === null ? t("Sleep, no readings yet") : t("Sleep, {time}", { time: hm(sleep) })}
           onClick={() => go("/app/health/sleep")}
         />
         {!hideKcal && (
@@ -358,14 +363,14 @@ export default function Health() {
             preset="health"
             metric="calories"
             icon={Flame}
-            label="Calories burned"
+            label={t("Calories burned")}
             value={kcal === null ? undefined : formatMetric("caloriesBurned", kcal)}
             unit="kcal"
             graphic={kcal === null ? undefined : <CaloriesGaugeMini fraction={kcal / KCAL_GOAL} dark={dark} />}
-            context={`of ${KCAL_GOAL.toLocaleString(appLocale())} kcal`}
+            context={t("of {n} kcal", { n: KCAL_GOAL.toLocaleString(appLocale()) })}
             state={ld(kcal === null ? "empty" : "ready")}
-            emptyHint={NO_DEVICE}
-            ariaLabel={kcal === null ? "Calories burned, no readings yet" : `Calories burned, ${formatMetric("caloriesBurned", kcal)} of ${KCAL_GOAL.toLocaleString(appLocale())} kilocalories`}
+            emptyHint={t(NO_DEVICE)}
+            ariaLabel={kcal === null ? t("Calories burned, no readings yet") : t("Calories burned, {n} of {goal} kilocalories", { n: formatMetric("caloriesBurned", kcal), goal: KCAL_GOAL.toLocaleString(appLocale()) })}
             onClick={() => go("/app/health/calories")}
           />
         )}
@@ -373,14 +378,14 @@ export default function Health() {
           preset="health"
           metric="heart-rate"
           icon={HeartPulse}
-          label="Heart rate"
+          label={t("Heart rate")}
           value={hr === null ? undefined : formatMetric("heartRate", hr)}
           unit="bpm"
           graphic={hr === null ? undefined : <EcgMini bpm={hr} />}
           context={hrRange ? `${hrWord} · ${hrRange}` : hrWord}
           state={ld(hr === null ? "empty" : "ready")}
-          emptyHint={NO_DEVICE}
-          ariaLabel={hr === null ? "Heart rate, no readings yet" : `Heart rate, ${formatMetric("heartRate", hr)} beats per minute, ${hrWord === "resting" ? "resting" : "latest reading"}`}
+          emptyHint={t(NO_DEVICE)}
+          ariaLabel={hr === null ? t("Heart rate, no readings yet") : resting !== null ? t("Heart rate, {n} beats per minute, resting", { n: formatMetric("heartRate", hr) }) : t("Heart rate, {n} beats per minute, latest reading", { n: formatMetric("heartRate", hr) })}
           onClick={() => go("/app/health/heart-rate")}
         />
         <MetricWidget
@@ -390,13 +395,13 @@ export default function Health() {
           // row so the grid ends without a hole.
           className={hideKcal ? "col-span-2" : undefined}
           icon={Gauge}
-          label="Blood pressure"
+          label={t("Blood pressure")}
           value={bpLatest ? `${bpLatest.systolic}/${bpLatest.diastolic}` : undefined}
           graphic={bpLatest ? <BpWaveMini /> : undefined}
           context={
             bpLatest ? (
               <>
-                {"mmHg · "}
+                {`${t("mmHg")} · `}
                 {bpWord && (
                   <>
                     <span style={{ color: bpWord.color }}>{bpWord.text}</span>
@@ -408,11 +413,13 @@ export default function Health() {
             ) : undefined
           }
           state={bpLatest ? "ready" : "empty"}
-          emptyHint="Tap to add one"
+          emptyHint={t("Tap to add one")}
           ariaLabel={
             bpLatest
-              ? `Blood pressure, ${bpLatest.systolic} over ${bpLatest.diastolic}${bpWord ? `, ${bpWord.text}` : ""}, at ${clock12(bpLatest.recordedAt)}`
-              : "Blood pressure, no readings yet"
+              ? bpWord
+                ? t("Blood pressure, {sys} over {dia}, {category}, at {time}", { sys: bpLatest.systolic, dia: bpLatest.diastolic, category: bpWord.text, time: clock12(bpLatest.recordedAt) })
+                : t("Blood pressure, {sys} over {dia}, at {time}", { sys: bpLatest.systolic, dia: bpLatest.diastolic, time: clock12(bpLatest.recordedAt) })
+              : t("Blood pressure, no readings yet")
           }
           onClick={() => go("/app/health/blood-pressure")}
         />
@@ -442,7 +449,7 @@ export default function Health() {
             sensitive mode, a neutral 358 x 163.7 r15 skeleton while that
             setting loads. */}
         {recoveryModePending ? (
-          <div className="col-span-2 animate-skeleton-pulse" aria-label="Weight trend" style={{ height: 163.7, borderRadius: 15, background: dark ? "#1C1F28" : "#F5F5F6" }} />
+          <div className="col-span-2 animate-skeleton-pulse" aria-label={t("Weight trend")} style={{ height: 163.7, borderRadius: 15, background: dark ? "#1C1F28" : "#F5F5F6" }} />
         ) : (
           !recoverySensitive && (
             <MetricWidget
@@ -451,15 +458,15 @@ export default function Health() {
               metric="weight"
               className="col-span-2"
               icon={WeightScaleIcon}
-              label="Weight trend"
+              label={t("Weight trend")}
               value={weight === null ? undefined : formatMetric("weight", weight)}
               unit="kg"
               graphic={weight === null ? undefined : <WeightJourneyStrip fraction={journey} dark={dark} hc={hc} />}
               graphicHeight={24}
               context={weightContext ?? undefined}
               state={ld(weight === null ? "empty" : "ready")}
-              emptyHint="Log your weight to start tracking"
-              ariaLabel={weight === null ? "Weight trend, no readings yet" : `Weight trend, ${formatMetric("weight", weight)} kilograms${weightContext ? `, ${weightContext}` : ""}`}
+              emptyHint={t("Log your weight to start tracking")}
+              ariaLabel={weight === null ? t("Weight trend, no readings yet") : weightContext ? t("Weight trend, {n} kilograms, {context}", { n: formatMetric("weight", weight), context: weightContext }) : t("Weight trend, {n} kilograms", { n: formatMetric("weight", weight) })}
               onClick={() => go("/app/health/weight")}
             />
           )
@@ -474,24 +481,24 @@ export default function Health() {
         </div>
       )}
 
-      <SectionCaps style={{ marginTop: 20 }}>Health records</SectionCaps>
+      <SectionCaps style={{ marginTop: 20 }}>{t("Health records")}</SectionCaps>
       {/* K13: the one-time tracker question, above the rows, while unanswered. */}
       <TrackerQuestion variant="health" className="mb-2" />
       <div className="flex flex-col" style={{ gap: 8 }}>
-        {showChecks && <RecordRow icon={<ClipboardCheck size={21} strokeWidth={1.5} />} title={SCREENING_COPY.cardTitle} onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })} />}
+        {showChecks && <RecordRow icon={<ClipboardCheck size={21} strokeWidth={1.5} />} title={t(SCREENING_COPY.cardTitle)} onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })} />}
         {/* K17 (OURS-health-advanced-monitoring-entry): only while the plan
             is active; its title is the plan's own (never the mode's name). */}
         {checkFlags.active && <RecordRow icon={<ClipboardList size={21} strokeWidth={1.5} />} title={CHECKS_COPY.planTitle} onClick={() => go("/app/health/checks")} />}
-        <RecordRow icon={<Microscope size={21} strokeWidth={1.5} />} title="Biomarkers & imaging" subtitle={biomarkersSubtitle} onClick={() => go("/app/health/records#biomarkers")} />
+        <RecordRow icon={<Microscope size={21} strokeWidth={1.5} />} title={t("Biomarkers & imaging")} subtitle={biomarkersSubtitle} onClick={() => go("/app/health/records#biomarkers")} />
         {/* Release 3 CU16 v2 (J14): after "Biomarkers & imaging", only with a care plan. */}
-        {carePlan && <RecordRow icon={<ClipboardPlus size={21} strokeWidth={1.5} />} title="Your care plan" subtitle={carePlanSubtitle} onClick={() => go("/app/health/care-plan")} />}
+        {carePlan && <RecordRow icon={<ClipboardPlus size={21} strokeWidth={1.5} />} title={t("Your care plan")} subtitle={carePlanSubtitle} onClick={() => go("/app/health/care-plan")} />}
         {/* K14: the tracker's way in; "Pregnancy" during a pregnancy (V6-135). */}
-        {showCycle && <RecordRow icon={<CycleCalendarIcon size={21} />} title={pregnancy ? "Pregnancy" : "Cycle tracking"} onClick={() => go("/app/cycle")} />}
+        {showCycle && <RecordRow icon={<CycleCalendarIcon size={21} />} title={pregnancy ? t("Pregnancy") : t("Cycle tracking")} onClick={() => go("/app/cycle")} />}
         {/* #84-#88: who can see the data → Profile › Connected professionals. */}
         <RecordRow
           radius={16}
           icon={<Eye size={17} strokeWidth={1.5} />}
-          title={sharesWithSomeone === false ? "Only you can see your health data." : "Who can see your health data"}
+          title={sharesWithSomeone === false ? t("Only you can see your health data.") : t("Who can see your health data")}
           onClick={() => go("/app/profile")}
         />
       </div>
@@ -506,7 +513,7 @@ export default function Health() {
           className="tap relative underline underline-offset-2 before:absolute before:-inset-y-[14px] before:inset-x-0 before:content-['']"
           style={{ fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: "rgb(var(--c-charcoal-soft))" }}
         >
-          Sources and guidelines
+          {t("Sources and guidelines")}
         </button>
       </div>
 
@@ -516,7 +523,7 @@ export default function Health() {
       <button
         type="button"
         onClick={() => setAddMetricOpen(true)}
-        aria-label="Add metric"
+        aria-label={t("Add metric")}
         className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px+var(--active-bar,0px))] end-[calc(var(--app-gutter)+20px)] z-30 rounded-full flex items-center justify-center"
         style={{
           width: 56,
@@ -572,7 +579,8 @@ function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: Reac
       style={{
         minHeight: 60,
         borderRadius: radius,
-        padding: subtitle ? "10px 40px 10px 10px" : "0 40px 0 10px",
+        paddingBlock: subtitle ? 10 : 0,
+        paddingInline: "10px 40px",
         gap: 12,
         background: dark ? "#1C1F28" : "#FFFFFF",
         border: `0.5px solid ${hairline(dark, hc)}`,
@@ -592,7 +600,7 @@ function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: Reac
           </span>
         )}
       </span>
-      <ChevronRight size={17} aria-hidden className="absolute" style={{ insetInlineEnd: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
+      <ChevronRight size={17} aria-hidden className="absolute rtl:-scale-x-100" style={{ insetInlineEnd: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
     </button>
   );
 }

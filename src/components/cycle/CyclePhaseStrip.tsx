@@ -4,6 +4,7 @@ import { PHASE_LABEL, PHASE_TRAINING_NOTE, phaseThemeColor } from "../../service
 import * as PG from "../../services/pregnancy/guidance";
 import { gestationOn } from "../../services/pregnancy";
 import { PREGNANCY_COLOR } from "../pregnancy/PregnancyRing";
+import { t, tx } from "../../i18n/core";
 import { PregnancyWorkoutCard } from "../pregnancy/PregnancyGuidance";
 
 // "Luteal phase · day 22", where training happens.
@@ -66,7 +67,7 @@ export const CyclePhaseStrip: React.FC = () => {
           />
           <div className="min-w-0">
             <p className="text-[12px] font-bold" style={{ color: PREGNANCY_COLOR }}>
-              Pregnancy · week {pregnant.week}
+              {t("Pregnancy · week {n}", { n: pregnant.week })}
             </p>
             <p className="mt-0.5 text-[11px] leading-snug text-charcoal-soft">
               {PG.WORKOUT_STRIP_NOTE}
@@ -77,7 +78,7 @@ export const CyclePhaseStrip: React.FC = () => {
               className="tap mt-1 text-[11px] font-bold"
               style={{ color: PREGNANCY_COLOR }}
             >
-              {open ? "Hide the guidance" : PG.WORKOUT_STRIP_LINK}
+              {open ? t("Hide the guidance") : t(PG.WORKOUT_STRIP_LINK)}
             </button>
           </div>
         </div>
@@ -98,8 +99,9 @@ export const CyclePhaseStrip: React.FC = () => {
       <span className="w-1 self-stretch rounded-full shrink-0" style={{ background: color }} />
       <div className="min-w-0">
         <p className="text-[12px] font-bold" style={{ color }}>
-          {PHASE_LABEL[strip.phase]} phase
-          {strip.day !== null && ` · day ${strip.day}`}
+          {strip.day !== null
+            ? t("{phase} phase · day {n}", { phase: t(PHASE_LABEL[strip.phase]), n: strip.day })
+            : tx("{phase} phase", "named", { phase: t(PHASE_LABEL[strip.phase]) })}
         </p>
         <p className="mt-0.5 text-[11px] leading-snug text-charcoal-soft">{strip.note}</p>
       </div>
@@ -119,7 +121,7 @@ export const CyclePhaseChip: React.FC = () => {
         style={{ background: `${PREGNANCY_COLOR}1F`, color: PREGNANCY_COLOR }}
         title={PG.WORKOUT_STRIP_NOTE}
       >
-        Pregnancy · {pregnant.week}
+        {t("Pregnancy · {n}", { n: pregnant.week })}
       </span>
     );
   }
@@ -134,7 +136,7 @@ export const CyclePhaseChip: React.FC = () => {
       style={{ background: phaseThemeColor(strip.phase, 0.12), color }}
       title={strip.note}
     >
-      {PHASE_LABEL[strip.phase]}
+      {t(PHASE_LABEL[strip.phase])}
       {strip.day !== null && ` · ${strip.day}`}
     </span>
   );

@@ -3,6 +3,8 @@ import { ArrowDown, ArrowUp, Check } from "lucide-react";
 import { CentredPopup } from "../../ui/CentredPopup";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useHealthMode, hairline } from "../metric/MetricKit";
+import { t, tk } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // Shared pieces of the Biomarkers & imaging page (HE1.9 family,
 // docs/health-b-handover.md lines 614-2863). Every value is the handover's
@@ -16,6 +18,8 @@ export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "–";
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return "–";
+  const loc = appLocale();
+  if (loc) return new Date(y, m - 1, d).toLocaleDateString(loc, { month: "short", day: "numeric", year: "numeric" });
   const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1];
   return `${month} ${d}, ${y}`;
 }
@@ -24,9 +28,9 @@ export function fmtDate(iso: string | null | undefined): string {
 export function rangeText(low: number | null | undefined, high: number | null | undefined): string {
   const l = low ?? null;
   const h = high ?? null;
-  if (l !== null && h !== null) return `${l} to ${h}`;
-  if (h !== null) return `under ${h}`;
-  if (l !== null) return `above ${l}`;
+  if (l !== null && h !== null) return t("{low} to {high}", { low: l, high: h });
+  if (h !== null) return t("under {high}", { high: h });
+  if (l !== null) return t("above {low}", { low: l });
   return "–";
 }
 
@@ -39,11 +43,11 @@ export type LabStatus = "low" | "normal" | "high" | null | undefined;
  */
 export function statusInfo(status: LabStatus, dark: boolean) {
   if (!status) return null;
-  if (status === "normal") return { word: "In range", long: "In range", Icon: Check, color: dark ? "#6DC08A" : "#357A4D" };
+  if (status === "normal") return { word: t("In range"), long: t("In range"), Icon: Check, color: dark ? "#6DC08A" : "#357A4D" };
   const out = dark ? "#E8837C" : "#C2453F";
   return status === "low"
-    ? { word: "Below", long: "Below range", Icon: ArrowDown, color: out }
-    : { word: "Above", long: "Above range", Icon: ArrowUp, color: out };
+    ? { word: t("Below"), long: t("Below range"), Icon: ArrowDown, color: out }
+    : { word: t("Above"), long: t("Above range"), Icon: ArrowUp, color: out };
 }
 
 /** Status word + icon (HE1.9 #25-#26: 10.5/15.8 700, icon 12, gap 3). */
@@ -177,7 +181,7 @@ export const ConfirmPopup: React.FC<{
   error?: string | null;
   destructive?: boolean;
   geometry?: "partB" | "ours";
-}> = ({ open, title, body, confirmLabel, cancelLabel = "Keep", onConfirm, onCancel, busy, error, destructive = true, geometry = "partB" }) => {
+}> = ({ open, title, body, confirmLabel, cancelLabel = t("Keep"), onConfirm, onCancel, busy, error, destructive = true, geometry = "partB" }) => {
   const { dark, hc } = useHealthMode();
   const h = geometry === "ours" ? 48 : 46;
   return (
@@ -230,7 +234,7 @@ export const RetryCard: React.FC<{ message: string; onRetry: () => void }> = ({ 
     <div role="alert" className="flex items-center justify-between" style={{ borderRadius: 18, padding: "4px 14px", background: cardFill, border: `0.5px solid ${hairline(dark, hc)}` }}>
       <span style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: red }}>{message}</span>
       <button type="button" onClick={onRetry} className="tap min-h-[44px] px-2" style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: red }}>
-        Retry
+        {t("Retry")}
       </button>
     </div>
   );
@@ -272,7 +276,4 @@ export const fileKind = (path: string | null | undefined): "PDF" | "Photo" | nul
 };
 
 /** The default report name (blood_panels.name not landed: BACKEND B2). */
-export const REPORT_NAME_DEFAULT = "Blood panel";
-
-/** Plural helper. */
-export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+export const REPORT_NAME_DEFAULT = tk("Blood panel");

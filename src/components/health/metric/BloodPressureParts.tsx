@@ -3,8 +3,8 @@ import { AlertCircle, ArrowUp, Check, Clock, Hand, HeartPulse, Info, Sunrise, Su
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, hairline, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
-import { daysOf, monthLetter, type MetricRange, type Period } from "./periods";
-import { isRtl } from "../../../i18n/core";
+import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
+import { isRtl, t, tk, tn } from "../../../i18n/core";
 import { BP_CATEGORIES, type BpCategory } from "../../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL, BP_CATEGORY_RANGE, BP_DETAIL_FOOTER, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
 import { PREGNANCY_FLAG_COPY, type PregnancyFlag } from "../../../services/pregnancy/checks";
@@ -45,7 +45,7 @@ export const BpSafetyCard: React.FC<{
   const { dark, hc } = useHealthMode();
   const red = kind !== "same-day";
   const link = hc && !dark ? "#4B3BA0" : dark ? "rgb(var(--thi-c3b3fb))" : "rgb(var(--thi-7d6bb5))";
-  const title = kind === "severe" ? "Very high reading" : (flag?.label ?? "");
+  const title = kind === "severe" ? t("Very high reading") : (flag?.label ?? "");
   const text = kind === "severe" ? SEVERE_READING_MESSAGE : (flag?.text ?? "");
   return (
     <section
@@ -73,7 +73,7 @@ export const BpSafetyCard: React.FC<{
           className="tap relative before:absolute before:-inset-y-[13px] before:-inset-x-1 before:content-['']"
           style={{ marginTop: 8, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: link }}
         >
-          How to measure
+          {t("How to measure")}
         </button>
       </div>
     </section>
@@ -153,7 +153,7 @@ export const BloodPressureHero: React.FC<{
             <span style={{ fontSize: 44, lineHeight: "44px", fontWeight: 800, letterSpacing: -1.8, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{data.systolic}</span>
             <span aria-hidden style={{ width: 100, height: 2, borderRadius: 1, margin: "8px 6px", background: mc(K, "main") }} />
             <span style={{ fontSize: 44, lineHeight: "44px", fontWeight: 800, letterSpacing: -1.8, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{data.diastolic}</span>
-            <span style={{ marginTop: 6, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: metricTextInk(K, dark) }}>mmHg</span>
+            <span style={{ marginTop: 6, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 700, color: metricTextInk(K, dark) }}>{t("mmHg")}</span>
           </div>
           <div className="min-w-0 flex-1 flex flex-col" style={{ gap: 9, paddingTop: 10 }}>
             {data.facts.map((f, i) => {
@@ -305,7 +305,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
     });
     labels = days.map((d, i) => (
       <text key={d} x={mx(25.4 + 46.6 * i)} y={139} textAnchor="middle" style={label(d === today)}>
-        {["S", "M", "T", "W", "T", "F", "S"][new Date(`${d}T12:00:00`).getDay()]}
+        {dowLetter(d)}
       </text>
     ));
   } else if (range === "month") {
@@ -325,10 +325,10 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
             <line x1={0} x2={326} y1={y(average.systolic)} y2={y(average.systolic)} stroke={sysFill} strokeWidth={1.5} />
             <line x1={0} x2={326} y1={y(average.diastolic)} y2={y(average.diastolic)} stroke={diaFill} strokeWidth={1.5} />
             <text x={mx(2)} y={y(average.systolic) - 5} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
-              Avg {average.systolic}
+              {t("Avg {n}", { n: average.systolic })}
             </text>
             <text x={mx(2)} y={y(average.diastolic) + 14} style={{ fontSize: "calc(10.5px + var(--text-boost, 0px))", fontWeight: 600, fill: metricTextInk(K, dark) }}>
-              Avg {average.diastolic}
+              {t("Avg {n}", { n: average.diastolic })}
             </text>
           </g>
         )}
@@ -373,14 +373,14 @@ export function bpLegend(range: MetricRange, dark: boolean, pregnancy: boolean):
   const dash = <span style={{ width: 14, borderTop: `1.5px dashed ${dark ? "#D08AB2" : mc(K, "accent")}`, display: "inline-block" }} />;
   const line = <span style={{ width: 14, height: 1.5, background: mc(K, "main"), display: "inline-block" }} />;
   const items: { label: string; swatch: React.ReactNode }[] = [
-    { label: "Systolic", swatch: dot(mc(K, "main")) },
-    { label: "Diastolic", swatch: dot(dark ? "#D08AB2" : mc(K, "accent")) },
+    { label: t("Systolic"), swatch: dot(mc(K, "main")) },
+    { label: t("Diastolic"), swatch: dot(dark ? "#D08AB2" : mc(K, "accent")) },
   ];
-  if (range === "week") items.push({ label: "Days ahead", swatch: ghost });
-  if (range === "year") items.push({ label: "Months ahead", swatch: ghost });
-  if (range === "month") items.push({ label: "Averages", swatch: line });
+  if (range === "week") items.push({ label: t("Days ahead"), swatch: ghost });
+  if (range === "year") items.push({ label: t("Months ahead"), swatch: ghost });
+  if (range === "month") items.push({ label: t("Averages"), swatch: line });
   // OURS-health-bp-pregnancy-levels #3 (V6-19): "Pregnancy 140 / 90".
-  items.push({ label: pregnancy ? "Pregnancy 140 / 90" : "Reference 120 / 80", swatch: dash });
+  items.push({ label: pregnancy ? t("Pregnancy 140 / 90") : t("Reference 120 / 80"), swatch: dash });
   return items;
 }
 
@@ -426,10 +426,10 @@ export const BpTiles: React.FC<{ morning: BpHalf; evening: BpHalf; countWord: (n
           <span className="grid place-items-center" style={{ width: 24, height: 24, borderRadius: 8, background: tileBg }}>
             <Icon size={13} strokeWidth={1.5} style={{ color: iconInk }} />
           </span>
-          <span style={{ marginTop: 3, fontSize: textPx(13), lineHeight: linePx(15), fontWeight: 800, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>No reading yet</span>
+          <span style={{ marginTop: 3, fontSize: textPx(13), lineHeight: linePx(15), fontWeight: 800, letterSpacing: -0.3, color: "rgb(var(--c-charcoal))" }}>{t("No reading yet")}</span>
         </>
       )}
-      <span style={{ marginTop: 3, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: metricTextInk(K, dark) }}>{label}</span>
+      <span style={{ marginTop: 3, fontSize: textPx(10), lineHeight: linePx(13), fontWeight: 600, color: metricTextInk(K, dark) }}>{t(label)}</span>
       {(h.avg ? countWord(h.count) : h.previous) && (
         <span style={{ marginTop: 3, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 600, color: "rgb(var(--c-charcoal-faint))" }}>
           {h.avg ? countWord(h.count) : h.previous}
@@ -439,8 +439,8 @@ export const BpTiles: React.FC<{ morning: BpHalf; evening: BpHalf; countWord: (n
   );
   return (
     <div className="flex items-stretch" style={{ marginTop: 10, borderRadius: 16, padding: "10px 2px", background: mc(K, "tint") }}>
-      {half(morning, Sunrise, "Morning", 0)}
-      {half(evening, Sunset, "Evening", 1)}
+      {half(morning, Sunrise, tk("Morning"), 0)}
+      {half(evening, Sunset, tk("Evening"), 1)}
     </div>
   );
 };
@@ -471,7 +471,7 @@ export const BpReferenceCard: React.FC<{
         <p style={{ fontSize: textPx(11.5), lineHeight: linePx(17.3), fontWeight: 700, color: strong ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-soft))" }}>{label}</p>
         {count !== null && count > 0 && (
           <p style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: "rgb(var(--c-charcoal-faint))" }}>
-            {count} reading{count === 1 ? "" : "s"}
+            {tn(count, "{n} reading", "{n} readings")}
           </p>
         )}
       </div>
@@ -491,11 +491,11 @@ export const BpReferenceCard: React.FC<{
         <>
           <h2 className="flex items-center" style={{ gap: 8, fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
             <Info size={15} strokeWidth={1.75} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
-            {showAdult ? "Reference ranges" : PREGNANCY_BP_LEVELS.title}
+            {showAdult ? t("Reference ranges") : PREGNANCY_BP_LEVELS.title}
           </h2>
           <div style={{ marginTop: 10 }}>
             {showAdult
-              ? BP_CATEGORIES.map((c, i) => row(c, `${BP_CATEGORY_LABEL[c]}${latest === c ? " · latest" : ""}`, BP_CATEGORY_RANGE[c], latest === c, counts ? counts[c] : null, i === 0))
+              ? BP_CATEGORIES.map((c, i) => row(c, latest === c ? t("{category} · latest", { category: BP_CATEGORY_LABEL[c] }) : BP_CATEGORY_LABEL[c], BP_CATEGORY_RANGE[c], latest === c, counts ? counts[c] : null, i === 0))
               : PREGNANCY_BP_LEVELS.rows.map((r, i) => row(r.label, r.label, r.range, false, null, i === 0))}
           </div>
         </>
