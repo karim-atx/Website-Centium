@@ -36,7 +36,7 @@ const {
   HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
-  CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage,
+  CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage, DoctorSummaryPage,
 } = appPages;
 
 const RouteLoading: React.FC = () => (
@@ -466,6 +466,8 @@ function AppRoutes() {
         <Route path="/app/health/sources" element={<HealthSources />} />
         <Route path="/app/health/records" element={<HealthRecords />} />
         <Route path="/app/health/care-plan" element={<CarePlan />} />
+        {/* Round G3: the doctor summary (back to Health records while the Premium switch is off). */}
+        <Route path="/app/health/doctor-summary" element={<DoctorSummaryPage />} />
         {/* Batch 2 · Health A: the seven metric pages (HE1.1-HE1.7) and heart-rate alert settings. */}
         <Route path="/app/health/water" element={<WaterPage />} />
         <Route path="/app/health/steps" element={<StepsPage />} />
