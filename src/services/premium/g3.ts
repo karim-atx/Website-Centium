@@ -445,7 +445,7 @@ export function stepAt(steps: readonly ScriptStep[], elapsed: number): { index: 
 export const libraryTypeLabel = (s: Pick<LibrarySession, "type">): string => (s.type === "breathing" ? t("Breathing") : t("Meditation"));
 
 /** "3 min". */
-export const minutesLabel = (n: number): string => t("{n} min", { n });
+export const minutesLabel = (n: number): string => tn(n, "{n} min", "{n} min");
 
 // ---- journal prompts ----
 
