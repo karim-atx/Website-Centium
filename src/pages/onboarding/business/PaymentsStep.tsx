@@ -9,7 +9,7 @@ import type { LaneStepProps } from "./laneTypes";
 import { t } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { useSwitches } from "../../../services/premium/hooks";
-import { awaitingPlanPayment, businessPlansOn, mustChooseLevel } from "../../../services/premium/model";
+import { businessPlansOn, mustChooseLevel, planPurchasePending } from "../../../services/premium/model";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 
 // OB-232 / 266 / 294: Step 5 · Payments. Cash now (venue_payment_method cash);
@@ -21,14 +21,15 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
   const lane = biz.lane ?? "gym";
   const plan = useBusinessPlanTier();
   const price = plan.base ? money(plan.base.monthlyPrice) : plan.loading ? "…" : "–";
-  // Round G1 (#15, G fixes): the plan is chosen at the start of onboarding,
-  // and verification approval waits for its first payment. A business already
-  // created reads its own answer (business_plan_level: a level still to choose,
-  // or its charge awaiting payment); one not yet created will choose first
-  // when the business plans switch is on for its owner. Off, or loading: as today.
+  // Round G1 (#15, G fixes; G fixes 2): the plan is bought in the Centium app,
+  // and verification approval waits for that purchase to be confirmed. A
+  // business already created reads its own answer (business_plan_level: a
+  // level still to buy, or its purchase not confirmed yet); one not yet
+  // created will need one when the business plans switch is on for its
+  // owner. Off, or loading: as today.
   const { switches } = useSwitches();
   const { level, loading: levelLoading } = usePlanLevel(biz.businessId);
-  const approvalWaits = biz.businessId ? !levelLoading && (mustChooseLevel(level) || awaitingPlanPayment(level)) : businessPlansOn(switches);
+  const approvalWaits = biz.businessId ? !levelLoading && (mustChooseLevel(level) || planPurchasePending(level)) : businessPlansOn(switches);
   return (
     <BizFrame
       step={flowKey}
@@ -63,7 +64,7 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
         price={price}
         note={
           approvalWaits
-            ? t("Your verification is approved, and your business goes live, once your plan's first payment is recorded.") /* undrawn (Round G, no handover) */
+            ? t("Your verification is approved once your plan purchase is confirmed.") /* undrawn (Round G, no handover) */
             : plan.error
               ? t("Couldn't load the plan price. It's shown again before you're charged.") /* OURS */
               : t("Plans and payment details are shown before you subscribe.") /* Round F (Karim) */
