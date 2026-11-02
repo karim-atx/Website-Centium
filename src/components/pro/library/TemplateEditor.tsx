@@ -10,6 +10,7 @@ import type { Exercise, WorkoutTemplate } from "../../../types";
 import { INK } from "../proInk";
 import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
 import { tidyPlaylistInput } from "../../../services/music/playlistLink";
+import { isRtl, t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR3 / TR13: the template builder = the shared
@@ -70,9 +71,9 @@ export const TemplateEditor: React.FC<{
 
   const submit = async (draft: RoutineDraft): Promise<string | undefined> => {
     const w = Number(weeks);
-    if (weeks && (!Number.isInteger(w) || w < 1 || w > 104)) return "Programme length is 1 to 104 weeks.";
+    if (weeks && (!Number.isInteger(w) || w < 1 || w > 104)) return t("Programme length is 1 to 104 weeks.");
     const playlistUrl = tidyPlaylistInput(playlist);
-    if (!playlistFieldValid(playlistUrl)) return "Check the playlist link.";
+    if (!playlistFieldValid(playlistUrl)) return t("Check the playlist link.");
     const payload = {
       name: draft.name,
       exercises: draft.exercises,
@@ -85,13 +86,13 @@ export const TemplateEditor: React.FC<{
     };
     if (template) {
       const message = await updateWorkoutTemplate(template.id, payload);
-      if (message) return message;
+      if (message) return t(message);
       onSaved(template.id, assignTo, new Set());
       return undefined;
     }
-    const before = new Set(workoutTemplates.map((t) => t.id));
+    const before = new Set(workoutTemplates.map((w) => w.id));
     const message = await addWorkoutTemplate(payload);
-    if (message) return message;
+    if (message) return t(message);
     // addWorkoutTemplate appends the saved row; the new id is the one not seen before.
     onSaved(null, assignTo, before);
     return undefined;
@@ -103,11 +104,11 @@ export const TemplateEditor: React.FC<{
   const extra = (
     <div className="border-t border-charcoal/[0.08] pt-4 space-y-4">
       <p className="flex items-center text-[11px] font-semibold uppercase text-charcoal-faint" style={{ gap: 8, letterSpacing: "0.14em" }}>
-        <Briefcase size={13} aria-hidden /> For your clients
+        <Briefcase size={13} aria-hidden /> {t("For your clients")}
       </p>
       {!template?.isPublic && roster.length > 0 && (
         <div>
-          {label("Assign to")}
+          {label(t("Assign to"))}
           <button
             type="button"
             onClick={(e) => setPickerAnchor(e.currentTarget)}
@@ -115,19 +116,19 @@ export const TemplateEditor: React.FC<{
             style={{ minHeight: 44, color: names.length ? INK.ch : INK.chF }}
             aria-haspopup="listbox"
           >
-            {names.length ? names.join(", ") : "Choose clients"}
+            {names.length ? names.join(isRtl() ? "، " : ", ") : t("Choose clients")}
           </button>
         </div>
       )}
       <div className="flex items-center justify-between rounded-2xl bg-cream-soft" style={{ padding: "12px 16px", gap: 12 }}>
         <span className="min-w-0">
-          <span className="block text-sm font-semibold text-charcoal">Save as template</span>
-          <span className="block text-[12px] text-charcoal-faint">Reuse it in other programmes</span>
+          <span className="block text-sm font-semibold text-charcoal">{t("Save as template")}</span>
+          <span className="block text-[12px] text-charcoal-faint">{t("Reuse it in other programmes")}</span>
         </span>
-        <Toggle checked onChange={() => undefined} disabled label="Save as template" />
+        <Toggle checked onChange={() => undefined} disabled label={t("Save as template")} />
       </div>
       <label className="block">
-        {label("Programme length (weeks)")}
+        {label(t("Programme length (weeks)"))}
         <input
           value={weeks}
           onChange={(e) => setWeeks(e.target.value.replace(/\D/g, "").slice(0, 3))}
@@ -137,9 +138,9 @@ export const TemplateEditor: React.FC<{
       </label>
       {workoutTemplateFolders.length > 0 && (
         <div>
-          {label("Folder")}
+          {label(t("Folder"))}
           <div className="flex flex-wrap gap-2">
-            {[{ id: null as string | null, name: "Unfiled", parentId: null as string | null | undefined }, ...workoutTemplateFolders].map((f) => (
+            {[{ id: null as string | null, name: t("Unfiled"), parentId: null as string | null | undefined }, ...workoutTemplateFolders].map((f) => (
               <button
                 key={f.id ?? "unfiled"}
                 type="button"
@@ -160,7 +161,7 @@ export const TemplateEditor: React.FC<{
       )}
       <label className="block">
         <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-          Note to client <span className="text-charcoal-faint font-normal">(read-only for them)</span>
+          {t("Note to client")} <span className="text-charcoal-faint font-normal">{t("(read-only for them)")}</span>
         </span>
         <textarea
           value={note}
@@ -172,7 +173,7 @@ export const TemplateEditor: React.FC<{
       <PlaylistField
         value={playlist}
         onChange={setPlaylist}
-        hint="Your clients see it on this workout and can play it while they train."
+        hint={t("Your clients see it on this workout and can play it while they train.")}
         labelStyle={{ fontWeight: 600 }}
         inputStyle={{ borderRadius: 16, fontWeight: 400 }}
       />
@@ -180,9 +181,9 @@ export const TemplateEditor: React.FC<{
   );
 
   const pro: RoutineSheetPro = {
-    title: template ? template.name : "Create Routine",
+    title: template ? template.name : t("Create Routine"),
     initial,
-    submitLabel: "Save routine",
+    submitLabel: t("Save routine"),
     onSubmit: submit,
     extra,
     settings: (exercise): ExerciseSettingsPro => ({

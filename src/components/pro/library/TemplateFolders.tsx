@@ -15,6 +15,7 @@ import { useRoutineDrag, type DragItem, type DropTarget } from "../../../pages/w
 import type { WorkoutTemplate, WorkoutTemplateFolder } from "../../../types";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
+import { t, tk, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W5: the template folders, ported whole from the old
@@ -29,11 +30,11 @@ import { INK } from "../proInk";
 type FolderAction = "rename" | "color" | "subfolder" | "template" | "delete";
 const MENU_ICON = 15;
 const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
-  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
-  { value: "color", label: "Edit color", icon: <Palette size={MENU_ICON} /> },
-  { value: "subfolder", label: "Add subfolder", icon: <FolderTree size={MENU_ICON} /> },
-  { value: "template", label: "Add template", icon: <Plus size={MENU_ICON} /> },
-  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+  { value: "rename", label: tk("Rename"), icon: <Pencil size={MENU_ICON} /> },
+  { value: "color", label: tk("Edit color"), icon: <Palette size={MENU_ICON} /> },
+  { value: "subfolder", label: tk("Add subfolder"), icon: <FolderTree size={MENU_ICON} /> },
+  { value: "template", label: tk("Add template"), icon: <Plus size={MENU_ICON} /> },
+  { value: "delete", label: tk("Delete"), icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
 
 export const TemplateFolders: React.FC<{
@@ -66,7 +67,7 @@ export const TemplateFolders: React.FC<{
 
   // Every folder write reports here, as on the Routines tab.
   const run = (action: Promise<string | undefined>) => {
-    void action.then((message) => onError(message ?? null));
+    void action.then((message) => onError(message ? t(message) : null));
   };
 
   const toggle = (id: string) =>
@@ -126,7 +127,7 @@ export const TemplateFolders: React.FC<{
   const draggingFolder = drag?.item.kind === "folder" ? drag.item.id : null;
   const dragFolder = draggingFolder ? workoutTemplateFolders.find((f) => f.id === draggingFolder) : undefined;
 
-  const templatesIn = (folderId: string | null) => templates.filter((t) => (t.folderId ?? null) === folderId);
+  const templatesIn = (folderId: string | null) => templates.filter((tpl) => (tpl.folderId ?? null) === folderId);
 
   const renderFolders = (parentId: string | null, depth: number): React.ReactNode => {
     const siblings = siblingsOf(parentId);
@@ -155,6 +156,7 @@ export const TemplateFolders: React.FC<{
           family={family}
           count={inside.length}
           noun={["template", "templates"]}
+          countText={tn(inside.length, "{n} template", "{n} templates")}
           collapsed={isCollapsed}
           highlighted={drag?.target.kind === "into" && drag.target.folderId === folder.id}
           onToggle={() => toggle(folder.id)}
@@ -184,12 +186,12 @@ export const TemplateFolders: React.FC<{
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && subfolderName.trim()) addSubfolder(folder.id);
                     }}
-                    placeholder="Subfolder name…"
-                    aria-label="Subfolder name"
+                    placeholder={t("Subfolder name…")}
+                    aria-label={t("Subfolder name")}
                     className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button onClick={() => addSubfolder(folder.id)} className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold" style={{ minHeight: 44 }}>
-                    Add
+                    {t("Add")}
                   </button>
                 </div>
                 <ColorSwatches value={subfolderColor} onPick={setSubfolderColor} size={24} />
@@ -216,7 +218,7 @@ export const TemplateFolders: React.FC<{
           className="tap flex items-center"
           style={{ gap: 6, minHeight: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}
         >
-          <FolderPlus size={15} aria-hidden /> New folder
+          <FolderPlus size={15} aria-hidden /> {t("New folder")}
         </button>
       </div>
       <div ref={listRef} onClickCapture={onClickCapture} className="flex flex-col gap-3.5 mb-3.5">
@@ -230,7 +232,7 @@ export const TemplateFolders: React.FC<{
         open={!!menuFolder}
         anchor={folderMenu?.anchor ?? null}
         onClose={() => setFolderMenu(null)}
-        options={menuFolder && !canAddSubfolder(menuFolder.id, workoutTemplateFolders) ? FOLDER_MENU.map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: MAX_DEPTH_NOTE } : o)) : FOLDER_MENU}
+        options={(menuFolder && !canAddSubfolder(menuFolder.id, workoutTemplateFolders) ? FOLDER_MENU.map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: t(MAX_DEPTH_NOTE) } : o)) : FOLDER_MENU).map((o) => ({ ...o, label: t(o.label) }))}
         onSelect={(action) => menuFolder && onFolderAction(menuFolder, action)}
       />
 
@@ -248,29 +250,30 @@ export const TemplateFolders: React.FC<{
               family={themedFamily(folderFamily(dragFolder, workoutTemplateFolders.indexOf(dragFolder)), dark)}
               count={templatesIn(dragFolder.id).length}
               noun={["template", "templates"]}
+              countText={tn(templatesIn(dragFolder.id).length, "{n} template", "{n} templates")}
               collapsed={collapsed.has(dragFolder.id)}
             />
           </div>,
           document.body
         )}
 
-      <BottomSheet open={newFolderOpen} onClose={() => setNewFolderOpen(false)} title="New Folder">
+      <BottomSheet open={newFolderOpen} onClose={() => setNewFolderOpen(false)} title={t("New Folder")}>
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Folder name</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Folder name")}</span>
             <input
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Folder name"
+              placeholder={t("Folder name")}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
           <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">{t("Color")}</span>
             <ColorSwatches value={newFolderColor} onPick={setNewFolderColor} size={28} />
           </div>
           <Button fullWidth size="lg" onClick={saveFolder} disabled={!newFolderName.trim()}>
-            Create folder
+            {t("Create folder")}
           </Button>
         </div>
       </BottomSheet>

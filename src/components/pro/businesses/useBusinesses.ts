@@ -9,6 +9,7 @@ import { time12 } from "../../../utils/time12";
 import { formatShortDate } from "../../../utils/date";
 import { loadConsoleAccess } from "../../../services/business-console";
 import { appLocale } from "../../../i18n/format";
+import { t, tk } from "../../../i18n/core";
 
 export interface BusinessesData {
   employments: MyEmployment[];
@@ -76,7 +77,8 @@ export function useBusinesses(): {
 /** "Gym · Beirut": the business type as a word and its location. */
 export function typeLine(f: BusinessFacts | undefined): string {
   if (!f) return "";
-  const type = f.type ? typeLabel(f.type) : null;
+  // venueTypes' label is English on this base (translated where it's defined on feat/eh-member); t() is a no-op on Arabic.
+  const type = f.type ? t(typeLabel(f.type)) : null;
   return [type, f.location].filter(Boolean).join(" · ");
 }
 
@@ -85,12 +87,15 @@ export const classWhen = (c: MyClass) => `${new Date(`${c.date}T00:00:00`).toLoc
 /** "Jun 2026". */
 export const monthYear = (iso: string) => formatShortDate(new Date(iso), { month: "short", year: "numeric" });
 
+/** English keys (tk); shown with t() (roleName). */
 export const ROLE_NAME: Record<string, string> = {
-  instructor: "Instructor",
-  trainer: "Personal trainer",
-  front_desk: "Front desk",
-  manager: "Manager",
-  staff: "Staff",
-  shop_assistant: "Shop assistant",
+  instructor: tk("Instructor"),
+  trainer: tk("Personal trainer"),
+  front_desk: tk("Front desk"),
+  manager: tk("Manager"),
+  staff: tk("Staff"),
+  shop_assistant: tk("Shop assistant"),
 };
+/** A business role as a word in the active language, or null when unknown. */
+export const roleName = (role: string | null | undefined): string | null => (role && ROLE_NAME[role] ? t(ROLE_NAME[role]) : null);
 

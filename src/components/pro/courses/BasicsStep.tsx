@@ -15,6 +15,7 @@ import { ChipRow, Field, FieldError, Label, Note, TextBox } from "./courseUi";
 import { fieldBox } from "./courseStyles";
 import { TITLE_MIN, titleError } from "./courseModel";
 import { appLocale } from "../../../i18n/format";
+import { t, tx } from "../../../i18n/core";
 
 export interface BasicsDraft {
   title: string;
@@ -95,7 +96,7 @@ export const BasicsStep: React.FC<{
     <div>
       {reviewReason && (
         <div style={{ borderRadius: 14, background: INK.goldPale, padding: "12px 14px", marginBottom: 12 }}>
-          <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.goldInk }}>What we'd like changed</p>
+          <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.goldInk }}>{t("What we'd like changed")}</p>
           <p style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.5, marginTop: 4, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{reviewReason}</p>
         </div>
       )}
@@ -103,7 +104,7 @@ export const BasicsStep: React.FC<{
         type="button"
         onClick={() => input.current?.click()}
         disabled={!editable}
-        aria-label={coverSrc ? "Change the cover image" : "Add a cover image"}
+        aria-label={coverSrc ? t("Change the cover image") : t("Add a cover image")}
         className="tap relative w-full flex flex-col items-center justify-center overflow-hidden disabled:cursor-default"
         style={{ height: 120, borderRadius: 16, background: coverBackground(draft.coverColour, dark), border: coverSrc ? `1px solid ${INK.b10}` : `1.5px dashed rgb(var(--c-charcoal) / 0.11)`, gap: 6 }}
       >
@@ -113,9 +114,9 @@ export const BasicsStep: React.FC<{
           <>
             <ImagePlus size={22} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
             <span className="whitespace-nowrap" style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.chS, background: INK.card, padding: "1px 8px", borderRadius: 6 }}>
-              Add a cover image
+              {t("Add a cover image")}
             </span>
-            <span style={{ fontSize: textPx(11), color: INK.chS, background: INK.card, padding: "0 6px", borderRadius: 6 }}>16 by 9 works best</span>
+            <span style={{ fontSize: textPx(11), color: INK.chS, background: INK.card, padding: "0 6px", borderRadius: 6 }}>{t("16 by 9 works best")}</span>
           </>
         )}
         {own && <ImageApprovalBadge state={own} className="absolute top-2 start-2" />}
@@ -125,12 +126,12 @@ export const BasicsStep: React.FC<{
           e.target.value = "";
         }}
       />
-      {coverErr && <FieldError>{coverErr}</FieldError>}
+      {coverErr && <FieldError>{t(coverErr)}</FieldError>}
       {cover.pick ? (
         <Note mt={6}>
-          Sent for approval when you save.{" "}
+          {t("Sent for approval when you save.")}{" "}
           <button type="button" onClick={() => cover.onPick(null)} className="tap font-bold underline" style={{ color: INK.prDeep }}>
-            Don't use it
+            {t("Don't use it")}
           </button>
         </Note>
       ) : own ? (
@@ -138,17 +139,17 @@ export const BasicsStep: React.FC<{
           <ImageApprovalNote state={own} className="mt-1.5" />
           {own.status === "pending" && editable && (
             <button type="button" onClick={cover.onWithdraw} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
-              Remove this photo
+              {t("Remove this photo")}
             </button>
           )}
         </>
       ) : (
-        <Note mt={6}>JPEG, PNG or WebP, up to 5 MB. {cover.live ? "A new cover goes live once our team approves it." : "Our team approves it before others see it."}</Note>
+        <Note mt={6}>{t("JPEG, PNG or WebP, up to 5 MB.")} {cover.live ? t("A new cover goes live once our team approves it.") : t("Our team approves it before others see it.")}</Note>
       )}
       {!cover.pick && cover.approvedUrl && own?.status !== "pending" && (
         removeAsk ? (
           <div className="flex flex-wrap items-center" style={{ gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: textPx(12), color: INK.chF }}>Remove the cover? A new one needs approval again.</span>
+            <span style={{ fontSize: textPx(12), color: INK.chF }}>{t("Remove the cover? A new one needs approval again.")}</span>
             <button
               type="button"
               onClick={() => {
@@ -158,28 +159,28 @@ export const BasicsStep: React.FC<{
               className="tap"
               style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}
             >
-              Remove
+              {t("Remove")}
             </button>
             <button type="button" onClick={() => setRemoveAsk(false)} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, minHeight: 32 }}>
-              Keep it
+              {tx("Keep it", "masculine object")}
             </button>
           </div>
         ) : (
           <button type="button" onClick={() => setRemoveAsk(true)} className="tap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.hi, minHeight: 32 }}>
-            Remove cover
+            {t("Remove cover")}
           </button>
         )
       )}
-      <Label>Cover colour</Label>
-      <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: -2, marginBottom: 6 }}>Shown when there's no cover image.</p>
-      <div className="flex flex-wrap" style={{ gap: 8 }} role="radiogroup" aria-label="Cover colour">
+      <Label>{t("Cover colour")}</Label>
+      <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: -2, marginBottom: 6 }}>{t("Shown when there's no cover image.")}</p>
+      <div className="flex flex-wrap" style={{ gap: 8 }} role="radiogroup" aria-label={t("Cover colour")}>
         {COVER_COLOURS.map((c) => (
           <button
             key={c}
             type="button"
             role="radio"
             aria-checked={draft.coverColour === c}
-            aria-label={`Cover colour ${c}`}
+            aria-label={t("Cover colour {colour}", { colour: c })}
             disabled={!editable}
             onClick={() => set("coverColour", c)}
             className="tap disabled:opacity-60 relative before:absolute before:-inset-1 before:content-['']"
@@ -191,21 +192,21 @@ export const BasicsStep: React.FC<{
       <div style={{ height: 12 }} />
       <Field
         id="course-title"
-        label="Title"
+        label={t("Title")}
         value={draft.title}
         onChange={(v) => set("title", v)}
         maxLength={LIMITS.title.max}
         disabled={!editable}
         invalid={!!tErr}
-        note={tErr ? `At least ${TITLE_MIN} characters.` : undefined}
+        note={tErr ? t("At least {n} characters.", { n: TITLE_MIN }) : undefined}
       />
       {tErr && <FieldError>{tErr}</FieldError>}
       <div style={{ height: 12 }} />
-      <Field id="course-subtitle" label="Subtitle" value={draft.subtitle} onChange={(v) => set("subtitle", v)} maxLength={LIMITS.subtitle.max} disabled={!editable} />
+      <Field id="course-subtitle" label={t("Subtitle")} value={draft.subtitle} onChange={(v) => set("subtitle", v)} maxLength={LIMITS.subtitle.max} disabled={!editable} />
       <div style={{ height: 12 }} />
       <div>
         <span className="block" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.chS, marginBottom: 6 }}>
-          Category
+          {t("Category")}
         </span>
         <button
           type="button"
@@ -213,14 +214,14 @@ export const BasicsStep: React.FC<{
           onClick={(e) => setMenu(e.currentTarget)}
           disabled={!editable}
           aria-haspopup="menu"
-          aria-label={`Category: ${cat?.name ?? ""}`}
+          aria-label={t("Category: {name}", { name: cat?.name ?? "" })}
           className="tap flex items-center justify-between disabled:opacity-60"
           style={{ ...fieldBox(!!menu), gap: 8 }}
         >
           <span className="flex-1 min-w-0 text-start truncate">{cat?.name ?? ""}</span>
           <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
         </button>
-        {showErrors && !draft.categoryKey && <FieldError>Choose a category</FieldError>}
+        {showErrors && !draft.categoryKey && <FieldError>{t("Choose a category")}</FieldError>}
       </div>
       <PopupMenu<string>
         open={!!menu}
@@ -234,49 +235,50 @@ export const BasicsStep: React.FC<{
         }}
       />
 
-      <Label>Level</Label>
-      <ChipRow items={COURSE_LEVELS.map((l) => ({ key: l, label: levelLabel(l) }))} on={draft.level} onPick={(k) => set("level", k)} disabled={!editable} />
+      <Label>{t("Level")}</Label>
+      <ChipRow items={COURSE_LEVELS.map((l) => ({ key: l, label: t(levelLabel(l)) }))} on={draft.level} onPick={(k) => set("level", k)} disabled={!editable} />
 
-      <Label>Focus</Label>
+      <Label>{t("Focus")}</Label>
       <ChipRow
-        items={FOCUS_CHOICES.map((f) => ({ key: f, label: f }))}
+        items={FOCUS_CHOICES.map((f) => ({ key: f, label: t(f) }))}
         on={draft.focus}
         onPick={(k) => set("focus", draft.focus === k ? "" : k)}
         disabled={!editable}
       />
-      {draft.focus !== "" && !(FOCUS_CHOICES as readonly string[]).includes(draft.focus) && <Note mt={6}>Focus: {draft.focus}</Note>}
+      {draft.focus !== "" && !(FOCUS_CHOICES as readonly string[]).includes(draft.focus) && <Note mt={6}>{t("Focus: {focus}", { focus: draft.focus })}</Note>}
 
       <div style={{ height: 14 }} />
       <TextBox
         id="course-description"
-        label="Description"
+        label={t("Description")}
         value={draft.description}
         onChange={(v) => set("description", v)}
         rows={4}
         maxLength={DESCRIPTION_MAX}
         disabled={!editable}
-        placeholder="What the course covers and who it's for"
+        placeholder={t("What the course covers and who it's for")}
       />
       <Note mt={6}>
-        Up to {DESCRIPTION_MAX.toLocaleString(appLocale("en-US"))} characters. {draft.description.length > DESCRIPTION_MAX - 200 ? `${(DESCRIPTION_MAX - draft.description.length).toLocaleString(appLocale("en-US"))} left.` : ""}
+        {t("Up to {n} characters.", { n: DESCRIPTION_MAX.toLocaleString(appLocale("en-US")) })}{" "}
+        {draft.description.length > DESCRIPTION_MAX - 200 ? t("{n} left.", { n: (DESCRIPTION_MAX - draft.description.length).toLocaleString(appLocale("en-US")) }) : ""}
       </Note>
-      {draft.focus.length > FOCUS_MAX && <FieldError>The focus is up to {FOCUS_MAX} characters.</FieldError>}
+      {draft.focus.length > FOCUS_MAX && <FieldError>{t("The focus is up to {n} characters.", { n: FOCUS_MAX })}</FieldError>}
 
       <div style={{ height: 14 }} />
       <Field
         id="course-hours"
-        label="Hours a week"
+        label={t("Hours a week")}
         value={draft.weeklyHours}
         onChange={(v) => set("weeklyHours", v)}
         inputMode="decimal"
         disabled={!editable}
         invalid={hoursBad}
-        note="Roughly how long a week takes. Leave it blank if it varies."
+        note={t("Roughly how long a week takes. Leave it blank if it varies.")}
       />
-      {hoursBad && <FieldError>That needs to be between 0.5 and {LIMITS.weeklyHours.max} hours.</FieldError>}
+      {hoursBad && <FieldError>{t("That needs to be between 0.5 and {max} hours.", { max: LIMITS.weeklyHours.max })}</FieldError>}
       <div style={{ height: 12 }} />
-      <TextBox id="course-points" label="What you'll learn" value={draft.learnPoints} onChange={(v) => set("learnPoints", v)} rows={4} disabled={!editable} />
-      <Note mt={6}>One per line, up to {LIMITS.learnPoints}.</Note>
+      <TextBox id="course-points" label={t("What you'll learn")} value={draft.learnPoints} onChange={(v) => set("learnPoints", v)} rows={4} disabled={!editable} />
+      <Note mt={6}>{t("One per line, up to {n}.", { n: LIMITS.learnPoints })}</Note>
       {footer}
     </div>
   );

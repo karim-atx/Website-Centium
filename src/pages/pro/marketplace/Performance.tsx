@@ -7,7 +7,6 @@ import { MarketEmptyCard, MarketError, MarketSkeleton } from "../../../component
 import { fetchProfessionalPerformance } from "../../../services/market/performance";
 import {
   chartData,
-  countOf,
   DEFAULT_RANGE,
   deltaPt,
   deltaText,
@@ -26,6 +25,7 @@ import {
   type ProFetched,
   type ProMetric,
 } from "../../../services/market/performanceModel";
+import { t, tk, tn } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · P-MA.6 Performance (HANDOVER §4 "P-MA.6
 // Performance"; Professional Marketplace Screens lines 482–533 and the
@@ -50,11 +50,11 @@ import {
 //   over views, a different question, so it isn't asked for.
 
 const QUESTION: Record<Exclude<ProMetric, "hired">, string> = {
-  profile_views: "How many people viewed your profile?",
-  hire_requests: "How many clients asked to hire you?",
-  vouchers_redeemed: "How many vouchers were redeemed?",
-  points_spent: "How many points did clients spend with you?",
-  conversion: "How many viewers asked to hire you?",
+  profile_views: tk("How many people viewed your profile?"),
+  hire_requests: tk("How many clients asked to hire you?"),
+  vouchers_redeemed: tk("How many vouchers were redeemed?"),
+  points_spent: tk("How many points did clients spend with you?"),
+  conversion: tk("How many viewers asked to hire you?"),
 };
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ok"; series: Record<ProFetched, PerfSeries | null> };
@@ -83,7 +83,7 @@ function useProSeries(range: PerfRange): [Load, () => void] {
       alive = false;
     };
   }, [range, tick]);
-  const retry = useCallback(() => setTick((t) => t + 1), []);
+  const retry = useCallback(() => setTick((n) => n + 1), []);
   return [got?.key === key ? got.load : { state: "loading" }, retry];
 }
 
@@ -95,9 +95,9 @@ export function PerformanceTab() {
   const empty = load.state === "ok" && PRO_FETCHED.every((mt) => isEmptySeries(load.series[mt]));
 
   let body: React.ReactNode;
-  if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={5} gap={12} label="Loading your performance" />;
-  else if (load.state === "error") body = <MarketError thing="your performance" onRetry={retry} />;
-  else if (empty || load.state !== "ok") body = <MarketEmptyCard title="No data yet" body="Profile views, hire requests and redemptions show here once your listing is visible." placeholder="Charts start with your first profile view" placeholderContentBox />;
+  if (load.state === "loading") body = <MarketSkeleton radius={20} rows={3} height={244} count={5} gap={12} label={t("Loading your performance")} />;
+  else if (load.state === "error") body = <MarketError thing={t("your performance")} onRetry={retry} />;
+  else if (empty || load.state !== "ok") body = <MarketEmptyCard title={t("No data yet")} body={t("Profile views, hire requests and redemptions show here once your listing is visible.")} placeholder={t("Charts start with your first profile view")} placeholderContentBox />;
   else {
     const s = load.series;
     const views = s.profile_views;
@@ -106,7 +106,7 @@ export function PerformanceTab() {
     const conv = rateOverTime(hires, views);
     const card = (mt: Exclude<ProMetric, "hired">) => {
       const d = mt === "conversion" ? deltaPt(proRatePt(views, hires)) : deltaText(s[mt]?.deltaPct);
-      return { question: QUESTION[mt], total: mt === "conversion" ? rateText(conv?.total ?? 0) : fmtCount(s[mt]?.total ?? 0), delta: d, note: d ? undefined : null, unit, range };
+      return { question: t(QUESTION[mt]), total: mt === "conversion" ? rateText(conv?.total ?? 0) : fmtCount(s[mt]?.total ?? 0), delta: d, note: d ? undefined : null, unit, range };
     };
     const vD = chartData(views);
     const hD = chartData(hires);
@@ -117,17 +117,17 @@ export function PerformanceTab() {
     const hiresN = hires?.total ?? 0;
     const hiredN = s.hired?.total ?? 0;
     const steps: FunnelStep[] = [
-      { label: "Profile views", value: fmtCount(viewsN), fraction: 1 },
-      { label: "Hire requests", value: fmtCount(hiresN), fraction: proStepFraction(hiresN, viewsN) },
-      { label: "Hired", value: fmtCount(hiredN), fraction: proStepFraction(hiredN, viewsN) },
+      { label: t("Profile views"), value: fmtCount(viewsN), fraction: 1 },
+      { label: t("Hire requests"), value: fmtCount(hiresN), fraction: proStepFraction(hiresN, viewsN) },
+      { label: t("Hired"), value: fmtCount(hiredN), fraction: proStepFraction(hiredN, viewsN) },
     ];
     const rate = ratePct(hiresN, viewsN);
     body = (
       <>
-        <ChartCard kind="line" {...card("profile_views")} labels={vD.labels} series={vD.values} formatValue={(v) => countOf(v, "view", "views")} />
-        <ChartCard kind="bar" {...card("hire_requests")} labels={hD.labels} series={hD.values} formatValue={(v) => countOf(v, "request", "requests")} />
-        <ChartCard kind="bar" {...card("vouchers_redeemed")} labels={rD.labels} series={rD.values} formatValue={(v) => countOf(v, "voucher", "vouchers")} />
-        <ChartCard kind="line" {...card("points_spent")} leaf labels={pD.labels} series={pD.values} formatValue={(v) => `${fmtCount(v)} pts`} />
+        <ChartCard kind="line" {...card("profile_views")} labels={vD.labels} series={vD.values} formatValue={(v) => tn(Math.round(v), "{n} view", "{n} views", { n: fmtCount(v) })} />
+        <ChartCard kind="bar" {...card("hire_requests")} labels={hD.labels} series={hD.values} formatValue={(v) => tn(Math.round(v), "{n} request", "{n} requests", { n: fmtCount(v) })} />
+        <ChartCard kind="bar" {...card("vouchers_redeemed")} labels={rD.labels} series={rD.values} formatValue={(v) => tn(Math.round(v), "{n} voucher", "{n} vouchers", { n: fmtCount(v) })} />
+        <ChartCard kind="line" {...card("points_spent")} leaf labels={pD.labels} series={pD.values} formatValue={(v) => t("{n} pts", { n: fmtCount(v) })} />
         <ChartCard kind="funnel" {...card("conversion")} total={rateText(rate)} labels={cD.labels} series={cD.values} steps={steps} rateSeries={cD.values} showAxis />
       </>
     );
@@ -136,7 +136,7 @@ export function PerformanceTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12, color: m.ink, lineHeight: "normal" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), color: m.faint }}>{load.state === "ok" && !empty ? "Tap or drag a chart" : ""}</span>
+        <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), color: m.faint }}>{load.state === "ok" && !empty ? t("Tap or drag a chart") : ""}</span>
         <ChartRangeControl ranges={PERF_RANGES} value={range} onChange={setRange} />
       </div>
       {body}

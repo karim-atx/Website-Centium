@@ -18,6 +18,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { t } from "../../i18n/core";
 
 export type Write = { ok: true } | { ok: false; message: string };
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -68,7 +69,7 @@ export async function withdrawJoinRequest(id: string): Promise<Write> {
   const { error } = await rpc("withdraw_join_request", { p_request_id: id });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  return { ok: false, message: "Couldn't withdraw. Try again." };
+  return { ok: false, message: t("Couldn't withdraw. Try again.") };
 }
 
 /**
@@ -85,10 +86,10 @@ export async function requestToJoinById(businessId: string, ask?: { role: string
   });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "22023" && `${error.message ?? ""}`.includes("500 characters")) return { ok: false, message: "Your message can be up to 500 characters." };
-  if (error.code === "ATX02") return { ok: false, message: "Too many tries in a short time. Try again in an hour." };
-  if (`${error.message ?? ""}`.includes("ATXB9")) return { ok: false, message: "This business isn't taking requests right now." };
-  return { ok: false, message: "Couldn't send your request. Try again." };
+  if (error.code === "22023" && `${error.message ?? ""}`.includes("500 characters")) return { ok: false, message: t("Your message can be up to 500 characters.") };
+  if (error.code === "ATX02") return { ok: false, message: t("Too many tries in a short time. Try again in an hour.") };
+  if (`${error.message ?? ""}`.includes("ATXB9")) return { ok: false, message: t("This business isn't taking requests right now.") };
+  return { ok: false, message: t("Couldn't send your request. Try again.") };
 }
 
 export interface BusinessFacts {

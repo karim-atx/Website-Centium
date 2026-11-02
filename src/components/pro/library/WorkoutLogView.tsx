@@ -14,6 +14,7 @@ import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader } from "./libraryUi";
 import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryModel";
 import { WorkoutLogReplies } from "./WorkoutLogReplies";
+import { t, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR22 "Client workout log · targets vs logged, swap".
@@ -63,14 +64,14 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
   if (client && !client.access.workoutActivity) {
     return (
       <div>
-        <DetailHeader title={name} eyebrow="Workout log" onBack={onBack} />
-        <LockLine what="Workout activity" clientFirstName={first} />
+        <DetailHeader title={name} eyebrow={t("Workout log")} onBack={onBack} />
+        <LockLine what={t("Workout activity")} clientFirstName={first} />
       </div>
     );
   }
 
   const assignment = session ? templateAssignments.find((a) => a.routineId === session.routineId && a.clientId === session.userId) : undefined;
-  const template = given ?? (assignment ? workoutTemplates.find((t) => t.id === assignment.templateId) ?? null : null);
+  const template = given ?? (assignment ? workoutTemplates.find((w) => w.id === assignment.templateId) ?? null : null);
   const prescribed = targets ?? template?.exercises ?? [];
   const swaps = session
     ? parseSwaps(session.swaps, { prescribed, catalog: exerciseCatalog, custom: customExercises, logged: session.exercises })
@@ -82,21 +83,21 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
   const line = session
     ? [
         template && session.routineName !== template.name ? session.routineName : null,
-        template ? (week ? `${template.name}, week ${week.n}` : template.name) : session.routineName,
-        session.durationSec ? `${Math.round(session.durationSec / 60)} min` : null,
-        rpe != null ? `RPE ${rpe}` : null,
+        template ? (week ? t("{name}, week {n}", { name: template.name, n: week.n }) : template.name) : session.routineName,
+        session.durationSec ? t("{n} min", { n: Math.round(session.durationSec / 60) }) : null,
+        rpe != null ? t("RPE {n}", { n: rpe }) : null,
       ]
         .filter(Boolean)
         .join(" · ")
     : "";
-  const when = session ? `Workout log · ${session.date === todayLocal() ? "Today" : fmtDay(session.date)} ${clock12(session.startedAt)}` : "Workout log";
+  const when = session ? t("Workout log · {day} {time}", { day: session.date === todayLocal() ? t("Today") : fmtDay(session.date), time: clock12(session.startedAt) }) : t("Workout log");
 
   const STATUS: Record<LogStatus, { label: string; ink: string }> = {
-    changed: { label: "Changed", ink: INK.goldInk },
-    planned: { label: "As planned", ink: INK.good },
-    above: { label: "Above", ink: INK.good },
-    below: { label: "Below", ink: INK.goldInk },
-    skipped: { label: "Skipped", ink: INK.hi },
+    changed: { label: t("Changed"), ink: INK.goldInk },
+    planned: { label: t("As planned"), ink: INK.good },
+    above: { label: tx("Above", "target"), ink: INK.good },
+    below: { label: tx("Below", "target"), ink: INK.goldInk },
+    skipped: { label: t("Skipped"), ink: INK.hi },
   };
 
   return (
@@ -105,7 +106,7 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
       {state === "offline" && <OfflineLine />}
       {state === "loading" && <ProCardSkeleton lines={4} />}
       {state === "error" && <ProError onRetry={() => setReload((n) => n + 1)} />}
-      {state === "none" && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>This session is no longer shared.</p>}
+      {state === "none" && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("This session is no longer shared.")}</p>}
       {session && (
         <>
           {line && <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{line}</p>}
@@ -113,20 +114,20 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
             <div key={`${s.from}-${s.to}`} className="flex items-start" style={{ gap: 10, background: INK.goldPale, borderRadius: 16, padding: "12px 14px", marginBottom: 12 }}>
               <Repeat2 size={16} aria-hidden style={{ color: INK.goldInk, flexShrink: 0, marginTop: 2 }} />
               <p style={{ fontSize: textPx(13), color: INK.ch }}>
-                <span style={{ fontWeight: 700 }}>{`${s.from} swapped for ${s.to}`}</span>
-                {s.reason ? ` · "${s.reason}"` : ""}
+                <span style={{ fontWeight: 700 }}>{t("{from} swapped for {to}", { from: s.from, to: s.to })}</span>
+                {s.reason ? ` · ${t("\"{reason}\"", { reason: s.reason })}` : ""}
               </p>
             </div>
           ))}
           {rows.length === 0 ? (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF }}>Nothing logged in this session.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("Nothing logged in this session.")}</p>
           ) : (
             <ListCard
               rows={rows.map((r, i) => ({
                 key: `${r.name}-${i}`,
                 icon: Dumbbell,
-                title: r.swapped ? `${r.name} (swap)` : r.name,
-                meta: r.status === "skipped" ? "Skipped" : [r.target, r.logged].filter(Boolean).join(" · "),
+                title: r.swapped ? t("{name} (swap)", { name: r.name }) : r.name,
+                meta: r.status === "skipped" ? t("Skipped") : [r.target, r.logged].filter(Boolean).join(" · "),
                 trailing: <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: STATUS[r.status].ink, flexShrink: 0 }}>{STATUS[r.status].label}</span>,
               }))}
             />
