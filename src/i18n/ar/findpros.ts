@@ -402,7 +402,7 @@ const findpros: Catalogue = {
   "Sessions, exercises and sets": "الجلسات والتمارين والمجموعات",
   "Your weight entries over time": "قياسات وزنك مع الوقت", // note: health-related (data-sharing category)
   "Streaks, goals and trends": "السلاسل والأهداف والاتجاهات",
-  "Steps, sleep, heart rate, water and calories burned": "الخطوات والنوم ونبض القلب والماء والسعرات المحروقة", // note: health-related (data-sharing category)
+  "Steps, sleep, heart rate, water and calories burned": "الخطوات والنوم ومعدل القلب والماء والسعرات المحروقة", // note: health-related (data-sharing category)
   "Habit ticks and streaks": "إنجاز العادات وسلاسلها",
   "Blood panels, markers and lab report documents": "تحاليل الدم والمؤشرات ووثائق تقارير المختبر", // note: health-related (data-sharing category)
   "Medications, surgeries, conditions and imaging": "الأدوية والعمليات الجراحية والحالات الصحية والتصوير الطبي", // note: health-related (data-sharing category)
