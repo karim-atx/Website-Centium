@@ -106,9 +106,15 @@ test("programmes, sessions and my programmes parse; a locked session carries no 
   assert.equal(sessionAccess(s[0]), "open");
   assert.equal(sessionAccess(s[1]), "locked");
 
-  const [m] = parseMyProgrammes([{ start_id: "s1", programme_id: "p1", slug: "x", title: "X", starts_on: "2026-11-02", sessions: 24, done: 1, next_session_number: 2, next_on: "2026-11-04", next_locked: false }]);
+  const [m] = parseMyProgrammes([{ start_id: "s1", programme_id: "p1", slug: "x", title: "X", starts_on: "2026-11-02", sessions: 24, done: 1, done_sessions: [1], next_session_number: 2, next_on: "2026-11-04", next_locked: false }]);
   assert.equal(m.nextSessionNumber, 2);
   assert.equal(m.nextOn, "2026-11-04");
+  assert.deepEqual(m.doneSessions, [1]);
+  // done_sessions: whole positive numbers, in order, no repeats; missing reads as none
+  const [odd] = parseMyProgrammes([{ start_id: "s2", programme_id: "p1", starts_on: "2026-11-02", done_sessions: [1, 2, 5, "7", 5, 0, -1, 2.5, null] }]);
+  assert.deepEqual(odd.doneSessions, [1, 2, 5, 7]);
+  const [none] = parseMyProgrammes([{ start_id: "s3", programme_id: "p1", starts_on: "2026-11-02" }]);
+  assert.deepEqual(none.doneSessions, []);
 });
 
 test("the preview is the open sessions: a week of locked sessions reads locked; dates follow starts_on + week and day", () => {
@@ -137,15 +143,19 @@ test("a start day is today to 30 days ahead", () => {
   assert.equal(startErrorText("22023"), "Choose a day from today to 30 days ahead.");
 });
 
-test("a session reads done before the next one, what was marked here wins", () => {
-  const p = { done: 2, nextSessionNumber: 3 };
+test("a session reads done from done_sessions, out of order too; what was marked here wins", () => {
+  // Sessions 1, 2 and 5 done; 3 and 4 not (the count-based guess read 5 as not done).
+  const p = { doneSessions: [1, 2, 5] };
   const none = new Map<number, boolean>();
   assert.equal(sessionDone(1, p, none), true);
+  assert.equal(sessionDone(2, p, none), true);
   assert.equal(sessionDone(3, p, none), false);
-  assert.equal(sessionDone(5, p, none), false);
+  assert.equal(sessionDone(4, p, none), false);
+  assert.equal(sessionDone(5, p, none), true);
+  assert.equal(sessionDone(6, p, none), false);
   assert.equal(sessionDone(1, p, new Map([[1, false]])), false);
-  assert.equal(sessionDone(5, p, new Map([[5, true]])), true);
-  assert.equal(sessionDone(9, { done: 24, nextSessionNumber: null }, none), true);
+  assert.equal(sessionDone(4, p, new Map([[4, true]])), true);
+  assert.equal(sessionDone(1, { doneSessions: [] }, none), false);
   assert.equal(sessionDone(1, null, none), false);
 });
 

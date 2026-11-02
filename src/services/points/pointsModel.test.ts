@@ -68,6 +68,7 @@ const e = (id: string, source: string, amount: number, createdAt: string, descri
   createdAt,
   expiresAt: null,
   reversedSource: null,
+  multiplier: 1,
 });
 
 test("ledger lines are the server's words: ref_label over description; achievements by title", () => {

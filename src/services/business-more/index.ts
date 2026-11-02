@@ -557,7 +557,7 @@ export async function addLocation(businessId: string, kind: VenueKind, d: Locati
   if (error || !data) {
     console.error("[business-more] Could not add the location:", error?.message);
     if (error?.code === "23514") return { ok: false, code: error.code, message: "Check the phone number and try again." };
-    // Round G1 (#15): ATXQ3, the plan has to be paid before a venue is added.
+    // Round G1 (#15, G fixes): ATXQ3, a plan level has to be chosen before a venue is added.
     if (error?.code === "ATXQ3") return { ok: false, code: error.code, message: premiumCodeMessage("ATXQ3", { message: error.message }) ?? "Couldn't add the location. Try again." };
     return fail(error, "Couldn't add the location. Try again.");
   }

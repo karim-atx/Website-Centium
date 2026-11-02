@@ -122,8 +122,8 @@ export interface LedgerEntry {
   expiresAt: string | null;
   /** On a reversal row, the logging source it reversed; null elsewhere. */
   reversedSource: string | null;
-  /** Round G2: points_ledger.multiplier, 2 on a Premium day (1 when my_points_ledger doesn't carry it). */
-  multiplier?: 1 | 2;
+  /** Round G2 (G fixes): my_points_ledger.multiplier, 2 on a Premium day, else 1 (also 1 from a database without it). */
+  multiplier: 1 | 2;
 }
 
 export function parseLedgerRows(data: unknown): LedgerEntry[] {

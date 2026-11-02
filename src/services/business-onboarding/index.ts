@@ -59,7 +59,7 @@ function fail<T>(error: unknown, fallback = SAVE_FAIL): Res<T> {
   // ATXB6 (identity: slug / timezone), ATXB7 (published policy), ATXB8 (review).
   if (/ATXB6/.test(msg)) return { ok: false, code: "ATXB6", message: msg.replace(/^.*ATXB6:\s*/, "").replace(/^./, (m) => m.toUpperCase()) };
   // Round G1 (#15): ATXQ3, a business created under the business plans switch
-  // adds a venue or submits its verification before its plan is paid.
+  // adds a venue or submits its verification before choosing a plan level.
   if (e?.code === "ATXQ3" || /\bATXQ3\b/.test(msg)) return { ok: false, code: "ATXQ3", message: premiumCodeMessage("ATXQ3", { message: msg }) ?? fallback };
   return { ok: false, code: e?.code, message: moderationRefusal(e) ?? fallback };
 }

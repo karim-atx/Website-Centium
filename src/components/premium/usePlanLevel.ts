@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchHiringCredits, fetchPlanLevel, type HiringCredits, type PlanLevel } from "../../services/premium";
+import { fetchHiringCredits, fetchLevelPrices, fetchPlanLevel, type HiringCredits, type PlanLevel, type PlanLevelPrice } from "../../services/premium";
 
 // Round G1 · #15: where a business stands on plan levels, and its hiring
 // credits, keyed to the business asked about. Null while loading, after a
@@ -32,4 +32,18 @@ export function usePlanLevel(businessId: string | null | undefined): { level: Pl
 export function useHiringCredits(businessId: string | null | undefined): { credits: HiringCredits | null; reload: () => void } {
   const r = useBusinessRead(businessId, fetchHiringCredits);
   return { credits: r.value, reload: r.reload };
+}
+
+/** business_plan_level_prices(), read only while `on` (the switch is on for the business). Null while loading or off; [] after a failed read. */
+export function usePlanLevelPrices(on: boolean): PlanLevelPrice[] | null {
+  const [prices, setPrices] = useState<PlanLevelPrice[] | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    let live = true;
+    void fetchLevelPrices().then((r) => live && setPrices(r.ok ? r.value : []));
+    return () => {
+      live = false;
+    };
+  }, [on]);
+  return on ? prices : null;
 }

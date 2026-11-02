@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
 import { BizNote, BizRow, BizSection } from "../business-more/kit";
 import { RefundPolicyLink } from "../legal/RefundPolicyLink";
 import { Button } from "../ui/Button";
-import { choosePlanLevel, choiceDue, fetchLevelPrices, formatPremiumPrice, planLevelName, type PlanLevel, type PlanLevelPrice, type PlanPeriod } from "../../services/premium";
+import { usePlanLevelPrices } from "./usePlanLevel";
+import { choosePlanLevel, choiceDue, formatPremiumPrice, planLevelName, type PlanLevel, type PlanLevelPrice, type PlanPeriod } from "../../services/premium";
 import { renewalDayText } from "../../services/centium-billing";
 import { t, tn } from "../../i18n/core";
 
@@ -29,21 +30,12 @@ const priceText = (row: PlanLevelPrice, p: PlanPeriod): string | null => {
 };
 
 export function BusinessPlanLevels({ businessId, level, isOwner, onChanged, historyAnchor }: { businessId: string; level: PlanLevel | null; isOwner: boolean; onChanged: () => void; historyAnchor: string }) {
-  const [prices, setPrices] = useState<PlanLevelPrice[] | null>(null);
   const [period, setPeriod] = useState<PlanPeriod>(level?.chosenBillingPeriod ?? level?.billingPeriod ?? "monthly");
   const [pick, setPick] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: "done" | "error"; text: string; pending?: boolean } | null>(null);
   const on = !!level?.businessPlansOn;
-
-  useEffect(() => {
-    if (!on) return;
-    let live = true;
-    void fetchLevelPrices().then((r) => live && setPrices(r.ok ? r.value : []));
-    return () => {
-      live = false;
-    };
-  }, [on]);
+  const prices = usePlanLevelPrices(on);
 
   if (!on || !level || !prices || prices.length === 0) return null;
   const base = prices.find((p) => p.seatBlocks === 0) ?? null;

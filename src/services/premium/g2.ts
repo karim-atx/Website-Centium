@@ -221,7 +221,7 @@ export function exportErrorText(code: string | null | undefined): string {
 
 // ---- 2x points ----
 
-/** points_ledger.multiplier (when my_points_ledger carries it): 2 on a Premium day, else 1. */
+/** my_points_ledger.multiplier (G fixes): 2 on a Premium day, else 1; anything else, or a database without it, is 1. */
 export const parseMultiplier = (v: unknown): 1 | 2 => (v === 2 || v === "2" ? 2 : 1);
 
 /** "2x with Premium" on a row: the switch on and the row made at 2x. */

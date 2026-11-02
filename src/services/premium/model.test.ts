@@ -7,7 +7,13 @@ import {
   memberStatusLine,
   memberStatusTitle,
   mayPrompt,
-  mustPayFirst,
+  mustChooseLevel,
+  awaitingPlanPayment,
+  onboardingPlanStep,
+  planHomeCard,
+  pendingPlanLine,
+  memberStatusGiver,
+  giverLineParts,
   offerUsesCredit,
   parseCandidates,
   parseFreeLimits,
@@ -67,9 +73,12 @@ test("off (and loading, and unreadable) behaves as today: no badge, no buy block
   assert.deepEqual(parseSwitches(null), { premiumOn: false, businessPlansOn: false, preview: false });
   assert.equal(businessPlansOn(null), false);
   assert.equal(businessPlansOn(parseSwitches([{ premium_on: true, business_plans_on: false }])), false);
-  assert.equal(mustPayFirst(null), false);
+  assert.equal(mustChooseLevel(null), false);
   assert.equal(choiceDue(null), false);
-  assert.equal(mustPayFirst(parseLevel([{ business_plans_on: false, must_pay_first: true }])), false);
+  assert.equal(mustChooseLevel(parseLevel([{ business_plans_on: false, must_choose_level: true }])), false);
+  assert.equal(awaitingPlanPayment(parseLevel([{ business_plans_on: false, awaiting_payment: true }])), false);
+  assert.equal(planHomeCard(parseLevel([{ business_plans_on: false, must_choose_level: true, awaiting_payment: true, choice_due: true }])), null);
+  assert.equal(planHomeCard(null), null);
   assert.equal(offerUsesCredit("role", null), false);
   assert.equal(offerUsesCredit("role", parseHiringCredits([{ credits_on: false }])), false);
 });
@@ -124,7 +133,29 @@ test("my_premium parses the handover's row", () => {
   assert.equal(parseFreeLimits({ history_days: 14 }), null);
 });
 
-test("member status (EA): pass, comp and store; never a price, never a name", () => {
+test("member status (EA): the giver's name on a pass (G fixes), today's wording without one", () => {
+  const pro = memberStatus(on({ premium: true, source: "professional_pass", from_name: "Rana" }))!;
+  assert.equal(on({ from_name: "  Rana " }).fromName, "Rana");
+  assert.equal(on({ from_name: "" }).fromName, null);
+  assert.equal(memberStatusGiver(pro), "Rana");
+  assert.equal(memberStatusTitle(pro), "Premium from Rana");
+  const gym = memberStatus(on({ premium: true, source: "gym_pass", from_name: "Iron Works" }))!;
+  assert.equal(memberStatusTitle(gym), "Premium from Iron Works");
+  // null falls back to today's wording
+  const noName = memberStatus(on({ premium: true, source: "gym_pass", from_name: null }))!;
+  assert.equal(memberStatusGiver(noName), null);
+  assert.equal(memberStatusTitle(noName), "Premium with your gym membership");
+  // a comp or a store purchase never names anyone, even if a name came back
+  const comp = memberStatus(on({ premium: true, source: "admin_comp", from_name: "Admin" }))!;
+  assert.equal(memberStatusGiver(comp), null);
+  assert.equal(memberStatusTitle(comp), "Premium");
+  // the sentence splits around the name so it can sit in <bdi>
+  assert.deepEqual(giverLineParts(), { before: "Premium from ", after: "" });
+  // the switch off: no card at all, whatever the name
+  assert.equal(memberStatus(off({ premium: true, source: "professional_pass", from_name: "Rana" })), null);
+});
+
+test("member status (EA): pass, comp and store; never a price", () => {
   const d = (iso: string) => `D(${iso})`;
   const pro = memberStatus(on({ premium: true, source: "professional_pass" }))!;
   assert.equal(memberStatusTitle(pro), "Premium from your professional");
@@ -160,9 +191,13 @@ test("every pass refusal reason has its own plain sentence; an unknown one a saf
 test("the Round G1 codes: Q0, Q1, Q3, Q4, Q6 as sentences; Q2, Q5 and others are not ours", () => {
   assert.equal(premiumCodeMessage("ATXQ0"), "That isn't available yet.");
   assert.equal(premiumCodeMessage("ATXQ1"), "That's part of Centium Premium.");
-  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: start your business plan before you add a venue" }), "Start your business plan before you add a venue.");
-  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: start your business plan before you submit your verification" }), "Start your business plan before you submit your verification.");
-  assert.equal(premiumCodeMessage("ATXQ3"), "Start your business plan first.");
+  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you add a venue" }), "Choose your business plan before you add a venue.");
+  assert.equal(premiumCodeMessage("ATXQ3", { message: "ATXQ3: choose your business plan before you submit your verification" }), "Choose your business plan before you submit your verification.");
+  assert.equal(premiumCodeMessage("ATXQ3"), "Choose your business plan first.");
+  assert.equal(
+    premiumCodeMessage("ATXQ3", { message: "ATXQ3: the business has not paid its plan yet -- mark its plan charge paid before approving" }),
+    "Your verification is approved once your plan is paid."
+  );
   assert.equal(premiumCodeMessage("ATXQ4"), "No hiring credit free. A role offer needs one.");
   assert.equal(premiumCodeMessage("ATXQ6", { detail: "too_soon" }), passReasonText("too_soon"));
   assert.equal(premiumCodeMessage("ATXQ6", { message: "ATXQ6: this client cannot have Premium through you yet (no_activity)" }), passReasonText("no_activity"));
@@ -209,8 +244,9 @@ test("passes, the gym's opt-in, plan levels and hiring credits parse the handove
   assert.deepEqual(prices.map((p) => p.seatBlocks), [0, 1, 2]);
   assert.equal(prices[1].yearlyPrice, null);
   assert.deepEqual(prices.map((p) => planLevelName(p, prices[0])), ["Base", "Base + 5 seats", "Base + 10 seats"]);
-  const level = parseLevel([{ business_plans_on: true, must_pay_first: true, plan_active: false, choice_due: false, billing_period: "yearly" }]);
-  assert.equal(mustPayFirst(level), true);
+  const level = parseLevel([{ business_plans_on: true, must_choose_level: true, plan_active: false, choice_due: false, billing_period: "yearly" }]);
+  assert.equal(mustChooseLevel(level), true);
+  assert.equal(awaitingPlanPayment(level), false);
   assert.equal(level?.billingPeriod, "yearly");
   assert.equal(choiceDue(parseLevel([{ business_plans_on: true, choice_due: true }])), true);
   const credits = parseHiringCredits([{ credits_on: true, free: 2, price_1: 39, price_3: 99, packs: [{ quantity: 3, used: 1, remaining: 2, starts_at: "a", ends_at: "b" }] }]);
@@ -218,4 +254,68 @@ test("passes, the gym's opt-in, plan levels and hiring credits parse the handove
   assert.equal(credits.packs[0].remaining, 2);
   assert.equal(offerUsesCredit("role", credits), true);
   assert.equal(offerUsesCredit("class_slot", credits), false, "class-slot hires are unchanged");
+});
+
+const PRICES = parseLevelPrices([
+  { seat_blocks: 0, seats: 5, monthly_price: 29, yearly_price: 289 },
+  { seat_blocks: 1, seats: 10, monthly_price: 89, yearly_price: 889 },
+  { seat_blocks: 2, seats: 15, monthly_price: 149, yearly_price: 1489 },
+]);
+const CHOOSE = parseLevel([{ business_plans_on: true, must_choose_level: true, plan_active: false, awaiting_payment: false }]);
+const AWAITING = parseLevel([
+  { business_plans_on: true, must_choose_level: false, plan_active: false, awaiting_payment: true, pending_charge_id: "ch1", pending_amount: 889, pending_seat_blocks: 1, pending_billing_period: "yearly" },
+]);
+const ACTIVE = parseLevel([{ business_plans_on: true, must_choose_level: false, plan_active: true, awaiting_payment: false, choice_due: false }]);
+
+test("business_plan_level (G fixes): must_choose_level and the open charge parse; must_pay_first is gone", () => {
+  assert.equal(AWAITING?.awaitingPayment, true);
+  assert.equal(AWAITING?.pendingChargeId, "ch1");
+  assert.equal(AWAITING?.pendingAmount, 889);
+  assert.equal(AWAITING?.pendingSeatBlocks, 1);
+  assert.equal(AWAITING?.pendingBillingPeriod, "yearly");
+  assert.equal("mustPayFirst" in (AWAITING ?? {}), false);
+  // an active plan is never "awaiting payment", whatever the row says
+  assert.equal(awaitingPlanPayment(parseLevel([{ business_plans_on: true, plan_active: true, awaiting_payment: true }])), false);
+});
+
+test("the onboarding plan step: only on the switch while a level must be chosen; kept after Start now", () => {
+  const onS = { businessPlansOn: true };
+  const offS = { businessPlansOn: false };
+  const gate = (o: Partial<Parameters<typeof onboardingPlanStep>[0]>) =>
+    onboardingPlanStep({ switches: onS, businessId: "b1", level: CHOOSE, levelLoading: false, justChosen: false, ...o });
+  assert.equal(gate({}), "plan");
+  // a level chosen (charge open, even unpaid), paid, or a business created before the switch: today's steps
+  assert.equal(gate({ level: AWAITING }), "skip");
+  assert.equal(gate({ level: ACTIVE }), "skip");
+  assert.equal(gate({ level: parseLevel([{ business_plans_on: true, must_choose_level: false }]) }), "skip");
+  // the switch off for the business, or no answer: today's steps
+  assert.equal(gate({ level: parseLevel([{ business_plans_on: false, must_choose_level: true }]) }), "skip");
+  assert.equal(gate({ level: null }), "skip");
+  // loading: the skeleton only when the switch is on for the owner; off or unknown, today's step
+  assert.equal(gate({ level: null, levelLoading: true }), "loading");
+  assert.equal(gate({ level: null, levelLoading: true, switches: offS }), "skip");
+  assert.equal(gate({ level: null, levelLoading: true, switches: null }), "skip");
+  // no business row yet (offline): today's step; the venue write says ATXQ3
+  assert.equal(gate({ businessId: null }), "skip");
+  // just chosen: kept on screen with the charge until Continue
+  assert.equal(gate({ level: AWAITING, justChosen: true }), "plan");
+});
+
+test("the business home card: choose, the first payment pending (with level, amount and charge), or the renewal choice", () => {
+  assert.equal(planHomeCard(CHOOSE), "choose");
+  assert.equal(planHomeCard(AWAITING), "awaiting_payment");
+  assert.equal(planHomeCard(ACTIVE), null);
+  assert.equal(planHomeCard(parseLevel([{ business_plans_on: true, plan_active: true, choice_due: true }])), "choice_due");
+  // choosing comes before anything else
+  assert.equal(planHomeCard(parseLevel([{ business_plans_on: true, must_choose_level: true, choice_due: true }])), "choose");
+  const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(n);
+  assert.equal(pendingPlanLine(AWAITING, PRICES), `Base + 5 seats · ${usd(889)}, billed yearly`);
+  // before the prices load: the level by its blocks
+  assert.equal(pendingPlanLine(AWAITING, null), `Base + 1 seat block · ${usd(889)}, billed yearly`);
+  assert.equal(
+    pendingPlanLine(parseLevel([{ business_plans_on: true, awaiting_payment: true, pending_seat_blocks: 0, pending_amount: 29, pending_billing_period: "monthly" }]), PRICES),
+    `Base · ${usd(29)}, billed monthly`
+  );
+  assert.equal(pendingPlanLine(parseLevel([{ business_plans_on: true }]), PRICES), null);
+  assert.equal(pendingPlanLine(null, PRICES), null);
 });

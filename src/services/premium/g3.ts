@@ -221,10 +221,22 @@ export interface MyCentiumProgramme {
   startsOn: string;
   sessions: number;
   done: number;
+  /** The session numbers done, in order (G fixes); sessions done out of order are here too. */
+  doneSessions: number[];
   nextSessionNumber: number | null;
   nextOn: string | null;
   nextLocked: boolean;
 }
+
+/** done_sessions (integer[]): whole positive numbers only, in the Database's order, no repeats. */
+const sessionNumbers = (v: unknown): number[] => {
+  const out: number[] = [];
+  for (const x of Array.isArray(v) ? v : []) {
+    const n = typeof x === "number" ? x : typeof x === "string" && x.trim() !== "" ? Number(x) : NaN;
+    if (Number.isInteger(n) && n > 0 && !out.includes(n)) out.push(n);
+  }
+  return out;
+};
 
 /** my_centium_programmes(): the programmes the member follows. */
 export function parseMyProgrammes(data: unknown): MyCentiumProgramme[] {
@@ -243,6 +255,7 @@ export function parseMyProgrammes(data: unknown): MyCentiumProgramme[] {
         startsOn,
         sessions: int(r.sessions),
         done: int(r.done),
+        doneSessions: sessionNumbers(r.done_sessions),
         nextSessionNumber: next === null ? null : Math.floor(next),
         nextOn: ymd(r.next_on),
         nextLocked: r.next_locked === true,
@@ -977,19 +990,14 @@ export function startErrorText(code: string | null | undefined): string {
 }
 
 /**
- * Whether a session reads as done. my_centium_programmes() gives the count
- * done and the first session not done (a Database need: the done sessions
- * themselves), so: what the member marked here wins; every session before the
- * next one is done; after it, none is, unless the count says some later ones
- * were done out of order, which the app can't place (read as not done; Mark
- * done is safe to repeat).
+ * Whether a session reads as done: what the member marked here wins, else
+ * my_centium_programmes().done_sessions (G fixes), the sessions actually
+ * done, so one done out of order reads as done.
  */
-export function sessionDone(n: number, p: Pick<MyCentiumProgramme, "done" | "nextSessionNumber"> | null, marked: ReadonlyMap<number, boolean>): boolean {
+export function sessionDone(n: number, p: Pick<MyCentiumProgramme, "doneSessions"> | null, marked: ReadonlyMap<number, boolean>): boolean {
   const m = marked.get(n);
   if (m !== undefined) return m;
-  if (!p) return false;
-  if (p.nextSessionNumber === null) return p.done > 0;
-  return n < p.nextSessionNumber;
+  return !!p && p.doneSessions.includes(n);
 }
 
 /** A lab status in words ("below range", "in range", "above range"); null for none. */

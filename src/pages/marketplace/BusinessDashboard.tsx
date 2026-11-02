@@ -254,7 +254,7 @@ export default function BusinessDashboard() {
 
       {error && !raw && <ErrorRow c={c} text={error} onRetry={() => void load()} />}
 
-      {/* Round G1 (#15): pay-first and the renewal choice, only with business_plans_on. */}
+      {/* Round G1 (#15, G fixes): choose a plan level, the first payment pending, and the renewal choice, only with business_plans_on. */}
       <BusinessPlanHomeCard businessId={business?.id} />
 
       {/* Kept from the venue switcher (VenueSwitcher): a hidden venue is explained, and staff are told they can only view. */}

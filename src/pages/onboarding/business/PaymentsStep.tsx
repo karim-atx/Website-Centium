@@ -9,7 +9,7 @@ import type { LaneStepProps } from "./laneTypes";
 import { t } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { useSwitches } from "../../../services/premium/hooks";
-import { businessPlansOn, mustPayFirst } from "../../../services/premium/model";
+import { awaitingPlanPayment, businessPlansOn, mustChooseLevel } from "../../../services/premium/model";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 
 // OB-232 / 266 / 294: Step 5 · Payments. Cash now (venue_payment_method cash);
@@ -21,12 +21,14 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
   const lane = biz.lane ?? "gym";
   const plan = useBusinessPlanTier();
   const price = plan.base ? money(plan.base.monthlyPrice) : plan.loading ? "…" : "–";
-  // Round G1 (#15): pay-first. A business already created reads its own flag
-  // (business_plan_level); one not yet created will be paid first when the
-  // business plans switch is on for its owner. Off, or loading: as today.
+  // Round G1 (#15, G fixes): the plan is chosen at the start of onboarding,
+  // and verification approval waits for its first payment. A business already
+  // created reads its own answer (business_plan_level: a level still to choose,
+  // or its charge awaiting payment); one not yet created will choose first
+  // when the business plans switch is on for its owner. Off, or loading: as today.
   const { switches } = useSwitches();
   const { level, loading: levelLoading } = usePlanLevel(biz.businessId);
-  const payFirst = biz.businessId ? !levelLoading && mustPayFirst(level) : businessPlansOn(switches);
+  const approvalWaits = biz.businessId ? !levelLoading && (mustChooseLevel(level) || awaitingPlanPayment(level)) : businessPlansOn(switches);
   return (
     <BizFrame
       step={flowKey}
@@ -60,8 +62,8 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
         sub={lane === "store" ? t("Add seats when your staff join") /* OURS (COPY: Store seats only once staff are added) */ : t("Includes 5 seats for your team")}
         price={price}
         note={
-          payFirst
-            ? t("Your plan is paid first: your business goes live, and you can submit your verification, once its first payment is recorded.") /* undrawn (Round G, no handover) */
+          approvalWaits
+            ? t("Your verification is approved, and your business goes live, once your plan's first payment is recorded.") /* undrawn (Round G, no handover) */
             : plan.error
               ? t("Couldn't load the plan price. It's shown again before you're charged.") /* OURS */
               : t("Plans and payment details are shown before you subscribe.") /* Round F (Karim) */
