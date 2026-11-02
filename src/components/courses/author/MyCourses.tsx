@@ -23,6 +23,7 @@ import { PageHead } from "../../pro/courses/courseUi";
 import { COURSE_TABS, sizeLine, statusLabel, tabOf, type CourseTab } from "../../pro/courses/courseModel";
 import { CourseSheet } from "../../pro/courses/CourseSheet";
 import { CourseStats } from "../../pro/courses/CourseStats";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 MO18 v3 "Community › Courses › Your courses" (Published,
@@ -89,9 +90,9 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
   if (!canAuthor) {
     return (
       <div>
-        <PageHead title="Your courses" sub="In Community › Courses, under your name" onBack={back} />
-        <EmptyState icon={GraduationCap} title="Courses are written by verified professionals" line="Add your licence in Profile and we'll verify it. Once it's verified you can write and publish courses here.">
-          <CtaButton size="base" variant="secondary" label="Go to Profile" onClick={() => navigate("/app/profile")} />
+        <PageHead title={t("Your courses")} sub={t("In Community › Courses, under your name")} onBack={back} />
+        <EmptyState icon={GraduationCap} title={t("Courses are written by verified professionals")} line={t("Add your licence in Profile and we'll verify it. Once it's verified you can write and publish courses here.")}>
+          <CtaButton size="base" variant="secondary" label={t("Go to Profile")} onClick={() => navigate("/app/profile")} />
         </EmptyState>
       </div>
     );
@@ -111,9 +112,9 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
 
   return (
     <div className="flex flex-col pb-28">
-      <PageHead title="Your courses" sub="In Community › Courses, under your name" onBack={back} />
+      <PageHead title={t("Your courses")} sub={t("In Community › Courses, under your name")} onBack={back} />
       <SegmentedTabs
-        items={COURSE_TABS.map((t) => ({ key: t, label: t }))}
+        items={COURSE_TABS.map((k) => ({ key: k, label: t(k) }))}
         activeKey={tab}
         onChange={(k) => setParams({ tab: k }, { replace: true })}
         tabHeight={40}
@@ -126,27 +127,27 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
       {failed && !cards ? (
         <ProError onRetry={() => void load()} />
       ) : !cards ? (
-        <div role="status" aria-label="Loading" className="flex flex-col" style={{ gap: 10 }}>
+        <div role="status" aria-label={t("Loading")} className="flex flex-col" style={{ gap: 10 }}>
           <ProCardSkeleton lines={3} height={190} />
           <ProCardSkeleton lines={3} height={190} />
         </div>
       ) : cards.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="No courses yet" line="A course is weeks of lessons: videos, readings, PDFs and quizzes. It stays a draft until you publish it.">
-          <CtaButton size="base" variant="secondary" icon={<Plus size={15} strokeWidth={2} aria-hidden />} label="Create a course" onClick={() => setCreating(true)} />
+        <EmptyState icon={GraduationCap} title={t("No courses yet")} line={t("A course is weeks of lessons: videos, readings, PDFs and quizzes. It stays a draft until you publish it.")}>
+          <CtaButton size="base" variant="secondary" icon={<Plus size={15} strokeWidth={2} aria-hidden />} label={t("Create a course")} onClick={() => setCreating(true)} />
         </EmptyState>
       ) : (
         <>
-          {shown.length === 0 && <EmptyState icon={GraduationCap} title={`No ${tab.toLowerCase()} courses`} />}
+          {shown.length === 0 && <EmptyState icon={GraduationCap} title={tab === "Published" ? t("No published courses") : tab === "Drafts" ? t("No drafts courses") : t("No archived courses")} />}
           {shown.map((c) => (
             <CourseCardView key={c.id} card={c} summary={summaries.get(c.id) ?? null} cover={coverUrl(extras.get(c.id)?.coverPath)} onOpen={() => openCard(c)} />
           ))}
           {tab === "Archived" && shown.length > 0 && (
-            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>Archived courses are hidden from new clients. Anyone enrolled keeps access.</p>
+            <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{t("Archived courses are hidden from new clients. Anyone enrolled keeps access.")}</p>
           )}
         </>
       )}
 
-      {cards && cards.length > 0 && <Fab label="Create course" icon={Plus} onClick={() => setCreating(true)} />}
+      {cards && cards.length > 0 && <Fab label={t("Create course")} icon={Plus} onClick={() => setCreating(true)} />}
 
       {(creating || (open && !!openCourseId)) && (
         <CourseSheet
@@ -162,12 +163,12 @@ export function MyCourses({ userId, canAuthor, openCourseId }: { userId: string;
             navigate(`/app/forum/courses/mine/${id}`, { replace: true, state: { step: 1 } });
           }}
           onSubmitted={(title) => {
-            setToast(`${title} is with Centium for review.`);
+            setToast(t("{title} is with Centium for review.", { title }));
             closeSheet();
             void load();
           }}
           onSavedDraft={() => {
-            setToast("Saved as a draft.");
+            setToast(t("Saved as a draft."));
             closeSheet();
             void load();
           }}
@@ -190,7 +191,7 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
       onClick={onOpen}
       className="tap w-full text-start overflow-hidden"
       style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10 }}
-      aria-label={`${c.title}, ${pub ? "published" : statusLabel(c.status).toLowerCase()}`}
+      aria-label={`${c.title}, ${pub ? t("published") : t(statusLabel(c.status)).toLowerCase()}`}
     >
       <div className="relative overflow-hidden" style={{ height: 96, background: coverBackground(c.coverColour, dark) }}>
         {cover && <img src={cover} alt="" className="absolute inset-0 w-full h-full object-cover" />}
@@ -207,7 +208,7 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
             <>
               <span className="inline-flex items-center" style={{ gap: 4 }}>
                 <Users size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
-                {c.enrolled} enrolled
+                {t("{n} enrolled", { n: c.enrolled })}
               </span>
               {c.ratings > 0 && c.averageRating !== null && (
                 <span className="inline-flex items-center ms-auto" style={{ gap: 4 }}>
@@ -219,16 +220,16 @@ function CourseCardView({ card: c, summary, cover, onOpen }: { card: CourseCard;
           ) : tab === "Archived" ? (
             <span className="inline-flex items-center" style={{ gap: 5 }}>
               <span aria-hidden style={{ width: 6, height: 6, borderRadius: 9999, background: INK.chF }} />
-              {c.enrolled} took it
-              {summary?.unpublishedAt && <span style={{ color: INK.chF, marginInlineStart: 7 }}>Unpublished {fmtDay(summary.unpublishedAt)}</span>}
+              {tn(c.enrolled, "{n} took it", "{n} took it")}
+              {summary?.unpublishedAt && <span style={{ color: INK.chF, marginInlineStart: 7 }}>{t("Unpublished {date}", { date: fmtDay(summary.unpublishedAt) })}</span>}
             </span>
           ) : (
             <>
               <span className="inline-flex items-center" style={{ gap: 5 }}>
                 <span aria-hidden style={{ width: 6, height: 6, borderRadius: 9999, background: dot }} />
-                {statusLabel(c.status)}
+                {t(statusLabel(c.status))}
               </span>
-              {c.status === "submitted" && c.submittedAt && <span style={{ color: INK.chF }}>Submitted {fmtDay(c.submittedAt)}</span>}
+              {c.status === "submitted" && c.submittedAt && <span style={{ color: INK.chF }}>{t("Submitted {date}", { date: fmtDay(c.submittedAt) })}</span>}
             </>
           )}
         </div>

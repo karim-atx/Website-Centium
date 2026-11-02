@@ -12,6 +12,7 @@ import {
   type PersonalReminder,
 } from "../../services/personal-reminders";
 import { todayLocal } from "../../utils/date";
+import { t, tn } from "../../i18n/core";
 
 /**
  * A personal reminder: every so many days, from a chosen date. It carries no
@@ -35,7 +36,7 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
     void fetchPersonalReminder(authUserId).then((r) => {
       if (cancelled) return;
       if (!r.ok) {
-        setLoadError(r.message);
+        setLoadError(t(r.message));
         setLoaded("error");
         return;
       }
@@ -69,9 +70,9 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
     setBusy(false);
     if (r.ok) {
       setExisting({ cadenceDays: days, nextDueOn: nextDue, enabled });
-      setMessage("Saved.");
+      setMessage(t("Saved."));
     } else {
-      setMessage(r.message);
+      setMessage(t(r.message));
     }
   };
 
@@ -85,22 +86,22 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
       setCadence("14");
       setNextDue(todayLocal());
       setEnabled(true);
-      setMessage("Reminder removed.");
+      setMessage(t("Reminder removed."));
     } else {
-      setMessage(r.message);
+      setMessage(t(r.message));
     }
   };
 
   return (
-    <BottomSheet open={open} onClose={close} title="Personal reminder">
+    <BottomSheet open={open} onClose={close} title={t("Personal reminder")}>
       {loaded === "loading" ? (
-        <p className="text-[13px] text-charcoal-faint">Loading…</p>
+        <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>
       ) : loaded === "error" ? (
         <p className="text-[13px] text-charcoal-faint">{loadError}</p>
       ) : (
         <div className="space-y-4">
           <label className="block">
-            <span className="text-[12px] font-semibold text-charcoal">Remind me every</span>
+            <span className="text-[12px] font-semibold text-charcoal">{t("Remind me every")}</span>
             <span className="mt-1.5 flex items-center gap-2">
               <input
                 type="number"
@@ -111,11 +112,11 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
                 onChange={(e) => setCadence(e.target.value)}
                 className="w-20 rounded-xl border border-charcoal/[0.12] bg-cream-card px-3 py-2.5 text-[14px] text-charcoal tabular-nums"
               />
-              <span className="text-[13px] text-charcoal-soft">days</span>
+              <span className="text-[13px] text-charcoal-soft">{tn(days || 0, "days", "days")}</span>
             </span>
           </label>
           <label className="block">
-            <span className="text-[12px] font-semibold text-charcoal">Next reminder on</span>
+            <span className="text-[12px] font-semibold text-charcoal">{t("Next reminder on")}</span>
             <input
               type="date"
               min={today}
@@ -125,12 +126,11 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
             />
           </label>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[13px] font-semibold text-charcoal">On</span>
-            <Toggle checked={enabled} onChange={setEnabled} label="Reminder on" />
+            <span className="text-[13px] font-semibold text-charcoal">{t("On")}</span>
+            <Toggle checked={enabled} onChange={setEnabled} label={t("Reminder on")} />
           </div>
           <p className="text-[11px] text-charcoal-faint leading-relaxed">
-            Arrives as a notification from 9:00 AM in your timezone, reading "You have a reminder today". Turn on
-            notifications in Settings to receive it.
+            {t('Arrives as a notification from 9:00 AM in your timezone, reading "You have a reminder today". Turn on notifications in Settings to receive it.')}
           </p>
           {message && (
             <p role="status" className="text-[12px] font-semibold text-primary-dark">
@@ -138,11 +138,11 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
             </p>
           )}
           <Button className="w-full" disabled={!valid || busy} onClick={save}>
-            Save
+            {t("Save")}
           </Button>
           {existing && (
             <Button variant="ghost" className="w-full" disabled={busy} onClick={remove}>
-              Remove reminder
+              {t("Remove reminder")}
             </Button>
           )}
         </div>

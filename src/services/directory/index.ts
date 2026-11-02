@@ -23,6 +23,7 @@ import type { PaymentModality } from "../professional-profile";
 // their node:test files can name it.
 export type { DirectoryListing } from "./model";
 import type { DirectoryListing } from "./model";
+import { tk } from "../../i18n/core";
 import { directoryCall, directoryErrorText, firstRow, type DirRead } from "./eg";
 
 const LISTING_COLUMNS =
@@ -80,9 +81,9 @@ export type DirectoryResult =
 
 function describe(error: PostgrestError): string {
   if (/jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to browse professionals.";
+    return tk("Your session expired. Sign in again to browse professionals.");
   }
-  return "Could not load professionals right now.";
+  return tk("Could not load professionals right now.");
 }
 
 /**

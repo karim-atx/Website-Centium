@@ -17,6 +17,13 @@ import { Caps, Chevron, PressButton } from "./parts";
 import { PlaylistCard } from "../../../components/music/PlaylistCard";
 import { providerHeading } from "../../../services/music/whichMusic";
 import type { SocialLink } from "./profileModel";
+import { getLanguage, t } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
+
+/** The week strip's day letter (Monday first): the board's letters in English, the locale's narrow day name otherwise. */
+const dayLetter = (i: number) => (getLanguage() === "en" ? WEEKDAY_LETTERS[i] : new Date(2024, 0, i + 1).toLocaleDateString(appLocale(), { weekday: "narrow" }));
+/** "Monday" … (2024-01-01 is a Monday). */
+const dayName = (i: number) => new Date(2024, 0, i + 1).toLocaleDateString(appLocale("en-US"), { weekday: "long" });
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proAbout` "About · point offers"
 // (Client Professional Screens lines 73–104). Literal values:
@@ -93,7 +100,7 @@ export const AboutTab: React.FC<{
       {bio ? <p style={{ margin: "16px 0 0", fontSize: textPx(13), lineHeight: linePx(19.5), color: m.ink2, whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{bio}</p> : null}
 
       {specialties.length > 0 && (
-        <ul aria-label="Specialties" style={{ margin: "12px 0 0", padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <ul aria-label={t("Specialties")} style={{ margin: "12px 0 0", padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
           {specialties.map((s) => (
             <li key={s} style={{ padding: "5px 10px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(11.5), fontWeight: 700 }}>
               {s}
@@ -103,15 +110,15 @@ export const AboutTab: React.FC<{
       )}
 
       {playlistUrl && (
-        <section aria-label="Music" style={{ marginTop: 18 }}>
-          <Caps>Music</Caps>
+        <section aria-label={t("Music")} style={{ marginTop: 18 }}>
+          <Caps>{t("Music")}</Caps>
           <PlaylistCard url={playlistUrl} heading={providerHeading(firstName)} style={{ marginTop: 8 }} />
         </section>
       )}
 
       {socials.length > 0 && (
-        <section aria-label="Social" style={{ marginTop: 18 }}>
-          <Caps>Social</Caps>
+        <section aria-label={t("Social")} style={{ marginTop: 18 }}>
+          <Caps>{t("Social")}</Caps>
           <ul style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
             {socials.map((s) => (
               <li key={s.kind}>
@@ -119,11 +126,11 @@ export const AboutTab: React.FC<{
                   href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`${s.label} ${s.text} (opens in a new tab)`}
+                  aria-label={t("{network} {handle} (opens in a new tab)", { network: s.label, handle: s.text })}
                   className="hit market-focus"
                   style={{ display: "inline-flex", padding: "5px 10px", borderRadius: 999, background: m.pale, color: m.pdark, fontSize: textPx(11.5), fontWeight: 700, textDecoration: "none" }}
                 >
-                  {s.label} {s.text}
+                  {s.label} <bdi>{s.text}</bdi>
                 </a>
               </li>
             ))}
@@ -138,10 +145,10 @@ export const AboutTab: React.FC<{
       ) : null}
 
       {where && (
-        <section aria-label="Where" style={{ marginTop: 18 }}>
-          <Caps>Where</Caps>
+        <section aria-label={t("Where")} style={{ marginTop: 18 }}>
+          <Caps>{t("Where")}</Caps>
           {where.length === 0 ? (
-            <p style={{ margin: "8px 0 0", fontSize: textPx(12.5), color: m.faint }}>{firstName || "They"} hasn't said where they work yet.</p>
+            <p style={{ margin: "8px 0 0", fontSize: textPx(12.5), color: m.faint }}>{t("{name} hasn't said where they work yet.", { name: firstName || t("They") })}</p>
           ) : (
             <div style={{ ...card, marginTop: 8, overflow: "hidden" }}>
               {where.map((w, i) => {
@@ -164,19 +171,19 @@ export const AboutTab: React.FC<{
       )}
 
       {availability && (
-        <section aria-label="Availability this week" style={{ marginTop: 18 }}>
-          <Caps>Availability this week</Caps>
+        <section aria-label={t("Availability this week")} style={{ marginTop: 18 }}>
+          <Caps>{t("Availability this week")}</Caps>
           {availability.state === "ready" && availability.week ? (
-            <div role="list" aria-label="Open sessions this week" style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4 }}>
+            <div role="list" aria-label={t("Open sessions this week")} style={{ marginTop: 8, display: "grid", gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 4 }}>
               {availability.week.map((n, i) => (
                 <span
                   key={i}
                   role="listitem"
-                  aria-label={`${["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][i]}: ${n} open`}
+                  aria-label={t("{day}: {n} open", { day: dayName(i), n })}
                   style={{ textAlign: "center", borderRadius: 10, padding: "8px 0", background: n ? m.pale : m.soft }}
                 >
                   <span aria-hidden style={{ display: "block", fontSize: textPx(10), fontWeight: 700, color: m.faint }}>
-                    {WEEKDAY_LETTERS[i]}
+                    {dayLetter(i)}
                   </span>
                   <span aria-hidden style={{ display: "block", fontSize: textPx(13), fontWeight: 800, color: n ? m.pdark : m.tert, fontVariantNumeric: "tabular-nums" }}>
                     {n}
@@ -186,18 +193,18 @@ export const AboutTab: React.FC<{
             </div>
           ) : (
             <p style={{ margin: "8px 0 0", fontSize: textPx(12.5), color: m.faint }}>
-              {availability.state === "blocked" ? availability.blockedLine : availability.state === "none" ? "No session types to book yet." : "Couldn't load open times."}
+              {availability.state === "blocked" ? availability.blockedLine : availability.state === "none" ? t("No session types to book yet.") : t("Couldn't load open times.")}
             </p>
           )}
         </section>
       )}
 
       {offers.length > 0 && (
-        <section aria-label="Point offers" style={{ marginTop: 18 }}>
+        <section aria-label={t("Point offers")} style={{ marginTop: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-            <Caps>Point offers</Caps>
+            <Caps>{t("Point offers")}</Caps>
             <span style={{ display: "inline-flex", alignItems: "baseline", gap: 3, fontSize: textPx(12), color: m.faint, whiteSpace: "nowrap" }}>
-              You have <span style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink, fontVariantNumeric: "tabular-nums" }}>{formatPoints(balance)}</span>
+              {t("You have")} <span style={{ fontSize: textPx(14), fontWeight: 700, color: m.ink, fontVariantNumeric: "tabular-nums" }}>{formatPoints(balance)}</span>
               <PointsLeaf height={10} />
             </span>
           </div>
@@ -208,12 +215,12 @@ export const AboutTab: React.FC<{
                 <PressButton
                   key={o.id}
                   onClick={() => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.id)}`)}
-                  aria-label={`${o.headline}. ${formatPoints(o.pointsCost)} points. ${p.note}`}
+                  aria-label={t("{offer}. {points} points. {note}", { offer: o.headline, points: formatPoints(o.pointsCost), note: p.note })}
                   style={{ ...card, position: "relative", overflow: "hidden", width: "100%", textAlign: "start", font: "inherit", lineHeight: "normal", cursor: "pointer", padding: "12px 14px 14px", display: "flex", gap: 12 }}
                 >
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, overflowWrap: "anywhere" }}>{o.headline}</span>
-                    {o.endsOn ? <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>Ends {dayText(o.endsOn)}</span> : null}
+                    {o.endsOn ? <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint, marginTop: 1 }}>{t("Ends {date}", { date: dayText(o.endsOn) })}</span> : null}
                   </span>
                   <span style={{ alignSelf: "flex-end", textAlign: "end", flexShrink: 0 }}>
                     <span style={{ display: "inline-flex", alignItems: "baseline", gap: 3, whiteSpace: "nowrap" }}>
@@ -232,17 +239,17 @@ export const AboutTab: React.FC<{
       )}
 
       {teaches.length > 0 && (
-        <section aria-label="Teaches at" style={{ marginTop: 18 }}>
-          <Caps>Teaches at</Caps>
+        <section aria-label={t("Teaches at")} style={{ marginTop: 18 }}>
+          <Caps>{t("Teaches at")}</Caps>
           <div style={{ ...card, marginTop: 8, overflow: "hidden" }}>
             {teaches.map((c, i) => {
-              const t = time12Split(c.startTime);
+              const tm = time12Split(c.startTime);
               const open = c.businessId ? () => navigate(`/app/marketplace/gym?id=${encodeURIComponent(c.businessId!)}`) : undefined;
               const inner = (
                 <>
                   <span style={{ width: 52, flexShrink: 0, textAlign: "center", borderRadius: 10, background: m.pale, padding: "6px 0" }}>
-                    <span style={{ display: "block", fontSize: textPx(13), fontWeight: 800, color: m.ink, fontVariantNumeric: "tabular-nums" }}>{t?.time ?? ""}</span>
-                    <span style={{ display: "block", fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{[t?.meridiem, weekdayCaps(c.weekday)].filter(Boolean).join(" ")}</span>
+                    <span style={{ display: "block", fontSize: textPx(13), fontWeight: 800, color: m.ink, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? ""}</span>
+                    <span style={{ display: "block", fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{[tm?.meridiem, weekdayCaps(c.weekday)].filter(Boolean).join(" ")}</span>
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(13.5), fontWeight: 700, overflowWrap: "anywhere" }}>{teachesTitle(c, today)}</span>

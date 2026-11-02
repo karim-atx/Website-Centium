@@ -6,6 +6,7 @@ import {
   type ConnectedProfessional,
 } from "../../services/connected-professional";
 import { LicencePendingTag } from "./LicencePendingTag";
+import { t } from "../../i18n/core";
 
 /**
  * Bio and specialty for the professional whose sharing sheet is open.
@@ -53,7 +54,8 @@ export const ConnectedProfessionalDetail: React.FC<{ professionalId: string }> =
   // The subtype alone is not worth a block: it is already implied by where the
   // client is standing, and rendering "Health professional" over a sharing
   // sheet tells them nothing they did not know.
-  const role = professionalRole({ specialty, subtype });
+  // The subtype label is an English key; the specialty is the professional's own text (t() leaves it).
+  const role = professionalRole({ specialty, subtype }) ? t(professionalRole({ specialty, subtype })!) : null;
   const hasBio = !!bio?.trim();
   // Release 3 (Karim's answer 1): a client deciding what to share is told
   // when the professional's licence isn't verified yet.

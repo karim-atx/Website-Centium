@@ -8,6 +8,7 @@ import { stubColors, type StubTone } from "../../../components/market/marketColo
 import { initialsOf } from "../../../components/market/peopleModel";
 import { sortWork, workDates, workRoleLine, workStub, type WorkEntry } from "../../../services/pro-profile/model";
 import { EmptyBlock } from "./parts";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proWork` / `proWorkEmpty` (Client
 // Professional Screens lines 118–132, 150–156; P-MA.2 uses the same entry).
@@ -31,29 +32,29 @@ export type WorkState = { kind: "loading" } | { kind: "pending" } | { kind: "err
 export const WorkTab: React.FC<{ state: WorkState; firstName: string; today: string; onRetry: () => void }> = ({ state, firstName, today, onRetry }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
-  const who = firstName || "This professional";
-  if (state.kind === "loading") return <MarketSkeleton radius={18} rows={3} height={88} count={2} label="Loading work history" style={{ marginTop: 14 }} />;
-  if (state.kind === "error") return <MarketError thing="work history" onRetry={onRetry} style={{ marginTop: 14 }} />;
+  const who = firstName || t("This professional");
+  if (state.kind === "loading") return <MarketSkeleton radius={18} rows={3} height={88} count={2} label={tk("Loading work history")} style={{ marginTop: 14 }} />;
+  if (state.kind === "error") return <MarketError thing={tk("work history")} onRetry={onRetry} style={{ marginTop: 14 }} />;
   if (state.kind === "pending") {
     return (
       <p role="status" style={{ margin: 0, padding: "40px 24px 0", textAlign: "center", fontSize: textPx(13), lineHeight: linePx(20.15), color: m.faint }}>
-        Roles and classes {who} is hired for through Centium will show here soon.
+        {t("Roles and classes {name} is hired for through Centium will show here soon.", { name: who })}
       </p>
     );
   }
   if (state.entries.length === 0) {
-    return <EmptyBlock title="No Centium work history yet" body={`Roles and classes ${who} is hired for through Centium will show here, with each gym's name.`} />;
+    return <EmptyBlock title={t("No Centium work history yet")} body={t("Roles and classes {name} is hired for through Centium will show here, with each gym's name.", { name: who })} />;
   }
   const tone = (stub: "Role" | "Class slot" | "Ended"): StubTone =>
     stub === "Role" ? 4 : stub === "Ended" ? "muted" : dark ? 1 : { ...stubColors(1, m, false), perf: m.fill };
   return (
-    <ul aria-label="Work history" style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 10, lineHeight: "normal" }}>
+    <ul aria-label={t("Work history")} style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 10, lineHeight: "normal" }}>
       {sortWork(state.entries, today).map((w) => {
         const stub = workStub(w, today);
         const c = stubColors(tone(stub), m, dark);
         return (
           <li key={w.id}>
-            <TicketStub stubWidth={46} vertical stubLabel={stub} tone={c} minHeight={88} bodyStyle={{ padding: "12px 14px", display: "flex", gap: 12 }}>
+            <TicketStub stubWidth={46} vertical stubLabel={t(stub)} tone={c} minHeight={88} bodyStyle={{ padding: "12px 14px", display: "flex", gap: 12 }}>
               <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(12.5), fontWeight: 800, color: m.accent, flexShrink: 0 }}>
                 {initialsOf(w.businessName)}
               </span>

@@ -3,6 +3,7 @@ import { Star, User } from "lucide-react";
 import type { ReviewRow } from "../../services/professional-reviews";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 
 // One review, rendered the same way everywhere it appears: the listing's
 // reviews sheet, the reviewer's own card, and the professional's Profile.
@@ -36,20 +37,20 @@ const Body: React.FC<{
         {redacted ? (
           // Not counted anywhere: professional_rating_summary leaves redacted
           // reviews out of the average and the count.
-          <p className="text-charcoal-faint italic" style={{ fontSize: textPx(size) }}>A moderator removed this review. It no longer counts toward the rating.</p>
+          <p className="text-charcoal-faint italic" style={{ fontSize: textPx(size) }}>{t("A moderator removed this review. It no longer counts toward the rating.")}</p>
         ) : (
           review.body && <p className="text-charcoal-soft leading-relaxed whitespace-pre-line break-words" style={{ fontSize: textPx(size) }}>{review.body}</p>
         )}
         {reply && (
           <div className="mt-2.5 ms-1 ps-3 border-s-2 border-primary/30">
             <p className="flex items-center gap-2 text-[11px] font-bold text-charcoal-soft">
-              {replyLabel}
+              {t(replyLabel)}
               {reply.editedAt && !reply.redactedAt && !hideEdited && (
-                <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
+                <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">{t("Edited")}</span>
               )}
             </p>
             {reply.redactedAt ? (
-              <p className="text-[13px] text-charcoal-faint italic">A moderator removed this reply. Only you can see that it was here.</p>
+              <p className="text-[13px] text-charcoal-faint italic">{t("A moderator removed this reply. Only you can see that it was here.")}</p>
             ) : (
               <p className="text-[13px] text-charcoal-soft leading-relaxed whitespace-pre-line break-words">{reply.body}</p>
             )}
@@ -87,7 +88,7 @@ export const ReviewItem: React.FC<{
    * the profile's My review passes this.
    */
   hideEdited?: boolean;
-}> = ({ review, showName = true, starSize = 13, replyLabel = "Reply from the professional", actions, layout = "default", menu, hideEdited }) => {
+}> = ({ review, showName = true, starSize = 13, replyLabel = tk("Reply from the professional"), actions, layout = "default", menu, hideEdited }) => {
   const redacted = !!review.redactedAt;
   if (layout === "row") {
     const named = !!review.reviewerName;
@@ -106,11 +107,11 @@ export const ReviewItem: React.FC<{
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[13px] leading-4 font-bold text-charcoal truncate">{showName ? review.reviewerName ?? "A client" : "You"}</p>
+              <p className="text-[13px] leading-4 font-bold text-charcoal truncate">{showName ? review.reviewerName ?? t("A client") : t("You")}</p>
               {menu && <span className="flex items-center shrink-0">{menu}</span>}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="flex items-center gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
+              <span className="flex items-center gap-0.5" role="img" aria-label={t("{n} out of 5 stars", { n: review.rating })}>
                 {stars(review.rating, 11)}
               </span>
               <span className="text-[11px] text-charcoal-faint">
@@ -128,16 +129,16 @@ export const ReviewItem: React.FC<{
   return (
     <div>
       <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex items-center gap-1" role="img" aria-label={`${review.rating} out of 5 stars`}>
+        <div className="flex items-center gap-1" role="img" aria-label={t("{n} out of 5 stars", { n: review.rating })}>
           {stars(review.rating, starSize)}
         </div>
         {/* edited_at is stamped by a trigger only when the rating or body
             actually changed, so this means a real edit. */}
         {review.editedAt && !redacted && !hideEdited && (
-          <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Edited</span>
+          <span className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">{t("Edited")}</span>
         )}
       </div>
-      {showName && <p className="text-xs font-semibold text-charcoal-soft mb-0.5">{review.reviewerName ?? "A client"}</p>}
+      {showName && <p className="text-xs font-semibold text-charcoal-soft mb-0.5">{review.reviewerName ?? t("A client")}</p>}
       <Body review={review} redacted={redacted} replyLabel={replyLabel} actions={actions} size={14} hideEdited={hideEdited} />
     </div>
   );

@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { fetchPublicCertificate, type PublicCertificate as Cert } from "../../services/courses";
 import { CentiumLockup } from "../../components/icons/CentiumMark";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tx } from "../../i18n/core";
 
 // The public certificate page: /certificate/:serial
 //
@@ -22,7 +23,7 @@ import { appLocale } from "../../i18n/format";
 // qualification" is fixed wording from the design and is not negotiable: it is
 // the sentence that stops this page being mistaken for a licence.
 
-const DISCLAIMER = "A certificate of completion, not a professional qualification.";
+const DISCLAIMER = tk("A certificate of completion, not a professional qualification.");
 
 /** Its own colours, because it renders for someone who has never signed in. */
 const INK = "#241F1B";
@@ -72,7 +73,7 @@ export default function PublicCertificate() {
   }, [serial]);
 
   useEffect(() => {
-    document.title = state.status === "found" ? `${state.cert.courseTitle} · Centium` : "Certificate · Centium";
+    document.title = state.status === "found" ? `${state.cert.courseTitle} · Centium` : t("Certificate · Centium");
   }, [state]);
 
   if (state.status === "loading") {
@@ -90,7 +91,7 @@ export default function PublicCertificate() {
         <Wordmark />
         <div className="rounded-[22px] p-6 text-center" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
           <p className="text-[15px] font-extrabold" style={{ color: INK }}>
-            Something went wrong
+            {t("Something went wrong")}
           </p>
           <p className="mt-1.5 text-[13px] leading-[1.6]" style={{ color: MUTED }}>
             {state.message}
@@ -106,13 +107,13 @@ export default function PublicCertificate() {
         <Wordmark />
         <div className="rounded-[22px] p-6 text-center" style={{ background: CARD, border: `1px solid ${BORDER}` }}>
           <p className="text-[15px] font-extrabold" style={{ color: INK }}>
-            We couldn't find that certificate
+            {t("We couldn't find that certificate")}
           </p>
           {/* DELIBERATELY SAYS NOTHING ABOUT WHY. The serial may never have
               existed, or its owner may not be sharing it; this page cannot tell
               you which, and that is the point rather than a limitation. */}
           <p className="mt-1.5 text-[13px] leading-[1.6]" style={{ color: MUTED }}>
-            Check the link and try again.
+            {t("Check the link and try again.")}
           </p>
         </div>
       </Frame>
@@ -134,11 +135,11 @@ export default function PublicCertificate() {
         style={{ background: CARD, border: `1px solid ${BORDER}` }}
       >
         <span className="text-[10px] font-extrabold tracking-[0.18em] uppercase" style={{ color: ACCENT }}>
-          Certificate of completion
+          {t("Certificate of completion")}
         </span>
 
         <span className="mt-4 text-[13px]" style={{ color: MUTED }}>
-          This certifies that
+          {t("This certifies that")}
         </span>
         {/* FIRST NAME ONLY, because that is all the function returns. */}
         <h1 className="text-[26px] font-extrabold leading-tight [overflow-wrap:anywhere]" style={{ color: INK }}>
@@ -146,7 +147,7 @@ export default function PublicCertificate() {
         </h1>
 
         <span className="mt-3 text-[13px]" style={{ color: MUTED }}>
-          completed
+          {tx("completed", "certificate")}
         </span>
         <p className="text-[18px] font-extrabold leading-snug [overflow-wrap:anywhere]" style={{ color: INK }}>
           {cert.courseTitle}
@@ -158,28 +159,28 @@ export default function PublicCertificate() {
               the course was still taught, and the certificate still stands. */}
           {cert.professionalName ? (
             <>
-              Taught by <strong style={{ color: INK }}>{cert.professionalName}</strong>
+              {t("Taught by")} <strong style={{ color: INK }}>{cert.professionalName}</strong>
             </>
           ) : (
-            "The professional who taught this course has since closed their account."
+            t("The professional who taught this course has since closed their account.")
           )}
         </p>
         <p className="text-[13px]" style={{ color: MUTED }}>
-          on {completed}
+          {t("on {date}", { date: completed })}
         </p>
 
         <div className="w-full mt-6 pt-4" style={{ borderTop: `1px solid ${BORDER}` }}>
           <p className="text-[10px] font-extrabold tracking-[0.14em] uppercase" style={{ color: MUTED }}>
-            Serial
+            {t("Serial")}
           </p>
-          <p className="text-[13px] font-bold tabular-nums tracking-wide [overflow-wrap:anywhere]" style={{ color: INK }}>
+          <p dir="ltr" className="text-[13px] font-bold tabular-nums tracking-wide [overflow-wrap:anywhere]" style={{ color: INK }}>
             {cert.serial}
           </p>
         </div>
       </article>
 
       <p className="text-center text-[11px] leading-[1.6] px-4" style={{ color: MUTED }}>
-        {DISCLAIMER}
+        {t(DISCLAIMER)}
       </p>
     </Frame>
   );

@@ -32,6 +32,7 @@ import { LessonMarkdown } from "./LessonMarkdown";
 import { fetchLessonImagePaths, fetchMyCheckIn, lessonImageUrl, submitCheckIn } from "../../services/courses/extras";
 import { CHECK_IN_ANSWER_MAX } from "../../services/courses/authorRules";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // Design screen 8: a lesson. The video is YouTube's official embedded player
 // on the privacy-enhanced domain (youtube-nocookie.com), with no autoplay and
@@ -70,7 +71,7 @@ async function loadLesson(courseId: string, userId: string): Promise<Loaded | nu
   ]);
   return {
     course,
-    authorName: names.get(course.authorId ?? "") ?? "the professional",
+    authorName: names.get(course.authorId ?? "") ?? t("the professional"),
     modules: tree.modules.sort((a, b) => a.position - b.position),
     lessons: tree.lessons,
     access,
@@ -114,8 +115,8 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
   // it); opened directly, replaces with the course.
   const goBack = useBack(toCourse);
   const backButton = (
-    <button type="button" onClick={goBack} aria-label="Back to course" className="tap w-11 h-11 flex items-center justify-center shrink-0">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fv("text")} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <button type="button" onClick={goBack} aria-label={t("Back to course")} className="tap w-11 h-11 flex items-center justify-center shrink-0">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fv("text")} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="rtl:-scale-x-100">
         <path d="M15 5l-7 7 7 7" />
       </svg>
     </button>
@@ -138,7 +139,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
       <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
         <div className="-mx-1">{backButton}</div>
         <p className="text-sm text-center py-8" style={{ color: fv("muted") }}>
-          {lockedLesson === lessonId ? "This lesson isn't open yet." : "This lesson isn't available."}
+          {lockedLesson === lessonId ? t("This lesson isn't open yet.") : t("This lesson isn't available.")}
         </p>
         {state && lockedLesson === lessonId && <DripLine author={state.authorName} modules={state.modules} drip={state.drip} />}
       </div>
@@ -182,7 +183,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
         {backButton}
         <div className="flex flex-col min-w-0">
           <span className="text-xs" style={{ color: fv("muted") }}>
-            Week {weekIndex + 1} · Lesson {n} of {week.length}
+            {t("Week {week} · Lesson {n} of {total}", { week: weekIndex + 1, n, total: week.length })}
           </span>
           <span className="text-[15px] font-extrabold [overflow-wrap:anywhere]">{lesson.title}</span>
         </div>
@@ -231,10 +232,10 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
               onPassed={async () => setState(await loadLesson(courseId, userId))}
             />
           ) : (
-            <LockedNote>Quizzes are part of the full course.</LockedNote>
+            <LockedNote>{t("Quizzes are part of the full course.")}</LockedNote>
           ))}
 
-        {lesson.kind === "pdf" && (open ? <PdfBlock lessonId={lesson.id} /> : <LockedNote>Downloadable plans are part of the full course.</LockedNote>)}
+        {lesson.kind === "pdf" && (open ? <PdfBlock lessonId={lesson.id} /> : <LockedNote>{t("Downloadable plans are part of the full course.")}</LockedNote>)}
 
         {open && lesson.kind !== "quiz" && lesson.kind !== "check_in" && (
           <button
@@ -246,7 +247,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
             style={{ background: fv("teal-bg"), color: fv("done-ink"), opacity: busy ? 0.6 : 1 }}
           >
             <CheckIcon />
-            {done ? "Completed" : busy ? "Saving…" : "Mark as complete"}
+            {done ? t("Completed") : busy ? t("Saving…") : t("Mark as complete")}
           </button>
         )}
         {error && (
@@ -256,7 +257,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
         )}
 
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-extrabold">This week</span>
+          <span className="text-sm font-extrabold">{t("This week")}</span>
           {week.map((l, i) => {
             const lOpen = lessonOpenTo(l.kind, access);
             const current = l.id === lesson.id;
@@ -279,7 +280,7 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
                   {l.title}
                 </span>
                 <span className="shrink-0" style={{ color: fv("muted"), fontWeight: 600 }}>
-                  {!lOpen ? "Full course" : mins ?? ""}
+                  {!lOpen ? t("Full course") : mins ?? ""}
                 </span>
               </button>
             );
@@ -293,17 +294,17 @@ export function LessonView({ courseId, lessonId, userId }: { courseId: string; l
         {showUpgrade && (
           <div className="rounded-2xl p-[14px] flex flex-col gap-2" style={{ background: fv("rules-bg") }}>
             <span className="text-sm font-extrabold" style={{ color: fv("rules-ink") }}>
-              Get more from this course
+              {t("Get more from this course")}
             </span>
             <span className="text-[13px] leading-[1.5]" style={{ color: fv("rules-ink") }}>
-              Quizzes, printable plans, questions answered by {state.authorName} and a certificate when you finish.
+              {t("Quizzes, printable plans, questions answered by {name} and a certificate when you finish.", { name: state.authorName })}
             </span>
             <Link
               to={toCourse}
               className="h-[46px] rounded-[14px] flex items-center justify-center text-sm font-extrabold no-underline"
               style={{ background: fv("accent"), color: fv("on-accent") }}
             >
-              Get the full course · {formatPrice(course.priceCents)}
+              {t("Get the full course · {price}", { price: formatPrice(course.priceCents) })}
             </Link>
           </div>
         )}
@@ -354,7 +355,7 @@ function PdfBlock({ lessonId }: { lessonId: string }) {
         className="tap h-12 rounded-[14px] text-sm font-extrabold disabled:opacity-60"
         style={{ background: fv("accent"), color: fv("on-accent") }}
       >
-        {busy ? "Opening…" : "Download the PDF"}
+        {busy ? t("Opening…") : t("Download the PDF")}
       </button>
       {error && <p role="alert" className="m-0 text-xs font-semibold text-status-high">{error}</p>}
     </div>
@@ -390,7 +391,7 @@ function QuizBlock({
 
   const submit = async () => {
     if (!questions || busy) return;
-    if (questions.some((q) => !answers[q.id])) return setError("Answer every question first.");
+    if (questions.some((q) => !answers[q.id])) return setError(t("Answer every question first."));
     setBusy(true);
     setError(null);
     const r = await submitQuiz(lesson.id, answers);
@@ -406,13 +407,14 @@ function QuizBlock({
     <div className="flex flex-col gap-3">
       {lesson.passMark !== null && (
         <span className="text-[13px]" style={{ color: fv("muted") }}>
-          Pass mark {lesson.passMark}%{shownBest ? ` · your best ${shownBest.score}%${shownBest.passed ? ", passed" : ""}` : ""}
+          {t("Pass mark {n}%", { n: lesson.passMark })}
+          {shownBest ? ` · ${shownBest.passed ? t("your best {score}%, passed", { score: shownBest.score }) : t("your best {score}%", { score: shownBest.score })}` : ""}
         </span>
       )}
       {questions === null && !error && <ForumPlaceholder height={140} />}
       {questions?.map((q, i) => (
         <fieldset key={q.id} className="border-none m-0 p-[14px] rounded-2xl flex flex-col gap-1" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
-          <legend className="sr-only">Question {i + 1}</legend>
+          <legend className="sr-only">{t("Question {n}", { n: i + 1 })}</legend>
           <span className="text-sm font-bold mb-1 [overflow-wrap:anywhere]">
             {i + 1}. {q.prompt}
           </span>
@@ -432,7 +434,7 @@ function QuizBlock({
       ))}
       {result && (
         <p role="status" className="m-0 text-sm font-bold rounded-xl px-3.5 py-3" style={result.passed ? { background: fv("teal-bg"), color: fv("done-ink") } : { background: fv("amber-bg"), color: fv("held-ink") }}>
-          {result.passed ? `Passed with ${result.score}%.` : `${result.score}%. You need ${lesson.passMark}% to pass. Have another go.`}
+          {result.passed ? t("Passed with {score}%.", { score: result.score }) : t("{score}%. You need {n}% to pass. Have another go.", { score: result.score, n: lesson.passMark ?? 0 })}
         </p>
       )}
       {error && <p role="alert" className="m-0 text-xs font-semibold text-status-high">{error}</p>}
@@ -444,7 +446,7 @@ function QuizBlock({
           className="tap h-12 rounded-[14px] text-sm font-extrabold disabled:opacity-60"
           style={{ background: fv("accent"), color: fv("on-accent") }}
         >
-          {busy ? "Checking…" : "Check my answers"}
+          {busy ? t("Checking…") : t("Check my answers")}
         </button>
       )}
     </div>
@@ -471,7 +473,7 @@ function ImageBlock({ lesson, enrolled }: { lesson: Lesson; enrolled: boolean })
         <img src={src} alt={lesson.title} className="block w-full rounded-2xl" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }} />
       ) : (
         <div className="rounded-2xl p-[14px] text-[13px]" style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("muted") }}>
-          {enrolled ? "The image isn't ready yet." : "Start the course to see this image."}
+          {enrolled ? t("The image isn't ready yet.") : t("Start the course to see this image.")}
         </div>
       )}
       {lesson.body && (
@@ -513,7 +515,7 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
   const send = async () => {
     const answer = draft.trim();
     if (busy || !answer) return;
-    if (answer.length > CHECK_IN_ANSWER_MAX) return setError(`Keep your answer to ${CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US"))} characters.`);
+    if (answer.length > CHECK_IN_ANSWER_MAX) return setError(t("Keep your answer to {n} characters.", { n: CHECK_IN_ANSWER_MAX.toLocaleString(appLocale("en-US")) }));
     setBusy(true);
     setError(null);
     const r = await submitCheckIn(lesson.id, answer);
@@ -535,14 +537,14 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
       )}
       {!canAnswer ? (
         <span className="text-[13px]" style={{ color: fv("muted") }}>
-          Start the course to answer.
+          {t("Start the course to answer.")}
         </span>
       ) : saved === undefined ? (
         <ForumPlaceholder height={80} />
       ) : showForm ? (
         <>
           <label htmlFor={`check-in-${lesson.id}`} className="sr-only">
-            Your answer
+            {t("Your answer")}
           </label>
           <textarea
             id={`check-in-${lesson.id}`}
@@ -550,12 +552,12 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
             onChange={(e) => setDraft(e.target.value)}
             rows={5}
             maxLength={CHECK_IN_ANSWER_MAX}
-            placeholder="Your answer"
+            placeholder={t("Your answer")}
             className="block w-full rounded-xl p-3 text-sm leading-[1.5] outline-none resize-y"
             style={{ background: "transparent", border: `1px solid ${fv("border")}`, color: fv("text") }}
           />
           <span className="text-xs" style={{ color: fv("muted") }}>
-            Only {authorName} sees your answer.
+            {t("Only {name} sees your answer.", { name: authorName })}
           </span>
           <div className="flex gap-2">
             {editing && (
@@ -569,7 +571,7 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
                 className="tap h-12 px-4 rounded-[14px] text-sm font-bold"
                 style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
               >
-                Cancel
+                {t("Cancel")}
               </button>
             )}
             <button
@@ -579,7 +581,7 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
               className="tap flex-1 h-12 rounded-[14px] text-sm font-extrabold disabled:opacity-60"
               style={{ background: fv("accent"), color: fv("on-accent") }}
             >
-              {busy ? "Sending…" : `Send to ${authorName}`}
+              {busy ? t("Sending…") : t("Send to {name}", { name: authorName })}
             </button>
           </div>
         </>
@@ -590,10 +592,10 @@ function CheckInBlock({ lesson, authorName, canAnswer, onAnswered }: { lesson: L
           </p>
           <span role="status" className="flex items-center gap-1.5 text-[13px] font-bold" style={{ color: fv("done-ink") }}>
             <CheckIcon />
-            {sent ? `Sent to ${authorName}` : `You answered. Only ${authorName} sees it.`}
+            {sent ? t("Sent to {name}", { name: authorName }) : t("You answered. Only {name} sees it.", { name: authorName })}
           </span>
           <button type="button" onClick={() => setEditing(true)} className="tap self-start text-[13px] font-bold min-h-[44px]" style={{ color: fv("link") }}>
-            Change my answer
+            {t("Change my answer")}
           </button>
         </>
       )}

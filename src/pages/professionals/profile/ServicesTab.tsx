@@ -6,6 +6,7 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { MarketError, MarketSkeleton } from "../../../components/market/MarketStates";
 import { EmptyBlock, PressButton } from "./parts";
 import type { ServiceRow } from "./profileModel";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proServices` "Services · Hire or Book"
 // (Client Professional Screens lines 106–116): a column (margin-top 14,
@@ -36,12 +37,12 @@ export const ServicesTab: React.FC<{
       {top}
       {rows === null ? (
         error ? (
-          <MarketError thing="services" onRetry={onRetry} />
+          <MarketError thing={tk("services")} onRetry={onRetry} />
         ) : (
-          <MarketSkeleton radius={18} rows={2} height={61} count={2} label="Loading services" />
+          <MarketSkeleton radius={18} rows={2} height={61} count={2} label={tk("Loading services")} />
         )
       ) : rows.length === 0 ? (
-        <EmptyBlock title="No services listed yet" body={`${firstName || "This professional"} hasn't added a session to book or a plan to hire.`} />
+        <EmptyBlock title={t("No services listed yet")} body={t("{name} hasn't added a session to book or a plan to hire.", { name: firstName || t("This professional") })} />
       ) : (
         rows.map((r) => (
           <div key={r.key} style={{ borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12, color: m.ink }}>
@@ -53,11 +54,11 @@ export const ServicesTab: React.FC<{
             <PressButton
               inert={inert}
               onClick={() => (r.kind === "book" ? onBook(r.id) : onHire(r.id))}
-              aria-label={`${r.kind === "book" ? "Book" : "Hire"} ${r.name}`}
+              aria-label={r.kind === "book" ? t("Book {name}", { name: r.name }) : t("Hire {name}", { name: r.name })}
               className="hit"
               style={{ height: 32, padding: "0 14px", borderRadius: 10, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(12), fontWeight: 800, flexShrink: 0, cursor: inert ? "default" : "pointer" }}
             >
-              {r.kind === "book" ? "Book" : "Hire"}
+              {r.kind === "book" ? t("Book") : t("Hire")}
             </PressButton>
           </div>
         ))

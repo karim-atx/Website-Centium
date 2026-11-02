@@ -4,6 +4,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { describeBookingError, isPublicReturnPath, publicReviewRows, readReturn, PUBLIC_REVIEWS_PAGE, type PublicReviewDbRow, type Slot } from "./logic";
 import type { ReviewRow } from "../professional-reviews";
+import { tk } from "../../i18n/core";
 
 export * from "./logic";
 
@@ -52,7 +53,7 @@ export interface InvitePreview {
 export async function previewInviteLink(code: string): Promise<Read<InvitePreview | null>> {
   try {
     const { data, error } = await rpc("preview_invite_link", { p_code: code.trim() });
-    if (error) return fail(error, "Couldn't open this invite. Try again.");
+    if (error) return fail(error, tk("Couldn't open this invite. Try again."));
     type Row = {
       professional_id: string;
       first_name: string | null;
@@ -80,7 +81,7 @@ export async function previewInviteLink(code: string): Promise<Read<InvitePrevie
       },
     };
   } catch (e) {
-    return fail(e, "Couldn't open this invite. Try again.");
+    return fail(e, tk("Couldn't open this invite. Try again."));
   }
 }
 
@@ -117,14 +118,14 @@ export interface Workplace {
 export async function fetchProfessionalWorkplaces(professionalId: string): Promise<Read<Workplace[]>> {
   try {
     const { data, error } = await rpc("professional_workplaces", { p_professional_id: professionalId });
-    if (error) return fail(error, "Couldn't load where they work.");
+    if (error) return fail(error, tk("Couldn't load where they work."));
     type Row = { business_id: string; business_name: string | null; location: string | null; role: string | null };
     return {
       ok: true,
       data: ((data ?? []) as Row[]).map((r) => ({ businessId: r.business_id, name: r.business_name?.trim() || "A business", role: r.role, location: r.location?.trim() || null })),
     };
   } catch (e) {
-    return fail(e, "Couldn't load where they work.");
+    return fail(e, tk("Couldn't load where they work."));
   }
 }
 
@@ -144,7 +145,7 @@ export interface HandleProfile {
 export async function professionalByHandle(handle: string): Promise<Read<HandleProfile | null>> {
   try {
     const { data, error } = await rpc("professional_by_handle", { p_handle: handle.trim().toLowerCase() });
-    if (error) return fail(error, "Couldn't load this profile. Try again.");
+    if (error) return fail(error, tk("Couldn't load this profile. Try again."));
     type Row = {
       profile_id: string;
       handle: string;
@@ -173,7 +174,7 @@ export async function professionalByHandle(handle: string): Promise<Read<HandleP
       },
     };
   } catch (e) {
-    return fail(e, "Couldn't load this profile. Try again.");
+    return fail(e, tk("Couldn't load this profile. Try again."));
   }
 }
 
@@ -181,10 +182,10 @@ export async function professionalByHandle(handle: string): Promise<Read<HandleP
 export async function bookingAllowed(professionalId: string): Promise<Read<boolean>> {
   try {
     const { data, error } = await rpc("professional_booking_allowed", { p_professional: professionalId });
-    if (error) return fail(error, "Couldn't load booking. Try again.");
+    if (error) return fail(error, tk("Couldn't load booking. Try again."));
     return { ok: true, data: data === true };
   } catch (e) {
-    return fail(e, "Couldn't load booking. Try again.");
+    return fail(e, tk("Couldn't load booking. Try again."));
   }
 }
 
@@ -210,7 +211,7 @@ export async function fetchBookableSessions(professionalId: string): Promise<Rea
       .is("business_id", null)
       .eq("active", true)
       .order("created_at");
-    if (error) return fail(error, "Couldn't load session types. Try again.");
+    if (error) return fail(error, tk("Couldn't load session types. Try again."));
     type Row = { id: string; name: string; duration_min: number; price: number | string | null; currency: string | null; location_kind: string | null; description: string | null; visible: boolean | null };
     return {
       ok: true,
@@ -226,7 +227,7 @@ export async function fetchBookableSessions(professionalId: string): Promise<Rea
       })),
     };
   } catch (e) {
-    return fail(e, "Couldn't load session types. Try again.");
+    return fail(e, tk("Couldn't load session types. Try again."));
   }
 }
 
@@ -243,11 +244,11 @@ export async function fetchPublicReviews(professionalId: string, offset = 0): Pr
       p_limit: PUBLIC_REVIEWS_PAGE,
       p_offset: offset,
     });
-    if (error) return fail(error, "Couldn't load reviews. Try again.");
+    if (error) return fail(error, tk("Couldn't load reviews. Try again."));
     const rows = (data ?? []) as PublicReviewDbRow[];
     return { ok: true, data: { reviews: publicReviewRows(rows, professionalId), read: rows.length, more: rows.length === PUBLIC_REVIEWS_PAGE } };
   } catch (e) {
-    return fail(e, "Couldn't load reviews. Try again.");
+    return fail(e, tk("Couldn't load reviews. Try again."));
   }
 }
 
@@ -263,12 +264,12 @@ export async function fetchOpenSlots(professionalId: string, from: string, to: s
         ok: false,
         code: error.code,
         offline,
-        message: error.code === "ATXG5" || error.code === "ATXF4" ? describeBookingError(error.code) : offline ? OFFLINE_MESSAGE : "Couldn't load open times. Try again.",
+        message: error.code === "ATXG5" || error.code === "ATXF4" ? describeBookingError(error.code) : offline ? OFFLINE_MESSAGE : tk("Couldn't load open times. Try again."),
       };
     }
     return { ok: true, slots: ((data ?? []) as { starts_at: string; ends_at: string }[]).map((r) => ({ startsAt: r.starts_at, endsAt: r.ends_at })) };
   } catch (e) {
-    return { ok: false, offline: isOffline(e), message: isOffline(e) ? OFFLINE_MESSAGE : "Couldn't load open times. Try again." };
+    return { ok: false, offline: isOffline(e), message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't load open times. Try again.") };
   }
 }
 

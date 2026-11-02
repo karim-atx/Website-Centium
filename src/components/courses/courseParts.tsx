@@ -3,6 +3,7 @@ import { fv } from "../forum/forumColor";
 import { ProfessionalBadge } from "../forum/parts";
 import { useIsDark } from "../../hooks/useIsDark";
 import { onCover } from "./courseCover";
+import { t, tx } from "../../i18n/core";
 
 export function StarIcon({ size = 13 }: { size?: number }) {
   return (
@@ -55,10 +56,10 @@ export function Instructor({ authorId, name, link }: { authorId: string | null; 
         // MO1.3.5 #3: "By Rami" at 13/400 in the muted ink; the name still
         // opens their directory page.
         <Link to={`/app/professionals/${authorId}`} className="no-underline" style={{ color: "inherit" }}>
-          By {name}
+          {t("By {name}", { name })}
         </Link>
       ) : (
-        <span>{link ? `By ${name}` : name}</span>
+        <span>{link ? t("By {name}", { name }) : name}</span>
       )}
       <ProfessionalBadge />
     </span>
@@ -70,7 +71,7 @@ export function RatingShort({ average, count }: { average: number | null; count:
   return (
     <span className="flex gap-1 items-center">
       {average === null ? (
-        "New"
+        tx("New", "course")
       ) : (
         <>
           <StarIcon size={12} /> {average.toFixed(1)} ({count})

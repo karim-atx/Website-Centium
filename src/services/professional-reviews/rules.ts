@@ -3,6 +3,7 @@
 // Kept free of the Supabase client so they can be tested under node.
 import { BLOCKED_TEXT } from "../moderation/text";
 import { appLocale } from "../../i18n/format";
+import { t, tk, tn } from "../../i18n/core";
 
 /** professional_reviews_body_check: length(btrim(body)) between 1 and 4000. */
 export const REVIEW_BODY_MAX = 4000;
@@ -13,7 +14,7 @@ export const EDIT_WINDOW_DAYS = 30;
 /** An average is shown only once this many reviews count towards it. */
 export const MIN_REVIEWS_FOR_AVERAGE = 3;
 
-export const EDIT_WINDOW_OVER = "Reviews can be edited for 30 days.";
+export const EDIT_WINDOW_OVER = tk("Reviews can be edited for 30 days.");
 
 /**
  * Characters as Postgres counts them. length() counts code points, so an
@@ -42,7 +43,7 @@ export function ratingLabel(average: number | null, count: number): RatingLabel 
 
 /** "12 reviews", "1 review". */
 export function reviewCountLabel(count: number): string {
-  return `${count} ${count === 1 ? "review" : "reviews"}`;
+  return tn(count, "{n} review", "{n} reviews");
 }
 
 const DAY = 86_400_000;
@@ -61,11 +62,9 @@ export function editMsLeft(createdAt: string, now: number): number {
 export function editWindowLabel(createdAt: string, now: number): string | null {
   const ms = editMsLeft(createdAt, now);
   if (ms <= 0) return null;
-  if (ms >= 2 * DAY) return `You can edit this for ${Math.floor(ms / DAY)} more days.`;
-  if (ms >= DAY) return "You can edit this for 1 more day.";
-  if (ms >= 2 * HOUR) return `You can edit this for ${Math.floor(ms / HOUR)} more hours.`;
-  if (ms >= HOUR) return "You can edit this for 1 more hour.";
-  return "You can edit this for less than an hour.";
+  if (ms >= DAY) return tn(Math.floor(ms / DAY), "You can edit this for 1 more day.", "You can edit this for {n} more days.");
+  if (ms >= HOUR) return tn(Math.floor(ms / HOUR), "You can edit this for 1 more hour.", "You can edit this for {n} more hours.");
+  return t("You can edit this for less than an hour.");
 }
 
 /** my_reviewable_professionals().my_review_status. */
@@ -111,12 +110,12 @@ export type ReviewReportReason =
  * the forum's health-advice reason — a review can carry advice as a post can.
  */
 export const REVIEW_REPORT_REASONS: { value: ReviewReportReason; label: string; hint: string }[] = [
-  { value: "safety_concern", label: "Safety concern", hint: "Someone may be at risk of harm" },
-  { value: "harmful_health_advice", label: "Harmful or unsafe health advice", hint: "Advice that could hurt someone who follows it" },
-  { value: "harassment", label: "Harassment", hint: "Bullying, threats or personal attacks" },
-  { value: "inappropriate_content", label: "Inappropriate content", hint: "Sexual, violent or offensive material" },
-  { value: "impersonation", label: "Impersonation", hint: "Pretending to be someone else, or Centium" },
-  { value: "spam", label: "Spam", hint: "Advertising, scams or nothing to do with the professional" },
+  { value: "safety_concern", label: tk("Safety concern"), hint: tk("Someone may be at risk of harm") },
+  { value: "harmful_health_advice", label: tk("Harmful or unsafe health advice"), hint: tk("Advice that could hurt someone who follows it") },
+  { value: "harassment", label: tk("Harassment"), hint: tk("Bullying, threats or personal attacks") },
+  { value: "inappropriate_content", label: tk("Inappropriate content"), hint: tk("Sexual, violent or offensive material") },
+  { value: "impersonation", label: tk("Impersonation"), hint: tk("Pretending to be someone else, or Centium") },
+  { value: "spam", label: tk("Spam"), hint: tk("Advertising, scams or nothing to do with the professional") },
 ];
 
 export type ReviewAction = "create" | "edit" | "withdraw" | "report" | "reply" | "editReply" | "removeReply";
@@ -133,59 +132,59 @@ export function describeReviewError(error: { code?: string; message?: string }, 
     case "ATX02":
       switch (action) {
         case "edit":
-          return "You've reached the limit of 20 review edits a day. Try again tomorrow.";
+          return t("You've reached the limit of 20 review edits a day. Try again tomorrow.");
         case "report":
-          return "You've reached the limit of 10 reports a day. Try again tomorrow.";
+          return t("You've reached the limit of 10 reports a day. Try again tomorrow.");
         case "reply":
         case "editReply":
         case "removeReply":
-          return "You've reached the limit of 30 replies a day. Try again tomorrow.";
+          return t("You've reached the limit of 30 replies a day. Try again tomorrow.");
         default:
-          return "That's too many in a short time. Try again later.";
+          return t("That's too many in a short time. Try again later.");
       }
     case "ATX71":
-      return EDIT_WINDOW_OVER;
+      return t(EDIT_WINDOW_OVER);
     case "ATX10":
       return isReply
-        ? "A moderator removed your reply, so it can't be changed."
-        : "A moderator removed this review, so it can't be edited.";
+        ? t("A moderator removed your reply, so it can't be changed.")
+        : t("A moderator removed this review, so it can't be edited.");
     case "ATX72":
-      if (action === "reply" || action === "report") return "This review isn't shown any more.";
-      return isReply ? "You've already removed this reply." : "You've withdrawn this review.";
+      if (action === "reply" || action === "report") return t("This review isn't shown any more.");
+      return isReply ? t("You've already removed this reply.") : t("You've withdrawn this review.");
     case "ATX73":
-      return "You've already replied to this review. Edit your reply instead.";
+      return t("You've already replied to this review. Edit your reply instead.");
     case "ATX08":
-      return "That review isn't available any more.";
+      return t("That review isn't available any more.");
     case "ATX09":
-      return "Your session expired. Sign in again.";
+      return t("Your session expired. Sign in again.");
     case "42501":
-      return "You can only review a professional you've worked with.";
+      return t("You can only review a professional you've worked with.");
     case "23505":
-      return "You've already reviewed this professional.";
+      return t("You've already reviewed this professional.");
     case "22023":
-      if (/empty/i.test(msg)) return "Write a reply first.";
+      if (/empty/i.test(msg)) return t("Write a reply first.");
       break;
     case "23514":
       if (/body/i.test(msg)) {
         return isReply
-          ? `A reply can be up to ${REPLY_BODY_MAX.toLocaleString(appLocale("en"))} characters.`
-          : `A review can be up to ${REVIEW_BODY_MAX.toLocaleString(appLocale("en"))} characters.`;
+          ? t("A reply can be up to {max} characters.", { max: REPLY_BODY_MAX.toLocaleString(appLocale("en")) })
+          : t("A review can be up to {max} characters.", { max: REVIEW_BODY_MAX.toLocaleString(appLocale("en")) });
       }
-      return "A review needs a rating from 1 to 5.";
+      return t("A review needs a rating from 1 to 5.");
   }
-  if (/jwt|not authenticated/i.test(msg)) return "Your session expired. Sign in again.";
+  if (/jwt|not authenticated/i.test(msg)) return t("Your session expired. Sign in again.");
   switch (action) {
     case "withdraw":
-      return "Couldn't withdraw your review. Try again.";
+      return t("Couldn't withdraw your review. Try again.");
     case "report":
-      return "Couldn't send the report. Try again.";
+      return t("Couldn't send the report. Try again.");
     case "reply":
     case "editReply":
-      return "Couldn't save your reply. Try again.";
+      return t("Couldn't save your reply. Try again.");
     case "removeReply":
-      return "Couldn't remove your reply. Try again.";
+      return t("Couldn't remove your reply. Try again.");
     default:
-      return "Couldn't save your review. Try again.";
+      return t("Couldn't save your review. Try again.");
   }
 }
 

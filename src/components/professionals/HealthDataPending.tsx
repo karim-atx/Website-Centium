@@ -1,4 +1,5 @@
 import React from "react";
+import { t, tk } from "../../i18n/core";
 
 // Stands in for the professional-facing client health/training panels.
 //
@@ -23,15 +24,15 @@ import React from "react";
 // follow-up "The professional dashboard's client-health tiles are not
 // wired".
 export const HealthDataPending: React.FC<{ label?: string; className?: string }> = ({
-  label = "Client health data",
+  label = tk("Client health data"),
   className,
 }) => (
   <div
     className={`rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center ${className ?? ""}`}
   >
-    <p className="text-xs font-semibold text-charcoal-soft">{label}: coming soon</p>
+    <p className="text-xs font-semibold text-charcoal-soft">{t("{label}: coming soon", { label: t(label) })}</p>
     <p className="text-[11px] text-charcoal-faint mt-1 leading-relaxed">
-      Not yet connected to real client data.
+      {t("Not yet connected to real client data.")}
     </p>
   </div>
 );

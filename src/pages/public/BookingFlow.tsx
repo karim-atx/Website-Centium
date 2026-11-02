@@ -24,6 +24,13 @@ import {
 } from "../../services/public-pro";
 import { SignInButtons } from "./publicKit";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tn } from "../../i18n/core";
+
+const english = () => getLanguage() === "en";
+/** "Oct 19" (English exactly as before; other languages the locale's own month and day). */
+const monthDay = (d: Date) => (english() ? `${d.toLocaleDateString(appLocale("en-US"), { month: "short" })} ${d.getDate()}` : d.toLocaleDateString(appLocale(), { month: "short", day: "numeric" }));
+/** The day letter, Monday first: the board's letters in English, the locale's narrow day otherwise. */
+const dayLetter = (d: Date, i: number) => (english() ? WEEKDAY_LETTERS[i] : d.toLocaleDateString(appLocale(), { weekday: "narrow" }));
 
 // Release 3 · W7 booking a professional's session: the public booking page
 // (/p/{handle}/book) and the client profile's "Book a session" (the same flow
@@ -145,7 +152,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
 
   if (load.status === "loading") {
     return (
-      <div aria-busy="true" role="status" aria-label="Loading" className="flex flex-col gap-3">
+      <div aria-busy="true" role="status" aria-label={t("Loading")} className="flex flex-col gap-3">
         <div aria-hidden className="h-[64px] rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
         <div aria-hidden className="h-[56px] rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
         <div aria-hidden className="h-[120px] rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
@@ -155,18 +162,18 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
   if (load.status === "error") {
     return (
       <div role="alert" className="flex flex-col items-center text-center py-6">
-        <p className="text-[13px] font-semibold text-status-high">{load.message}</p>
+        <p className="text-[13px] font-semibold text-status-high">{t(load.message)}</p>
         <button type="button" onClick={() => setReload((n) => n + 1)} className="tap mt-2 min-h-11 px-4 text-[13px] font-bold text-primary-accent">
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
   }
   if (load.status === "blocked") {
-    return <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title="No bookings" line={NOT_TAKING_BOOKINGS} />;
+    return <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title={t("No bookings")} line={t(NOT_TAKING_BOOKINGS)} />;
   }
   if (load.sessions.length === 0) {
-    return <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title="Nothing to book yet" line={`${firstName || "This professional"} hasn't added a session type to book.`} />;
+    return <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title={t("Nothing to book yet")} line={t("{name} hasn't added a session type to book.", { name: firstName || t("This professional") })} />;
   }
 
   if (done) {
@@ -174,11 +181,11 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
     return (
       <StateBlock
         icon={<CalendarCheck size={26} strokeWidth={1.5} />}
-        title={done.status === "booked" ? "You're booked" : "Request sent"}
+        title={done.status === "booked" ? t("You're booked") : t("Request sent")}
         line={
           done.status === "booked"
-            ? `${session?.name ?? "Your session"} with ${firstName || "your professional"}, ${when}. It's in your calendar.`
-            : `${firstName || "The professional"} will confirm ${session?.name ?? "your session"} on ${when}.`
+            ? t("{session} with {name}, {when}. It's in your calendar.", { session: session?.name ?? t("Your session"), name: firstName || t("your professional"), when })
+            : t("{name} will confirm {session} on {when}.", { name: firstName || t("The professional"), session: session?.name ?? t("your session"), when })
         }
       />
     );
@@ -191,12 +198,12 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
     </div>
   );
 
-  const weekTitle = `${days[0].toLocaleDateString(appLocale("en-US"), { month: "short" })} ${days[0].getDate()} to ${days[6].toLocaleDateString(appLocale("en-US"), { month: "short" })} ${days[6].getDate()}`;
+  const weekTitle = t("{from} to {to}", { from: monthDay(days[0]), to: monthDay(days[6]) });
 
   return (
     <div className="flex flex-col">
-      {label("Session")}
-      <div className="flex flex-col gap-2 mb-6" role="radiogroup" aria-label="Session type">
+      {label(t("Session"))}
+      <div className="flex flex-col gap-2 mb-6" role="radiogroup" aria-label={t("Session type")}>
         {load.sessions.map((s) => {
           const on = s.id === serviceId;
           return (
@@ -236,13 +243,13 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
       </div>
 
       {label(
-        "Choose a time",
+        t("Choose a time"),
         // W9: the week stays on one line (360 with Larger text). The arrows keep
         // 44px targets, overlapping the gap and the edge by 12 so the label fits.
         <span className="flex shrink-0 items-center gap-1">
           <button
             type="button"
-            aria-label="Previous week"
+            aria-label={t("Previous week")}
             disabled={weekOffset === 0}
             onClick={() => {
               setWeekOffset((w) => Math.max(0, w - 1));
@@ -251,14 +258,14 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
             className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
-            <ChevronLeft size={16} strokeWidth={2} aria-hidden />
+            <ChevronLeft size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
           </button>
           <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             {weekTitle}
           </span>
           <button
             type="button"
-            aria-label="Next week"
+            aria-label={t("Next week")}
             disabled={weekOffset >= MAX_WEEKS_AHEAD}
             onClick={() => {
               setWeekOffset((w) => Math.min(MAX_WEEKS_AHEAD, w + 1));
@@ -267,25 +274,25 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
             className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
-            <ChevronRight size={16} strokeWidth={2} aria-hidden />
+            <ChevronRight size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
           </button>
         </span>
       )}
 
       {current && "error" in current ? (
         current.blocked ? (
-          <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title="No bookings" line={NOT_TAKING_BOOKINGS} />
+          <StateBlock icon={<CalendarX size={26} strokeWidth={1.5} />} title={t("No bookings")} line={t(NOT_TAKING_BOOKINGS)} />
         ) : (
           <div role="alert" className="flex flex-col items-center text-center py-4">
-            <p className="text-[13px] font-semibold text-status-high">{current.error}</p>
+            <p className="text-[13px] font-semibold text-status-high">{t(current.error)}</p>
             <button type="button" onClick={() => void loadSlots()} className="tap mt-1 min-h-11 px-4 text-[13px] font-bold text-primary-accent">
-              Retry
+              {t("Retry")}
             </button>
           </div>
         )
       ) : (
         <>
-          <div className="grid grid-cols-7 gap-1 mb-4" role="group" aria-label="Days this week">
+          <div className="grid grid-cols-7 gap-1 mb-4" role="group" aria-label={t("Days this week")}>
             {days.map((d, i) => {
               const key = localDay(d);
               const list = byDay.get(key) ?? [];
@@ -297,7 +304,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
                   type="button"
                   disabled={!current || list.length === 0}
                   aria-pressed={on}
-                  aria-label={`${dayLabel(key)}, ${n === null ? "loading" : n === 0 ? "no times" : `${n} open`}`}
+                  aria-label={`${dayLabel(key)}, ${n === null ? t("loading") : n === 0 ? t("no times") : tn(n, "{n} open", "{n} open")}`}
                   onClick={() => setDay(key)}
                   className="tap min-h-[52px] rounded-[10px] py-2 flex flex-col items-center justify-center"
                   style={{
@@ -305,7 +312,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
                     boxShadow: on ? `inset 0 0 0 1.5px ${INK.pr}` : undefined,
                   }}
                 >
-                  <span style={{ fontSize: textPx(10), fontWeight: 700, color: INK.chF }}>{WEEKDAY_LETTERS[i]}</span>
+                  <span style={{ fontSize: textPx(10), fontWeight: 700, color: INK.chF }}>{dayLetter(d, i)}</span>
                   <span className="tabular-nums" style={{ fontSize: textPx(13), fontWeight: 800, color: n ? INK.prDeep : INK.chT }}>
                     {d.getDate()}
                   </span>
@@ -318,14 +325,14 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
             <div aria-hidden className="h-[96px] rounded-[14px] bg-cream-soft animate-skeleton-pulse" />
           ) : daySlots.length === 0 ? (
             <p className="py-3 text-charcoal-faint" style={{ fontSize: textPx(12.5) }}>
-              {byDay.size === 0 ? "No open times this week. Try the next week." : "No open times on this day."}
+              {byDay.size === 0 ? t("No open times this week. Try the next week.") : t("No open times on this day.")}
             </p>
           ) : (
             <>
               <p className="mb-2 font-semibold text-charcoal" style={{ fontSize: textPx(13) }}>
                 {dayLabel(shownDay!)}
               </p>
-              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Open times">
+              <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("Open times")}>
                 {daySlots.map((s) => {
                   const on = s.startsAt === chosen;
                   return (
@@ -353,7 +360,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
 
       {error && (
         <p role="alert" className="mt-3 font-semibold text-status-high" style={{ fontSize: textPx(12.5) }}>
-          {error}
+          {t(error)}
         </p>
       )}
 
@@ -361,7 +368,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
         {signedIn ? (
           <CtaButton
             full
-            label={chosenSlot ? `Book ${slotLabel(chosenSlot)}` : "Choose a time"}
+            label={chosenSlot ? t("Book {time}", { time: slotLabel(chosenSlot) }) : t("Choose a time")}
             onClick={() => void book()}
             disabled={!chosenSlot}
             busy={busy}
@@ -369,7 +376,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
         ) : (
           <SignInButtons
             returnPath={returnPathFor && serviceId ? returnPathFor(serviceId, chosenSlot) : "/"}
-            line={chosenSlot ? `Sign in or create an account to book ${dayLabel(localDay(new Date(chosenSlot.startsAt)))}, ${slotLabel(chosenSlot)}.` : "Sign in or create an account to book."}
+            line={chosenSlot ? t("Sign in or create an account to book {when}.", { when: `${dayLabel(localDay(new Date(chosenSlot.startsAt)))}, ${slotLabel(chosenSlot)}` }) : t("Sign in or create an account to book.")}
           />
         )}
       </div>

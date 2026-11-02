@@ -6,21 +6,23 @@ import { rangeClock12 } from "../../utils/time12";
 import type { ReviewRow } from "../professional-reviews/types";
 import { PAST_MIDNIGHT_CODE, PAST_MIDNIGHT_MESSAGE } from "../booking/pastMidnight";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tk } from "../../i18n/core";
 
 /** The error codes the booking readers and request raise (HANDOVER_API Release 3). */
-export const NOT_TAKING_BOOKINGS = "This professional isn't taking bookings from you.";
-export const SLOT_TAKEN = "That time is no longer free.";
+// English keys (tk); screens show them through t().
+export const NOT_TAKING_BOOKINGS = tk("This professional isn't taking bookings from you.");
+export const SLOT_TAKEN = tk("That time is no longer free.");
 
 /** A booking error code as the words the contract gives. */
 export function describeBookingError(code: string | undefined, offline = false): string {
-  if (offline) return "You're offline. Try again when you're connected.";
-  if (code === "ATXG5") return NOT_TAKING_BOOKINGS;
-  if (code === "ATXG6") return SLOT_TAKEN;
-  if (code === "ATXF4") return "That session type isn't available any more.";
-  if (code === PAST_MIDNIGHT_CODE) return PAST_MIDNIGHT_MESSAGE;
-  if (code === "ATX02") return "You've sent several booking requests in the last hour. Try again later.";
-  if (code === "ATX01" || code === "PGRST301") return "Sign in to book this session.";
-  return "Couldn't book this session. Try again.";
+  if (offline) return t("You're offline. Try again when you're connected.");
+  if (code === "ATXG5") return t(NOT_TAKING_BOOKINGS);
+  if (code === "ATXG6") return t(SLOT_TAKEN);
+  if (code === "ATXF4") return t("That session type isn't available any more.");
+  if (code === PAST_MIDNIGHT_CODE) return t(PAST_MIDNIGHT_MESSAGE);
+  if (code === "ATX02") return t("You've sent several booking requests in the last hour. Try again later.");
+  if (code === "ATX01" || code === "PGRST301") return t("Sign in to book this session.");
+  return t("Couldn't book this session. Try again.");
 }
 
 /** Local "YYYY-MM-DD" (the device's calendar day, not UTC). */
@@ -89,6 +91,8 @@ export function slotLabel(s: Slot): string {
 export function dayLabel(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   const date = new Date(y, m - 1, d);
+  // Arabic: the locale's own day and month names (English keeps its exact form).
+  if (getLanguage() !== "en") return date.toLocaleDateString(appLocale(), { weekday: "short", month: "short", day: "numeric" });
   const month = date.toLocaleDateString(appLocale("en-US"), { month: "short" });
   return `${WEEKDAY_SHORT[(date.getDay() + 6) % 7]}, ${month} ${d}`;
 }
@@ -105,7 +109,7 @@ export function inviteView(
   preview: { usable: boolean; usableMessage: string | null; professionalId: string },
   viewer: { userId: string | null; accountType: string | null }
 ): InviteView {
-  if (!preview.usable) return { kind: "unusable", message: preview.usableMessage?.trim() || "That invite link can't be used any more." };
+  if (!preview.usable) return { kind: "unusable", message: preview.usableMessage?.trim() || t("That invite link can't be used any more.") };
   if (!viewer.userId) return { kind: "signed_out" };
   if (viewer.userId === preview.professionalId) return { kind: "own" };
   if (viewer.accountType && viewer.accountType !== "customer") return { kind: "not_client" };

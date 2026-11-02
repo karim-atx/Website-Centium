@@ -34,6 +34,7 @@
 
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t, tk } from "../../i18n/core";
 import { fromMyFormQuestion, parseShowIfRule, safetyLineOf, type Answers, type ClientQuestion, type ConnectReferral, type FormKind, type MyFormQuestionRow, type PendingReferral, type QuestionType, type TodaySession } from "./logic";
 import { asProposalField, type ProfileProposal, type ProposalStatus } from "./proposals";
 import type { AccessCategory } from "../consent";
@@ -180,7 +181,7 @@ export async function fetchMyOpenForms(me: string): Promise<Read<ClientFormBundl
       dueAt: x.due_at,
       status: x.status,
       proId: x.professional_id,
-      proName: nameOr(names, x.professional_id, "Your professional"),
+      proName: nameOr(names, x.professional_id, t("Your professional")),
       proAvatarUrl: names.get(x.professional_id)?.avatar_url ?? null,
       questions: q.byAssignment.get(x.id)?.questions ?? [],
       safetyLine: q.byAssignment.get(x.id)?.safetyLine ?? null,
@@ -202,7 +203,7 @@ export interface SavedResponse {
 export type SaveResult = { ok: true; row: SavedResponse } | { ok: false; code: "sent" | "missing" | "consent" | "closed" | "offline" | "other"; message: string; missing?: string };
 
 /** The consent_required refusal in the app's words: the box above Send wasn't ticked. */
-export const CONSENT_REQUIRED_MESSAGE = "Tick the box to share these answers before you send them.";
+export const CONSENT_REQUIRED_MESSAGE = tk("Tick the box to share these answers before you send them.");
 
 /**
  * save_form_response: p_submit false keeps a draft ("Save, come back later"),
@@ -219,15 +220,15 @@ export async function saveFormResponse(assignmentId: string, answers: Answers, s
   const { data, error } = await rpcClient.rpc("save_form_response", args);
   if (error) {
     if (isOffline(error)) return { ok: false, code: "offline", message: OFFLINE_MESSAGE };
-    if (error.code === "ATXG9") return { ok: false, code: "sent", message: "This form has already been sent." };
-    if (error.code === "ATX08") return { ok: false, code: "closed", message: "This form isn't open any more." };
+    if (error.code === "ATXG9") return { ok: false, code: "sent", message: t("This form has already been sent.") };
+    if (error.code === "ATX08") return { ok: false, code: "closed", message: t("This form isn't open any more.") };
     // The same SQLSTATE as a missing answer, told apart by the word the database leads with.
     if (error.code === "22023" && error.message.startsWith("consent_required")) return { ok: false, code: "consent", message: CONSENT_REQUIRED_MESSAGE };
     if (error.code === "22023") {
       const m = /please answer: (.*)$/.exec(error.message);
-      return { ok: false, code: "missing", message: "Some required answers are missing.", missing: m?.[1] };
+      return { ok: false, code: "missing", message: t("Some required answers are missing."), missing: m?.[1] };
     }
-    return { ok: false, code: "other", message: "Couldn't save your answers. Try again." };
+    return { ok: false, code: "other", message: t("Couldn't save your answers. Try again.") };
   }
   const row = (data ?? {}) as Partial<SavedResponse>;
   return { ok: true, row: { id: String(row.id ?? ""), safety_flag: row.safety_flag === true, safety_topics: Array.isArray(row.safety_topics) ? row.safety_topics : [], submitted_at: row.submitted_at ?? null } };
@@ -258,23 +259,23 @@ export type ProposalResult = { ok: true } | { ok: false; message: string; gone?:
 
 function proposalFail(error: { code?: string; message: string }, fallback: string): ProposalResult {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATXL2") return { ok: false, message: "Weight isn't added while recovery-sensitive mode is on.", gone: true };
-  if (error.code === "ATX10") return { ok: false, message: "You already decided this one.", gone: true };
-  if (error.code === "ATX08") return { ok: false, message: "This isn't available any more.", gone: true };
-  if (error.code === "22023") return { ok: false, message: "Check the details and try again." };
+  if (error.code === "ATXL2") return { ok: false, message: t("Weight isn't added while recovery-sensitive mode is on."), gone: true };
+  if (error.code === "ATX10") return { ok: false, message: t("You already decided this one."), gone: true };
+  if (error.code === "ATX08") return { ok: false, message: t("This isn't available any more."), gone: true };
+  if (error.code === "22023") return { ok: false, message: t("Check the details and try again.") };
   return { ok: false, message: fallback };
 }
 
 /** Adds one carried answer to the profile, as the client edited it (p_value). */
 export async function confirmProfileProposal(id: string, value: Record<string, unknown>): Promise<ProposalResult> {
   const { error } = await rpcClient.rpc("confirm_form_profile_proposal", { p_proposal_id: id, p_value: value });
-  return error ? proposalFail(error, "Couldn't add it. Try again.") : { ok: true };
+  return error ? proposalFail(error, t("Couldn't add it. Try again.")) : { ok: true };
 }
 
 /** Leaves one carried answer out: nothing is written. */
 export async function declineProfileProposal(id: string): Promise<ProposalResult> {
   const { error } = await rpcClient.rpc("decline_form_profile_proposal", { p_proposal_id: id });
-  return error ? proposalFail(error, "Couldn't skip it. Try again.") : { ok: true };
+  return error ? proposalFail(error, t("Couldn't skip it. Try again.")) : { ok: true };
 }
 
 const FORM_UPLOADS = "form-uploads";
@@ -284,7 +285,7 @@ export async function uploadFormPhoto(me: string, assignmentId: string, file: Fi
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const path = `${me}/${assignmentId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from(FORM_UPLOADS).upload(path, file, { contentType: file.type || undefined, upsert: false });
-  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't add that photo. Use a JPEG, PNG or HEIC under 10 MB." };
+  if (error) return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't add that photo. Use a JPEG, PNG or HEIC under 10 MB.") };
   return { ok: true, path };
 }
 
@@ -313,7 +314,7 @@ export async function fetchMyPendingReferrals(me: string): Promise<Read<PendingR
     data: rows.map((r) => ({
       id: r.id,
       fromId: r.from_professional,
-      fromName: nameOr(names, r.from_professional, "Your professional"),
+      fromName: nameOr(names, r.from_professional, t("Your professional")),
       toName: names.get(r.to_professional)?.first_name?.trim() || null,
       reason: r.reason,
       createdAt: r.created_at,
@@ -325,8 +326,8 @@ export async function answerCareReferral(referralId: string, agree: boolean): Pr
   const { error } = await rpcClient.rpc("answer_care_referral", { p_referral_id: referralId, p_agree: agree });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATX08") return { ok: false, message: "This referral isn't waiting for your answer any more." };
-  return { ok: false, message: "Couldn't send your answer. Try again." };
+  if (error.code === "ATX08") return { ok: false, message: t("This referral isn't waiting for your answer any more.") };
+  return { ok: false, message: t("Couldn't send your answer. Try again.") };
 }
 
 /**
@@ -352,7 +353,7 @@ export async function fetchMyAcceptedReferrals(me: string): Promise<Read<Connect
     data: waiting.map((r) => ({
       id: r.id,
       fromId: r.from_professional,
-      fromName: nameOr(names, r.from_professional, "Your professional"),
+      fromName: nameOr(names, r.from_professional, t("Your professional")),
       toId: r.to_professional,
       toName: names.get(r.to_professional)?.first_name?.trim() || null,
       respondedAt: r.responded_at ?? r.created_at,
@@ -370,8 +371,8 @@ export async function connectFromReferral(referralId: string, categories: Access
   const { error } = await rpcClient.rpc("connect_from_referral", { p_referral_id: referralId, p_categories: categories });
   if (!error) return { ok: true };
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  if (error.code === "ATX08") return { ok: false, message: "This referral can't be used to connect any more." };
-  return { ok: false, message: "Couldn't connect. Try again." };
+  if (error.code === "ATX08") return { ok: false, message: t("This referral can't be used to connect any more.") };
+  return { ok: false, message: t("Couldn't connect. Try again.") };
 }
 
 interface AppointmentRow { id: string; staff_id: string | null; service_name: string; starts_at: string; ends_at: string }

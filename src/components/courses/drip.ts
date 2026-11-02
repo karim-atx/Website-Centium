@@ -1,4 +1,5 @@
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 // CU25 (Release 3, DB-6): a course that opens a week at a time, as the
 // enrolled learner sees it. Pure, so the wording and the "which week is next"
 // rule are tested without Supabase.
@@ -39,7 +40,7 @@ export function lockedWeekSize(rows: DripRow[], moduleId: string): { lessons: nu
 export const hasDrip = (rows: DripRow[]): boolean => rows.some((r) => r.opensAt !== null);
 
 /** A locked week's syllabus contents: its kinds are hidden with its lessons, so the count ("3 lessons"). */
-export const lockedWeekContents = (lessons: number): string => (lessons === 1 ? "1 lesson" : `${lessons} lessons`);
+export const lockedWeekContents = (lessons: number): string => tn(lessons, "1 lesson", "{n} lessons");
 
 /** The next module still to open (lowest position), or null when every week is open. */
 export function nextLocked(rows: DripRow[]): DripRow | null {
@@ -72,12 +73,12 @@ function daysUntil(opensAt: string, now: Date): number {
  */
 export function courseDripLine(author: string, week: number, opensAt: string, now = new Date()): string {
   const { weekday, date } = openingDay(opensAt);
-  const when = daysUntil(opensAt, now) <= 6 ? weekday : `${weekday}, ${date}`;
-  return `${lead(author)} opens a week at a time. Week ${week} opens ${when}.`;
+  const when = daysUntil(opensAt, now) <= 6 ? weekday : t("{weekday}, {date}", { weekday, date });
+  return t("{author} opens a week at a time. Week {week} opens {when}.", { author: lead(author), week, when });
 }
 
 /** Lesson (CU25 "next week opens Thursday"): "Week 2 opens Thursday, Oct 15. Alex opens a week at a time." */
 export function lessonDripLine(author: string, week: number, opensAt: string): string {
   const { weekday, date } = openingDay(opensAt);
-  return `Week ${week} opens ${weekday}, ${date}. ${lead(author)} opens a week at a time.`;
+  return t("Week {week} opens {weekday}, {date}. {author} opens a week at a time.", { week, weekday, date, author: lead(author) });
 }

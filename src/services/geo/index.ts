@@ -9,6 +9,7 @@ import { areaById, type Area } from "./areas";
 
 export { distanceKm, describeDistance, coarsePoint, groupByPoint, type Coords } from "./distance";
 import type { Coords } from "./distance";
+import { tk } from "../../i18n/core";
 
 export type LocationPermission = "granted" | "prompt" | "denied" | "unsupported";
 
@@ -33,10 +34,11 @@ export type PositionResult =
   | { ok: false; reason: "denied" | "timeout" | "unavailable" | "unsupported"; message: string };
 
 const MESSAGES: Record<Exclude<PositionResult, { ok: true }>["reason"], string> = {
-  denied: "Location is turned off for Centium. Choose an area instead, or allow location in your browser settings.",
-  timeout: "Finding your location took too long. Choose an area instead.",
-  unavailable: "Your location isn't available right now. Choose an area instead.",
-  unsupported: "This browser can't share a location. Choose an area instead.",
+  // English keys (tk); the screens show them through t().
+  denied: tk("Location is turned off for Centium. Choose an area instead, or allow location in your browser settings."),
+  timeout: tk("Finding your location took too long. Choose an area instead."),
+  unavailable: tk("Your location isn't available right now. Choose an area instead."),
+  unsupported: tk("This browser can't share a location. Choose an area instead."),
 };
 
 /**

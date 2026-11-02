@@ -1,3 +1,5 @@
+import { t } from "../../i18n/core";
+
 // Distances for the professionals map, worked out ON THE DEVICE. The server
 // never receives the user's precise position (only a point rounded to one
 // decimal place) and never returns a distance; it returns each professional's
@@ -26,8 +28,8 @@ export function distanceKm(a: Coords, b: Coords): number {
  */
 export function describeDistance(km: number): string {
   if (!Number.isFinite(km)) return "";
-  if (km < 1) return "under 1 km away";
-  return `about ${Math.round(km)} km away`;
+  if (km < 1) return t("under 1 km away");
+  return t("about {km} km away", { km: Math.round(km) });
 }
 
 /** The only precision of the user's position that leaves the device. */

@@ -502,7 +502,7 @@ const marketplace: Catalogue = {
 
   // == Class page ==
   "Booking cancelled. It was free to cancel.": "أُلغي الحجز. كان الإلغاء مجانيًا.",
-  "Booking cancelled. It was inside the free-cancellation window, so the studio may charge for it.": "أُلغي الحجز. تم ذلك خارج فترة الإلغاء المجاني، لذا قد يفرض الاستوديو رسومًا عليه.",
+  "Booking cancelled. It was outside the free-cancellation window, so the studio may charge for it.": "أُلغي الحجز. تم ذلك خارج فترة الإلغاء المجاني، لذا قد يفرض الاستوديو رسومًا عليه.",
   "Loading the class": "جارٍ تحميل الحصة",
   "Loading the instructor": "جارٍ تحميل المدرّب",
   "This class was cancelled by the venue.": "ألغى المكان هذه الحصة.",

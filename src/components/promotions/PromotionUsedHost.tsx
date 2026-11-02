@@ -8,6 +8,7 @@ import { useOnline } from "../../hooks/useOnline";
 import { businessPaymentFor, fetchPromotions, promotionStatus, recordPromotionRedemption, type Promotion } from "../../services/business-market/promotions";
 import { offerSub } from "../../pages/business-market/promoModel";
 import { onPromotionUsedOffer, type PromotionUsedOffer } from "./promotionUsed";
+import { t } from "../../i18n/core";
 
 // "Promotion used" (Follow-up 20261121390000; B13 "Promotions are recorded,
 // not applied"). After a payment is recorded at the desk, the store, an
@@ -83,9 +84,9 @@ export function PromotionUsedHost() {
         bottom={152}
         duration={8000}
         icon={<BadgePercent size={15} strokeWidth={2.4} aria-hidden className="flex-none" />}
-        message="Promotion used? Record it on this payment."
+        message={t("Promotion used? Record it on this payment.")}
         action={{
-          label: "Choose",
+          label: t("Choose"),
           onClick: () => {
             setToastOpen(false);
             setSheetOpen(true);
@@ -96,14 +97,14 @@ export function PromotionUsedHost() {
       <BottomSheet
         open={sheetOpen && !!offer}
         onClose={() => setSheetOpen(false)}
-        title="Promotion used"
+        title={t("Promotion used")}
         tone="business"
         headerHeight={53}
         bodyPadding={{ top: 18, right: 20, bottom: 12, left: 20 }}
-        footer={<CtaButton label="Record" loading={busy} disabled={!picked || !online} onClick={() => void record()} />}
+        footer={<CtaButton label={t("Record")} loading={busy} disabled={!picked || !online} onClick={() => void record()} />}
       >
-        <p className="m-0 mb-3 text-[12.5px] leading-[18px] text-charcoal-soft">Optional. Pick the promotion this payment used. The price stays what you charged.</p>
-        <div role="radiogroup" aria-label="Promotion used" className="flex flex-col gap-2" data-promotion-used="">
+        <p className="m-0 mb-3 text-[12.5px] leading-[18px] text-charcoal-soft">{t("Optional. Pick the promotion this payment used. The price stays what you charged.")}</p>
+        <div role="radiogroup" aria-label={t("Promotion used")} className="flex flex-col gap-2" data-promotion-used="">
           {offer?.promos.map((p) => {
             const on = picked === p.id;
             return (
@@ -130,7 +131,7 @@ export function PromotionUsedHost() {
           </p>
         )}
       </BottomSheet>
-      <Toast open={done} variant="business" message="Promotion recorded." onExpire={() => setDone(false)} />
+      <Toast open={done} variant="business" message={t("Promotion recorded.")} onExpire={() => setDone(false)} />
     </>
   );
 }

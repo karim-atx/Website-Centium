@@ -9,7 +9,7 @@ import { formatPrice } from "../../utils/price";
 import { OFFLINE_MESSAGE } from "../network-error";
 import type { HirePaymentMethod, PlanBilling } from "./proLogic";
 import { formatShortDate } from "../../utils/date";
-import { t, tk } from "../../i18n/core";
+import { t, tk, tx } from "../../i18n/core";
 
 export type { HirePaymentMethod, PlanBilling } from "./proLogic";
 
@@ -173,10 +173,10 @@ export function liveHireWith(hires: MyHire[], professionalId: string): MyHire | 
  * professional confirms receipt").
  */
 export function hireStatusLabel(h: Pick<MyHire, "status" | "paymentStatus">): string {
-  if (h.status === "cancelled") return "Cancelled";
-  if (h.status === "expired") return "Ended";
-  if (h.paymentStatus !== "paid") return "Pending payment";
-  return "Active";
+  if (h.status === "cancelled") return t("Cancelled");
+  if (h.status === "expired") return t("Ended");
+  if (h.paymentStatus !== "paid") return t("Pending payment");
+  return tx("Active", "hire");
 }
 
 /** "Until 7 Nov 2026" for a dated hire, else null. */
@@ -184,7 +184,7 @@ export function hireUntilLabel(expiresOn: string | null): string | null {
   if (!expiresOn) return null;
   const d = new Date(`${expiresOn}T00:00:00`);
   if (Number.isNaN(d.getTime())) return null;
-  return `Until ${formatShortDate(d, { day: "numeric", month: "short", year: "numeric" })}`;
+  return t("Until {date}", { date: formatShortDate(d, { day: "numeric", month: "short", year: "numeric" }) });
 }
 
 /**
@@ -195,19 +195,19 @@ export function hireUntilLabel(expiresOn: string | null): string | null {
 export function describeHireError(code: string | undefined): string {
   switch (code) {
     case "ATXA2":
-      return "Accounts under 18 can't hire a professional.";
+      return tk("Accounts under 18 can't hire a professional.");
     case "ATX98":
-      return "That plan isn't available any more.";
+      return tk("That plan isn't available any more.");
     case "22023":
-      return "You can't hire yourself.";
+      return tk("You can't hire yourself.");
     case "ATX99":
-      return "You already have a plan with this professional. Cancel it before choosing another.";
+      return tk("You already have a plan with this professional. Cancel it before choosing another.");
     case "ATXA0":
-      return "This professional is not taking new clients right now.";
+      return tk("This professional is not taking new clients right now.");
     case "ATX01":
       return "Your session expired. Sign in again.";
     default:
-      return "Couldn't complete the hire. Try again.";
+      return tk("Couldn't complete the hire. Try again.");
   }
 }
 
@@ -215,11 +215,11 @@ export function describeHireError(code: string | undefined): string {
 export function describeClientCancelError(code: string | undefined): string {
   switch (code) {
     case "ATXA1":
-      return "This hire has already been cancelled.";
+      return tk("This hire has already been cancelled.");
     case "ATX01":
       return "Your session expired. Sign in again.";
     default:
-      return "Couldn't cancel the hire. Try again.";
+      return tk("Couldn't cancel the hire. Try again.");
   }
 }
 
@@ -259,17 +259,21 @@ export function describePlansCardError(code: string | undefined, offline = false
  * neither.
  */
 export function cancelPromptLine(h: Pick<MyHire, "planName" | "priceAgreed" | "paymentStatus" | "professionalFirstName">): string {
-  const who = h.professionalFirstName.trim() || "The professional";
+  const name = h.professionalFirstName.trim();
   if (h.paymentStatus !== "paid") {
-    return `${who} hasn't confirmed a payment yet, so cancelling is free.`;
+    return name ? t("{name} hasn't confirmed a payment yet, so cancelling is free.", { name }) : t("The professional hasn't confirmed a payment yet, so cancelling is free.");
   }
-  return `You agreed to ${h.planName} at ${priceShort(h.priceAgreed)}, and ${who} has confirmed your payment. Centium records the cancellation only; anything already paid is between you and them.`;
+  const vars = { plan: h.planName, price: priceShort(h.priceAgreed), name };
+  return name
+    ? t("You agreed to {plan} at {price}, and {name} has confirmed your payment. Centium records the cancellation only; anything already paid is between you and them.", vars)
+    : t("You agreed to {plan} at {price}, and The professional has confirmed your payment. Centium records the cancellation only; anything already paid is between you and them.", vars);
 }
 
 /** What cancelling did, from cancel_hire()'s was_free. */
 export function clientCancelledLine(firstName: string, wasFree: boolean): string {
-  const who = firstName.trim() || "the professional";
-  return wasFree
-    ? "Hire cancelled. No payment had been confirmed, so there's nothing to settle."
-    : `Hire cancelled. Centium has recorded it; anything already paid is between you and ${who}.`;
+  const name = firstName.trim();
+  if (wasFree) return t("Hire cancelled. No payment had been confirmed, so there's nothing to settle.");
+  return name
+    ? t("Hire cancelled. Centium has recorded it; anything already paid is between you and {name}.", { name })
+    : t("Hire cancelled. Centium has recorded it; anything already paid is between you and the professional.");
 }

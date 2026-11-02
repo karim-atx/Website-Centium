@@ -1,6 +1,7 @@
 import React from "react";
 import { Star } from "lucide-react";
 import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
+import { t } from "../../i18n/core";
 
 /**
  * A professional's rating: "★ 4.6 · 12 reviews", or "New" until three reviews
@@ -19,9 +20,9 @@ export const RatingBadge: React.FC<{
     return (
       <span
         className={`inline-flex items-center rounded-full bg-primary-pale px-2 py-[2px] text-[11px] font-bold text-primary-deep-text ${className}`}
-        aria-label={count > 0 ? `New, ${reviewCountLabel(count)}` : "New, no rating yet"}
+        aria-label={count > 0 ? t("New, {reviews}", { reviews: reviewCountLabel(count) }) : t("New, no rating yet")}
       >
-        New
+        {t("New")}
       </span>
     );
   }

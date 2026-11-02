@@ -17,6 +17,7 @@ import {
 } from "../../../services/public-pro";
 import { Chevron } from "./parts";
 import { dayChip, sessionWhen, timeChip, weekTitle } from "./profileModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proBook` "Book sheet · 3 payment
 // methods" (Client Professional Screens lines 216–252): the purchase sheet
@@ -165,9 +166,9 @@ export const BookSheet: React.FC<{
   );
 
   const summary = session ? (
-    <div role="group" aria-label="Session" style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
+    <div role="group" aria-label={t("Session")} style={{ position: "relative", display: "flex", borderRadius: 14, background: m.sgrey, overflow: "hidden", color: m.ink }}>
       <div style={{ flex: 1, minWidth: 0, padding: "12px 14px" }}>
-        <div style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>Session</div>
+        <div style={{ fontSize: textPx(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>{t("Session")}</div>
         <div style={{ fontSize: textPx(15), fontWeight: 800 }}>{session.name}</div>
         <div style={{ fontSize: textPx(12), fontWeight: 600, color: m.accent }}>{ownerLine}</div>
         <div style={{ fontSize: textPx(12), color: m.ink2, marginTop: 2 }}>
@@ -183,37 +184,37 @@ export const BookSheet: React.FC<{
   ) : null;
 
   const timeBox = (
-    <SheetBox label="Time" id="book-time">
+    <SheetBox label={t("Time")} id="book-time">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: textPx(12), fontWeight: 700, color: m.pdark, fontVariantNumeric: "tabular-nums" }}>{weekTitle(days)}</span>
         <span style={{ display: "flex", gap: 12 }}>
-          {arrow("left", weekOffset === 0, () => { setWeekOffset((w) => Math.max(0, w - 1)); setDay(null); setChosen(null); }, "Previous week")}
-          {arrow("right", weekOffset >= MAX_WEEKS_AHEAD, () => { setWeekOffset((w) => Math.min(MAX_WEEKS_AHEAD, w + 1)); setDay(null); setChosen(null); }, "Next week")}
+          {arrow("left", weekOffset === 0, () => { setWeekOffset((w) => Math.max(0, w - 1)); setDay(null); setChosen(null); }, t("Previous week"))}
+          {arrow("right", weekOffset >= MAX_WEEKS_AHEAD, () => { setWeekOffset((w) => Math.min(MAX_WEEKS_AHEAD, w + 1)); setDay(null); setChosen(null); }, t("Next week"))}
         </span>
       </div>
       {isBlocked ? (
-        <p style={{ margin: 0, fontSize: textPx(12.5), color: m.ink2 }}>{NOT_TAKING_BOOKINGS}</p>
+        <p style={{ margin: 0, fontSize: textPx(12.5), color: m.ink2 }}>{t(NOT_TAKING_BOOKINGS)}</p>
       ) : !current ? (
         <div aria-hidden className="animate-skeleton-pulse" style={{ height: 36, borderRadius: 8, background: m.card }} />
       ) : "error" in current ? (
         <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
-          {current.error}{" "}
+          {t(current.error)}{" "}
           <button type="button" onClick={() => setReload((n) => n + 1)} className="hit market-focus" style={{ background: "none", border: 0, padding: 0, font: "inherit", fontWeight: 800, color: m.pdark, cursor: "pointer" }}>
-            Retry
+            {t("Retry")}
           </button>
         </p>
       ) : openDays.length === 0 ? (
-        <p style={{ margin: 0, fontSize: textPx(12.5), color: m.ink2 }}>No open times this week. Try the next week.</p>
+        <p style={{ margin: 0, fontSize: textPx(12.5), color: m.ink2 }}>{t("No open times this week. Try the next week.")}</p>
       ) : (
         <>
-          <div role="radiogroup" aria-label="Day" className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -14px", padding: "4px 14px" }}>
+          <div role="radiogroup" aria-label={t("Day")} className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -14px", padding: "4px 14px" }}>
             {openDays.map((k) => (
               <button key={k} type="button" role="radio" aria-checked={k === shownDay} className="hit market-focus" onClick={() => { setDay(k); setChosen(null); }} style={chip(k === shownDay)}>
                 {dayChip(k)}
               </button>
             ))}
           </div>
-          <div role="radiogroup" aria-label="Start time" className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "4px -14px 0", padding: "4px 14px" }}>
+          <div role="radiogroup" aria-label={t("Start time")} className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "4px -14px 0", padding: "4px 14px" }}>
             {daySlots.map((s) => (
               <button key={s.startsAt} type="button" role="radio" aria-checked={s.startsAt === chosen} className="hit market-focus" onClick={() => { setChosen(s.startsAt); setError(null); }} style={{ ...chip(s.startsAt === chosen), fontVariantNumeric: "tabular-nums" }}>
                 {timeChip(s.startsAt)}
@@ -230,19 +231,19 @@ export const BookSheet: React.FC<{
     <PurchaseSheet
       open={open && !!session}
       onClose={onClose}
-      title={`Book with ${firstName}`}
+      title={t("Book with {name}", { name: firstName })}
       summary={
         <>
           {summary}
           {timeBox}
         </>
       }
-      cashHint={free ? null : `Pay ${firstName} at the start of the session`}
-      ctaLabel={free ? "Confirm booking" : confirmLabel(price)}
+      cashHint={free ? null : t("Pay {name} at the start of the session", { name: firstName })}
+      ctaLabel={free ? t("Confirm booking") : confirmLabel(price)}
       busy={busy}
       disabled={!signedIn || !chosenSlot || isBlocked}
-      error={error}
-      note={!signedIn ? <p style={{ margin: 0, fontSize: textPx(12), color: m.ink2 }}>Sign in to book a session.</p> : null}
+      error={error ? t(error) : error}
+      note={!signedIn ? <p style={{ margin: 0, fontSize: textPx(12), color: m.ink2 }}>{t("Sign in to book a session.")}</p> : null}
       onConfirm={() => void book()}
     />
   );

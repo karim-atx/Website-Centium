@@ -20,6 +20,7 @@ import { MarketError, MarketSkeleton } from "../../components/market/MarketState
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { BackRow, Caps, EmptyBlock, PressButton } from "./profile/parts";
 import { typeLabel } from "./profile/profileModel";
+import { t, tk, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W5 · the full Reviews page (/app/professionals/:id/
 // reviews), reached from the profile's Reviews tab ("See all reviews"). Not
@@ -65,18 +66,18 @@ export default function ProfessionalReviews() {
   if (listing === undefined)
     return (
       <div aria-busy="true" style={{ lineHeight: "normal" }}>
-        <BackRow title="Reviews" />
-        <MarketSkeleton radius={18} rows={3} height={110} label="Loading reviews" style={{ marginTop: 14 }} />
-        <MarketSkeleton radius={18} rows={4} height={240} label="Loading reviews" style={{ marginTop: 18 }} />
+        <BackRow title={t("Reviews")} />
+        <MarketSkeleton radius={18} rows={3} height={110} label={tk("Loading reviews")} style={{ marginTop: 14 }} />
+        <MarketSkeleton radius={18} rows={4} height={240} label={tk("Loading reviews")} style={{ marginTop: 18 }} />
       </div>
     );
   if (listing === null)
     return (
       <div style={{ lineHeight: "normal" }}>
-        <BackRow title="Reviews" />
-        <EmptyBlock title="Professional not found." body={null}>
+        <BackRow title={t("Reviews")} />
+        <EmptyBlock title={t("Professional not found.")} body={null}>
           <PressButton onClick={() => navigate("/app/professionals")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
-            Back
+            {t("Back")}
           </PressButton>
         </EmptyBlock>
       </div>
@@ -103,26 +104,26 @@ export default function ProfessionalReviews() {
   return (
     <div className={canWrite || canEdit ? "pb-[172px]" : ""} style={{ lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <BackRow title="Reviews" />
+      <BackRow title={t("Reviews")} />
       <p style={{ margin: "2px 0 0", fontSize: textPx(13), color: m.ink2 }}>
         {listing.name} · {listing.specialty?.trim() || typeLabel(listing.subtype)}
       </p>
 
-      <section aria-label="Rating summary" style={{ ...card, marginTop: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 16 }}>
+      <section aria-label={t("Rating summary")} style={{ ...card, marginTop: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 16 }}>
         <div style={{ flexShrink: 0 }}>
-          <div style={{ fontSize: textPx(30), lineHeight: linePx(34), fontWeight: 800 }}>{label.kind === "average" ? label.value : "New"}</div>
-          <span role="img" aria-label={`${stars} out of 5 stars`} style={{ display: "flex", gap: 2, marginTop: 2 }}>
+          <div style={{ fontSize: textPx(30), lineHeight: linePx(34), fontWeight: 800 }}>{label.kind === "average" ? label.value : t("New")}</div>
+          <span role="img" aria-label={t("{n} out of 5 stars", { n: stars })} style={{ display: "flex", gap: 2, marginTop: 2 }}>
             {[0, 1, 2, 3, 4].map((i) => (
               <svg key={i} width={13} height={13} viewBox="0 0 24 24" fill={i < stars ? m.gold : "none"} stroke={i < stars ? m.gold : m.border} strokeWidth={1.5} strokeLinejoin="round" aria-hidden style={{ display: "block", ...NO_ICON_SCALE }}>
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
               </svg>
             ))}
           </span>
-          <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 2 }}>{listing.reviewCount > 0 ? reviewCountLabel(listing.reviewCount) : "No reviews yet"}</div>
+          <div style={{ fontSize: textPx(11.5), color: m.faint, marginTop: 2 }}>{listing.reviewCount > 0 ? reviewCountLabel(listing.reviewCount) : t("No reviews yet")}</div>
         </div>
-        <div aria-label="Reviews by stars" role="list" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div aria-label={t("Reviews by stars")} role="list" style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
           {[5, 4, 3, 2, 1].map((n) => (
-            <div key={n} role="listitem" aria-label={`${n} stars: ${dist[n - 1]}`} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(11) }}>
+            <div key={n} role="listitem" aria-label={tx("{n} stars: {count}", "rating bar", { n, count: dist[n - 1] })} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: textPx(11) }}>
               <span aria-hidden style={{ width: 8, fontWeight: 700, color: m.ink2 }}>{n}</span>
               <span aria-hidden style={{ flex: 1, height: 5, borderRadius: 999, overflow: "hidden", background: m.pale }}>
                 <span style={{ display: "block", height: "100%", borderRadius: 999, width: `${(dist[n - 1] / total) * 100}%`, background: m.accent }} />
@@ -133,35 +134,35 @@ export default function ProfessionalReviews() {
         </div>
       </section>
 
-      <Caps style={{ marginTop: 18 }}>All reviews</Caps>
+      <Caps style={{ marginTop: 18 }}>{t("All reviews")}</Caps>
 
       {signedOut ? (
-        <EmptyBlock icon={<LogIn size={24} strokeWidth={1.75} aria-hidden style={NO_ICON_SCALE} />} title="Sign in to read reviews" body={`Reviews are from ${firstName}'s clients, and members can read them.`}>
+        <EmptyBlock icon={<LogIn size={24} strokeWidth={1.75} aria-hidden style={NO_ICON_SCALE} />} title={t("Sign in to read reviews")} body={t("Reviews are from {name}'s clients, and members can read them.", { name: firstName })}>
           <PressButton onClick={() => navigate("/app/onboarding")} style={{ height: 44, padding: "0 18px", borderRadius: 14, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: textPx(14), fontWeight: 800, cursor: "pointer" }}>
-            Sign in
+            {t("Sign in")}
           </PressButton>
         </EmptyBlock>
       ) : loading && rows.length === 0 ? (
-        <MarketSkeleton radius={18} rows={4} height={200} label="Loading reviews" style={{ marginTop: 8 }} />
+        <MarketSkeleton radius={18} rows={4} height={200} label={tk("Loading reviews")} style={{ marginTop: 8 }} />
       ) : error && rows.length === 0 ? (
-        <MarketError thing="reviews" onRetry={() => void reload()} style={{ marginTop: 8 }} />
+        <MarketError thing={tk("reviews")} onRetry={() => void reload()} style={{ marginTop: 8 }} />
       ) : rows.length === 0 ? (
-        <EmptyBlock title="No reviews yet" body={null} style={{ paddingTop: 24 }} />
+        <EmptyBlock title={t("No reviews yet")} body={null} style={{ paddingTop: 24 }} />
       ) : (
         <div style={{ ...card, marginTop: 8, padding: "0 16px" }}>
           {rows.map((r, i) => (
             <div key={r.id} style={{ padding: "12px 0", borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
               {r.id === mine?.id ? (
-                <ReviewItem review={r} layout="row" showName={false} replyLabel={`Reply from ${firstName}`} />
+                <ReviewItem review={r} layout="row" showName={false} replyLabel={t("Reply from {name}", { name: firstName })} />
               ) : (
                 <ReviewItem
                   review={r}
                   layout="row"
-                  replyLabel={`Reply from ${firstName}`}
+                  replyLabel={t("Reply from {name}", { name: firstName })}
                   menu={
                     <button
                       type="button"
-                      aria-label="Review options"
+                      aria-label={t("Review options")}
                       aria-haspopup="menu"
                       aria-expanded={menuFor?.id === r.id}
                       onClick={(e) => setMenuFor({ id: r.id, anchor: e.currentTarget })}
@@ -177,7 +178,7 @@ export default function ProfessionalReviews() {
           ))}
           {error && (
             <p role="alert" style={{ margin: 0, padding: "12px 0", textAlign: "center", fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>
-              {error}
+              {t(error)}
             </p>
           )}
         </div>
@@ -191,7 +192,7 @@ export default function ProfessionalReviews() {
         <PinnedCta
           size="base"
           primary={{
-            label: canEdit ? "Edit your review" : "Write a review",
+            label: canEdit ? t("Edit your review") : t("Write a review"),
             icon: <Pencil size={15} />,
             onClick: () => setFormOpen(true),
             style: { background: m.fill, color: m.onfill, fontSize: textPx(14), fontWeight: 800 },
@@ -221,9 +222,9 @@ export default function ProfessionalReviews() {
         anchor={menuFor?.anchor ?? null}
         onClose={() => setMenuFor(null)}
         options={[
-          { value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> },
+          { value: "report", label: t("Report"), icon: <Flag size={15} strokeWidth={1.75} /> },
           ...(menuReview?.reply && !menuReview.reply.redactedAt
-            ? [{ value: "report-reply", label: "Report reply", icon: <MessageSquareWarning size={15} strokeWidth={1.75} /> }]
+            ? [{ value: "report-reply", label: t("Report reply"), icon: <MessageSquareWarning size={15} strokeWidth={1.75} /> }]
             : []),
         ]}
         onSelect={(value) => {
@@ -233,7 +234,7 @@ export default function ProfessionalReviews() {
         }}
       />
 
-      <BottomSheet open={!!reportingReplyId} onClose={() => setReportingReplyId(null)} title="Report this reply">
+      <BottomSheet open={!!reportingReplyId} onClose={() => setReportingReplyId(null)} title={t("Report this reply")}>
         {reportingReplyId && (
           <ReviewReportForm
             onSend={async (reason, detail) => {
@@ -244,7 +245,7 @@ export default function ProfessionalReviews() {
         )}
       </BottomSheet>
 
-      <BottomSheet open={!!reportingId} onClose={() => setReportingId(null)} title="Report this review">
+      <BottomSheet open={!!reportingId} onClose={() => setReportingId(null)} title={t("Report this review")}>
         {reportingId && (
           <ReviewReportForm
             onSend={async (reason, detail) => {

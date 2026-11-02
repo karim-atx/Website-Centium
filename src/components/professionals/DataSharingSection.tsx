@@ -30,12 +30,13 @@ import { formatDisplayDate } from "../../utils/date";
 import { ACCESS_CATEGORIES, type AccessCategory, type LinkedProfessional } from "../../services/consent";
 import { answerAccessRequest, firstNameOf, getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
 import { AccessRequestNotice } from "./AccessRequestNotice";
+import { t, tk } from "../../i18n/core";
 
 /** MO1.5.1.1: the board's three groups. */
 const GROUPS: { label: string; categories: AccessCategory[] }[] = [
-  { label: "Everyday tracking", categories: ["food_diary", "workout_activity", "weight", "progress", "health_metrics", "habits"] },
-  { label: "Health records", categories: ["lab_results", "medical_history", "allergies_dietary", "body_measurements", "blood_pressure"] },
-  { label: "Personal", categories: ["cycle_phase", "pregnancy"] },
+  { label: tk("Everyday tracking"), categories: ["food_diary", "workout_activity", "weight", "progress", "health_metrics", "habits"] },
+  { label: tk("Health records"), categories: ["lab_results", "medical_history", "allergies_dietary", "body_measurements", "blood_pressure"] },
+  { label: tk("Personal"), categories: ["cycle_phase", "pregnancy"] },
 ];
 
 /**
@@ -73,7 +74,7 @@ const CATEGORY_ICON: Partial<Record<AccessCategory, LucideIcon>> = {
 
 /** The display label for a category, for use inside prose. */
 const labelFor = (category: AccessCategory): string =>
-  ACCESS_CATEGORIES.find((c) => c.category === category)?.label ?? "This setting";
+  ACCESS_CATEGORIES.find((c) => c.category === category)?.label ?? tk("This setting");
 
 // The client's data-sharing controls.
 //
@@ -135,7 +136,7 @@ export const DataSharingSection: React.FC<{
 
   /** Who a pending-change warning is about, for the message that names them. */
   const nameFor = (id: string) =>
-    professionals.find((p) => p.professionalId === id)?.name ?? "your professional";
+    professionals.find((p) => p.professionalId === id)?.name ?? t("your professional");
 
   // One fetch, filtered — not a second query or a second component.
   const visible = professionalId
@@ -161,9 +162,9 @@ export const DataSharingSection: React.FC<{
         </span>
         {/* MO1.5.1.1 anatomy row 11: name 18/700. */}
         <p className="mt-2.5 text-[18px] font-bold text-charcoal">{pro.name}</p>
-        <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
+        <p className="text-xs text-charcoal-faint">{t("Connected since {date}", { date: formatDisplayDate(pro.joinedAt) })}</p>
         <p className="mt-2.5 text-[12.5px] text-charcoal-soft max-w-[300px]">
-          Choose what they can see. Nothing is shared unless you turn it on.
+          {t("Choose what they can see. Nothing is shared unless you turn it on.")}
         </p>
       </div>
     ) : (
@@ -178,10 +179,10 @@ export const DataSharingSection: React.FC<{
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-charcoal truncate">{pro.name}</p>
-            <p className="text-xs text-charcoal-faint">Connected since {formatDisplayDate(pro.joinedAt)}</p>
+            <p className="text-xs text-charcoal-faint">{t("Connected since {date}", { date: formatDisplayDate(pro.joinedAt) })}</p>
           </div>
         </div>
-        <p className="text-[11px] text-charcoal-soft mb-3">Choose what they can see. Nothing is shared unless you turn it on.</p>
+        <p className="text-[11px] text-charcoal-soft mb-3">{t("Choose what they can see. Nothing is shared unless you turn it on.")}</p>
       </>
     );
 
@@ -205,21 +206,14 @@ export const DataSharingSection: React.FC<{
           className="rounded-2xl bg-primary-pale px-3.5 pt-3 pb-1 mb-3"
         >
           <p className="text-[12.5px] font-semibold text-charcoal mb-1">
-            Two things we should have asked separately
+            {t("Two things we should have asked separately")}
           </p>
           <p className="text-[12.5px] text-charcoal-soft leading-normal">
-            When you agreed to share health metrics with {pro.name}, that one switch also covered your lab results and
-            your medical history. That was too much to bundle into a single question. We've split it out below. Your
-            activity and vitals are still shared exactly as before, and{" "}
-            {unanswered[pro.professionalId]!.length > 1 ? (
-              <>these two are waiting on your answer. Until you answer, they can't see either one.</>
-            ) : (
-              <>
-                {labelFor(unanswered[pro.professionalId]![0])} is waiting on your answer. Until you answer, they can't
-                see it.
-              </>
-            )}{" "}
-            Either answer is fine.
+            {t("When you agreed to share health metrics with {name}, that one switch also covered your lab results and your medical history. That was too much to bundle into a single question. We've split it out below. Your activity and vitals are still shared exactly as before, and", { name: pro.name })}{" "}
+            {unanswered[pro.professionalId]!.length > 1
+              ? t("these two are waiting on your answer. Until you answer, they can't see either one.")
+              : t("{label} is waiting on your answer. Until you answer, they can't see it.", { label: t(labelFor(unanswered[pro.professionalId]![0])) })}{" "}
+            {t("Either answer is fine.")}
           </p>
           {/* The switches below are the "yes". This is the "no": without it the
               only way to decline would be to grant access and take it straight
@@ -231,10 +225,10 @@ export const DataSharingSection: React.FC<{
             className="tap min-h-11 inline-flex items-center text-[13px] font-bold text-primary-accent disabled:opacity-50"
           >
             {saving === pro.professionalId
-              ? "Saving…"
+              ? t("Saving…")
               : unanswered[pro.professionalId]!.length > 1
-              ? "Don't share these"
-              : "Don't share this"}
+              ? t("Don't share these")
+              : t("Don't share this")}
           </button>
         </div>
       )}
@@ -243,7 +237,7 @@ export const DataSharingSection: React.FC<{
         // MO1.5.1.1 rows 12–13 are section labels: the one section-label
         // style (decision 20). Group cards radius 18 (2x frame).
         <div key={g.label} className="mt-6 first:mt-0">
-          <p className="section-label text-charcoal-faint mb-2.5">{g.label}</p>
+          <p className="section-label text-charcoal-faint mb-2.5">{t(g.label)}</p>
           <div className="rounded-[18px] border border-charcoal/[0.08] px-3.5">
             {g.items.map(({ category, label, description }) => {
               // Absent means denied: no default-on.
@@ -261,19 +255,19 @@ export const DataSharingSection: React.FC<{
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-charcoal flex items-center gap-1.5">
-                        {label}
+                        {t(label)}
                         {savedKey === `${pro.professionalId}:${category}` && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-status-good">
-                            <Check size={11} /> Saved
+                            <Check size={11} /> {t("Saved")}
                           </span>
                         )}
                       </p>
-                      <p className="text-[11px] text-charcoal-faint">{description}</p>
+                      <p className="text-[11px] text-charcoal-faint">{t(description)}</p>
                     </div>
                     <Toggle
                       checked={granted}
                       onChange={(v) => void onSwitch(pro.professionalId, category, v)}
-                      label={`Share ${label.toLowerCase()} with ${pro.name}`}
+                      label={t("Share {data} with {name}", { data: t(label).toLowerCase(), name: pro.name })}
                     />
                   </div>
                   {/* Release 3 CU8 v4 (r25.js SHARE25: syringe, "Vaccinations",
@@ -289,8 +283,8 @@ export const DataSharingSection: React.FC<{
                         <Syringe size={16} strokeWidth={1.75} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-charcoal">Vaccinations</p>
-                        <p className="text-[11px] text-charcoal-faint">Not recorded in Centium yet</p>
+                        <p className="text-sm text-charcoal">{t("Vaccinations")}</p>
+                        <p className="text-[11px] text-charcoal-faint">{t("Not recorded in Centium yet")}</p>
                       </div>
                     </div>
                   )}
@@ -309,8 +303,7 @@ export const DataSharingSection: React.FC<{
       <p className="flex items-start gap-1.5 text-[11px] text-charcoal-faint mt-3.5 pt-3 border-t border-charcoal/[0.06]">
         <Info size={12} className="mt-0.5 shrink-0" />
         <span>
-          These take effect straight away. Turning one on lets them see that data from that moment; turning it off
-          stops them just as quickly.
+          {t("These take effect straight away. Turning one on lets them see that data from that moment; turning it off stops them just as quickly.")}
         </span>
       </p>
     </>
@@ -322,11 +315,11 @@ export const DataSharingSection: React.FC<{
           own title, so the section heading would just repeat it. */}
       {!professionalId && (
         <p className="section-label text-charcoal-faint mb-2 flex items-center gap-1.5">
-          <ShieldCheck size={13} /> Data sharing
+          <ShieldCheck size={13} /> {t("Data sharing")}
         </p>
       )}
 
-      {error && <p className="text-xs font-semibold text-status-high mb-2">{error}</p>}
+      {error && <p className="text-xs font-semibold text-status-high mb-2">{t(error)}</p>}
 
       {/* SAID IN WORDS, not left as a switch that quietly sprang back: the
           database came back disagreeing with what this device asked for, so
@@ -339,12 +332,13 @@ export const DataSharingSection: React.FC<{
         <div role="alert" className="mb-3">
           <p className="flex items-start gap-2 text-xs font-semibold text-status-high">
             <CircleAlert size={13} strokeWidth={2} className="shrink-0 mt-px" aria-hidden />
-            {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
+            {unsaved.length > 1 ? t("Some changes didn't save") : t("A change didn't save")}
           </p>
           {unsaved.map((u) => (
             <p key={`${u.professionalId}:${u.category}`} className="ps-[21px] mt-0.5 text-xs text-charcoal-soft leading-normal">
-              {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with {nameFor(u.professionalId)}. Set it
-              again to retry.
+              {u.requested
+                ? t("{label} is still not shared with {name}. Set it again to retry.", { label: t(labelFor(u.category)), name: nameFor(u.professionalId) })
+                : t("{label} is still shared with {name}. Set it again to retry.", { label: t(labelFor(u.category)), name: nameFor(u.professionalId) })}
             </p>
           ))}
         </div>

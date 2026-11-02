@@ -13,10 +13,22 @@ import type { ProfessionalCardData } from "../../../components/market/peopleMode
 import { dayText, reviewContext, type DirectoryHit, type ProfileReview } from "../../../services/pro-profile/model";
 import { clock12 } from "../../../utils/time12";
 import { SUBTYPE_SINGULAR } from "../../../components/professionals/subtypeLabels";
+import { getLanguage, t, tk } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
+
+/** The subtype names with a capital (SUBTYPE_SINGULAR's), as English keys for t(). */
+const TYPE_LABEL: Record<keyof typeof SUBTYPE_SINGULAR, string> = {
+  trainer: tk("Personal trainer"),
+  dietitian: tk("Dietitian"),
+  physiotherapist: tk("Physiotherapist"),
+  doctor: tk("Doctor"),
+  nutritionist: tk("Nutritionist"),
+  coach_instructor: tk("Coach or instructor"),
+  other: tk("Health professional"),
+};
 
 /** "Personal trainer": the subtype's name, for a listing without a specialty. */
-export const typeLabel = (s: keyof typeof SUBTYPE_SINGULAR | null | undefined): string =>
-  s ? SUBTYPE_SINGULAR[s].charAt(0).toUpperCase() + SUBTYPE_SINGULAR[s].slice(1) : "Professional";
+export const typeLabel = (s: keyof typeof SUBTYPE_SINGULAR | null | undefined): string => t(s ? TYPE_LABEL[s] : "Professional");
 
 /** The fields of a live directory listing (services/directory) the card uses. */
 export interface ListingLike {
@@ -38,7 +50,7 @@ export const dollars = (n: number): string => `$${Number.isInteger(n) ? n : n.to
 
 /** "From $15" (the card's price), or null when nothing is priced. */
 export function fromPriceText(value: number | null | undefined): string | null {
-  return value != null && Number.isFinite(value) && value > 0 ? `From ${dollars(value)}` : null;
+  return value != null && Number.isFinite(value) && value > 0 ? t("From {price}", { price: dollars(value) }) : null;
 }
 
 /**
@@ -105,7 +117,7 @@ export function matchesQuery(l: Pick<ListingLike, "name" | "specialty" | "headli
  */
 export function profileRatingLine(average: number | null, count: number, area: string | null): string {
   const r = ratingLabel(average, count);
-  const head = r.kind === "average" ? `${r.value} · ${reviewCountLabel(r.count)}` : count > 0 ? `New · ${reviewCountLabel(count)}` : "New · no reviews yet";
+  const head = r.kind === "average" ? `${r.value} · ${reviewCountLabel(r.count)}` : count > 0 ? `${t("New")} · ${reviewCountLabel(count)}` : t("New · no reviews yet");
   return area?.trim() ? `${head} · ${area.trim()}` : head;
 }
 
@@ -202,10 +214,10 @@ export interface ReviewLine {
 export function reviewLines(client: ClientReviewLike[], classReviews: ProfileReview[], mineId?: string | null): ReviewLine[] {
   const a: ReviewLine[] = client
     .filter((r) => !r.redactedAt)
-    .map((r) => ({ id: `c:${r.id}`, who: r.id === mineId ? "You" : r.reviewerName?.trim() || "A client", when: dayText(r.createdAt), context: null, text: r.body?.trim() || null, rating: r.rating, at: r.createdAt }));
+    .map((r) => ({ id: `c:${r.id}`, who: r.id === mineId ? t("You") : r.reviewerName?.trim() || t("A client"), when: dayText(r.createdAt), context: null, text: r.body?.trim() || null, rating: r.rating, at: r.createdAt }));
   const b: ReviewLine[] = classReviews.map((r) => ({
     id: `k:${r.id}`,
-    who: r.reviewerName.trim() || "A client",
+    who: r.reviewerName.trim() || t("A client"),
     when: dayText(r.createdAt),
     context: reviewContext(r),
     text: r.text?.trim() || null,
@@ -215,15 +227,18 @@ export function reviewLines(client: ClientReviewLike[], classReviews: ProfileRev
   return [...a, ...b].sort((x, y) => y.at.localeCompare(x.at));
 }
 
+/** "New": the summary's figure under three reviews (an English key; the tab shows it through t()). */
+export const NEW = tk("New");
+
 /** The summary's big figure: the average once three reviews count, else "New". */
 export function summaryFigure(average: number | null, count: number): string {
   const r = ratingLabel(average, count);
-  return r.kind === "average" ? r.value : "New";
+  return r.kind === "average" ? r.value : NEW;
 }
 
 /** "38 reviews from class clients" (class reviews only), else "12 reviews". */
 export function summaryLine(count: number, classOnly: boolean): string {
-  return classOnly ? `${reviewCountLabel(count)} from class clients` : reviewCountLabel(count);
+  return classOnly ? t("{reviews} from class clients", { reviews: reviewCountLabel(count) }) : reviewCountLabel(count);
 }
 
 /** The average of a set of 1–5 ratings, or null. */
@@ -244,6 +259,7 @@ export const timeChip = (startsAt: string): string => clock12(startsAt);
 export function dayChip(key: string): string {
   const [y, m, d] = key.split("-").map(Number);
   const date = new Date(y, m - 1, d);
+  if (getLanguage() !== "en") return date.toLocaleDateString(appLocale(), { weekday: "short", day: "numeric" });
   return `${WEEKDAY[date.getDay()]} ${d}`;
 }
 
@@ -251,6 +267,7 @@ export function dayChip(key: string): string {
 export function sessionWhen(startsAt: string, joiner = " · "): string {
   const d = new Date(startsAt);
   if (Number.isNaN(d.getTime())) return "";
+  if (getLanguage() !== "en") return `${d.toLocaleDateString(appLocale(), { weekday: "short", month: "short", day: "numeric" })}${joiner}${clock12(d)}`;
   return `${WEEKDAY[d.getDay()]}, ${MONTH[d.getMonth()]} ${d.getDate()}${joiner}${clock12(d)}`;
 }
 
@@ -258,5 +275,9 @@ export function sessionWhen(startsAt: string, joiner = " · "): string {
 export function weekTitle(days: Date[]): string {
   const a = days[0];
   const b = days[days.length - 1];
+  if (getLanguage() !== "en") {
+    const md = (x: Date) => x.toLocaleDateString(appLocale(), { month: "short", day: "numeric" });
+    return t("{from} to {to}", { from: md(a), to: md(b) });
+  }
   return `${MONTH[a.getMonth()]} ${a.getDate()} to ${MONTH[b.getMonth()]} ${b.getDate()}`;
 }

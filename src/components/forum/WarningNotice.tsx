@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { acknowledgeWarning, fetchUnseenWarnings, type ForumWarning } from "../../services/forum";
 import { ShieldAlert } from "lucide-react";
 import { fv } from "./forumColor";
+import { t } from "../../i18n/core";
 
 // A moderator's warning to this member (my_forum_warnings), shown at the top
 // of the forum until they acknowledge it (acknowledge_forum_warning). Only
@@ -43,7 +44,7 @@ export function WarningNotice() {
         <ShieldAlert size={17} strokeWidth={1.75} />
       </span>
       <div className="min-w-0 flex-1 flex flex-col gap-1">
-        <span className="text-[14px] font-bold text-charcoal">A message from the moderators</span>
+        <span className="text-[14px] font-bold text-charcoal">{t("A message from the moderators")}</span>
         <p className="m-0 text-[13px] font-medium leading-[1.55] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
           {current.body}
         </p>
@@ -55,7 +56,7 @@ export function WarningNotice() {
           // 44 to the finger, the text action drawn flush with the body.
           className="tap self-start h-11 -my-2 text-[13px] font-bold text-primary-accent disabled:opacity-60"
         >
-          {busy ? "Saving…" : "I understand"}
+          {busy ? t("Saving…") : t("I understand")}
         </button>
       </div>
     </div>

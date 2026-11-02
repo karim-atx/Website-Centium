@@ -48,6 +48,7 @@ import {
 } from "./directoryFilterModel";
 import { BackRow, Chevron, EmptyBlock } from "./profile/parts";
 import { hitCard, matchesQuery } from "./profile/profileModel";
+import { t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 `proDir` "Directory · ranked search"
 // (Client Professional Screens lines 26–50): the back row with "Professionals"
@@ -99,9 +100,9 @@ import { hitCard, matchesQuery } from "./profile/profileModel";
 // the device.
 
 const DIRECTORY_FILTER_GROUPS = [
-  { heading: "Distance", options: DISTANCE_OPTIONS },
-  { heading: "Where", options: WHERE_OPTIONS },
-  { heading: "Country", options: COUNTRY_OPTIONS },
+  { heading: tk("Distance"), options: DISTANCE_OPTIONS },
+  { heading: tk("Where"), options: WHERE_OPTIONS },
+  { heading: tk("Country"), options: COUNTRY_OPTIONS },
 ] as const;
 
 type Subtype = Enums<"professional_subtype">;
@@ -177,7 +178,7 @@ export default function Professionals() {
   }, [linkedProfileOpen, linkedProfessionalId]);
 
   const hasLinkedProfessional = !!linkedProfessionalId || !!user.linkedProfessionalCode;
-  const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? "Your professional";
+  const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? t("Your professional");
 
   // The live directory (public_professional_directory): no contact columns
   // are selected (services/directory LISTING_COLUMNS; D-27).
@@ -258,7 +259,7 @@ export default function Professionals() {
     <div style={{ lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <FixedHeader paddingBottom={12}>
-        <BackRow title="Professionals" />
+        <BackRow title={t("Professionals")} />
 
         <label
           style={{ marginTop: 10, height: 48, boxSizing: "border-box", borderRadius: 14, border: `1.5px solid ${m.fill}`, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", cursor: "text" }}
@@ -271,8 +272,8 @@ export default function Professionals() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search professionals"
-            aria-label="Search professionals"
+            placeholder={t("Search professionals")}
+            aria-label={t("Search professionals")}
             className="placeholder:text-charcoal-faint"
             style={{ flex: 1, minWidth: 0, height: "100%", border: 0, outline: "none", background: "transparent", font: "inherit", fontSize: textPx(14), fontWeight: 600, color: m.ink }}
           />
@@ -280,7 +281,7 @@ export default function Professionals() {
 
         {isRanked && view === "list" ? (
           <p style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "16px", color: m.faint }}>
-            {nearestFirst ? "Nearest first, measured on this phone." : "Best match first: Centium work history, reviews and distance."}
+            {nearestFirst ? t("Nearest first, measured on this phone.") : t("Best match first: Centium work history, reviews and distance.")}
           </p>
         ) : null}
 
@@ -289,8 +290,8 @@ export default function Professionals() {
         <SegmentedTabs
           className="mb-2.5"
           items={[
-            { key: "list", label: "List", icon: <List size={17} strokeWidth={1.75} aria-hidden /> },
-            { key: "map", label: "Map", icon: <MapIcon size={17} strokeWidth={1.75} aria-hidden /> },
+            { key: "list", label: t("List"), icon: <List size={17} strokeWidth={1.75} aria-hidden /> },
+            { key: "map", label: t("Map"), icon: <MapIcon size={17} strokeWidth={1.75} aria-hidden /> },
           ]}
           activeKey={view}
           onChange={(k) => setView(k as "list" | "map")}
@@ -303,7 +304,7 @@ export default function Professionals() {
         <SegmentedTabs
           className="-me-4"
           scroll
-          items={[{ key: "all", label: "All" }, ...(Object.keys(subtypeLabels) as Subtype[]).map((t) => ({ key: t, label: subtypeLabels[t] }))]}
+          items={[{ key: "all", label: t("All") }, ...(Object.keys(subtypeLabels) as Subtype[]).map((st) => ({ key: st, label: t(subtypeLabels[st]) }))]}
           activeKey={type ?? "all"}
           onChange={(k) => setType(k === "all" ? null : (k as Subtype))}
           labelSize={12}
@@ -344,7 +345,7 @@ export default function Professionals() {
                 className="hit market-focus"
                 style={{ height: 32, paddingBlock: "0", paddingInline: "12px 8px", borderRadius: 10, border: `0.5px solid ${m.border}`, background: "transparent", display: "inline-flex", alignItems: "center", gap: 3, font: "inherit", fontSize: textPx(12), fontWeight: 700, color: m.ink2, cursor: "pointer", whiteSpace: "nowrap" }}
               >
-                Sort: {sort}
+                {t("Sort: {sort}", { sort: t(sort) })}
                 <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
                   <path d="m6 9 6 6 6-6" />
                 </svg>
@@ -352,7 +353,7 @@ export default function Professionals() {
             ) : (
               <span />
             )}
-            <FilterTrigger ref={setFilterAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label="Filter professionals" />
+            <FilterTrigger ref={setFilterAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label={t("Filter professionals")} />
           </div>
         ) : null}
         {filter.active && ((isRanked && view === "list") || view === "map") ? (
@@ -364,9 +365,9 @@ export default function Professionals() {
         open={sortOpen}
         onClose={() => setSortOpen(false)}
         anchor={sortEl}
-        heading="Sort by"
+        heading={t("Sort by")}
         align="left"
-        options={SORTS.map((s) => ({ value: s, label: s }))}
+        options={SORTS.map((s) => ({ value: s, label: t(s) }))}
         selected={sort}
         onSelect={(v) => {
           setSort(v);
@@ -383,13 +384,13 @@ export default function Professionals() {
         <button
           type="button"
           onClick={openLinked}
-          aria-label={`Your professional, ${linkedName}. Open profile`}
+          aria-label={t("Your professional, {name}. Open profile", { name: linkedName })}
           className="market-focus"
           style={{ width: "100%", marginBottom: 10, minHeight: 56, display: "flex", alignItems: "center", gap: 12, borderRadius: 18, background: m.card, border: `0.5px solid ${m.hair}`, padding: "10px 16px", textAlign: "start", font: "inherit", color: m.ink, cursor: "pointer" }}
         >
           <MarketAvatar id={linkedProfessionalId ?? "linked"} name={linkedName} photoUrl={linkedDetail?.avatarUrl ?? null} size={36} fontSize={13} />
           <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>Your professional</span>
+            <span style={{ display: "block", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>{t("Your professional")}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
               <span style={{ fontSize: textPx(14), fontWeight: 800, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{linkedName}</span>
               {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={14} />}
@@ -419,32 +420,32 @@ export default function Professionals() {
             })
           : shownListings.map((p) => <DirectoryCard key={p.profileId} listing={p} />)}
 
-        {loading && <MarketSkeleton radius={18} rows={3} height={121} count={3} label="Loading professionals" />}
-        {directoryError && !isRanked && <MarketError thing="professionals" onRetry={() => { setDirectoryError(false); setListings((prev) => (prev && prev.length > 0 ? prev : null)); setReload((n) => n + 1); }} />}
+        {loading && <MarketSkeleton radius={18} rows={3} height={121} count={3} label={tk("Loading professionals")} />}
+        {directoryError && !isRanked && <MarketError thing={tk("professionals")} onRetry={() => { setDirectoryError(false); setListings((prev) => (prev && prev.length > 0 ? prev : null)); setReload((n) => n + 1); }} />}
         {!loading && !(directoryError && !isRanked) && count === 0 && (
           <EmptyBlock
             icon={<Users size={24} strokeWidth={1.75} aria-hidden style={NO_ICON_SCALE} />}
             title={
               filtering
                 ? query.trim()
-                  ? "No professionals match"
+                  ? t("No professionals match")
                   : type
-                    ? "No professionals in this category yet"
+                    ? t("No professionals in this category yet")
                     : maxKm != null
-                      ? `No professionals within ${maxKm} km`
-                      : "No professionals match these filters"
-                : "No professionals listed yet"
+                      ? t("No professionals within {km} km", { km: maxKm })
+                      : t("No professionals match these filters")
+                : t("No professionals listed yet")
             }
             body={
               filtering
                 ? query.trim()
-                  ? "Try another search."
+                  ? t("Try another search.")
                   : type
-                    ? "Try a different category."
+                    ? t("Try a different category.")
                     : maxKm != null
-                      ? "Try a wider distance."
-                      : "Try another filter."
-                : "Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect."
+                      ? t("Try a wider distance.")
+                      : t("Try another filter.")
+                : t("Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect.")
             }
             style={{ paddingTop: 24, paddingBottom: 8 }}
           />
@@ -473,14 +474,14 @@ export default function Professionals() {
               </p>
               {linkedDetail?.headline && <p style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.accent }}>{linkedDetail.headline}</p>}
               <p style={{ margin: 0, fontSize: textPx(12), color: m.ink2 }}>
-                {[linkedDetail ? professionalRole(linkedDetail) : null, linkedDetail?.location].filter(Boolean).join(" · ")}
+                {[linkedDetail ? t(professionalRole(linkedDetail) ?? "") || null : null, linkedDetail?.location].filter(Boolean).join(" · ")}
               </p>
               {linkedDetail?.licenceVerified === false && <LicencePendingTag className="mt-0.5" />}
             </div>
           </div>
 
-          {linkedError && <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>{linkedError}</p>}
-          {!linkedError && !linkedCv && linkedProfessionalId && <MarketSkeleton radius={18} rows={3} label="Loading" />}
+          {linkedError && <p role="alert" style={{ margin: 0, fontSize: textPx(12.5), fontWeight: 600, color: m.high }}>{t(linkedError)}</p>}
+          {!linkedError && !linkedCv && linkedProfessionalId && <MarketSkeleton radius={18} rows={3} label={tk("Loading")} />}
 
           {linkedDetail?.bio && (
             <p style={{ margin: 0, fontSize: textPx(13), lineHeight: "19.5px", color: m.ink2, whiteSpace: "pre-line" }}>{linkedDetail.bio}</p>
@@ -488,7 +489,7 @@ export default function Professionals() {
 
           {linkedCv &&
             (cvIsEmpty(linkedCv, linkedDetail?.skills ?? []) ? (
-              <p style={{ margin: 0, fontSize: textPx(13), color: m.faint }}>{linkedName.split(" ")[0]} hasn't added a CV yet.</p>
+              <p style={{ margin: 0, fontSize: textPx(13), color: m.faint }}>{t("{name} hasn't added a CV yet.", { name: linkedName.split(" ")[0] })}</p>
             ) : (
               <CvView cv={linkedCv} skills={linkedDetail?.skills ?? []} accent={{ label: m.faint, pillBg: m.pale, pillInk: m.pdark }} />
             ))}

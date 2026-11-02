@@ -4,6 +4,7 @@ import { textPx, linePx } from "../../theme/textSize";
 import { lookupPlaylist, type PlaylistMeta } from "../../services/music/lookup";
 import { isAlbum, playlistServiceOf, SERVICE_LABEL, type PlaylistService } from "../../services/music/playlistLink";
 import { ServiceIcon } from "./ServiceIcon";
+import { t } from "../../i18n/core";
 
 // Round E · THE playlist card, the same everywhere a playlist shows (workouts,
 // routines, programmes, the active workout, classes, the gym's page, the
@@ -91,7 +92,7 @@ export const PlayInLink: React.FC<{ url: string; service: PlaylistService; label
     }}
   >
     <ServiceIcon service={service} size={16} />
-    {label ?? `Play in ${SERVICE_LABEL[service]}`}
+    {label ?? t("Play in {service}", { service: SERVICE_LABEL[service] })}
   </a>
 );
 
@@ -107,7 +108,7 @@ export const PlaylistCard: React.FC<{
   const meta = usePlaylistMeta(service ? url : null);
   if (!service) return null;
   const kind = isAlbum(url) ? "album" : "playlist";
-  const title = meta?.title ?? `${SERVICE_LABEL[service]} ${kind}`;
+  const title = meta?.title ?? (kind === "album" ? t("{service} album", { service: SERVICE_LABEL[service] }) : t("{service} playlist", { service: SERVICE_LABEL[service] }));
   return (
     <section
       aria-label={heading ? `${heading}: ${title}` : title}
@@ -127,7 +128,7 @@ export const PlaylistCard: React.FC<{
           </p>
           <p className="flex items-center" style={{ marginTop: 2, gap: 5, fontSize: textPx(11.5), lineHeight: linePx(17), fontWeight: 600, color: INK_SOFT }}>
             <ServiceIcon service={service} size={13} />
-            {`${SERVICE_LABEL[service]} · ${kind === "album" ? "Album" : "Playlist"}`}
+            {`${SERVICE_LABEL[service]} · ${kind === "album" ? t("Album") : t("Playlist")}`}
           </p>
         </div>
       </div>
@@ -155,16 +156,16 @@ export const PlayYourMusicRow: React.FC<{
       <MusicTile size={40} />
       <span className="flex-1 min-w-0 text-start">
         <span className="block" style={{ fontSize: textPx(14), lineHeight: linePx(20), fontWeight: 700, color: INK }}>
-          Play your music
+          {t("Play your music")}
         </span>
         <span className="flex items-center" style={{ gap: 5, fontSize: textPx(11.5), lineHeight: linePx(17), color: INK_FAINT }}>
           {service ? (
             <>
               <ServiceIcon service={service} size={13} />
-              {`Opens ${SERVICE_LABEL[service]}`}
+              {t("Opens {service}", { service: SERVICE_LABEL[service] })}
             </>
           ) : (
-            "Choose your music app in Settings"
+            t("Choose your music app in Settings")
           )}
         </span>
       </span>

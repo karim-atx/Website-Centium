@@ -7,6 +7,7 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { Toast } from "../ui/Toast";
 import { clock12 } from "../../utils/time12";
+import { t } from "../../i18n/core";
 import { fetchMyAcceptedReferrals, fetchMyOpenForms, fetchMyPendingReferrals, fetchTodaySessions, type ClientFormBundle } from "../../services/client-forms";
 import {
   connectBody,
@@ -87,7 +88,7 @@ async function fetchShareAsks(me: string): Promise<ShareAsk[] | null> {
   const ids = r.data.map((x) => x.professionalId);
   const [names, handles] = await Promise.all([fetchProSummaries(ids), fetchProfessionalHandles(ids)]);
   return r.data.map((request) => {
-    const proName = names.get(request.professionalId)?.firstName ?? "Your professional";
+    const proName = names.get(request.professionalId)?.firstName ?? t("Your professional");
     const card = specFromPayload(request.card, proName);
     return { request, proName, proAvatarUrl: names.get(request.professionalId)?.avatarUrl ?? null, proHandle: handles.get(request.professionalId) ?? null, winTitle: card ? sharedTitle(card.spec) : "" };
   });
@@ -185,7 +186,7 @@ export const ProReminders: React.FC = () => {
   const qi = current && queue ? queue.indexOf(current) : 0;
   const advance = (note?: string) => {
     const next = live[1];
-    if (note) setToast(next ? `${note} One more from ${next.proName}.` : note);
+    if (note) setToast(next ? t("{note} One more from {name}.", { note, name: next.proName }) : note);
     if (current) setHandled((h) => [...h, current.key]);
   };
 
@@ -236,7 +237,7 @@ export const ProReminders: React.FC = () => {
       }}
       onGone={() => {
         close();
-        setToast("This request was already answered.");
+        setToast(t("This request was already answered."));
         dropShare(sa.request.id);
       }}
       onDismiss={close}
@@ -251,16 +252,16 @@ export const ProReminders: React.FC = () => {
       return {
         ...common,
         title: current.title,
-        body: s ? `${s.serviceName} · Today ${clock12(s.startsAt)}.` : current.detail,
+        body: s ? t("{service} · Today {time}.", { service: s.serviceName, time: clock12(s.startsAt) }) : current.detail,
         primary: {
-          label: "Got it",
+          label: t("Got it"),
           onClick: () => {
             addAck(current.key);
-            advance("Session noted.");
+            advance(t("Session noted."));
           },
         },
         secondary: {
-          label: "View",
+          label: t("View"),
           onClick: () => {
             addAck(current.key);
             advance();
@@ -278,13 +279,13 @@ export const ProReminders: React.FC = () => {
         title: referralTitle(ref),
         body: referralBody(ref),
         primary: {
-          label: "Review",
+          label: t("Review"),
           onClick: () => {
             advance();
             setReferralOpen(ref);
           },
         },
-        secondary: { label: "Not now", onClick: () => advance() },
+        secondary: { label: t("Not now"), onClick: () => advance() },
         onDismiss: () => advance(),
       };
     }
@@ -296,13 +297,13 @@ export const ProReminders: React.FC = () => {
         title: connectTitle(c),
         body: connectBody(c),
         primary: {
-          label: "Review",
+          label: t("Review"),
           onClick: () => {
             advance();
             setConnectOpen(c);
           },
         },
-        secondary: { label: "Not now", onClick: () => advance() },
+        secondary: { label: t("Not now"), onClick: () => advance() },
         onDismiss: () => advance(),
       };
     }
@@ -314,11 +315,11 @@ export const ProReminders: React.FC = () => {
       {(status === "error" || status === "offline") && (
         <div className="flex items-center animate-fade-slide-up" style={{ gap: 10, borderRadius: 16, background: INK.soft, paddingBlock: "6px", paddingInline: "14px 6px", marginBottom: 13 }}>
           <p className="flex-1 min-w-0" style={{ fontSize: textPx(12), lineHeight: 1.45, color: INK.chS }}>
-            {status === "offline" ? "You're offline. Updates from your professional show when you're back online." : "Couldn't load updates from your professional."}
+            {status === "offline" ? t("You're offline. Updates from your professional show when you're back online.") : t("Couldn't load updates from your professional.")}
           </p>
           <button type="button" onClick={() => void load()} className="tap inline-flex items-center justify-center shrink-0" style={{ minHeight: 44, padding: "0 12px", gap: 5, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             <RotateCw size={13} strokeWidth={2.2} aria-hidden />
-            Retry
+            {t("Retry")}
           </button>
         </div>
       )}
@@ -350,7 +351,7 @@ export const ProReminders: React.FC = () => {
         onAnswered={(agree) => {
           const from = referralOpen?.fromName ?? "";
           setReferralOpen(null);
-          setToast(agree ? `Thanks. ${from}'s referral is on its way.` : "Referral declined.");
+          setToast(agree ? t("Thanks. {name}'s referral is on its way.", { name: from }) : t("Referral declined."));
           void load();
         }}
       />
@@ -363,7 +364,7 @@ export const ProReminders: React.FC = () => {
           const to = connectOpen?.toName;
           const id = connectOpen?.id;
           setConnectOpen(null);
-          setToast(to ? `You're connected with ${to}.` : "You're connected.");
+          setToast(to ? t("You're connected with {name}.", { name: to }) : t("You're connected."));
           setData((prev) => (prev ? { ...prev, connects: prev.connects.filter((x) => x.id !== id) } : prev));
           void load();
         }}
