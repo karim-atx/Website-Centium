@@ -102,4 +102,5 @@ export { default as WeeklyReviewPage } from "./pages/home/review/WeeklyReviewPag
 export { default as DoctorSummaryPage } from "./pages/health/doctor/DoctorSummaryPage";
 // Round G4.
 export { default as MealPlannerPage } from "./pages/food/planner/MealPlannerPage";
+export { default as ProgressPhotosPage } from "./pages/workout/photos/ProgressPhotosPage";
 export { ConsoleGate } from "./components/business-console/ConsoleGate";

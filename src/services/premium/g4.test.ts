@@ -25,6 +25,21 @@ import {
   groceryView,
   parseGrocery,
   withChecked,
+  PHOTO_MAX_BYTES,
+  daysApartText,
+  newestFirst,
+  pairOrder,
+  pairReady,
+  parsePair,
+  parsePhotos,
+  photoErrorText,
+  photoFileError,
+  photoNote,
+  photoPath,
+  photoType,
+  photosAddable,
+  photosVisible,
+  takenOnValid,
   type PlanItem,
 } from "./g4.ts";
 
@@ -190,4 +205,71 @@ test("the grocery list shows what's left to buy first, amounts in words, the rec
   assert.deepEqual(groceryView(withChecked(ticked, "n:1", false)).done.map((l) => l.name), ["Oats"]);
   assert.equal(amountText(1, "cup"), "1 cup");
   assert.equal(amountText(2, "tbsp"), "2 tbsp");
+});
+
+// ---- progress photos ----
+
+test("progress photos show nowhere in recovery-sensitive mode (or while it loads), with the switch off, or without G4", () => {
+  assert.equal(photosVisible({ premiumOn: true, g4: true, hideNumbers: false }), true);
+  assert.equal(photosVisible({ premiumOn: true, g4: true, hideNumbers: true }), false);
+  assert.equal(photosVisible({ premiumOn: false, g4: true, hideNumbers: false }), false);
+  assert.equal(photosVisible({ premiumOn: true, g4: false, hideNumbers: false }), false);
+  // The Add button also needs i_may_add_progress_photos() to say yes (unknown = no).
+  assert.equal(photosAddable({ visible: true, mayAdd: true }), true);
+  assert.equal(photosAddable({ visible: true, mayAdd: false }), false);
+  assert.equal(photosAddable({ visible: true, mayAdd: null }), false);
+  assert.equal(photosAddable({ visible: false, mayAdd: true }), false);
+});
+
+test("a photo is checked before upload: jpeg, png, webp or heic, up to 10 MB, into my own folder", () => {
+  const ok = (type: string, name = "a", size = 1000) => photoFileError({ type, name, size });
+  assert.equal(ok("image/jpeg"), null);
+  assert.equal(ok("image/png"), null);
+  assert.equal(ok("image/webp"), null);
+  assert.equal(ok("image/heic"), null);
+  assert.equal(photoType({ type: "", name: "IMG_1.HEIC" }), "image/heic");
+  assert.equal(photoType({ type: "image/heif", name: "x" }), "image/heic");
+  assert.equal(photoType({ type: "image/jpg", name: "x" }), "image/jpeg");
+  assert.equal(photoType({ type: "", name: "x.jpeg" }), "image/jpeg");
+  assert.equal(ok("image/gif"), "Choose a JPEG, PNG, WebP or HEIC photo.");
+  assert.equal(ok("application/pdf", "scan.pdf"), "Choose a JPEG, PNG, WebP or HEIC photo.");
+  assert.equal(ok("image/jpeg", "a", 0), "That file is empty.");
+  assert.equal(ok("image/jpeg", "a", PHOTO_MAX_BYTES), null);
+  assert.equal(ok("image/jpeg", "a", PHOTO_MAX_BYTES + 1), "Choose a photo under 10 MB.");
+  const owner = "0f8fad5b-d9cb-469f-a165-70867728950e";
+  const path = photoPath(owner, "image/heic", "2026-11-02", "1b4e28ba-2fa1-11d2-883f-0016d3cca427");
+  assert.equal(path.split("/")[0], owner);
+  assert.match(path, /^[0-9a-f-]{36}\/2026-11-02-[0-9a-f]{24}\.heic$/);
+  assert.ok(path.length >= 40 && path.length <= 300);
+  assert.equal(photoNote("  "), null);
+  assert.equal(photoNote(" Week 4 "), "Week 4");
+  assert.equal(takenOnValid("2026-11-02", "2026-11-02"), true);
+  assert.equal(takenOnValid("2026-11-03", "2026-11-02"), false);
+  assert.equal(takenOnValid("02/11/2026", "2026-11-02"), false);
+});
+
+test("photos come newest first, and a pair is shown earlier first with the days between", () => {
+  const photos = parsePhotos([
+    { photo_id: "b", taken_on: "2026-10-01", pose: "side", note: null, storage_path: "u/b.jpg", created_at: "2026-10-01T09:00:00Z" },
+    { photo_id: "a", taken_on: "2026-11-01", pose: "front", note: "Week 8", storage_path: "u/a.jpg", created_at: "2026-11-01T09:00:00Z" },
+    { photo_id: "c", taken_on: "2026-10-01", pose: "weird", storage_path: "u/c.jpg", created_at: "2026-10-01T10:00:00Z" },
+    { photo_id: "x", taken_on: null, storage_path: "u/x.jpg" },
+  ]);
+  assert.deepEqual(photos.map((p) => p.id), ["b", "a", "c"]);
+  assert.equal(photos[2].pose, "other");
+  assert.deepEqual(newestFirst(photos).map((p) => p.id), ["a", "c", "b"]);
+  const [early, late] = pairOrder(photos[1], photos[0]);
+  assert.deepEqual([early.id, late.id], ["b", "a"]);
+  assert.deepEqual(pairOrder(photos[2], photos[0]).map((p) => p.id), ["b", "c"]); // same day: the one added first
+  const pair = parsePair([{ first_photo_id: "a", first_taken_on: "2026-11-01", first_path: "u/a.jpg", second_photo_id: "b", second_taken_on: "2026-10-01", second_path: "u/b.jpg", days_between: 31 }]);
+  assert.equal(pair?.first.id, "b"); // earlier first, even if a row came back the other way
+  assert.equal(pair?.daysBetween, 31);
+  assert.equal(parsePair([]), null);
+  assert.equal(daysApartText(31), "31 days apart");
+  assert.equal(daysApartText(1), "1 day apart");
+  assert.equal(daysApartText(0), "Same day");
+  assert.equal(pairReady("a", "b"), true);
+  assert.equal(pairReady("a", "a"), false);
+  assert.equal(pairReady("a", null), false);
+  assert.equal(photoErrorText("ATX08"), "Choose two of your own photos.");
 });
