@@ -25,6 +25,7 @@ import { HIRING_ROUTES } from "./HiringRoutes";
 import { useHiringBusiness } from "./useHiringBusiness";
 import { DialogRows, ExistingTeamChip, NotForThisBusiness, SheetNote } from "./teamParts";
 import { PRO_TYPE_CHIPS, addCta, addTitle, addedDuringWindow, addedStrip, countdownParts, fullDate, inviteNote, isEmailOrPhone, windowPct } from "./teamModel";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4-B · B-MA.8.8 Add your existing team (Business
 // Hiring Screens lines 227–265 + the `ETP` / `et` / etInvite / etConfirm /
@@ -116,7 +117,7 @@ export default function ExistingTeamPage() {
   const [dlgError, setDlgError] = useState<string | null>(null);
   const addNow = async () => {
     if (!businessId || busy) return;
-    if (!online) return setDlgError("You're offline. Try again when you're connected.");
+    if (!online) return setDlgError(t("You're offline. Try again when you're connected."));
     const people = [...picked.values()];
     setBusy(true);
     setDlgError(null);
@@ -130,7 +131,7 @@ export default function ExistingTeamPage() {
     setConfirming(false);
     setAdded((cur) => new Set([...cur, ...people.map((p) => p.id)]));
     setPicked(new Map());
-    showStrip(addedStrip(people.length), "success", { label: "Team", onPress: () => navigate(HIRING_ROUTES.team) });
+    showStrip(addedStrip(people.length), "success", { label: t("Team"), onPress: () => navigate(HIRING_ROUTES.team) });
     void fetchMyTeam(businessId).then((t) => t.ok && setTeam({ status: "ok", value: t.value }));
   };
 
@@ -138,7 +139,7 @@ export default function ExistingTeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const back = () => navigate(HIRING_ROUTES.hub);
-  const header = <BackHeader eyebrow="Hiring" title="Add your existing team" onBack={back} backLabel="Back to Hiring" />;
+  const header = <BackHeader eyebrow={t("Hiring")} title={t("Add your existing team")} onBack={back} backLabel={t("Back to Hiring")} />;
 
   const fixedBg = (hue: string, light: string) => (dark ? hexAlpha(hue, 0.16) : light);
   const [tealBg, tealHue] = STATUS_STEPS.HIRED;
@@ -147,25 +148,25 @@ export default function ExistingTeamPage() {
 
   let body: React.ReactNode;
   if (biz.loading || (businessId && win.status === "loading")) {
-    body = <MarketSkeleton radius={20} rows={4} height={183} label="Loading your free window" />;
+    body = <MarketSkeleton radius={20} rows={4} height={183} label={t("Loading your free window")} />;
   } else if (!biz.canHire || !businessId) {
     body = <NotForThisBusiness error={biz.error} onRetry={biz.reload} />;
   } else if (win.status === "error") {
     body = <MarketError thing="your free window" onRetry={retry} />;
   } else if (win.status === "pending" || !w) {
-    body = <MarketEmptyCard title="Hiring is coming soon." body="Professionals who already work with you join free during your first 30 days. You add them here." />;
+    body = <MarketEmptyCard title={t("Hiring is coming soon.")} body={t("Professionals who already work with you join free during your first 30 days. You add them here.")} />;
   } else if (!isOpen && !w.opensAt) {
     body = (
       <div data-closed style={{ borderRadius: 20, background: m.soft, padding: 16 }}>
-        <CapsLabel as="p">Not open yet</CapsLabel>
-        <h2 style={{ margin: "4px 0 0", fontSize: px(18), fontWeight: 800, color: m.ink }}>New professionals join through Hiring</h2>
-        <p style={{ margin: "4px 0 0", fontSize: px(12.5), lineHeight: lh(18), color: m.ink2 }}>The free window to add your existing team hasn't started yet. Until it does, post an opening or send a direct offer. A one-time hiring fee applies to each hire.</p>
+        <CapsLabel as="p">{t("Not open yet")}</CapsLabel>
+        <h2 style={{ margin: "4px 0 0", fontSize: px(18), fontWeight: 800, color: m.ink }}>{t("New professionals join through Hiring")}</h2>
+        <p style={{ margin: "4px 0 0", fontSize: px(12.5), lineHeight: lh(18), color: m.ink2 }}>{t("The free window to add your existing team hasn't started yet. Until it does, post an opening or send a direct offer. A one-time hiring fee applies to each hire.")}</p>
         <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <button type="button" onClick={() => navigate(`${HIRING_ROUTES.hub}?post=1`)} className="market-focus" style={{ height: 44, borderRadius: 12, background: m.fill, color: m.onfill, border: 0, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
-            Post an opening
+            {t("Post an opening")}
           </button>
           <button type="button" onClick={() => navigate(HIRING_ROUTES.find)} className="market-focus" style={{ height: 44, boxSizing: "content-box", padding: 0, borderRadius: 12, background: "transparent", border: `1px solid ${m.border}`, color: m.pdark, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
-            Find a professional
+            {t("Find a professional")}
           </button>
         </div>
       </div>
@@ -175,28 +176,28 @@ export default function ExistingTeamPage() {
     body = (
       <>
         <div data-closed style={{ borderRadius: 20, background: m.soft, padding: 16 }}>
-          <CapsLabel as="p">{`Closed ${fullDate(w.closesAt)}`.trim()}</CapsLabel>
-          <h2 style={{ margin: "4px 0 0", fontSize: px(18), fontWeight: 800, color: m.ink }}>New professionals join through Hiring</h2>
-          <p style={{ margin: "4px 0 0", fontSize: px(12.5), lineHeight: lh(18), color: m.ink2 }}>Your free window to add your existing team has ended. Post an opening or send a direct offer. A one-time hiring fee applies to each hire.</p>
+          <CapsLabel as="p">{fullDate(w.closesAt) ? t("Closed {date}", { date: fullDate(w.closesAt) }) : t("Closed")}</CapsLabel>
+          <h2 style={{ margin: "4px 0 0", fontSize: px(18), fontWeight: 800, color: m.ink }}>{t("New professionals join through Hiring")}</h2>
+          <p style={{ margin: "4px 0 0", fontSize: px(12.5), lineHeight: lh(18), color: m.ink2 }}>{t("Your free window to add your existing team has ended. Post an opening or send a direct offer. A one-time hiring fee applies to each hire.")}</p>
           <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <button type="button" onClick={() => navigate(`${HIRING_ROUTES.hub}?post=1`)} className="market-focus" style={{ height: 44, borderRadius: 12, background: m.fill, color: m.onfill, border: 0, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
-              Post an opening
+              {t("Post an opening")}
             </button>
             <button type="button" onClick={() => navigate(HIRING_ROUTES.find)} className="market-focus" style={{ height: 44, boxSizing: "content-box", padding: 0, borderRadius: 12, background: "transparent", border: `1px solid ${m.border}`, color: m.pdark, fontSize: px(13), fontWeight: 800, fontFamily: "inherit", cursor: "pointer" }}>
-              Find a professional
+              {t("Find a professional")}
             </button>
           </div>
         </div>
         {during.length ? (
           <>
-            <CapsLabel as="p" style={{ marginTop: 16 }}>{`Added during the window · ${during.length}`}</CapsLabel>
+            <CapsLabel as="p" style={{ marginTop: 16 }}>{t("Added during the window · {n}", { n: during.length })}</CapsLabel>
             <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
-              {during.map((t) => (
-                <div key={t.professional.id} data-person style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 18, border: `1px solid ${m.border}`, padding: "10px 12px" }}>
-                  <MarketAvatar id={t.professional.id} name={t.professional.name} photoUrl={t.professional.photoUrl} size={40} fontSize={13} />
+              {during.map((tm) => (
+                <div key={tm.professional.id} data-person style={{ display: "flex", alignItems: "center", gap: 12, borderRadius: 18, border: `1px solid ${m.border}`, padding: "10px 12px" }}>
+                  <MarketAvatar id={tm.professional.id} name={tm.professional.name} photoUrl={tm.professional.photoUrl} size={40} fontSize={13} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: px(13.5), fontWeight: 800, color: m.ink }}>{t.professional.name}</div>
-                    <div style={{ fontSize: px(11.5), color: m.faint }}>{t.professional.specialty ? `${t.professional.specialty} · added free` : "Added free"}</div>
+                    <div style={{ fontSize: px(13.5), fontWeight: 800, color: m.ink }}>{tm.professional.name}</div>
+                    <div style={{ fontSize: px(11.5), color: m.faint }}>{tm.professional.specialty ? t("{specialty} · added free", { specialty: tm.professional.specialty }) : t("Added free")}</div>
                   </div>
                 </div>
               ))}
@@ -212,8 +213,8 @@ export default function ExistingTeamPage() {
       <>
         <div data-countdown style={{ borderRadius: 20, background: fixedBg(tealHue, tealBg), padding: "14px 16px" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
-            <span style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: tealInk }}>Free for your first 30 days</span>
-            {w.closesAt ? <span style={{ fontSize: px(11.5), fontWeight: 700, color: tealInk, whiteSpace: "nowrap" }}>{`Closes ${fullDate(w.closesAt)}`}</span> : null}
+            <span style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: tealInk }}>{t("Free for your first 30 days")}</span>
+            {w.closesAt ? <span style={{ fontSize: px(11.5), fontWeight: 700, color: tealInk, whiteSpace: "nowrap" }}>{t("Closes {date}", { date: fullDate(w.closesAt) })}</span> : null}
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginTop: 2 }}>
             <span style={{ fontSize: px(34), fontWeight: 800, letterSpacing: "-0.02em", color: dark ? m.ink : "#17142A" }}>{cd.figure}</span>
@@ -221,7 +222,7 @@ export default function ExistingTeamPage() {
           </div>
           <div
             role="progressbar"
-            aria-label="Free window used"
+            aria-label={t("Free window used")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(windowUsed(w.daysLeft) * 100)}
@@ -230,7 +231,7 @@ export default function ExistingTeamPage() {
             <div style={{ height: "100%", width: windowPct(windowUsed(w.daysLeft)), borderRadius: 999, background: tealLine }} />
           </div>
           <p style={{ margin: "10px 0 0", fontSize: px(12), lineHeight: lh(17), color: m.ink2 }}>
-            Add the trainers, dietitians, physiotherapists and other professionals who already work with you. They join free and can teach your classes. After the window, new professionals join through Hiring.
+            {t("Add the trainers, dietitians, physiotherapists and other professionals who already work with you. They join free and can teach your classes. After the window, new professionals join through Hiring.")}
           </p>
         </div>
 
@@ -243,8 +244,8 @@ export default function ExistingTeamPage() {
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name or specialty"
-            aria-label="Search by name or specialty"
+            placeholder={t("Search by name or specialty")}
+            aria-label={t("Search by name or specialty")}
             className="et-search"
             style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent", fontSize: px(14), fontWeight: 600, color: m.ink, fontFamily: "inherit", padding: 0 }}
           />
@@ -253,13 +254,13 @@ export default function ExistingTeamPage() {
 
         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }} aria-live="polite">
           {results.status === "loading" ? (
-            <MarketSkeleton radius={18} rows={1} height={66} count={2} gap={8} label="Searching" />
+            <MarketSkeleton radius={18} rows={1} height={66} count={2} gap={8} label={t("Searching")} />
           ) : results.status === "error" ? (
             <MarketError thing="professionals" onRetry={retry} />
           ) : results.status === "pending" ? (
-            <SoonNote style={{ marginTop: 0 }}>Hiring is coming soon.</SoonNote>
+            <SoonNote style={{ marginTop: 0 }}>{t("Hiring is coming soon.")}</SoonNote>
           ) : people.length === 0 ? (
-            <SoonNote style={{ marginTop: 0 }}>No professionals found. Invite them by email or phone.</SoonNote>
+            <SoonNote style={{ marginTop: 0 }}>{t("No professionals found. Invite them by email or phone.")}</SoonNote>
           ) : (
             people.map((p) => {
               const src = sourceOf.get(p.id);
@@ -279,7 +280,7 @@ export default function ExistingTeamPage() {
                     <button
                       type="button"
                       aria-pressed={isPicked}
-                      aria-label={`${isPicked ? "Selected" : "Add free"}: ${p.name}`}
+                      aria-label={`${isPicked ? t("Selected") : t("Add free")}: ${p.name}`}
                       onClick={() => toggle(p)}
                       className="hit market-focus"
                       style={{
@@ -300,7 +301,7 @@ export default function ExistingTeamPage() {
                         flexShrink: 0,
                       }}
                     >
-                      {isPicked ? "Selected" : "Add free"}
+                      {isPicked ? t("Selected") : t("Add free")}
                     </button>
                   ) : null}
                 </div>
@@ -319,19 +320,19 @@ export default function ExistingTeamPage() {
             <path d="M22 2 11 13" />
             <path d="M22 2 15 22l-4-9-9-4 20-7z" />
           </svg>
-          Invite by email or phone
+          {t("Invite by email or phone")}
         </button>
         <p style={{ margin: "10px 0 0", fontSize: px(11.5), lineHeight: lh(16), color: m.faint }}>
-          {"Front desk and other non-professional staff join through "}
+          {t("Front desk and other non-professional staff join through")}{" "}
           <button
             type="button"
             onClick={() => navigate("/app/business/employees")}
             className="market-focus"
             style={{ display: "inline", padding: 0, border: 0, background: "transparent", font: "inherit", fontWeight: 700, color: m.pdark, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}
           >
-            More › Team and access
+            {t("More › Team and access")}
           </button>
-          {", any time, free."}
+          {t(", any time, free.")}
         </p>
         {picked.size > 0 ? (
           <PrimaryButton onClick={() => {
@@ -358,15 +359,15 @@ export default function ExistingTeamPage() {
         actionsTop={18}
         tone="primary"
         title={addTitle(chosen.length)}
-        body="They join as your existing team. They can be named as class instructors and their profiles show to clients."
-        cancel="Back"
-        action="Add free"
+        body={t("They join as your existing team. They can be named as class instructors and their profiles show to clients.")}
+        cancel={t("Back")}
+        action={t("Add free")}
         busy={busy}
         error={dlgError}
         onCancel={() => !busy && setConfirming(false)}
         onAction={() => void addNow()}
       >
-        <DialogRows rows={[...chosen.map((p): [string, string] => [p.name, p.specialty ?? ""]), ["Hiring fee", "None · existing team"]]} />
+        <DialogRows rows={[...chosen.map((p): [string, string] => [p.name, p.specialty ?? ""]), [t("Hiring fee"), t("None · existing team")]]} />
       </CentredDialog>
       {businessId && w ? (
         <InviteSheet
@@ -376,7 +377,7 @@ export default function ExistingTeamPage() {
           closesAt={w.closesAt}
           onSent={(name) => {
             setInviteOpen(false);
-            showStrip(`Invite sent to ${name}`);
+            showStrip(t("Invite sent to {name}", { name }));
           }}
           onClosed={retry}
         />
@@ -412,7 +413,7 @@ function InviteSheet({ open, onClose, businessId, closesAt, onSent, onClosed }: 
   const valid = isEmailOrPhone(contact) && !!name.trim() && !!type;
   const send = async () => {
     if (!valid || busy || !type) return;
-    if (!online) return setError("You're offline. Try again when you're connected.");
+    if (!online) return setError(t("You're offline. Try again when you're connected."));
     setBusy(true);
     setError(null);
     setSoon(false);
@@ -425,16 +426,16 @@ function InviteSheet({ open, onClose, businessId, closesAt, onSent, onClosed }: 
   };
 
   return (
-    <MasterSheet open={open} onClose={() => !busy && onClose()} title="Invite a professional" footer={<PrimaryButton onClick={() => void send()} disabled={!valid} busy={busy}>Send invite</PrimaryButton>}>
+    <MasterSheet open={open} onClose={() => !busy && onClose()} title={t("Invite a professional")} footer={<PrimaryButton onClick={() => void send()} disabled={!valid} busy={busy}>{t("Send invite")}</PrimaryButton>}>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, lineHeight: "normal" }}>
-        <SheetBox label="Email or phone" htmlFor={ids.contact}>
+        <SheetBox label={t("Email or phone")} htmlFor={ids.contact}>
           <input id={ids.contact} type="text" inputMode="email" autoComplete="off" value={contact} onChange={(e) => setContact(e.target.value)} disabled={busy} style={fieldStyle(m)} />
         </SheetBox>
-        <SheetBox label="Name" htmlFor={ids.name}>
+        <SheetBox label={t("Name")} htmlFor={ids.name}>
           <input id={ids.name} type="text" autoComplete="off" value={name} onChange={(e) => setName(e.target.value)} disabled={busy} style={fieldStyle(m)} />
         </SheetBox>
         <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
-          <p id={ids.type} style={{ margin: "0 0 8px", fontSize: px(13), fontWeight: 500, color: m.slabel }}>They are a</p>
+          <p id={ids.type} style={{ margin: "0 0 8px", fontSize: px(13), fontWeight: 500, color: m.slabel }}>{t("They are a")}</p>
           <div role="radiogroup" aria-labelledby={ids.type} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {PRO_TYPE_CHIPS.map((c) => (
               <button
@@ -447,13 +448,13 @@ function InviteSheet({ open, onClose, businessId, closesAt, onSent, onClosed }: 
                 className="hit market-focus"
                 style={{ ...sheetChipStyle(type === c.key), padding: "8px 12px", fontSize: px(13), fontFamily: "inherit", lineHeight: "normal", cursor: "pointer" }}
               >
-                {c.label}
+                {t(c.label)}
               </button>
             ))}
           </div>
         </div>
         <SheetNote>{inviteNote(closesAt)}</SheetNote>
-        {soon ? <SoonNote style={{ marginTop: 0 }}>Hiring is coming soon.</SoonNote> : null}
+        {soon ? <SoonNote style={{ marginTop: 0 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
         {error ? <SaveError style={{ marginTop: 0 }}>{error}</SaveError> : null}
       </div>
     </MasterSheet>

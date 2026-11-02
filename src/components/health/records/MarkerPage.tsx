@@ -20,6 +20,8 @@ import type { BloodMarker } from "../../../types";
 import { textPx, linePx } from "../../../theme/textSize";
 import { RecordsHeader } from "./RecordsHeader";
 import { ResultFormSheet } from "./ResultFormSheet";
+import { TrendGate } from "./premium/TrendGate";
+import { useTrendResults } from "./premium/useTrendResults";
 import {
   useHealthMode,
   hairline,
@@ -107,13 +109,15 @@ export const MarkerPage: React.FC<{
   const pFlag = pregnancyFlags.lab(marker);
   const flag = pFlag ? null : checkFlags.lab(marker);
   const entry = catalogue?.find((c) => c.key === marker.markerKey) ?? null;
+  // Round G3: with the Premium switch on and Premium, the chart reads my_biomarker_trend(); otherwise these results, as today.
+  const trend = useTrendResults(marker, results);
 
   const shown = useMemo(() => {
     const days = SPAN_DAYS[span];
-    if (days === null) return results;
+    if (days === null) return trend;
     const from = new Date(`${today}T00:00:00Z`).getTime() - days * 86400000;
-    return results.filter((r) => new Date(`${r.date}T00:00:00Z`).getTime() >= from);
-  }, [results, span, today]);
+    return trend.filter((r) => new Date(`${r.date}T00:00:00Z`).getTime() >= from);
+  }, [trend, span, today]);
   const sameUnit = shown.filter((r) => r.unit === latest?.unit);
   const avg = sameUnit.length ? Math.round((sameUnit.reduce((s, r) => s + r.value, 0) / sameUnit.length) * 100) / 100 : null;
   const highest = sameUnit.length ? sameUnit.reduce((a, b) => (b.value > a.value ? b : a)) : null;
@@ -225,6 +229,8 @@ export const MarkerPage: React.FC<{
         </FlagNote>
       )}
 
+      {/* Round G3 (decision G5): with the Premium switch on and no Premium, the chart and its stats are Premium (TrendGate); off, as today. */}
+      <TrendGate results={results.length} className="mt-3">
       {/* Chart card */}
       <ListCard style={{ marginTop: 12, padding: 14, overflow: "visible" }}>
         <div className="flex items-center justify-between">
@@ -287,6 +293,7 @@ export const MarkerPage: React.FC<{
         {stat(highest?.value ?? "–", t("Highest"), statusColor(highest ? statOf(highest.value) : null, dark))}
         {stat(change === null ? "–" : change === 0 ? "0" : `${change < 0 ? "↓" : "↑"} ${Math.abs(change)}`, t("Change vs last"), INK)}
       </div>
+      </TrendGate>
 
       <SectionCaps>{t("History")}</SectionCaps>
       <ListCard>

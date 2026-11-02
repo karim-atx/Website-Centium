@@ -6,6 +6,7 @@ import { todayLocal } from "../../utils/date";
 import { fileTypeOf } from "../storage/fileMeta";
 import { fetchLabCatalogue } from "./catalogue";
 import { convertUnit, tidy, type CatalogueMarker } from "./catalogueLogic";
+import { t, tk } from "../../i18n/core";
 
 // Blood work: public.blood_panels and the blood_markers hanging off them,
 // plus the lab report itself in the private `lab-reports` bucket.
@@ -110,8 +111,8 @@ export function parseRange(range: string | null | undefined): {
  */
 export function formatRange(low: number | null, high: number | null): string {
   if (low !== null && high !== null) return `${low} – ${high}`;
-  if (high !== null) return `under ${high}`;
-  if (low !== null) return `above ${low}`;
+  if (high !== null) return t("under {high}", { high });
+  if (low !== null) return t("above {low}", { low });
   return "–";
 }
 
@@ -147,10 +148,10 @@ export interface LabWriteResult {
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save these results.";
+    return tk("Your session expired. Sign in again to save these results.");
   }
-  if (code === "23514") return "Some of these results were out of the range this can store.";
-  return "Couldn't save these results. Check your connection and try again.";
+  if (code === "23514") return tk("Some of these results were out of the range this can store.");
+  return tk("Couldn't save these results. Check your connection and try again.");
 }
 
 /** Rounds to numeric(12,4), the scale blood_markers.value actually holds. */
@@ -213,7 +214,7 @@ export async function recordPanel(
   input: RecordPanelInput
 ): Promise<LabWriteResult & { panelId?: string }> {
   if (input.markers.length === 0) {
-    return { ok: false, message: "Select at least one result to save." };
+    return { ok: false, message: tk("Select at least one result to save.") };
   }
 
   let filePath: string | undefined = input.filePath;
@@ -316,10 +317,10 @@ export async function deleteLabPanel(id: string, filePath?: string): Promise<Lab
 
   if (error) {
     console.error("[labs] Could not remove panel:", error.message);
-    return { ok: false, message: "That lab report couldn't be removed." };
+    return { ok: false, message: tk("That lab report couldn't be removed.") };
   }
   if (!data || data.length === 0) {
-    return { ok: false, message: "That lab report couldn't be removed." };
+    return { ok: false, message: tk("That lab report couldn't be removed.") };
   }
 
   if (filePath) {
@@ -492,7 +493,7 @@ export async function getLabReports(userId: string): Promise<LabReportResult> {
 
   if (error) {
     console.error("[labs] Could not load lab reports:", error.message);
-    return { ok: false, message: "Could not load your lab reports." };
+    return { ok: false, message: tk("Could not load your lab reports.") };
   }
 
   return {
@@ -528,7 +529,7 @@ export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult
   const error = panels.error ?? alone.error;
   if (error) {
     console.error("[labs] Could not load lab results:", error.message);
-    return { ok: false, message: "Could not load your lab results." };
+    return { ok: false, message: tk("Could not load your lab results.") };
   }
 
   // Each standalone result joins the timeline as a one-result pseudo panel on

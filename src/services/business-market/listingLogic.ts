@@ -1,4 +1,5 @@
 import { appLocale } from "../../i18n/format";
+import { t, tk } from "../../i18n/core";
 // Pure B13 listing rules (node --test loads this file; no client imports):
 // amenity keys and labels, listing_strength rows, the photo gallery, and the
 // listing-performance readers mapped onto the MA1 Performance tab.
@@ -11,18 +12,18 @@ export type AmenityKey = (typeof AMENITY_KEYS)[number];
 
 /** The sheet's words for the server's keys (OURS-MA1-listing-details-sheets row 1; Café, Sauna and Pool are B13's additions). */
 export const AMENITY_LABEL: Record<AmenityKey, string> = {
-  showers: "Showers",
-  lockers: "Lockers",
-  changing_rooms: "Changing rooms",
-  towels: "Towels",
-  parking: "Parking",
-  wifi: "Wi-Fi",
-  water: "Water",
-  cafe: "Café",
-  sauna: "Sauna",
-  pool: "Pool",
-  childcare: "Child care",
-  accessible: "Wheelchair access",
+  showers: tk("Showers"),
+  lockers: tk("Lockers"),
+  changing_rooms: tk("Changing rooms"),
+  towels: tk("Towels"),
+  parking: tk("Parking"),
+  wifi: tk("Wi-Fi"),
+  water: tk("Water"),
+  cafe: tk("Café"),
+  sauna: tk("Sauna"),
+  pool: tk("Pool"),
+  childcare: tk("Child care"),
+  accessible: tk("Wheelchair access"),
 };
 
 export const isAmenityKey = (k: string): k is AmenityKey => (AMENITY_KEYS as readonly string[]).includes(k);
@@ -116,17 +117,17 @@ export function moveTo(ids: readonly string[], id: string, to: number): string[]
 
 /** "{n} of 6 recommended · {k} in review" (MA1-001 row 8c); n counts the cover and approved photos. */
 export function photoLine(shown: number, inReview: number): string {
-  if (shown === 0 && inReview === 0) return "No photos yet. Add at least 6 of your real space.";
-  return `${shown} of 6 recommended${inReview ? ` · ${inReview} in review` : ""}`;
+  if (shown === 0 && inReview === 0) return t("No photos yet. Add at least 6 of your real space.");
+  return inReview ? t("{shown} of 6 recommended · {review} in review", { shown, review: inReview }) : t("{shown} of 6 recommended", { shown });
 }
 
 /** Only the uploader may remove an object (the bucket policy keys on the first folder). */
 export const ownsObject = (path: string, uid: string): boolean => path.split("/")[0] === uid;
 
 export function photoError(code: string | undefined): string {
-  if (code === "ATXF5") return "You've reached 20 photos. Remove a photo to add another.";
-  if (code === "ATX03" || code === "42501") return "You need the Marketing permission to change photos. Ask the owner.";
-  return "Couldn't save the photo. Try again.";
+  if (code === "ATXF5") return t("You've reached 20 photos. Remove a photo to add another.");
+  if (code === "ATX03" || code === "42501") return t("You need the Marketing permission to change photos. Ask the owner.");
+  return t("Couldn't save the photo. Try again.");
 }
 
 // ---------------------------------------------------------------------------
@@ -170,11 +171,11 @@ export type ListingSource = "search" | "category" | "map" | "direct" | "featured
 /** The funnel chips' order and words (MA1-005 row 6a); Featured is B13's fifth source. */
 export const SOURCE_ORDER: ListingSource[] = ["search", "category", "map", "direct", "featured"];
 export const SOURCE_LABEL: Record<ListingSource, string> = {
-  search: "Search",
-  category: "Category browsing",
-  map: "Map",
-  direct: "Direct link",
-  featured: "Featured",
+  search: tk("Search"),
+  category: tk("Category browsing"),
+  map: tk("Map"),
+  direct: tk("Direct link"),
+  featured: tk("Featured"),
 };
 
 export type MarketKind = "classes" | "gym" | "store";
@@ -267,11 +268,24 @@ export function topBooked(items: readonly TopItem[]): TopItem | null {
 
 /** The number card's insight line (MA1-005 row 5b). */
 export function perfLine(s: PerfSummary, top: TopItem | null, kind: MarketKind, people: string): string {
-  if (s.empty) return `Numbers start once ${people} see your listing.`;
-  if (s.early) return "Changes show after 2 weeks on Explore.";
-  const what = kind === "store" ? "Orders" : kind === "gym" ? "Passes" : "Bookings";
-  if (!top?.title) return `${what} from Centium this period.`;
-  return kind === "store" ? `${what} from Centium this period. ${top.title} leads.` : `${what} from Centium this period. ${top.title} brings the most.`;
+  if (s.empty) return t("Numbers start once {people} see your listing.", { people: peopleWord(people) });
+  if (s.early) return t("Changes show after 2 weeks on Explore.");
+  if (!top?.title) return kind === "store" ? t("Orders from Centium this period.") : kind === "gym" ? t("Passes from Centium this period.") : t("Bookings from Centium this period.");
+  const title = top.title;
+  return kind === "store"
+    ? t("Orders from Centium this period. {title} leads.", { title })
+    : kind === "gym"
+      ? t("Passes from Centium this period. {title} brings the most.", { title })
+      : t("Bookings from Centium this period. {title} brings the most.", { title });
+}
+
+/** The vocabulary's English "people" word (people, customers, clients, members) in the app's language. */
+function peopleWord(people: string): string {
+  if (people === "people") return t("people");
+  if (people === "customers") return t("customers");
+  if (people === "clients") return t("clients");
+  if (people === "members") return t("members");
+  return people;
 }
 
 export interface FunnelStage {
@@ -290,11 +304,11 @@ export function funnelStages(f: Funnel, titles: readonly string[], src: ListingS
   const seen = src ? f.bySource[src] ?? 0 : f.seen;
   const vals = [seen, f.opened, f.booked];
   const segs = SOURCE_ORDER.filter((s) => (f.bySource[s] ?? 0) > 0).map((s) => ({ source: s, v: f.bySource[s] ?? 0 }));
-  return titles.slice(0, 3).map((t, i) => ({
-    t,
+  return titles.slice(0, 3).map((title, i) => ({
+    t: title,
     v: vals[i],
     w: Math.max(14, vals[0] ? (vals[i] / vals[0]) * 100 : 14),
-    conv: i ? `${vals[i - 1] ? Math.round((vals[i] / vals[i - 1]) * 100) : 0}% go on to ${t.toLowerCase()}` : "",
+    conv: i ? t("{pct}% go on to {stage}", { pct: vals[i - 1] ? Math.round((vals[i] / vals[i - 1]) * 100) : 0, stage: title.toLowerCase() }) : "",
     segs: i === 0 ? segs : null,
   }));
 }
@@ -302,10 +316,19 @@ export function funnelStages(f: Funnel, titles: readonly string[], src: ListingS
 /** The funnel's insight line (MA1-005 row 6e). */
 export function funnelLine(f: Funnel, src: ListingSource | null, emptyLine: string, doneWord: string): string {
   if (!f.seen) return emptyLine;
-  if (src) return `${SOURCE_LABEL[src]}: ${pctOf(f.bySource[src] ?? 0, f.seen)} of your views came from here.`;
+  if (src) return t("{source}: {pct} of your views came from here.", { source: t(SOURCE_LABEL[src]), pct: pctOf(f.bySource[src] ?? 0, f.seen) });
   const lead = SOURCE_ORDER.filter((s) => (f.bySource[s] ?? 0) > 0).sort((a, b) => (f.bySource[b] ?? 0) - (f.bySource[a] ?? 0))[0];
-  const first = lead ? `${SOURCE_LABEL[lead]} brings the most views. ` : "";
-  return `${first}${pctOf(f.booked, f.seen)} of views became ${doneWord}.`;
+  const first = lead ? `${t("{source} brings the most views.", { source: t(SOURCE_LABEL[lead]) })} ` : "";
+  const pct = pctOf(f.booked, f.seen);
+  const became =
+    doneWord === "passes"
+      ? t("{pct} of views became passes.", { pct })
+      : doneWord === "orders"
+        ? t("{pct} of views became orders.", { pct })
+        : doneWord === "bookings"
+          ? t("{pct} of views became bookings.", { pct })
+          : t("{pct} of views became {done}.", { pct, done: doneWord });
+  return `${first}${became}`;
 }
 
 /** The 12-week total of people whose first booking came through Centium. */

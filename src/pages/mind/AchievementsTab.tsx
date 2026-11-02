@@ -28,6 +28,7 @@ import {
   type AchievementCategory,
 } from "../../services/achievements";
 import { appLocale } from "../../i18n/format";
+import { t } from "../../i18n/core";
 
 // The Achievements page, v6 MO1.1.3 (/app/mind/achievements).
 //
@@ -78,7 +79,7 @@ function BadgeTile({ badge, onOpen, hc }: { badge: Badge; onOpen: () => void; hc
         )}
       >
         {display.title}
-        {!earned && <span className="sr-only">, Locked</span>}
+        {!earned && <span className="sr-only">{t(", Locked")}</span>}
       </span>
 
       {/* THE BAR ONLY APPEARS WHERE THERE IS SOMETHING LEFT TO DO. A finished
@@ -89,13 +90,15 @@ function BadgeTile({ badge, onOpen, hc }: { badge: Badge; onOpen: () => void; hc
             <span className="block h-full rounded-full bg-team-gold-deep" style={{ width: `${badge.progress * 100}%` }} />
           </span>
           <span className="mt-[5px] block text-[9.5px] leading-[14.3px] font-semibold tabular-nums text-charcoal-faint">
-            {Math.min(badge.rungs[0].currentValue, badge.next.threshold).toLocaleString(appLocale())} /{" "}
-            {badge.next.threshold.toLocaleString(appLocale())}
+            <bdi dir="ltr">
+              {Math.min(badge.rungs[0].currentValue, badge.next.threshold).toLocaleString(appLocale())} /{" "}
+              {badge.next.threshold.toLocaleString(appLocale())}
+            </bdi>
           </span>
         </span>
       ) : (
         <span className="text-[11.5px] leading-[14.4px] font-bold text-charcoal line-clamp-2">
-          {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString(appLocale())} pts` : "No points, just bragging rights"}
+          {badge.pointsEarned > 0 ? t("+{n} pts", { n: badge.pointsEarned.toLocaleString(appLocale()) }) : t("No points, just bragging rights")}
         </span>
       )}
     </button>
@@ -112,7 +115,7 @@ function Banner({ text, onRetry }: { text: string; onRetry?: () => void }) {
       <p className="flex-1 min-w-0 text-[12px] font-semibold">{text}</p>
       {onRetry && (
         <button onClick={onRetry} className="tap shrink-0 -my-3 -me-3 px-3 min-h-11 text-[12px] font-bold">
-          Retry
+          {t("Retry")}
         </button>
       )}
     </div>
@@ -221,8 +224,8 @@ export default function AchievementsTab() {
   }, [linked, params, setParams]);
 
   const tabItems = [
-    { key: "all", label: "All" },
-    ...(achievements === null ? CATEGORY_ORDER.filter((c) => !(hideNumbers && c === "consistency")) : categories).map((c) => ({ key: c, label: CATEGORY_LABEL[c] })),
+    { key: "all", label: t("All") },
+    ...(achievements === null ? CATEGORY_ORDER.filter((c) => !(hideNumbers && c === "consistency")) : categories).map((c) => ({ key: c, label: t(CATEGORY_LABEL[c]) })),
   ];
   const tabs = (
     <PinnedTabs>
@@ -247,9 +250,9 @@ export default function AchievementsTab() {
   );
 
   const banner = !online ? (
-    <Banner text="You're offline. Showing your last saved achievements." />
+    <Banner text={t("You're offline. Showing your last saved achievements.")} />
   ) : achievementsError ? (
-    <Banner text={achievementsError || "Couldn't load. Check your connection."} onRetry={refreshAchievements} />
+    <Banner text={t(achievementsError || "Couldn't load. Check your connection.")} onRetry={refreshAchievements} />
   ) : null;
 
   // O-1 Loading: the header and the tabs at once, then three 96 tall r22
@@ -262,7 +265,7 @@ export default function AchievementsTab() {
         <MindHeader section="achievements" paddingBottom={20} />
         {tabs}
         {banner}
-        <span className="sr-only" role="status">Loading your achievements…</span>
+        <span className="sr-only" role="status">{t("Loading your achievements…")}</span>
         <div aria-hidden className="flex flex-col gap-3">
           {[0, 1, 2].map((i) => (
             <div key={i} className="h-24 rounded-[22px] bg-cream-soft animate-skeleton-pulse" />
@@ -286,13 +289,13 @@ export default function AchievementsTab() {
           <div className="flex items-end justify-between gap-3">
             <div>
               <p className="text-[10px] leading-[14px] font-extrabold tracking-[1.4px] uppercase" style={{ color: tier.ink }}>
-                {pointsSummary.tierName} tier
+                {t("{tier} tier", { tier: pointsSummary.tierName })}
               </p>
               <p className="mt-1 flex items-baseline gap-[5px]">
                 <span className="text-[30px] font-extrabold leading-[30px] tracking-[-1.2px] text-charcoal tabular-nums">
                   {pointsSummary.balance.toLocaleString(appLocale())}
                 </span>
-                <span className="text-[12px] leading-[18px] font-semibold text-charcoal-faint">pts</span>
+                <span className="text-[12px] leading-[18px] font-semibold text-charcoal-faint">{t("pts")}</span>
               </p>
             </div>
             {/* Only once the list has loaded: a failed read is not "0 of 0". */}
@@ -300,9 +303,9 @@ export default function AchievementsTab() {
               <div className="text-end">
                 <p className="tabular-nums leading-[22px]">
                   <span className="text-[17px] font-extrabold text-charcoal">{counts.earned}</span>
-                  <span className="text-[12px] font-semibold text-charcoal-faint"> of {counts.total}</span>
+                  <span className="text-[12px] font-semibold text-charcoal-faint"> {t("of {n}", { n: counts.total })}</span>
                 </p>
-                <p className="text-[10.5px] leading-[14px] font-normal text-charcoal-faint">earned</p>
+                <p className="text-[10.5px] leading-[14px] font-normal text-charcoal-faint">{t("earned")}</p>
               </div>
             )}
           </div>
@@ -311,12 +314,14 @@ export default function AchievementsTab() {
           <div className="mt-4 flex items-baseline justify-between gap-3">
             <p className="text-[11.5px] leading-[17.3px] font-bold text-charcoal">
               {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
-                ? `${pointsSummary.pointsToNextTier.toLocaleString(appLocale())} to ${pointsSummary.nextTierName}`
-                : "Highest tier"}
+                ? t("{n} to {tier}", { n: pointsSummary.pointsToNextTier.toLocaleString(appLocale()), tier: pointsSummary.nextTierName })
+                : t("Highest tier")}
             </p>
             {pointsSummary.nextTierMinPoints !== null && (
               <p className="text-[11.5px] leading-[17.3px] font-normal text-charcoal-faint tabular-nums">
-                {pointsSummary.balance.toLocaleString(appLocale())} / {pointsSummary.nextTierMinPoints.toLocaleString(appLocale())}
+                <bdi dir="ltr">
+                  {pointsSummary.balance.toLocaleString(appLocale())} / {pointsSummary.nextTierMinPoints.toLocaleString(appLocale())}
+                </bdi>
               </p>
             )}
           </div>
@@ -342,7 +347,7 @@ export default function AchievementsTab() {
               style={{ background: hair(hc, 0.08) }}
             />
             {(() => {
-              const i = pointTiers.findIndex((t) => t.name === pointsSummary.tierName);
+              const i = pointTiers.findIndex((pt) => pt.name === pointsSummary.tierName);
               if (i < 0 || i >= pointTiers.length - 1) return null;
               const step = 100 / pointTiers.length;
               return (
@@ -350,20 +355,20 @@ export default function AchievementsTab() {
                   aria-hidden
                   className="absolute top-[14.75px] h-[1.5px]"
                   style={{
-                    left: `${step * (i + 0.5)}%`,
+                    insetInlineStart: `${step * (i + 0.5)}%`,
                     width: `${step * tierProgress(pointsSummary)}%`,
                     background: tier.solid,
                   }}
                 />
               );
             })()}
-            {pointTiers.map((t) => {
-              const reached = tierReached(t, pointsSummary);
-              const current = t.name === pointsSummary.tierName;
-              const own = tierCardColours(tierHex(tierRank(pointTiers, t.name)), dark);
-              const Icon = tierIcon(tierRank(pointTiers, t.name));
+            {pointTiers.map((pt) => {
+              const reached = tierReached(pt, pointsSummary);
+              const current = pt.name === pointsSummary.tierName;
+              const own = tierCardColours(tierHex(tierRank(pointTiers, pt.name)), dark);
+              const Icon = tierIcon(tierRank(pointTiers, pt.name));
               return (
-                <div key={t.name} className="relative flex-1 flex flex-col items-center">
+                <div key={pt.name} className="relative flex-1 flex flex-col items-center">
                   <span
                     className="relative w-[31px] h-[31px] rounded-full flex items-center justify-center border-[1.5px]"
                     style={{
@@ -378,10 +383,10 @@ export default function AchievementsTab() {
                     className={clsx("mt-[5px] text-[10px] leading-[12px]", current ? "font-extrabold" : "font-normal")}
                     style={{ color: current ? own.ink : "rgb(var(--c-charcoal-faint))" }}
                   >
-                    {t.name}
+                    {pt.name}
                   </span>
                   <span className="mt-[5px] text-[10px] leading-[12px] font-normal text-charcoal-faint tabular-nums">
-                    {t.minPoints.toLocaleString(appLocale())}
+                    {pt.minPoints.toLocaleString(appLocale())}
                   </span>
                 </div>
               );
@@ -393,7 +398,7 @@ export default function AchievementsTab() {
             className="mt-3.5 pt-3 border-t-[0.5px] text-[11px] leading-[15px] text-charcoal-faint"
             style={{ borderColor: tier.rule }}
           >
-            Rewards for your points are coming soon.
+            {t("Rewards for your points are coming soon.")}
           </p>
         </div>
       )}
@@ -402,7 +407,7 @@ export default function AchievementsTab() {
       {recent.length > 0 && (
         <div className="mb-[22px]">
           <p className="mx-1 mb-2 text-[10.5px] leading-[14px] font-bold tracking-[1.3px] uppercase text-charcoal-faint">
-            Recently unlocked
+            {t("Recently unlocked")}
           </p>
           {/* #21: r18, 0.5 px #241F1B@8% (X-09). Dividers inset to the text
               column (#27: 1 px #241F1B@5%). */}
@@ -430,7 +435,7 @@ export default function AchievementsTab() {
                       className="shrink-0 whitespace-nowrap [.larger-text_&]:whitespace-normal [.larger-text_&]:max-w-[150px] text-end text-[12px] leading-[18px] font-extrabold tabular-nums"
                       style={{ color: keyInk(a.key, dark) }}
                     >
-                      {a.points > 0 ? `+${a.points.toLocaleString(appLocale())}` : "No points, just bragging rights"}
+                      {a.points > 0 ? `+${a.points.toLocaleString(appLocale())}` : t("No points, just bragging rights")}
                     </span>
                   </span>
                 </button>
@@ -453,9 +458,9 @@ export default function AchievementsTab() {
             <span className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-accent">
               <Trophy size={26} strokeWidth={1.5} aria-hidden />
             </span>
-            <p className="text-[15px] font-bold text-charcoal mt-3">Nothing here yet</p>
+            <p className="text-[15px] font-bold text-charcoal mt-3">{t("Nothing here yet")}</p>
             <p className="text-[12.5px] font-medium text-charcoal-muted mt-1 leading-relaxed max-w-[260px]">
-              Use the app and badges start appearing here.
+              {t("Use the app and badges start appearing here.")}
             </p>
           </div>
         )

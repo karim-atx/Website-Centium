@@ -8,6 +8,7 @@ import type { CustomMeal, Recipe } from "../../../types";
 import { divideTotals, sumItems, type PrepItem } from "../../food/mealPrepShared";
 import { portionMultiplier, scaleMacros, type ItemKind, type Macros, type ServingFacts } from "./nutritionModel";
 import { appLocale } from "../../../i18n/format";
+import { t, tn } from "../../../i18n/core";
 
 export interface FactSources {
   recipes: Recipe[];
@@ -42,12 +43,13 @@ export function itemMacros(item: { kind: ItemKind | null; refId: string | null; 
 
 /** NU2 row line: "200 g · 146 kcal", "1 medium · 95 kcal", "Recipe · 1 serving · 540 kcal". */
 export function itemLine(item: { kind: ItemKind | null; facts: ServingFacts | null; grams: number | null; servings: number | null }, m: Macros | null): string {
-  const kcal = m ? `${Math.round(m.kcal).toLocaleString(appLocale("en-GB"))} kcal` : "No nutrition data";
+  const kcal = m ? t("{n} kcal", { n: Math.round(m.kcal).toLocaleString(appLocale("en-GB")) }) : t("No nutrition data");
   const n = item.servings ?? 1;
   const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
-  if (item.kind === "recipe") return `Recipe · ${fmt(n)} ${n === 1 ? "serving" : "servings"} · ${kcal}`;
-  if (item.kind === "custom_meal") return `Meal · ${fmt(n)} ${n === 1 ? "serving" : "servings"} · ${kcal}`;
-  if (item.grams != null) return `${fmt(item.grams)} g · ${kcal}`;
-  const label = item.facts?.servingLabel ?? "serving";
+  if (item.kind === "recipe") return tn(n, "Recipe · {n} serving · {kcal}", "Recipe · {n} servings · {kcal}", { n: fmt(n), kcal });
+  if (item.kind === "custom_meal") return tn(n, "Meal · {n} serving · {kcal}", "Meal · {n} servings · {kcal}", { n: fmt(n), kcal });
+  if (item.grams != null) return `${t("{n} g", { n: fmt(item.grams) })} · ${kcal}`;
+  // The serving label is the food's own (data, F13); only the fallback word is ours.
+  const label = item.facts?.servingLabel ?? t("serving");
   return `${n === 1 ? label : `${fmt(n)} × ${label}`} · ${kcal}`;
 }

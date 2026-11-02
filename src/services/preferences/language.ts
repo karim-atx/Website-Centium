@@ -39,8 +39,22 @@ export async function readAccountLanguage(ownerId: string): Promise<Language | n
   }
 }
 
+// Round G3 (G fixes 3): the Premium content readers answer in
+// app_preferences.language, so after a change they read once the account's
+// language is saved, or a quick re-read could still get the old language.
+let lastWrite: Promise<unknown> = Promise.resolve();
+
+/** Resolves once the last language write has finished (saved or not). */
+export const accountLanguageSaved = (): Promise<unknown> => lastWrite;
+
 /** Update first, insert only if no row matched (the UPDATE grant excludes owner_id, so never upsert). */
-export async function writeAccountLanguage(ownerId: string, language: Language): Promise<boolean> {
+export function writeAccountLanguage(ownerId: string, language: Language): Promise<boolean> {
+  const write = saveAccountLanguage(ownerId, language);
+  lastWrite = write.catch(() => false);
+  return write;
+}
+
+async function saveAccountLanguage(ownerId: string, language: Language): Promise<boolean> {
   const updated = await table().update({ language }).eq("owner_id", ownerId).select("language");
   if (updated.error) {
     console.error("[language] Could not save:", updated.error.message);
@@ -48,7 +62,7 @@ export async function writeAccountLanguage(ownerId: string, language: Language):
   }
   if (updated.data && updated.data.length > 0) return true;
   const inserted = await table().insert({ owner_id: ownerId, language });
-  if (inserted.error?.code === "23505") return writeAccountLanguage(ownerId, language);
+  if (inserted.error?.code === "23505") return saveAccountLanguage(ownerId, language);
   if (inserted.error) {
     console.error("[language] Could not save:", inserted.error.message);
     return false;

@@ -20,6 +20,7 @@ import { CancelClassDialog } from "./CancelClassDialog";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { dayWords, shortDate, todayIso, type Session } from "./scheduleModel";
 import type { ScheduleApi } from "./useSchedule";
+import { t, tn } from "../../../i18n/core";
 
 // The actions a session offers wherever it is shown (Schedule row menu,
 // session page tiles, Needs attention): Create / Edit (the class sheet, with
@@ -172,9 +173,9 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           // exists, after the sheet closes; only a refusal is shown (a toast).
           const sendCover = (target: CoverTarget) => {
             if (!cover) return;
-            if (!authUserId) return show("Class saved. Couldn't send the cover photo. Try again.");
+            if (!authUserId) return show(t("Class saved. Couldn't send the cover photo. Try again."));
             void submitClassCover(authUserId, target, cover).then((c) => {
-              if (!c.ok) show(`Class saved. ${c.message}`);
+              if (!c.ok) show(t("Class saved. {problem}", { problem: c.message }));
             });
           };
           if (sheet.mode === "edit" && sheet.editingId) {
@@ -185,7 +186,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
             sendCover(sheet.scope === "future" && r.seriesId ? { surface: "class_series_cover", id: r.seriesId } : { surface: "class_cover", id: sheet.editingId });
             // OURS-AN3 A8: "Changes saved. {n} clients were told." / "Changes saved."
             // Future (OURS): how many sessions took the edit.
-            show(sheet.scope === "future" && r.changed > 1 ? `Changes saved to ${r.changed} sessions.` : `Changes saved.${toldTail(r.told, people)}`);
+            show(sheet.scope === "future" && r.changed > 1 ? tn(r.changed, "Changes saved to {n} session.", "Changes saved to {n} sessions.") : `${t("Changes saved.")}${toldTail(r.told, people)}`);
             return { ok: true };
           }
           if (rule) {
@@ -195,7 +196,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
             const first = r.created[0];
             sendCover({ surface: "class_series_cover", id: r.seriesId });
             // AN3-055 row 4 / O1-O3, with "View class" (row 5; S1 unspecified: the first session's page).
-            show(seriesToast(rule, r.created.length), first ? { label: "View class", onClick: () => navigate(`/app/business/classes/${first.id}`) } : undefined);
+            show(seriesToast(rule, r.created.length), first ? { label: t("View class"), onClick: () => navigate(`/app/business/classes/${first.id}`) } : undefined);
             if (first) opts.onCreated?.(first.id);
             return { ok: true };
           }
@@ -205,8 +206,8 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           const carried = carryOf({ ...sheet.initial, classType: draft.classType, date: draft.date, professionalId: draft.professionalId ?? "", paymentType: draft.paymentType ?? "Cash" });
           setSheet(null);
           // OP1-154 / AN3-053 (12-hour, V6-164 card date) + "Create another" (V6-162).
-          show(`Class created: ${saved.title}, ${shortDate(saved.date)}, ${time12(saved.startTime)}.`, {
-            label: "Create another",
+          show(t("Class created: {class}, {date}, {time}.", { class: saved.title, date: shortDate(saved.date), time: time12(saved.startTime) }), {
+            label: t("Create another"),
             onClick: () => {
               setToast(null);
               setSheet({ mode: "create", scope: "this", initial: blankForm(carried.date ?? todayIso(), carried) });
@@ -222,18 +223,18 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         open={!!seriesFor}
         layout="stacked"
         icon={<Repeat size={20} strokeWidth={2.2} />}
-        title={seriesFor ? `Edit ${seriesFor.title}` : ""}
+        title={seriesFor ? t("Edit {class}", { class: seriesFor.title }) : ""}
         subtitle={seriesRule ? repeatsSentence(seriesRule, seriesRule.startTime) : undefined}
-        confirmLabel="Only this session"
+        confirmLabel={t("Only this session")}
         secondary={{
-          label: "This and all future sessions",
+          label: t("This and all future sessions"),
           onClick: () => {
             const id = seriesFor?.id;
             setSeriesFor(null);
             if (id) openEditScope(id, "future");
           },
         }}
-        cancelLabel="Cancel"
+        cancelLabel={t("Cancel")}
         onCancel={() => setSeriesFor(null)}
         onConfirm={() => {
           const id = seriesFor?.id;
@@ -259,7 +260,7 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           const noteSent = note && authUserId ? await sendNote(pid, authUserId, note) : true;
           setSubFor(null);
           // OP1-073 T4 (12-hour day words), "{n} {people} were told." only when the notice went out.
-          show(`${api.nameOf(pid)} now teaches ${subSession.title} ${dayWords(subSession.date, today)}.${toldTail(r.told, people)}${noteSent ? "" : " Couldn't send your note."}`);
+          show(`${t("{name} now teaches {class} {when}.", { name: api.nameOf(pid), class: subSession.title, when: dayWords(subSession.date, today) })}${toldTail(r.told, people)}${noteSent ? "" : ` ${t("Couldn't send your note.")}`}`);
           return { ok: true };
         }}
       />
@@ -306,8 +307,8 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         open={!!endFor}
         layout="stacked"
         icon={<Repeat size={20} strokeWidth={2.2} />}
-        title={endFor ? `Stop repeating ${endFor.title} after ${shortDate(endFor.date)}?` : ""}
-        subtitle={`Later sessions nobody has booked are removed. Booked ones stay, so you can cancel them and the ${people} are told.`}
+        title={endFor ? t("Stop repeating {class} after {date}?", { class: endFor.title, date: shortDate(endFor.date) }) : ""}
+        subtitle={people === "clients" ? t("Later sessions nobody has booked are removed. Booked ones stay, so you can cancel them and the clients are told.") : t("Later sessions nobody has booked are removed. Booked ones stay, so you can cancel them and the members are told.")}
         extra={
           endError ? (
             <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(17), fontWeight: 600, color: dark ? "#F09A8E" : "#C0392B" }}>
@@ -315,9 +316,9 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
             </p>
           ) : undefined
         }
-        confirmLabel={endBusy ? "Saving…" : endError ? "Try again" : "Stop repeating"}
+        confirmLabel={endBusy ? t("Saving…") : endError ? t("Try again") : t("Stop repeating")}
         confirmDisabled={offline}
-        cancelLabel="Keep repeating"
+        cancelLabel={t("Keep repeating")}
         initialFocus="cancel"
         busy={endBusy}
         onCancel={() => !endBusy && setEndFor(null)}
@@ -334,11 +335,13 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           const s = endFor;
           setEndFor(null);
           const kept = r.value.keptWithBookings;
-          show(
-            `${s.title} stops repeating after ${dayMonth(s.date)}.${
-              kept > 0 ? ` ${kept} booked ${kept === 1 ? "session stays" : "sessions stay"}: cancel ${kept === 1 ? "it" : "them"} to tell the ${people}.` : ""
-            }`
-          );
+          const keptLine =
+            kept > 0
+              ? people === "clients"
+                ? tn(kept, "{n} booked session stays: cancel it to tell the clients.", "{n} booked sessions stay: cancel them to tell the clients.")
+                : tn(kept, "{n} booked session stays: cancel it to tell the members.", "{n} booked sessions stay: cancel them to tell the members.")
+              : "";
+          show([t("{class} stops repeating after {date}.", { class: s.title, date: dayMonth(s.date) }), keptLine].filter(Boolean).join(" "));
         }}
       />
       <ConfirmCard
@@ -346,10 +349,10 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
         layout="stacked"
         tone="destructive"
         icon={<Trash2 size={20} strokeWidth={2.2} />}
-        title={deleteFor ? `Delete ${deleteFor.title} ${dayWords(deleteFor.date, today)} at ${time12(deleteFor.startTime)}?` : ""}
-        subtitle={deleteError ?? "Nobody has booked it yet. It's removed from your schedule and from Explore."}
-        confirmLabel={deleteBusy ? "Deleting…" : deleteError ? "Try again" : "Delete class"}
-        cancelLabel="Keep class"
+        title={deleteFor ? t("Delete {class} {when} at {time}?", { class: deleteFor.title, when: dayWords(deleteFor.date, today), time: time12(deleteFor.startTime) }) : ""}
+        subtitle={deleteError ?? t("Nobody has booked it yet. It's removed from your schedule and from Explore.")}
+        confirmLabel={deleteBusy ? t("Deleting…") : deleteError ? t("Try again") : t("Delete class")}
+        cancelLabel={t("Keep class")}
         cancelVariant="outlined"
         initialFocus="cancel"
         busy={deleteBusy}
@@ -361,12 +364,12 @@ export function useSessionActions(api: ScheduleApi, opts: { onCreated?: (id: str
           const r = await api.remove(deleteFor.id);
           setDeleteBusy(false);
           if (!r.ok) {
-            setDeleteError(r.message ?? "Couldn't delete the class. Check your connection and try again.");
+            setDeleteError(r.message ?? t("Couldn't delete the class. Check your connection and try again."));
             return;
           }
           const gone = deleteFor;
           setDeleteFor(null);
-          show(`${gone.title} ${dayWords(gone.date, today)} is deleted.`);
+          show(t("{class} {when} is deleted.", { class: gone.title, when: dayWords(gone.date, today) }));
           opts.onDeleted?.(gone);
         }}
       />

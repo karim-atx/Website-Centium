@@ -3,6 +3,7 @@ import { resolveMyBusinessId } from "../business-profile";
 import { formatPrice, parsePrice } from "../../utils/price";
 import type { BusinessClassRow } from "./types";
 import { assignClassInstructor, type ClassFields } from "./schedule";
+import { t, tk } from "../../i18n/core";
 export type { BusinessClassRow } from "./types";
 
 // A business's scheduled classes: the real business_classes rows.
@@ -76,12 +77,12 @@ export type ClassField = "name" | "date" | "times" | "capacity" | "price";
 
 /** The ClassFlowsV6 field messages (`er`), one per field. */
 export const CLASS_FIELD_MESSAGES = {
-  name: "Give the class a name.",
-  date: "Pick today or a later date.",
-  times: "The class can't end before it starts.",
-  capacityLow: "At least 1 spot.",
-  capacityHigh: "Maximum is 200 spots per class.",
-  price: "Use numbers only, e.g. 15 or 15.50.",
+  name: tk("Give the class a name."),
+  date: tk("Pick today or a later date."),
+  times: tk("The class can't end before it starts."),
+  capacityLow: tk("At least 1 spot."),
+  capacityHigh: tk("Maximum is 200 spots per class."),
+  price: tk("Use numbers only, e.g. 15 or 15.50."),
 } as const;
 
 /**
@@ -91,17 +92,17 @@ export const CLASS_FIELD_MESSAGES = {
  */
 export function validateClassDraft(draft: ClassDraft, today?: string): Partial<Record<ClassField, string>> {
   const out: Partial<Record<ClassField, string>> = {};
-  if (!draft.title.trim()) out.name = CLASS_FIELD_MESSAGES.name;
-  if (today && draft.date < today) out.date = CLASS_FIELD_MESSAGES.date;
+  if (!draft.title.trim()) out.name = t(CLASS_FIELD_MESSAGES.name);
+  if (today && draft.date < today) out.date = t(CLASS_FIELD_MESSAGES.date);
   // A 0-minute class is not a class (AN3-064 row 6): equal times fail too,
   // although the table's CHECK allows start = end.
-  if (draft.endTime <= draft.startTime) out.times = CLASS_FIELD_MESSAGES.times;
+  if (draft.endTime <= draft.startTime) out.times = t(CLASS_FIELD_MESSAGES.times);
   if (!Number.isFinite(draft.maxCapacity) || !Number.isInteger(draft.maxCapacity) || draft.maxCapacity < CAPACITY_MIN) {
-    out.capacity = CLASS_FIELD_MESSAGES.capacityLow;
+    out.capacity = t(CLASS_FIELD_MESSAGES.capacityLow);
   } else if (draft.maxCapacity > CAPACITY_MAX) {
-    out.capacity = CLASS_FIELD_MESSAGES.capacityHigh;
+    out.capacity = t(CLASS_FIELD_MESSAGES.capacityHigh);
   }
-  if (!parsePrice(draft.price ?? "").ok) out.price = CLASS_FIELD_MESSAGES.price;
+  if (!parsePrice(draft.price ?? "").ok) out.price = t(CLASS_FIELD_MESSAGES.price);
   return out;
 }
 
@@ -216,7 +217,7 @@ function toRow(draft: ClassDraft): { ok: true; row: WriteRow } | { ok: false; me
   if (first) return { ok: false, message: first };
 
   const price = parsePrice(draft.price ?? "");
-  if (!price.ok) return { ok: false, message: CLASS_FIELD_MESSAGES.price };
+  if (!price.ok) return { ok: false, message: t(CLASS_FIELD_MESSAGES.price) };
 
   return {
     ok: true,
@@ -283,7 +284,7 @@ export function classFieldsOf(draft: ClassDraft): { ok: true; fields: ClassField
 export async function fetchMyClasses(userId: string): Promise<ClassesResult> {
   const business = await resolveMyBusinessId(userId);
   if (!business.ok) {
-    return { ok: false, message: "Couldn't load your classes. Check your connection and try again." };
+    return { ok: false, message: t("Couldn't load your classes. Check your connection and try again.") };
   }
   if (!business.id) return { ok: true, businessId: null, classes: [] };
 
@@ -296,7 +297,7 @@ export async function fetchMyClasses(userId: string): Promise<ClassesResult> {
 
   if (error) {
     console.error("[business-classes] Could not read classes:", error.message);
-    return { ok: false, message: "Couldn't load your classes. Check your connection and try again." };
+    return { ok: false, message: t("Couldn't load your classes. Check your connection and try again.") };
   }
   return { ok: true, businessId: business.id, classes: (data ?? []).map((r) => toClass(r as unknown as Row)) };
 }
@@ -365,13 +366,13 @@ export async function createClass(
       if (!again.error && again.data) return { ok: true, created: toClass(again.data as unknown as Row) };
     }
     console.error("[business-classes] Could not create the class:", error?.message);
-    return { ok: false, message: CLASS_SAVE_FAILED };
+    return { ok: false, message: t(CLASS_SAVE_FAILED) };
   }
   return { ok: true, created: toClass(data as unknown as Row) };
 }
 
 /** AN3-068 row 1 (ClassFlowsV6 `sheet-fail`). */
-export const CLASS_SAVE_FAILED = "Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.";
+export const CLASS_SAVE_FAILED = tk("Couldn't save the class. Check your connection and tap Retry. Everything you entered is kept.");
 
 // updateClass (a direct UPDATE of one session) is gone: B9 edits go through
 // edit_class / move_class_session (services/business-classes/schedule.ts), so
@@ -397,7 +398,7 @@ export async function assignInstructor(
   const { data, error } = await supabase.from("business_classes").select(COLUMNS).eq("id", classId).maybeSingle();
   if (error || !data) {
     console.error("[business-classes] Could not read the assigned class back:", error?.message);
-    return { ok: false, message: "Couldn't assign. Check your connection and try again." };
+    return { ok: false, message: t("Couldn't assign. Check your connection and try again.") };
   }
   return { ok: true, updated: toClass(data as unknown as Row), told: r.value };
 }
@@ -468,7 +469,7 @@ export async function fetchInstructors(businessId: string): Promise<{ ok: true; 
   return {
     ok: true,
     instructors: ids
-      .map((id) => ({ professionalId: id, firstName: byId.get(id) || "Unnamed" }))
+      .map((id) => ({ professionalId: id, firstName: byId.get(id) || t("Unnamed") }))
       .sort((a, b) => a.firstName.localeCompare(b.firstName)),
   };
 }
@@ -538,8 +539,8 @@ export async function deleteClass(classId: string): Promise<{ ok: boolean; messa
   const { error } = await supabase.from("business_classes").delete().eq("id", classId);
   if (error) {
     console.error("[business-classes] Could not delete the class:", error.message);
-    if (error.code === "ATXE1") return { ok: false, booked: true, message: "Someone has booked this class, so it can't be deleted. Cancel it instead." };
-    return { ok: false, message: "Couldn't delete the class. Try again." };
+    if (error.code === "ATXE1") return { ok: false, booked: true, message: t("Someone has booked this class, so it can't be deleted. Cancel it instead.") };
+    return { ok: false, message: t("Couldn't delete the class. Try again.") };
   }
   return { ok: true };
 }

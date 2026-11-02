@@ -33,6 +33,7 @@ import {
 } from "../../../services/offers/manage";
 import { BackHeader, BoxInput, Caps, FieldError, FieldLabel, FundingCheck, PrimaryButton, SubSegment } from "./parts";
 import { GuidelinesLink } from "../../moderation/GuidelinesLink";
+import { OfferPremiumToggle } from "../../premium/OfferPremium";
 
 // Market + Share 3.0 · W3 · Create offer → Preview and publish, and the same
 // editor for an existing offer (B-MA.3 `offerCreate` / `offerPreview`,
@@ -258,6 +259,8 @@ export const OfferEditor: React.FC<OfferEditorProps> = ({ variant, owner, offerI
     <div ref={formRef} style={{ color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <BackHeader eyebrow="Offers" title={editWord} onBack={onClose} backLabel={backLabels} />
+      {/* Round G2: the owner keeps an existing offer for Premium members (only with the switch on). */}
+      {offerId && !expired ? <OfferPremiumToggle offerId={offerId} /> : null}
 
       <div data-field="headline">
         <FieldLabel htmlFor="offer-headline">Headline</FieldLabel>

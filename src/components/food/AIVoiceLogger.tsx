@@ -30,6 +30,7 @@ import { foodCategoryIcon } from "../../utils/icons";
 import type { MealType } from "../../types";
 import { resolveCssColor } from "../../theme/cssColor";
 import { textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 
 // Voice logging, end to end: record, transcribe, parse, confirm, log.
 //
@@ -498,14 +499,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     setStage("idle");
     switch (outcome.kind) {
       case "no_speech":
-        setNotice({ tone: "info", text: "Didn't catch anything. Try again a bit closer to the mic." });
+        setNotice({ tone: "info", text: t("Didn't catch anything. Try again a bit closer to the mic.") });
         break;
       case "no_items":
         setNotice({
           tone: "info",
           text: outcome.transcript
-            ? `Heard "${outcome.transcript}", but no food in it. Try again, or add it manually.`
-            : "No food in that one. Try again, or add it manually.",
+            ? t("Heard “{transcript}”, but no food in it. Try again, or add it manually.", { transcript: outcome.transcript })
+            : t("No food in that one. Try again, or add it manually."),
         });
         break;
       case "rate_limited":
@@ -528,7 +529,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     const mimeType = pickRecordingMimeType();
     if (!mimeType) {
       setStage("idle");
-      setNotice({ tone: "error", text: "This browser can't record audio. Add the food manually for now." });
+      setNotice({ tone: "error", text: t("This browser can't record audio. Add the food manually for now.") });
       stream.getTracks().forEach((t) => t.stop());
       return;
     }
@@ -561,7 +562,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         waveHoldTimerRef.current = null;
         if (blob.size === 0) {
           setStage("idle");
-          setNotice({ tone: "error", text: "That recording didn't capture any audio. Try again." });
+          setNotice({ tone: "error", text: t("That recording didn't capture any audio. Try again.") });
           return;
         }
         void finish(blob);
@@ -708,8 +709,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     if (failed > 0) {
       setSaveError(
         failed === chosen.length
-          ? "Couldn't save those items. Please try again."
-          : `Saved, but ${failed} item${failed === 1 ? "" : "s"} couldn't be added.`
+          ? t("Couldn't save those items. Please try again.")
+          : tn(failed, "Saved, but {n} item couldn't be added.", "Saved, but {n} items couldn't be added.")
       );
       if (failed === chosen.length) return;
     }
@@ -751,7 +752,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       ? Object.fromEntries(Object.entries(perServing).map(([key, amount]) => [key, amount * multiplier]))
       : null;
 
-    const plural = item.quantity === 1 ? "" : "s";
     return {
       multiplier,
       calories: round(food.calories),
@@ -762,9 +762,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       // Shown beside the serving label only when the spoken word was dropped.
       unitNote:
         item.spokenUnit && !item.unit
-          ? `Logged as ${item.quantity} serving${plural}. “${item.spokenUnit}” is not a unit this can convert`
+          ? tn(item.quantity, "Logged as {n} serving. “{unit}” is not a unit this can convert", "Logged as {n} servings. “{unit}” is not a unit this can convert", { unit: item.spokenUnit })
           : null,
-      quantityLabel: item.unit && item.unit !== "serving" ? item.unit : `serving${plural}`,
+      quantityLabel: item.unit && item.unit !== "serving" ? t(item.unit) : tn(item.quantity, "serving", "servings"),
     };
   };
 
@@ -778,12 +778,11 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       <CustomFoodForm
         open={open}
         onClose={handleClose}
-        title="Create food"
+        title={t("Create food")}
         onBack={() => setCreatingFor(null)}
         intro={
           <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3.5 py-2.5 mb-4">
-            Heard “{pending?.spokenName}”. Fill in what it is and it joins this recording with
-            its nutrition.
+            {t("Heard “{name}”. Fill in what it is and it joins this recording with its nutrition.", { name: pending?.spokenName ?? "" })}
           </p>
         }
         initialName={pending?.spokenName}
@@ -796,7 +795,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     <BottomSheet
       open={open}
       onClose={handleClose}
-      title="Tell Centium what you ate"
+      title={t("Tell Centium what you ate")}
       // Mobile handoff item 1: the mic-denied screen's old in-content "Back"
       // button becomes the header chevron, back to the idle mic prompt. The
       // handover's frame (CentiumFrame sheetCanBack) shows it on the review
@@ -825,10 +824,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             >
               <Mic size={32} className="text-on-primary-fill" />
             </button>
-            <p className="font-display text-xl font-semibold text-charcoal mb-2">What did you eat?</p>
+            <p className="font-display text-xl font-semibold text-charcoal mb-2">{t("What did you eat?")}</p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Tap the mic and describe your meal naturally. Centium will find the foods for you to
-              confirm.
+              {t("Tap the mic and describe your meal naturally. Centium will find the foods for you to confirm.")}
             </p>
           </>
         )}
@@ -842,15 +840,15 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               <Mic size={32} className="text-teal" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Requesting microphone access…
+              {t("Requesting microphone access…")}
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Centium needs your mic to hear what you ate.
+              {t("Centium needs your mic to hear what you ate.")}
             </p>
             {/* HO5.1 / decision 9: the transcription notice card is gone; the
                 disclosure is one line at the mic-permission step instead. */}
             <p className="text-[11px] text-charcoal-faint max-w-xs mt-3">
-              Recordings are sent to Groq, a third-party service, to be transcribed.
+              {t("Recordings are sent to Groq, a third-party service, to be transcribed.")}
             </p>
           </>
         )}
@@ -861,14 +859,13 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               <MicOff size={32} className="text-charcoal-faint" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Microphone access denied
+              {t("Microphone access denied")}
             </p>
             {/* The "Try a sample instead" button that used to sit here replayed
                 the canned response. With real transcription it would be the one
                 remaining way to put four foods nobody mentioned into a diary. */}
             <p className="text-sm text-charcoal-soft max-w-xs mb-6">
-              Enable microphone access in your browser or device settings to use voice logging. You
-              can still add foods manually from the search tab.
+              {t("Enable microphone access in your browser or device settings to use voice logging. You can still add foods manually from the search tab.")}
             </p>
           </>
         )}
@@ -889,14 +886,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             >
               <canvas ref={waveCanvasRef} className="block shrink-0" style={{ willChange: "transform" }} />
             </div>
-            <p className="font-display text-xl font-semibold text-charcoal mb-1">Listening…</p>
+            <p className="font-display text-xl font-semibold text-charcoal mb-1">{t("Listening…")}</p>
             <p className="text-sm text-charcoal-soft mb-6 tabular-nums">
-              {elapsed}s · {remaining}s left
+              {t("{elapsed}s · {remaining}s left", { elapsed, remaining })}
             </p>
             {/* THE CONTROL THE MOCK NEVER NEEDED. A fixed 1800ms timer ended
                 the old "recording"; a real one ends when the speaker decides. */}
             <Button size="lg" onClick={stopRecording}>
-              <Square size={14} /> Stop & process
+              <Square size={14} /> {t("Stop & process")}
             </Button>
           </>
         )}
@@ -907,10 +904,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               <Sparkles size={26} className="text-primary" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Centium is processing…
+              {t("Centium is processing…")}
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Transcribing what you said and matching it against the food database.
+              {t("Transcribing what you said and matching it against the food database.")}
             </p>
           </>
         )}
@@ -931,7 +928,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 from the hour and shown, so a breakfast recorded at 8am is
                 already right and a shift worker can change it in one tap. */}
             <div style={{ ...sheetGreyStyle, marginBottom: 12 }}>
-              <p style={sheetLabelStyle}>Meal</p>
+              <p style={sheetLabelStyle}>{t("Meal")}</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
                 {mealOrder.map((m) => (
                   <button
@@ -941,14 +938,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                     className="tap transition-colors"
                     style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
                   >
-                    {mealLabels[m]}
+                    {t(mealLabels[m])}
                   </button>
                 ))}
               </div>
             </div>
 
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              We found: select what to add
+              {t("We found: select what to add")}
             </p>
             <div className="space-y-2 mb-4">
               {items.map((item, i) => {
@@ -986,7 +983,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           {item.food &&
                             item.food.name.toLowerCase() !== item.spokenName.toLowerCase() && (
                               <p className="text-[11px] text-charcoal-faint truncate">
-                                heard “{item.spokenName}”
+                                {t("heard “{name}”", { name: item.spokenName })}
                               </p>
                             )}
                           {/* NAMED AS A NEW FOOD, not as a failure. The row has a
@@ -994,7 +991,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                               says what it is rather than what it lacks. */}
                           {!item.food && (
                             <p className="text-[11px] text-charcoal-faint">
-                              New food: not in your food list yet
+                              {t("New food: not in your food list yet")}
                             </p>
                           )}
                         </div>
@@ -1025,10 +1022,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           style={{ ...sheetGreyStyle, padding: "9px 0", borderRadius: 12 }}
                         >
                           {[
-                            { value: `${preview.calories}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
-                            { value: `${preview.protein}g`, color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: "protein" },
-                            { value: `${preview.carbs}g`, color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: "carbs" },
-                            { value: `${preview.fat}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
+                            { value: `${preview.calories}`, color: "rgb(var(--c-charcoal))", caption: t("kcal") },
+                            { value: t("{n}g", { n: preview.protein }), color: dark ? FOOD_DARK.protein : "rgb(var(--thi-7d6bb5))", caption: t("protein") },
+                            { value: t("{n}g", { n: preview.carbs }), color: dark ? FOOD_DARK.carbs : "rgb(var(--thi-8175c2))", caption: t("carbs") },
+                            { value: t("{n}g", { n: preview.fat }), color: dark ? FOOD_DARK.fat : "#4274D7", caption: t("fat") },
                           ].map((cell, ci) => (
                             <div
                               key={cell.caption}
@@ -1055,12 +1052,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         better answer than four sets of numbers at once. */}
                     {item.food && item.alternatives.length > 0 && (
                       <div className="mt-2 ps-11 flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[11px] text-charcoal-faint shrink-0">Also:</span>
+                        <span className="text-[11px] text-charcoal-faint shrink-0">{t("Also:")}</span>
                         {item.alternatives.map((alt) => (
                           <button
                             key={alt.id}
                             onClick={() => chooseAlternative(i, alt)}
-                            aria-label={`Use ${alt.name} instead`}
+                            aria-label={t("Use {name} instead", { name: alt.name })}
                             className="tap transition-colors"
                             style={{ ...sheetChipStyle(false), padding: "5px 10px", fontSize: textPx(11.5) }}
                           >
@@ -1076,7 +1073,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         a name that says so. */}
                     <div className="flex items-center justify-between gap-3 mt-2.5 ps-11">
                       <span className="text-[11px] text-charcoal-faint">
-                        {preview ? preview.quantityLabel : item.spokenUnit ? `per ${item.spokenUnit}` : "servings"}
+                        {preview ? preview.quantityLabel : item.spokenUnit ? t("per {unit}", { unit: item.spokenUnit }) : tn(item.quantity, "serving", "servings")}
                       </span>
                       <div
                         className="shrink-0"
@@ -1088,7 +1085,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           onBlur={() => commitQuantity(i)}
                           onClick={(e) => e.stopPropagation()}
                           inputMode="decimal"
-                          aria-label={`${item.food?.name ?? item.spokenName} quantity`}
+                          aria-label={t("{name} quantity", { name: item.food?.name ?? item.spokenName })}
                           className="w-14 text-center tabular-nums focus:outline-none"
                           style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
                         />
@@ -1102,13 +1099,13 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                     {!item.food && (
                       <div className="mt-2.5 ps-11 flex items-center gap-3">
                         <Button size="sm" className="!px-3" onClick={() => setCreatingFor(i)}>
-                          <Plus size={13} /> Create food
+                          <Plus size={13} /> {t("Create food")}
                         </Button>
                         <button
                           onClick={() => toggleItem(i)}
                           className="tap text-[11px] font-semibold text-charcoal-faint underline"
                         >
-                          {item.selected ? "Don't log this" : "Log without nutrition"}
+                          {item.selected ? t("Don't log this") : t("Log without nutrition")}
                         </button>
                       </div>
                     )}
@@ -1129,7 +1126,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             size={13}
                             style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .18s ease" }}
                           />
-                          {isOpen ? "Hide nutrients" : "More nutrients"}
+                          {isOpen ? t("Hide nutrients") : t("More nutrients")}
                         </button>
                         {isOpen && (
                           <div className="mt-2 animate-fade-slide-up">
@@ -1143,8 +1140,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                               />
                             ) : (
                               <p className="text-[11px] text-charcoal-faint">
-                                No per-nutrient data for this food yet. The calories and macros
-                                above are all there is.
+                                {t("No per-nutrient data for this food yet. The calories and macros above are all there is.")}
                               </p>
                             )}
                           </div>
@@ -1166,7 +1162,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                   changing an amount on something already heard — and it used to
                   be the ONLY thing the button called "Edit" did. */}
               <Button variant="outline" size="md" className="!px-4" onClick={reset}>
-                <Mic size={14} /> Record again
+                <Mic size={14} /> {t("Record again")}
               </Button>
               <Button
                 fullWidth
@@ -1175,17 +1171,16 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 disabled={added || saving || selectedCount === 0}
               >
                 {added
-                  ? "Added ✓"
+                  ? t("Added ✓")
                   : saving
-                    ? "Saving…"
+                    ? t("Saving…")
                     : selectedCount === 0
-                      ? "Select something to add"
-                      : `Add ${selectedCount} to diary`}
+                      ? t("Select something to add")
+                      : t("Add {n} to diary", { n: selectedCount })}
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">
-              AI-identified from your description. Review before adding. Estimates, not
-              medical-grade data.
+              {t("AI-identified from your description. Review before adding. Estimates, not medical-grade data.")}
             </p>
           </div>
         )}

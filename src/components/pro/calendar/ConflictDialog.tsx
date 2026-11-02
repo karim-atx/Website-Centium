@@ -9,6 +9,7 @@ import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../proInk";
 import { DEFAULT_SESSION } from "./calendarItems";
 import { TicketRow } from "./TicketRow";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · P-CA.5.5 Conflict check (Professional Calendar
 // Screens lines 138–158, `dlg` / `clashes`): the scrim --sscrim + blur 2; the
@@ -99,9 +100,7 @@ export const ConflictDialog: React.FC<{
         <span aria-hidden style={{ width: 52, height: 52, margin: "0 auto", borderRadius: 999, background: m.cautionbg, color: m.caution, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <TriangleAlert size={24} strokeWidth={2} style={NO_ICON_SCALE} />
         </span>
-        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(20), lineHeight: linePx(26), fontWeight: 800, letterSpacing: "-0.015em", color: m.stitle }}>
-          This overlaps your calendar
-        </h2>
+        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(20), lineHeight: linePx(26), fontWeight: 800, letterSpacing: "-0.015em", color: m.stitle }}>{t("This overlaps your calendar")}</h2>
         <p id={bodyId} style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), fontWeight: 500, color: m.ink2 }}>
           {body}
         </p>
@@ -109,7 +108,7 @@ export const ConflictDialog: React.FC<{
           <ul style={{ margin: "14px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 6, textAlign: "start" }}>
             {clashes.map((c, i) => (
               <li key={i}>
-                <TicketRow title={c.title} sub={[c.time, c.place].filter(Boolean).join(" · ")} colour={DEFAULT_SESSION} badge={{ text: "Clash", ink: m.caution }} notchBg={m.sbody} />
+                <TicketRow title={c.title} sub={[c.time, c.place].filter(Boolean).join(" · ")} colour={DEFAULT_SESSION} badge={{ text: t("Clash"), ink: m.caution }} notchBg={m.sbody} />
               </li>
             ))}
           </ul>
@@ -117,7 +116,7 @@ export const ConflictDialog: React.FC<{
         <p style={{ margin: "8px 0 0", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint, textAlign: "start" }}>
           {/* Not the board's "both stay on your calendar": accept_hire_offer(p_ack_conflicts) keeps the agreement and leaves the
               clashing sessions WITHOUT an instructor (an instructor can't be in two places; Database Release 2). Ours, flagged. */}
-          If you continue, you're hired and the clashing sessions are left for the gym to cover. Your own sessions stay as they are.
+          {t("If you continue, you're hired and the clashing sessions are left for the gym to cover. Your own sessions stay as they are.")}
         </p>
         {children}
         {error ? (
@@ -126,12 +125,8 @@ export const ConflictDialog: React.FC<{
           </p>
         ) : null}
         <div style={{ marginTop: 18, display: "flex", gap: 8 }}>
-          <button type="button" onClick={onBack} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
-            Go back
-          </button>
-          <button type="button" onClick={onAccept} disabled={busy} aria-busy={busy || undefined} className="market-focus" style={{ ...btn(m.fill, m.onfill), opacity: busy ? 0.6 : 1 }}>
-            Accept anyway
-          </button>
+          <button type="button" onClick={onBack} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>{t("Go back")}</button>
+          <button type="button" onClick={onAccept} disabled={busy} aria-busy={busy || undefined} className="market-focus" style={{ ...btn(m.fill, m.onfill), opacity: busy ? 0.6 : 1 }}>{t("Accept anyway")}</button>
         </div>
       </div>
     </div>,

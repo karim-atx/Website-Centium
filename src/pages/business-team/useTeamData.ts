@@ -14,6 +14,7 @@ import {
 import { shiftDate, todayLocal } from "../../utils/date";
 import { inviteState, isAccepted, seatHolders, weekRange } from "./teamLogic";
 import { fetchPlanSummary, type PlanSummary } from "../../services/centium-billing";
+import { t } from "../../i18n/core";
 
 // One load for the Team screens: the team (accepted and invited), seat
 // capacity, pending join requests and the sessions from last Monday to two
@@ -104,7 +105,7 @@ export function useTeamData(): TeamData {
   const hasBusiness = !!biz.business;
   const bizReload = biz.reload;
   const reload = useCallback(() => {
-    if (hasBusiness) setTick((t) => t + 1);
+    if (hasBusiness) setTick((n) => n + 1);
     else bizReload();
   }, [hasBusiness, bizReload]);
 
@@ -119,7 +120,7 @@ export function useTeamData(): TeamData {
     requests,
     requestsError,
     sessions,
-    error: error ?? (biz.error && !biz.business ? "Couldn't load your team. Check your connection and try again." : null),
+    error: error ?? (biz.error && !biz.business ? t("Couldn't load your team. Check your connection and try again.") : null),
     loading: loading || biz.loading,
     noBusiness: !biz.loading && !biz.business && !biz.error,
     today,

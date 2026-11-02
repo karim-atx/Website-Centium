@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { ProgrammeAssignment } from "./programmeLogic";
+import { t } from "../../i18n/core";
 
 // Release 3 · W7 (CU1): what the client's "From your coach" section reads.
 //
@@ -44,7 +45,7 @@ export async function fetchProgrammes(userId: string): Promise<ProgrammeRead> {
     .order("assigned_at", { ascending: true });
   if (error) {
     console.error("[programmes] Could not read assignments:", error.message);
-    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't load your coach's programmes." };
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't load your coach's programmes.") };
   }
   const rows = (data ?? []) as AssignmentRow[];
   if (rows.length === 0) return { ok: true, data: { assignments: [], sessions: {} } };
@@ -55,7 +56,7 @@ export async function fetchProgrammes(userId: string): Promise<ProgrammeRead> {
     .in("id", [...new Set(rows.map((r) => r.workout_template_id))]);
   if (templatesError) {
     console.error("[programmes] Could not read the programmes' templates:", templatesError.message);
-    return { ok: false, message: isOffline(templatesError) ? OFFLINE_MESSAGE : "Couldn't load your coach's programmes." };
+    return { ok: false, message: isOffline(templatesError) ? OFFLINE_MESSAGE : t("Couldn't load your coach's programmes.") };
   }
   const templateById = new Map(((templates ?? []) as { id: string; name: string; duration_weeks: number | null }[]).map((t) => [t.id, t]));
 
@@ -92,7 +93,7 @@ export async function fetchProgrammes(userId: string): Promise<ProgrammeRead> {
     .order("event_date", { ascending: true });
   if (eventsError) {
     console.error("[programmes] Could not read programme sessions:", eventsError.message);
-    return { ok: false, message: isOffline(eventsError) ? OFFLINE_MESSAGE : "Couldn't load your coach's programmes." };
+    return { ok: false, message: isOffline(eventsError) ? OFFLINE_MESSAGE : t("Couldn't load your coach's programmes.") };
   }
   const sessions: Record<string, string[]> = {};
   for (const e of (events ?? []) as { event_date: string | null; source_template_assignment_id: string | null }[]) {

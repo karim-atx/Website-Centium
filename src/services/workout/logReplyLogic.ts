@@ -14,6 +14,8 @@
 // - delete_workout_log_reply(p_reply_id).
 // Somebody who can't read the session gets ATX08, as if it didn't exist.
 
+import { t, tn } from "../../i18n/core";
+
 export const REPLY_MAX = 1000;
 /** workout_log_review_states takes at most this many ids a call. */
 export const REVIEW_STATES_MAX = 200;
@@ -21,34 +23,34 @@ export const REVIEW_STATES_MAX = 200;
 /** Why a reply can't be sent yet, or null when it can. */
 export function replyProblem(body: string): string | null {
   const n = body.trim().length;
-  if (n === 0) return "Write a reply first.";
-  if (n > REPLY_MAX) return "A reply is up to 1,000 characters.";
+  if (n === 0) return t("Write a reply first.");
+  if (n > REPLY_MAX) return t("A reply is up to 1,000 characters.");
   return null;
 }
 
 /** A refusal from any of the five calls, as one plain sentence. */
 export function replyRefusal(error: { code?: string | null } | null | undefined, offline: boolean, action: "send" | "review" | "delete" | "read" = "send"): string {
-  if (offline) return "You're offline. This needs a connection.";
+  if (offline) return t("You're offline. This needs a connection.");
   switch (error?.code) {
     case "ATX08":
-      return action === "delete" ? "That reply is already gone." : "This workout isn't shared with you any more.";
+      return action === "delete" ? t("That reply is already gone.") : t("This workout isn't shared with you any more.");
     case "ATX09":
-      return "Only professionals can reply to a workout.";
+      return t("Only professionals can reply to a workout.");
     case "ATX02":
     case "429":
-      return "You've sent a lot of replies this hour. Try again later.";
+      return t("You've sent a lot of replies this hour. Try again later.");
     case "22023":
-      return "A reply is 1 to 1,000 characters.";
+      return t("A reply is 1 to 1,000 characters.");
     case "ATX06":
-      return "Sign in again to continue.";
+      return t("Sign in again to continue.");
     default:
       return action === "send"
-        ? "Couldn't send your reply. Try again."
+        ? t("Couldn't send your reply. Try again.")
         : action === "review"
-          ? "Couldn't update the review. Try again."
+          ? t("Couldn't update the review. Try again.")
           : action === "delete"
-            ? "Couldn't delete the reply. Try again."
-            : "Couldn't load the replies. Try again.";
+            ? t("Couldn't delete the reply. Try again.")
+            : t("Couldn't load the replies. Try again.");
   }
 }
 
@@ -130,11 +132,11 @@ export function chunkIds(ids: readonly string[], size: number = REVIEW_STATES_MA
 /** The list row's state: "Reviewed · 2 replies", "1 reply", or null for neither. */
 export function reviewStateText(s: ReviewState | undefined): string | null {
   if (!s) return null;
-  const replies = s.replyCount > 0 ? `${s.replyCount} ${s.replyCount === 1 ? "reply" : "replies"}` : null;
-  return [s.reviewedAt ? "Reviewed" : null, replies].filter(Boolean).join(" · ") || null;
+  const replies = s.replyCount > 0 ? tn(s.replyCount, "{n} reply", "{n} replies") : null;
+  return [s.reviewedAt ? t("Reviewed") : null, replies].filter(Boolean).join(" · ") || null;
 }
 
 /** The reply's heading: "Reply from Alex" (or "Reply from your coach"). */
 export function replyHeading(firstName: string | null | undefined): string {
-  return `Reply from ${firstName?.trim() || "your coach"}`;
+  return t("Reply from {name}", { name: firstName?.trim() || t("your coach") });
 }

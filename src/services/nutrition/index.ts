@@ -8,6 +8,7 @@ import type {
   UserProfile,
   WeightGoalType,
 } from "../../types";
+import { tk } from "../../i18n/core";
 
 export interface NutritionTotals {
   calories: number;
@@ -349,7 +350,7 @@ export const DEFAULT_REFERENCE_INTAKE = 2000;
  * still a reasonable place to start — it just has to say what it is.
  */
 export const REFERENCE_INTAKE_NOTE =
-  "General reference: add your details for a personal target";
+  tk("General reference: add your details for a personal target");
 
 /**
  * True when the target on screen could not have been computed from this user.

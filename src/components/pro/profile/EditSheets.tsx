@@ -11,7 +11,7 @@ import { MAX_SPECIALTIES, MORE_SPECIALTIES, SPECIALTIES, proKindOf } from "../..
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { CtaButton, ErrorLine } from "./kit";
-import { t } from "../../../i18n/core";
+import { t, tk } from "../../../i18n/core";
 
 // Release 3 · W6 MO14's own sheets beyond the CV's:
 // - SpecialtiesSheet: professional_profiles.specialties (up to 5), chosen from
@@ -73,8 +73,8 @@ export const SpecialtiesSheet: React.FC<{ open: boolean; onClose: () => void; in
     onClose();
   };
   return (
-    <BottomSheet open={open} onClose={onClose} title="Specialties" footer={<CtaButton label="Save" icon={Check} size="sheet" onClick={() => void save()} busy={busy} full />}>
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>Choose up to {MAX_SPECIALTIES}. Clients see them on your profile.</p>
+    <BottomSheet open={open} onClose={onClose} title={t("Specialties")} footer={<CtaButton label={t("Save")} icon={Check} size="sheet" onClick={() => void save()} busy={busy} full />}>
+      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{t("Choose up to {MAX_SPECIALTIES}. Clients see them on your profile.", { MAX_SPECIALTIES })}</p>
       <div className="flex flex-wrap" style={{ gap: 6 }}>
         {options.map((s) => (
           <SpecialtyChip key={s} label={t(s)} on={chosen.includes(s)} onClick={() => toggle(s)} disabled={!chosen.includes(s) && chosen.length >= MAX_SPECIALTIES} />
@@ -90,11 +90,11 @@ const EMPTY: Draft = { specialty: "", location: "", website: "", instagram: "", 
 const orNull = (s: string) => (s.trim() === "" ? null : s.trim());
 
 const FIELDS: { key: keyof Draft; label: string; placeholder: string }[] = [
-  { key: "specialty", label: "Specialty", placeholder: "e.g. Strength & conditioning" },
-  { key: "location", label: "Location", placeholder: "e.g. Beirut" },
-  { key: "website", label: "Website", placeholder: "yoursite.com" },
-  { key: "instagram", label: "Instagram", placeholder: "@handle" },
-  { key: "facebook", label: "Facebook", placeholder: "Page name or URL" },
+  { key: "specialty", label: tk("Specialty"), placeholder: tk("e.g. Strength & conditioning") },
+  { key: "location", label: tk("Location"), placeholder: tk("e.g. Beirut") },
+  { key: "website", label: tk("Website"), placeholder: "yoursite.com" },
+  { key: "instagram", label: tk("Instagram"), placeholder: "@handle" },
+  { key: "facebook", label: tk("Facebook"), placeholder: tk("Page name or URL") },
   { key: "x", label: "X", placeholder: "@handle" },
 ];
 
@@ -140,11 +140,11 @@ export const ListingDetailsSheet: React.FC<{ open: boolean; onClose: () => void;
     onClose();
   };
   return (
-    <BottomSheet open={open} onClose={onClose} title="Details and links" size="tall" footer={<CtaButton label="Save" size="sheet" onClick={() => void save()} disabled={loading} busy={busy} full />}>
+    <BottomSheet open={open} onClose={onClose} title={t("Details and links")} size="tall" footer={<CtaButton label={t("Save")} size="sheet" onClick={() => void save()} disabled={loading} busy={busy} full />}>
       <div className="flex flex-col" style={{ gap: 14 }}>
         {/* Disabled while loading: typing before the read lands would be overwritten. */}
         {FIELDS.map((f) => (
-          <FieldInput key={f.key} label={f.label} value={draft[f.key]} placeholder={f.placeholder} disabled={loading} onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))} />
+          <FieldInput key={f.key} label={t(f.label)} value={draft[f.key]} placeholder={t(f.placeholder)} disabled={loading} onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))} />
         ))}
         {error && <ErrorLine>{error}</ErrorLine>}
       </div>
@@ -181,8 +181,8 @@ export const ProfilePlaylistSheet: React.FC<{ open: boolean; onClose: () => void
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Playlist"
-      footer={<CtaButton label={url && !next ? "Remove playlist" : "Save"} size="sheet" onClick={() => void save()} disabled={next === (url ?? "") || !playlistFieldValid(next)} busy={busy} full />}
+      title={t("Playlist")}
+      footer={<CtaButton label={url && !next ? t("Remove playlist") : t("Save")} size="sheet" onClick={() => void save()} disabled={next === (url ?? "") || !playlistFieldValid(next)} busy={busy} full />}
     >
       <PlaylistField
         value={draft}
@@ -190,7 +190,7 @@ export const ProfilePlaylistSheet: React.FC<{ open: boolean; onClose: () => void
           setDraft(v);
           setError(null);
         }}
-        hint="Shown on your profile. Clients open it in their own app."
+        hint={t("Shown on your profile. Clients open it in their own app.")}
         error={error}
       />
     </BottomSheet>
@@ -203,9 +203,7 @@ export const AddChip: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     onClick={onClick}
     className="tap inline-flex items-center"
     style={{ gap: 4, borderRadius: 9999, padding: "7px 13px", minHeight: 32, fontSize: textPx(12), fontWeight: 600, border: "1px solid rgb(var(--c-charcoal) / 0.11)", color: INK.chS }}
-  >
-    Add
-  </button>
+  >{t("Add")}</button>
 );
 
 /**
@@ -244,11 +242,11 @@ export const RatesSheet: React.FC<{ open: boolean; onClose: () => void; monthly:
     onClose();
   };
   return (
-    <BottomSheet open={open} onClose={onClose} title="Rates" footer={<CtaButton label="Save" size="sheet" onClick={() => void save()} busy={busy} full />}>
+    <BottomSheet open={open} onClose={onClose} title={t("Rates")} footer={<CtaButton label={t("Save")} size="sheet" onClick={() => void save()} busy={busy} full />}>
       <div className="flex flex-col" style={{ gap: 14 }}>
-        <FieldInput label="Monthly rate (to be hired)" value={m} onChange={(v) => setM(v.replace(/\D/g, ""))} inputMode="numeric" placeholder="e.g. 150" />
-        <FieldInput label="Consultation rate" value={c} onChange={(v) => setC(v.replace(/\D/g, ""))} inputMode="numeric" placeholder="e.g. 40" />
-        <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>In US dollars. Clients connecting with you see these, and so does your Explore listing when it's on.</p>
+        <FieldInput label={t("Monthly rate (to be hired)")} value={m} onChange={(v) => setM(v.replace(/\D/g, ""))} inputMode="numeric" placeholder={t("e.g. 150")} />
+        <FieldInput label={t("Consultation rate")} value={c} onChange={(v) => setC(v.replace(/\D/g, ""))} inputMode="numeric" placeholder={t("e.g. 40")} />
+        <p style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>{t("In US dollars. Clients connecting with you see these, and so does your Explore listing when it's on.")}</p>
         {error && <ErrorLine>{error}</ErrorLine>}
       </div>
     </BottomSheet>

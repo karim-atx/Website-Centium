@@ -57,6 +57,7 @@ import {
   flagLine,
   healthLines,
   heroLead,
+  INJURY_LINE,
   instructorsOf,
   metricsOf,
   replyTimeTone,
@@ -67,7 +68,8 @@ import {
   type FilterKey,
   type ServerMetrics,
 } from "./reputationModel";
-import { FlagLine, INJURY_LINE, ReviewRow, Stars } from "./parts";
+import { FlagLine, ReviewRow, Stars } from "./parts";
+import { t, tk, tn, isRtl } from "../../../i18n/core";
 
 /**
  * The flag card's reason line (OURS-AN13-flag-queue row 4) from flag_kind
@@ -95,8 +97,8 @@ function rememberMessaged(id: string): Set<string> {
 }
 
 function flagText(r: BizReview, reportedAt: string | null): string {
-  if (r.flagKind === "injury") return INJURY_LINE;
-  if (r.flagKind === "harassment" && !reportedAt) return "Mentions harassment or threats. Read it yourself before replying.";
+  if (r.flagKind === "injury") return t(INJURY_LINE);
+  if (r.flagKind === "harassment" && !reportedAt) return t("Mentions harassment or threats. Read it yourself before replying.");
   return flagLine(reportedAt);
 }
 import { ReportSheet, ReviewComposer, type ComposerMode } from "./ReviewSheets";
@@ -114,14 +116,14 @@ import "./an13.css";
 // handled have no B14 call and are not shown.
 
 const RANGE_TABS: { key: RangeKey; label: string }[] = [
-  { key: "week", label: "This week" },
-  { key: "4w", label: "4 weeks" },
-  { key: "12w", label: "12 weeks" },
-  { key: "custom", label: "Custom" },
+  { key: "week", label: tk("This week") },
+  { key: "4w", label: tk("4 weeks") },
+  { key: "12w", label: tk("12 weeks") },
+  { key: "custom", label: tk("Custom") },
 ];
 const SUBS = [
-  { key: "metrics", label: "Metrics" },
-  { key: "reviews", label: "Reviews & replies" },
+  { key: "metrics", label: tk("Metrics") },
+  { key: "reviews", label: tk("Reviews & replies") },
 ];
 
 type Stage<T> =
@@ -134,29 +136,26 @@ type Stage<T> =
 function vocabOf(kind: BizKind) {
   if (kind === "store")
     return {
-      sub: "What customers say about your business",
+      sub: t("What customers say about your business"),
       people: "customers",
       rateWhat: "your products or your store",
-      emptyBody:
-        "Customers can rate your store after an order. Their reviews arrive here.",
-      emptyLine: "Reviews show here once customers rate you.",
+      emptyBody: t("Customers can rate your store after an order. Their reviews arrive here."),
+      emptyLine: t("Reviews show here once customers rate you."),
     };
   if (kind === "classes")
     return {
-      sub: "What clients say about your business",
+      sub: t("What clients say about your business"),
       people: "clients",
       rateWhat: "their classes or your business",
-      emptyBody:
-        "Clients can rate classes and your business after they book. Their reviews arrive here.",
-      emptyLine: "Reviews show here once clients rate you.",
+      emptyBody: t("Clients can rate classes and your business after they book. Their reviews arrive here."),
+      emptyLine: t("Reviews show here once clients rate you."),
     };
   return {
-    sub: "What members say about your business",
+    sub: t("What members say about your business"),
     people: "members",
     rateWhat: "their classes or your business",
-    emptyBody:
-      "Members can rate classes and your business after they book. Their reviews arrive here.",
-    emptyLine: "Reviews show here once members rate you.",
+    emptyBody: t("Members can rate classes and your business after they book. Their reviews arrive here."),
+    emptyLine: t("Reviews show here once members rate you."),
   };
 }
 
@@ -255,7 +254,7 @@ export default function ReputationPage() {
 
   const line =
     !online && data.loadedAt
-      ? `Offline. Showing what was loaded at ${clock12(data.loadedAt)}.`
+      ? t("Offline. Showing what was loaded at {time}.", { time: clock12(data.loadedAt) })
       : rangeLine(range);
   const m = useMemo(
     () => metricsOf(list, range, data.server),
@@ -275,7 +274,7 @@ export default function ReputationPage() {
         <button
           type="button"
           className="rp-back tap"
-          aria-label="Back to Analytics"
+          aria-label={t("Back to Analytics")}
           onClick={() => navigate("/app/business/analytics/overview")}
         >
           <span className="rp-back-disc">
@@ -283,15 +282,15 @@ export default function ReputationPage() {
           </span>
         </button>
         <span className="rp-back-label" aria-hidden>
-          Analytics
+          {t("Analytics")}
         </span>
       </div>
-      <h1 className="rp-title">Reputation</h1>
+      <h1 className="rp-title">{t("Reputation")}</h1>
       <p className="rp-sub">{vocab.sub}</p>
       <SegmentedTabs
         className="mt-[16px]"
         size="compact"
-        items={RANGE_TABS.map((t) => ({ key: t.key, label: t.label }))}
+        items={RANGE_TABS.map((tb) => ({ key: tb.key, label: t(tb.label) }))}
         activeKey={range.key}
         onChange={(k) =>
           k === "custom"
@@ -301,28 +300,27 @@ export default function ReputationPage() {
       />
       <SegmentedTabs
         className="mt-[10px]"
-        items={SUBS}
+        items={SUBS.map((s) => ({ key: s.key, label: t(s.label) }))}
         activeKey={sub}
         onChange={(k) => setSub(k as "metrics" | "reviews")}
       />
       <p className="rp-range-line">{line}</p>
       {!loading && !failed && m.early && sub === "metrics" && (
         <p className="rp-early">
-          Your first reviews came in less than 4 weeks ago. Trends start after a
-          full period.
+          {t("Your first reviews came in less than 4 weeks ago. Trends start after a full period.")}
         </p>
       )}
 
       {failed ? (
         <div className="rp-card" style={{ marginTop: 16 }}>
           <div className="rp-err" role="alert">
-            <p>Couldn't load your reviews.</p>
+            <p>{t("Couldn't load your reviews.")}</p>
             <button
               type="button"
               className="tap"
               onClick={() => (bizError ? reloadBiz() : data.reload())}
             >
-              Retry
+              {t("Retry")}
             </button>
           </div>
         </div>
@@ -338,7 +336,7 @@ export default function ReputationPage() {
           byInstructor={kind !== "store"}
           vocab={vocab}
           tagOf={tagOf}
-          businessName={business?.name || "Your business"}
+          businessName={business?.name || t("Your business")}
           canMessage={canMessage}
           canHandle={canHandle}
           onThread={(threadId) => navigate("/app/messages", { state: { threadId } })}
@@ -366,7 +364,7 @@ export default function ReputationPage() {
 const Skeleton: React.FC<{ sub: string }> = ({ sub }) => (
   <div
     role="status"
-    aria-label="Loading your reviews"
+    aria-label={t("Loading your reviews")}
     style={{ marginTop: 16 }}
   >
     {sub === "metrics" ? (
@@ -458,16 +456,15 @@ const Metrics: React.FC<{
     vh: 120,
     labels: ws.labels,
     xl: ws.xl,
-    aria: "Average rating and new reviews per week",
-    caption:
-      "Drag across either chart to read a week, tap to pin it. Markers show weeks you replied to a batch of reviews and sharp rating changes.",
-    earlyText: "The trend starts after 2 weeks of reviews.",
-    emptyText: "Your rating and review counts start with your first review.",
-    curLabel: "Average rating",
-    prevLabel: "12 weeks before",
+    aria: t("Average rating and new reviews per week"),
+    caption: t("Drag across either chart to read a week, tap to pin it. Markers show weeks you replied to a batch of reviews and sharp rating changes."),
+    earlyText: t("The trend starts after 2 weeks of reviews."),
+    emptyText: t("Your rating and review counts start with your first review."),
+    curLabel: t("Average rating"),
+    prevLabel: t("12 weeks before"),
     markers: ws.markers,
     sub: {
-      label: "New reviews",
+      label: t("New reviews"),
       cur: ws.count,
       prev: ws.countPrev,
       h: 56,
@@ -476,8 +473,8 @@ const Metrics: React.FC<{
     },
     modes: [
       {
-        t: "Rating",
-        unit: "out of 5",
+        t: t("Rating"),
+        unit: t("out of 5"),
         cur: ws.rating,
         prev: ws.ratingPrev,
         min: 1,
@@ -486,15 +483,15 @@ const Metrics: React.FC<{
         fmt: (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1)),
         tips: ws.rating.map((v, i) => [
           {
-            l: "Average",
+            l: t("Average"),
             v: v === null ? "–" : `${starsText(v)} ${v.toFixed(1)}`,
             cur: true,
           },
-          { l: "New reviews", v: String(ws.count[i]), sub: true },
+          { l: t("New reviews"), v: String(ws.count[i]), sub: true },
           { l: "5 · 4 · 3 · 2 · 1 ★", v: ws.split[i].join(" · "), sub: true },
           {
-            l: "12 weeks before",
-            v: `${ws.ratingPrev[i] === null ? "–" : ws.ratingPrev[i]!.toFixed(1)} · ${ws.countPrev[i]} reviews`,
+            l: t("12 weeks before"),
+            v: `${ws.ratingPrev[i] === null ? "–" : ws.ratingPrev[i]!.toFixed(1)} · ${tn(ws.countPrev[i], "1 review", "{n} reviews")}`,
             prev: true,
           },
         ]),
@@ -537,7 +534,7 @@ const Metrics: React.FC<{
       <section
         className="rp-card"
         style={{ marginTop: 16 }}
-        aria-label="Rating"
+        aria-label={t("Rating")}
       >
         <div className="rp-hero-top">
           <p className="rp-hero-v">
@@ -555,39 +552,38 @@ const Metrics: React.FC<{
           <Stars value={showRating ? m.rating! : 0} size={22} />
           <p className="rp-hero-l">
             {none
-              ? "No reviews yet"
+              ? t("No reviews yet")
               : m.early
-                ? `${m.total} ${m.total === 1 ? "review" : "reviews"}`
-                : `${m.total} ${m.total === 1 ? "review" : "reviews"} · ${m.inRange} this period`}
+                ? tn(m.total, "1 review", "{n} reviews")
+                : `${tn(m.total, "1 review", "{n} reviews")} · ${t("{n} this period", { n: m.inRange })}`}
           </p>
         </div>
         <div className="rp-boxes">
           {box(
             hasReplies && m.replyRate !== null ? `${m.replyRate}%` : null,
             hasReplies ? m.replyRateDelta : null,
-            "Reply rate",
-            " pts",
+            t("Reply rate"),
+            ` ${t("pts")}`,
           )}
           <span className="rp-box-sep" aria-hidden />
           {box(
-            hasReplies && m.replyHours !== null ? `${m.replyHours} h` : null,
+            hasReplies && m.replyHours !== null ? t("{n} h", { n: m.replyHours }) : null,
             hasReplies ? m.replyHoursDelta : null,
-            "Average reply time",
-            " h",
+            t("Average reply time"),
+            ` ${t("h")}`,
             true,
           )}
         </div>
         <p className="rp-lead">{heroLead(m, vocab)}</p>
       </section>
 
-      <p className="rp-label">Rating and new reviews</p>
-      <section className="rp-card rp-chart" aria-label="Rating and new reviews">
+      <p className="rp-label">{t("Rating and new reviews")}</p>
+      <section className="rp-card rp-chart" aria-label={t("Rating and new reviews")}>
         <p className="rp-chart-t">
-          Is your rating going up, and how many reviews arrive?
+          {t("Is your rating going up, and how many reviews arrive?")}
         </p>
         <p className="rp-chart-lead">
-          Line: average rating each week, on a 1 to 5 scale. Bars: new reviews
-          each week. Dashed lines are the 12 weeks before.
+          {t("Line: average rating each week, on a 1 to 5 scale. Bars: new reviews each week. Dashed lines are the 12 weeks before.")}
         </p>
         <ScrubChart cfg={cfg} empty={none} early={!none && ws.early} />
       </section>
@@ -601,7 +597,7 @@ const Metrics: React.FC<{
             onClick={() => setDistOpen(!distOpen)}
           >
             <span className="min-w-0 flex-1">
-              <span className="rp-coll-t block">Rating breakdown</span>
+              <span className="rp-coll-t block">{t("Rating breakdown")}</span>
               <span className="rp-coll-s block">{dl.insight}</span>
             </span>
             <span className={"rp-chev" + (distOpen ? " is-open" : "")}>
@@ -610,13 +606,13 @@ const Metrics: React.FC<{
           </button>
           {distOpen && (
             <div className="rp-coll-body">
-              <p className="rp-q">How are reviews spread across the stars?</p>
+              <p className="rp-q">{t("How are reviews spread across the stars?")}</p>
               <div className="rp-dist">
                 {m.dist.map((n, i) => (
                   <div
                     key={i}
                     className="rp-dist-row"
-                    aria-label={`${5 - i} stars: ${n}`}
+                    aria-label={t("{stars} stars: {n}", { stars: 5 - i, n })}
                   >
                     <span className="rp-dist-s">
                       {5 - i}
@@ -658,7 +654,7 @@ const Metrics: React.FC<{
             onClick={() => setHealthOpen(!healthOpen)}
           >
             <span className="min-w-0 flex-1">
-              <span className="rp-coll-t block">Response health</span>
+              <span className="rp-coll-t block">{t("Response health")}</span>
               <span className="rp-coll-s block">{hl.insight}</span>
             </span>
             <span className={"rp-chev" + (healthOpen ? " is-open" : "")}>
@@ -667,10 +663,10 @@ const Metrics: React.FC<{
           </button>
           {healthOpen && (
             <div className="rp-coll-body">
-              <p className="rp-q">Are you answering reviews in good time?</p>
+              <p className="rp-q">{t("Are you answering reviews in good time?")}</p>
               <div style={{ marginTop: 14 }}>
                 <p className="rp-h-row">
-                  <span>Reply rate</span>
+                  <span>{t("Reply rate")}</span>
                   <span>{m.replyRate ?? 0}%</span>
                 </p>
                 <div className="rp-h-bar">
@@ -680,8 +676,8 @@ const Metrics: React.FC<{
               </div>
               <div style={{ marginTop: 16 }}>
                 <p className="rp-h-row">
-                  <span>Average reply time</span>
-                  <span>{m.replyHours ?? 0} h</span>
+                  <span>{t("Average reply time")}</span>
+                  <span>{t("{n} h", { n: m.replyHours ?? 0 })}</span>
                 </p>
                 <div className="rp-h-time" aria-hidden>
                   <span className="rp-h-track" />
@@ -689,7 +685,7 @@ const Metrics: React.FC<{
                   <span
                     className="rp-h-mark"
                     style={{
-                      left: `${Math.min(100, ((m.replyHours ?? 0) / 72) * 100).toFixed(1)}%`,
+                      insetInlineStart: `${Math.min(100, ((m.replyHours ?? 0) / 72) * 100).toFixed(1)}%`,
                       background: {
                         good: "var(--an-good)",
                         caution: "var(--an-caution)",
@@ -699,10 +695,10 @@ const Metrics: React.FC<{
                   />
                 </div>
                 <div className="rp-h-axis" aria-hidden>
-                  <span>0 h</span>
-                  <span>24 h</span>
-                  <span>48 h</span>
-                  <span>72 h</span>
+                  <span>{t("{n} h", { n: 0 })}</span>
+                  <span>{t("{n} h", { n: 24 })}</span>
+                  <span>{t("{n} h", { n: 48 })}</span>
+                  <span>{t("{n} h", { n: 72 })}</span>
                 </div>
                 <p className="rp-h-legend">
                   <span aria-hidden />
@@ -721,11 +717,11 @@ const Metrics: React.FC<{
 // Reviews & replies (AN13-011 to -031, OURS-AN13-flag-queue)
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "All reviews" },
-  { key: "unreplied", label: "Unreplied" },
-  { key: "5", label: "5 stars" },
-  { key: "4", label: "4 stars" },
-  { key: "low", label: "3 stars or lower" },
+  { key: "all", label: tk("All reviews") },
+  { key: "unreplied", label: tk("Unreplied") },
+  { key: "5", label: tk("5 stars") },
+  { key: "4", label: tk("4 stars") },
+  { key: "low", label: tk("3 stars or lower") },
 ];
 
 const Reviews: React.FC<{
@@ -755,7 +751,7 @@ const Reviews: React.FC<{
     setHandling(r.id);
     const x = await markReviewHandled(r.id, true);
     setHandling(null);
-    onChanged(x.ok ? "Marked as handled. It's back with your other reviews." : (reputationError(x.code) ?? "Couldn't mark it as handled. Try again."));
+    onChanged(x.ok ? t("Marked as handled. It's back with your other reviews.") : (reputationError(x.code) ?? t("Couldn't mark it as handled. Try again.")));
   };
   // Reviews whose author start_reviewer_thread refused (ATX96): Report to Centium instead (X-28).
   const [noThread, setNoThread] = useState<Set<string>>(new Set());
@@ -796,7 +792,7 @@ const Reviews: React.FC<{
   const instructors = byInstructor ? instructorsOf(list) : [];
   const filterLabel = fk.startsWith("inst:")
     ? fk.slice(5)
-    : (FILTERS.find((o) => o.key === fk)?.label ?? "All reviews");
+    : t(FILTERS.find((o) => o.key === fk)?.label ?? "All reviews");
   const choose = (k: FilterKey) => {
     setFk(k);
     setFOpen(false);
@@ -814,19 +810,19 @@ const Reviews: React.FC<{
       ? (el: HTMLElement) => setMenu({ review: r, el })
       : undefined;
   const replyAction = (r: BizReview) => ({
-    label: "Reply",
+    label: t("Reply"),
     onClick: () => setComposer({ mode: "reply", review: r }),
   });
 
   const head = empty
-    ? "No reviews yet"
-    : `${total} ${total === 1 ? "review" : "reviews"} · ${need.length + flagged.filter((r) => !r.reply).length} need a reply`;
+    ? t("No reviews yet")
+    : `${tn(total, "1 review", "{n} reviews")} · ${t("{n} need a reply", { n: need.length + flagged.filter((r) => !r.reply).length })}`;
 
   return (
     <>
       <div className="rp-rev-head">
         <div className="min-w-0 flex-1">
-          <p className="rp-rev-t">Reviews</p>
+          <p className="rp-rev-t">{t("Reviews")}</p>
           <p className="rp-rev-s">{head}</p>
         </div>
         <button
@@ -838,7 +834,7 @@ const Reviews: React.FC<{
           }
           aria-haspopup="listbox"
           aria-expanded={fOpen}
-          aria-label={`Filter reviews: ${filterLabel}`}
+          aria-label={t("Filter reviews: {filter}", { filter: filterLabel })}
           disabled={empty}
           onClick={() => {
             setFOpen(!fOpen);
@@ -852,7 +848,7 @@ const Reviews: React.FC<{
         </button>
       </div>
       {fOpen && (
-        <div role="listbox" aria-label="Filter reviews" className="rp-list">
+        <div role="listbox" aria-label={t("Filter reviews")} className="rp-list">
           {instLevel ? (
             <>
               <button
@@ -861,7 +857,7 @@ const Reviews: React.FC<{
                 onClick={() => setInstLevel(false)}
               >
                 <ChevronLeft size={14} aria-hidden />
-                <span className="rp-opt-t">All filters</span>
+                <span className="rp-opt-t">{t("All filters")}</span>
               </button>
               {instructors.map((x) => {
                 const k = `inst:${x.name}` as FilterKey;
@@ -896,7 +892,7 @@ const Reviews: React.FC<{
                   className="rp-opt tap"
                   onClick={() => choose(o.key)}
                 >
-                  <span className="rp-opt-t">{o.label}</span>
+                  <span className="rp-opt-t">{t(o.label)}</span>
                   <span className="rp-opt-n">{countOf(o.key)}</span>
                   {o.key === fk && (
                     <span className="rp-opt-check">
@@ -913,7 +909,7 @@ const Reviews: React.FC<{
                   className="rp-opt tap"
                   onClick={() => setInstLevel(true)}
                 >
-                  <span className="rp-opt-t">By instructor</span>
+                  <span className="rp-opt-t">{t("By instructor")}</span>
                   <ChevronRight size={14} aria-hidden />
                 </button>
               )}
@@ -924,8 +920,8 @@ const Reviews: React.FC<{
 
       {fk === "all" && flagged.length > 0 && (
         <>
-          <p className="rp-label">Flagged for you · {flagged.length}</p>
-          <section className="rp-card rp-flag" aria-label="Flagged for you">
+          <p className="rp-label">{t("Flagged for you · {n}", { n: flagged.length })}</p>
+          <section className="rp-card rp-flag" aria-label={t("Flagged for you")}>
             {flagged.length === 1 && (
               <FlagLine
                 place="top"
@@ -961,7 +957,7 @@ const Reviews: React.FC<{
                         onClick={() => setComposer({ mode: "message", review: r })}
                       >
                         <MessageCircle size={14} strokeWidth={2.4} aria-hidden />
-                        Message privately
+                        {t("Message privately")}
                       </button>
                     ) : (
                       <button
@@ -971,7 +967,7 @@ const Reviews: React.FC<{
                         onClick={() => setReport(r)}
                       >
                         <Flag size={14} strokeWidth={2.4} aria-hidden />
-                        Report to Centium
+                        {t("Report to Centium")}
                       </button>
                     )}
                     <button
@@ -986,7 +982,7 @@ const Reviews: React.FC<{
                       }
                     >
                       <Reply size={14} strokeWidth={2.4} aria-hidden />
-                      {r.reply ? "Edit reply" : "Post a reply"}
+                      {r.reply ? t("Edit reply") : t("Post a reply")}
                     </button>
                   </div>
                   {/* OURS-AN13-flag-queue row 7: 12.5/800 #7D6BB5 text button, min-height 44, under the actions. */}
@@ -997,7 +993,7 @@ const Reviews: React.FC<{
                       disabled={!online || handling === r.id}
                       onClick={() => void markHandled(r)}
                     >
-                      Mark as handled
+                      {t("Mark as handled")}
                     </button>
                   )}
                 </ReviewRow>
@@ -1009,8 +1005,8 @@ const Reviews: React.FC<{
 
       {(fk === "all" || fk === "unreplied") && need.length > 0 && (
         <>
-          <p className="rp-label">Needs a reply · {need.length}</p>
-          <section className="rp-card" aria-label="Needs a reply">
+          <p className="rp-label">{t("Needs a reply · {n}", { n: need.length })}</p>
+          <section className="rp-card" aria-label={t("Needs a reply")}>
             {(needAll ? need : need.slice(0, 3)).map((r) => (
               <ReviewRow
                 key={r.id}
@@ -1026,7 +1022,7 @@ const Reviews: React.FC<{
                 className="rp-more tap"
                 onClick={() => setNeedAll(true)}
               >
-                See all {need.length}
+                {t("See all {n}", { n: need.length })}
                 <ChevronRight size={14} aria-hidden />
               </button>
             )}
@@ -1036,7 +1032,7 @@ const Reviews: React.FC<{
 
       <section
         className="rp-card rp-all"
-        aria-label={fk === "all" ? "All reviews" : filterLabel}
+        aria-label={fk === "all" ? t("All reviews") : filterLabel}
       >
         <button
           type="button"
@@ -1048,7 +1044,7 @@ const Reviews: React.FC<{
           <span className="min-w-0 flex-1">
             <span className="rp-coll-t block" style={{ lineHeight: "18px" }}>
               {fk === "all"
-                ? `All reviews · ${empty ? 0 : total}`
+                ? `${t("All reviews")} · ${empty ? 0 : total}`
                 : `${filterLabel} · ${shown.filter((r) => !r.redacted).length}`}
             </span>
             <span className="rp-coll-s block">
@@ -1056,7 +1052,7 @@ const Reviews: React.FC<{
                 ? vocab.emptyLine
                 : fk === "all"
                   ? allReviewsLine(list, range)
-                  : "Showing reviews that match this filter."}
+                  : t("Showing reviews that match this filter.")}
             </span>
           </span>
           <span className={"rp-chev" + (!empty && open ? " is-open" : "")}>
@@ -1080,8 +1076,8 @@ const Reviews: React.FC<{
                 onClick={() => setAllShown(allShown === 3 ? 20 : allShown + 20)}
               >
                 {allShown === 3
-                  ? `See all ${shown.filter((r) => !r.redacted).length}`
-                  : "Show more"}
+                  ? t("See all {n}", { n: shown.filter((r) => !r.redacted).length })
+                  : t("Show more")}
                 <ChevronRight size={14} aria-hidden />
               </button>
             )}
@@ -1098,10 +1094,10 @@ const Reviews: React.FC<{
               <Star size={22} aria-hidden />
             </span>
             <p className="rp-none-t">
-              {empty ? "No reviews yet" : "No reviews match"}
+              {empty ? t("No reviews yet") : t("No reviews match")}
             </p>
             <p className="rp-none-s">
-              {empty ? vocab.emptyBody : "Try another filter."}
+              {empty ? vocab.emptyBody : t("Try another filter.")}
             </p>
           </div>
         )}
@@ -1115,12 +1111,13 @@ const Reviews: React.FC<{
             ...(ownReply(menu.review)
               ? [
                   {
-                    label: "Edit reply",
+                    label: t("Edit reply"),
                     onClick: () =>
                       setComposer({ mode: "edit", review: menu.review }),
                   },
                   {
-                    label: "Delete reply",
+                    label: t("Delete reply"),
+                    danger: true,
                     onClick: () => setDelReply(menu.review),
                   },
                 ]
@@ -1128,7 +1125,7 @@ const Reviews: React.FC<{
             ...(!menu.review.flagged && !reports.get(menu.review.id)
               ? [
                   {
-                    label: "Report to Centium",
+                    label: t("Report to Centium"),
                     onClick: () => setReport(menu.review),
                   },
                 ]
@@ -1159,7 +1156,7 @@ const Reviews: React.FC<{
           const id = composer?.review.id;
           setComposer(null);
           if (id) setNoThread((s) => new Set(s).add(id));
-          onChanged("You can only message your own members. Report it to Centium instead.");
+          onChanged(t("You can only message your own members. Report it to Centium instead."));
         }}
       />
       <ReportSheet
@@ -1175,10 +1172,10 @@ const Reviews: React.FC<{
       <ConfirmCard
         open={!!delReply}
         tone="destructive"
-        title="Delete your reply?"
-        subtitle="Members won't see it any more."
-        confirmLabel="Delete"
-        cancelLabel="Keep it"
+        title={t("Delete your reply?")}
+        subtitle={t("Members won't see it any more.")}
+        confirmLabel={t("Delete")}
+        cancelLabel={t("Keep it")}
         busy={busy}
         onCancel={() => setDelReply(null)}
         onConfirm={async () => {
@@ -1189,9 +1186,9 @@ const Reviews: React.FC<{
           setDelReply(null);
           onChanged(
             r.ok
-              ? "Reply deleted."
+              ? t("Reply deleted.")
               : (reputationError(r.code) ??
-                  "Couldn't delete your reply. Try again."),
+                  t("Couldn't delete your reply. Try again.")),
           );
         }}
       />
@@ -1202,7 +1199,7 @@ const Reviews: React.FC<{
 /** The row's "⋯" menu (AN13-024 O3, OURS-AN13-flag-queue row 5): PopupMenu styling, anchored under the button. */
 const RowMenu: React.FC<{
   anchor: HTMLElement;
-  items: { label: string; onClick: () => void }[];
+  items: { label: string; onClick: () => void; danger?: boolean }[];
   onClose: () => void;
 }> = ({ anchor, items, onClose }) => {
   const r = anchor.getBoundingClientRect();
@@ -1223,7 +1220,8 @@ const RowMenu: React.FC<{
         className="rp an-scope rp-list fixed z-[61]"
         style={{
           top: r.bottom + 6,
-          right: Math.max(16, window.innerWidth - r.right),
+          // Right to left, the menu opens from the button's left edge.
+          ...(isRtl() ? { left: Math.max(16, r.left) } : { right: Math.max(16, window.innerWidth - r.right) }),
           minWidth: 190,
           marginTop: 0,
         }}
@@ -1242,7 +1240,7 @@ const RowMenu: React.FC<{
             <span
               className="rp-opt-t"
               style={
-                it.label.startsWith("Delete")
+                it.danger
                   ? { color: "var(--an-high)" }
                   : undefined
               }

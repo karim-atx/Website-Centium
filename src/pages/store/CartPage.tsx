@@ -13,6 +13,7 @@ import { MAX_QTY } from "../../services/store/customer";
 import { useLive } from "../business-ops/store/storeShared";
 import { ClientCard, ClientEmpty, ClientRow, QtyStepper, RetryLine, Section, SkeletonCards } from "./clientKit";
 import { useCart } from "./useCart";
+import { t } from "../../i18n/core";
 
 // OURS-customer-store-cart (Designed by us). One store per cart; quantities
 // on this device, prices read from the store every time.
@@ -51,8 +52,8 @@ export default function CartPage() {
   if (!cart || cart.lines.length === 0) {
     return (
       <div>
-        <PageHeader title="Your cart" showBack sub />
-        <ClientEmpty icon={ShoppingCart} title="Your cart is empty" line="Add products from a store on Explore, then check out here." />
+        <PageHeader title={t("Your cart")} showBack sub />
+        <ClientEmpty icon={ShoppingCart} title={t("Your cart is empty")} line={t("Add products from a store on Explore, then check out here.")} />
       </div>
     );
   }
@@ -61,35 +62,35 @@ export default function CartPage() {
 
   return (
     <div>
-      <PageHeader title="Your cart" subtitle={d?.store?.name} showBack sub />
+      <PageHeader title={t("Your cart")} subtitle={d?.store?.name} showBack sub />
       <BusinessClosedNote status={bizStatus} what="orders" className="mb-3" />
       {s.status === "loading" ? (
-        <SkeletonCards label="Loading your cart" />
+        <SkeletonCards label={t("Loading your cart")} />
       ) : s.status !== "ok" || !d ? (
-        <RetryLine text="Couldn't load your cart." onRetry={live.reload} />
+        <RetryLine text={t("Couldn't load your cart.")} onRetry={live.reload} />
       ) : (
         <>
-          <ClientCard label="Items">
+          <ClientCard label={t("Items")}>
             {d.lines.map((l) => (
               <ClientRow
                 key={l.product.id}
                 icon={ShoppingBag}
                 title={l.product.name}
                 sub={money(l.total)}
-                trailing={<QtyStepper value={l.qty} min={0} max={Math.min(MAX_QTY, l.product.stock ?? MAX_QTY)} onChange={(n) => setCartQty(uid, l.product.id, n)} label={`Quantity of ${l.product.name}`} />}
+                trailing={<QtyStepper value={l.qty} min={0} max={Math.min(MAX_QTY, l.product.stock ?? MAX_QTY)} onChange={(n) => setCartQty(uid, l.product.id, n)} label={t("Quantity of {name}", { name: l.product.name })} />}
               />
             ))}
           </ClientCard>
           {d.gone.length > 0 && (
-            <Section label="No longer available">
+            <Section label={t("No longer available")}>
               <ClientCard>
                 {d.gone.map((id) => (
                   <ClientRow
                     key={id}
                     icon={ShoppingBag}
-                    title="This item isn't available now"
+                    title={t("This item isn't available now")}
                     trailing={
-                      <button type="button" aria-label="Remove" onClick={() => setCartQty(uid, id, 0)} className="tap shrink-0 flex items-center justify-center text-charcoal-faint" style={{ width: 44, height: 44 }}>
+                      <button type="button" aria-label={t("Remove")} onClick={() => setCartQty(uid, id, 0)} className="tap shrink-0 flex items-center justify-center text-charcoal-faint" style={{ width: 44, height: 44 }}>
                         <Trash2 size={16} aria-hidden />
                       </button>
                     }
@@ -99,14 +100,14 @@ export default function CartPage() {
             </Section>
           )}
           <div className="flex items-center justify-between" style={{ marginTop: 16, padding: "0 4px" }}>
-            <span className="text-[14px] font-semibold text-charcoal-soft">Subtotal</span>
+            <span className="text-[14px] font-semibold text-charcoal-soft">{t("Subtotal")}</span>
             <span className="text-[16px] font-extrabold text-charcoal tabular-nums">{money(subtotal)}</span>
           </div>
           <p className="text-[12px] font-medium text-charcoal-faint" style={{ marginTop: 4, padding: "0 4px" }}>
-            Delivery, if you choose it, is added at checkout.
+            {t("Delivery, if you choose it, is added at checkout.")}
           </p>
           <div aria-hidden style={{ height: 60 }} />
-          <PinnedCta primary={{ label: "Checkout", onClick: () => navigate("/app/store/checkout"), disabled: d.lines.length === 0 || !takesNewActivity(bizStatus) }} />
+          <PinnedCta primary={{ label: t("Checkout"), onClick: () => navigate("/app/store/checkout"), disabled: d.lines.length === 0 || !takesNewActivity(bizStatus) }} />
         </>
       )}
     </div>

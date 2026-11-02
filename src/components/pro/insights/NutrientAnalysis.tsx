@@ -15,7 +15,7 @@ import { fetchFoodEntries, fetchInsightTargets, fetchMetricRows, localMinute, ty
 import { sumNutrientMaps } from "../../../services/nutrition";
 import { localIso } from "../../../services/pro/home";
 import { NUTRIENT_SECTIONS, type NutrientRow } from "../../../data/nutrientSchema";
-import { formatMinutes12, rangeMinutes12 } from "../../../utils/time12";
+import { formatMinutes12, hourLabel12, rangeMinutes12 } from "../../../utils/time12";
 import {
   addDays,
   bestWorst,
@@ -42,6 +42,7 @@ import { DetailHead, Group, InsightLine, QuietLine, RangeTabs } from "./parts";
 import { readGate, useRead } from "./reads";
 import { PAGE_RANGE_DAYS, type PageRange } from "./panelProps";
 import { appLocale } from "../../../i18n/format";
+import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 NU7 Nutrient analysis (NU7 v3 Macros, best and worst days,
@@ -67,7 +68,15 @@ import { appLocale } from "../../../i18n/format";
 type Tab = "macros" | "intake" | "micros";
 const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 const MACRO_COLOURS = ["#7D6BB5", "#AEA1DC", "#A2C8C2"];
-const SLOT_LABEL: Record<MealSlot, string> = { breakfast: "Breakfast", lunch: "Lunch", snack: "Snacks", dinner: "Dinner" };
+const SLOT_LABEL: Record<MealSlot, string> = { breakfast: tk("Breakfast"), lunch: tk("Lunch"), snack: tk("Snacks"), dinner: tk("Dinner") };
+/** A list separator: "; " in English, the Arabic semicolon in Arabic. */
+const semi = () => (isRtl() ? "؛ " : "; ");
+/** "Protein up", "carbs steady"… one whole phrase per macro and direction. */
+const MACRO_TREND: Record<string, Record<"up" | "down" | "steady", string>> = {
+  Protein: { up: tk("Protein up"), down: tk("Protein down"), steady: tk("Protein steady") },
+  carbs: { up: tk("carbs up"), down: tk("carbs down"), steady: tk("carbs steady") },
+  fat: { up: tk("fat up"), down: tk("fat down"), steady: tk("fat steady") },
+};
 
 function totals(entries: FoodEntry[]): DayTotals[] {
   const m = new Map<string, DayTotals & { slots: Set<string> }>();
@@ -112,16 +121,16 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
   const header = (
     <>
       {onBack ? (
-        <DetailHead eyebrow="Nutrient analysis" title={name} onBack={onBack} />
+        <DetailHead eyebrow={t("Nutrient analysis")} title={name} onBack={onBack} />
       ) : (
         <div style={{ marginBottom: 13 }}>
-          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>Nutrient analysis</p>
+          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{t("Nutrient analysis")}</p>
           <h2 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{name}</h2>
         </div>
       )}
       <SegmentedTabs
         className="mb-[10px]"
-        items={[{ key: "macros", label: "Macros" }, { key: "intake", label: "Intake" }, ...(deep ? [{ key: "micros", label: "Micros" }] : [])]}
+        items={[{ key: "macros", label: t("Macros") }, { key: "intake", label: tx("Intake", "nutrition tab") }, ...(deep ? [{ key: "micros", label: t("Micros") }] : [])]}
         activeKey={tab}
         onChange={(k) => setTab(k as Tab)}
         tabHeight={36}
@@ -134,13 +143,13 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
   );
 
   if (access.loading) return (<>{header}<ProCardSkeleton lines={4} height={200} /></>);
-  if (!on) return (<>{header}<LockLine what="Food diary" clientFirstName={firstName} /></>);
+  if (!on) return (<>{header}<LockLine what={t("Food diary")} clientFirstName={firstName} /></>);
   const gate = readGate(food, 4);
   if (gate) return (<>{header}{gate}</>);
 
-  const t = targets.data;
-  const pct = t?.pct ?? null;
-  const tGrams = t?.kcal && pct ? macroGrams(t.kcal, pct) : null;
+  const tgt = targets.data;
+  const pct = tgt?.pct ?? null;
+  const tGrams = tgt?.kcal && pct ? macroGrams(tgt.kcal, pct) : null;
   const latestKg = weight.data?.length ? weight.data[weight.data.length - 1].value : null;
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
 
@@ -155,7 +164,7 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
           entries={entriesInWindow}
           allEntries={food.data ?? []}
           today={today}
-          target={t?.kcal ?? null}
+          target={tgt?.kcal ?? null}
           firstName={firstName}
           range={chartRange}
           onRange={setChartRange}
@@ -187,7 +196,7 @@ const SplitBar: React.FC<{ label: string; split: [number, number, number] | null
         ))}
       </span>
     ) : (
-      <span style={{ fontSize: textPx(11.5), color: INK.chF }}>Nothing logged</span>
+      <span style={{ fontSize: textPx(11.5), color: INK.chF }}>{t("Nothing logged")}</span>
     )}
   </div>
 );
@@ -232,71 +241,82 @@ const Macros: React.FC<{
     const d = (v[v.length - 1] - v[0]) / (v[0] || 1);
     return Math.abs(d) <= 0.05 ? "steady" : d > 0 ? "up" : "down";
   };
-  const trendLine = [["Protein", dirWord(pW)], ["carbs", dirWord(cW)], ["fat", dirWord(fW)]].filter((x) => x[1]).map((x) => `${x[0]} ${x[1]}`).join(", ");
+  const trendLine = ([["Protein", dirWord(pW)], ["carbs", dirWord(cW)], ["fat", dirWord(fW)]] as const)
+    .filter((x) => x[1])
+    .map((x) => t(MACRO_TREND[x[0]][x[1] as "up" | "down" | "steady"]))
+    .join(isRtl() ? "، " : ", ");
   const bw = tGrams ? bestWorst(inWindow, tGrams) : null;
   const ink = dark ? "#C3B3FB" : "#7D6BB5";
 
   return (
     <>
       <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
-        <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>Split vs target</p>
-        <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{n > 1 ? `Today and ${n}-day average` : "Today"}</p>
-        <SplitBar label="Today" split={td ? macroSplit(td.p, td.c, td.f) : null} />
-        {n > 1 && <SplitBar label={`${n}-day avg`} split={macroSplit(avg.p, avg.c, avg.f)} />}
-        {pct ? <SplitBar label="Target" split={pct.map((x) => Math.round(x)) as [number, number, number]} faded /> : <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10 }}>No macro targets set yet.</p>}
+        <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Split vs target")}</p>
+        <p style={{ fontSize: textPx(11.5), color: INK.chF }}>{n > 1 ? t("Today and {n}-day average", { n }) : t("Today")}</p>
+        <SplitBar label={t("Today")} split={td ? macroSplit(td.p, td.c, td.f) : null} />
+        {n > 1 && <SplitBar label={t("{n}-day avg", { n })} split={macroSplit(avg.p, avg.c, avg.f)} />}
+        {pct ? <SplitBar label={t("Target")} split={pct.map((x) => Math.round(x)) as [number, number, number]} faded /> : <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10 }}>{t("No macro targets set yet.")}</p>}
         <div className="flex" style={{ gap: 12, marginTop: 10, fontSize: textPx(10.5), color: INK.chF }}>
-          <span>Protein</span>
-          <span>Carbs</span>
-          <span>Fat</span>
+          <span>{t("Protein")}</span>
+          <span>{t("Carbs")}</span>
+          <span>{t("Fat")}</span>
         </div>
       </div>
       <Group
         id="pkg"
         icon={Dumbbell}
-        title="Protein per kg"
-        line={!weightOn ? "Weight isn't shared, so protein per kg can't be worked out." : kg == null || avgP == null ? "Needs a shared weigh-in and logged meals." : `${Math.round((avgP / kg) * 10) / 10} g/kg${targetGkg ? `; target ${targetGkg} g/kg` : ""} (weight ${kg} kg, shared)`}
+        title={t("Protein per kg")}
+        line={
+          !weightOn
+            ? t("Weight isn't shared, so protein per kg can't be worked out.")
+            : kg == null || avgP == null
+              ? t("Needs a shared weigh-in and logged meals.")
+              : targetGkg
+                ? t("{gkg} g/kg; target {target} g/kg (weight {kg} kg, shared)", { gkg: Math.round((avgP / kg) * 10) / 10, target: targetGkg, kg })
+                : t("{gkg} g/kg (weight {kg} kg, shared)", { gkg: Math.round((avgP / kg) * 10) / 10, kg })
+        }
         open={open === "pkg"}
         onToggle={() => toggle("pkg")}
       >
         {gkg && gkg.some((v) => v != null) ? (
           <ProChart
             flat
-            title="Protein per kg body weight"
-            x={["W1", "W2", "W3", "W4"]}
+            title={t("Protein per kg body weight")}
+            x={[1, 2, 3, 4].map((n) => t("W{n}", { n }))}
             min={0}
             max={Math.max(targetGkg ?? 0, ...gkg.map((v) => v ?? 0), ...(gkgPrev ?? []).map((v) => v ?? 0)) * 1.3 || 2}
             goal={targetGkg ?? undefined}
-            goalLegend={targetGkg ? `Target ${targetGkg}` : undefined}
+            goalLegend={targetGkg ? t("Target {n}", { n: targetGkg }) : undefined}
             series={[
-              { key: "g", label: "g per kg", type: "line", color: ink, values: gkg },
-              { key: "l", label: "Last month", type: "line", color: INK.chT, ghost: true, values: gkgPrev ?? [] },
+              { key: "g", label: t("g per kg"), type: "line", color: ink, values: gkg },
+              { key: "l", label: t("Last month"), type: "line", color: INK.chT, ghost: true, values: gkgPrev ?? [] },
             ]}
-            tooltip={(i) => (gkg[i] == null ? null : { title: `Week ${i + 1}`, lines: [`${gkg[i]} g/kg · ${fmt(pW[i] ?? 0)} g a day`] })}
-            summary={`Protein ${gkg[3] ?? gkg.filter((v) => v != null).pop()} g per kg in the latest week.`}
+            tooltip={(i) => (gkg[i] == null ? null : { title: t("Week {n}", { n: i + 1 }), lines: [t("{gkg} g/kg · {g} g a day", { gkg: gkg[i] as number, g: fmt(pW[i] ?? 0) })] })}
+            summary={t("Protein {n} g per kg in the latest week.", { n: String(gkg[3] ?? gkg.filter((v) => v != null).pop()) })}
           />
         ) : (
           <div style={{ paddingBottom: 10 }}>
-            <QuietLine>Nothing to chart yet.</QuietLine>
+            <QuietLine>{t("Nothing to chart yet.")}</QuietLine>
           </div>
         )}
       </Group>
-      <Group id="trend" icon={LineChart} title="Trends per macro" line={trendLine || "Needs two weeks of logs."} open={open === "trend"} onToggle={() => toggle("trend")}>
+      <Group id="trend" icon={LineChart} title={t("Trends per macro")} line={trendLine || t("Needs two weeks of logs.")} open={open === "trend"} onToggle={() => toggle("trend")}>
         <ProChart
           flat
-          title="Grams per day"
-          x={["W1", "W2", "W3", "W4"]}
+          title={t("Grams per day")}
+          x={[1, 2, 3, 4].map((n) => t("W{n}", { n }))}
           min={0}
           max={Math.max(50, ...[...pW, ...cW, ...fW].map((v) => v ?? 0)) * 1.15}
           series={[
-            { key: "p", label: "Protein", type: "line", color: MACRO_COLOURS[0], values: pW },
-            { key: "c", label: "Carbs", type: "line", color: MACRO_COLOURS[1], values: cW },
-            { key: "f", label: "Fat", type: "line", color: MACRO_COLOURS[2], values: fW },
+            { key: "p", label: t("Protein"), type: "line", color: MACRO_COLOURS[0], values: pW },
+            { key: "c", label: t("Carbs"), type: "line", color: MACRO_COLOURS[1], values: cW },
+            { key: "f", label: t("Fat"), type: "line", color: MACRO_COLOURS[2], values: fW },
           ]}
-          tooltip={(i) => ({ title: `Week ${i + 1}`, lines: [`Protein ${fmt(pW[i] ?? 0)} g · carbs ${fmt(cW[i] ?? 0)} g · fat ${fmt(fW[i] ?? 0)} g`] })}
-          summary={trendLine ? `${trendLine}, grams a day over 4 weeks.` : undefined}
+          tooltip={(i) => ({ title: t("Week {n}", { n: i + 1 }), lines: [t("Protein {p} g · carbs {c} g · fat {f} g", { p: fmt(pW[i] ?? 0), c: fmt(cW[i] ?? 0), f: fmt(fW[i] ?? 0) })] })}
+          summary={trendLine ? t("{trends}, grams a day over 4 weeks.", { trends: trendLine }) : undefined}
         />
       </Group>
-      <Group id="days" icon={CalendarRange} title="Best and worst days" line={bw ? `Best ${tipDay(bw.best.day)}, worst ${tipDay(bw.worst.day)}` : tGrams ? "Needs two logged days." : "Needs macro targets."} open={open === "days"} onToggle={() => toggle("days")}>
+      <Group id="days" icon={CalendarRange} title={t("Best and worst days")} line={bw ? t("Best {best}, worst {worst}", { best: tipDay(bw.best.day), worst: tipDay(bw.worst.day) }) : tGrams ? t("Needs two logged days.") : t("Needs macro targets.")} open={open === "days"} onToggle={() => toggle("days")}>
         {bw ? (
           <ListCard
             rows={[
@@ -304,15 +324,17 @@ const Macros: React.FC<{
                 key: "b",
                 icon: ThumbsUp,
                 title: tipDay(bw.best.day),
-                meta: bw.bestOnTarget ? `On target for all three macros · ${fmt(bw.best.kcal)} kcal` : `Protein ${fmt(bw.best.p)} g, carbs ${fmt(bw.best.c)} g, fat ${fmt(bw.best.f)} g · ${fmt(bw.best.kcal)} kcal`,
-                trailing: <Chip label="Best" tone="act" />,
+                meta: bw.bestOnTarget
+                  ? t("On target for all three macros · {kcal} kcal", { kcal: fmt(bw.best.kcal) })
+                  : t("Protein {p} g, carbs {c} g, fat {f} g · {kcal} kcal", { p: fmt(bw.best.p), c: fmt(bw.best.c), f: fmt(bw.best.f), kcal: fmt(bw.best.kcal) }),
+                trailing: <Chip label={t("Best")} tone="act" />,
               },
-              { key: "w", icon: ThumbsDown, title: tipDay(bw.worst.day), meta: `Fat ${fmt(bw.worst.f)} g, protein ${fmt(bw.worst.p)} g · ${fmt(bw.worst.kcal)} kcal`, trailing: <Chip label="Worst" tone="att" /> },
+              { key: "w", icon: ThumbsDown, title: tipDay(bw.worst.day), meta: t("Fat {f} g, protein {p} g · {kcal} kcal", { f: fmt(bw.worst.f), p: fmt(bw.worst.p), kcal: fmt(bw.worst.kcal) }), trailing: <Chip label={t("Worst")} tone="att" /> },
             ]}
           />
         ) : (
           <div style={{ paddingBottom: 10 }}>
-            <QuietLine>{tGrams ? "Best and worst days appear once two days are logged." : "Best and worst days compare each day with the macro targets, and none are set yet."}</QuietLine>
+            <QuietLine>{tGrams ? t("Best and worst days appear once two days are logged.") : t("Best and worst days compare each day with the macro targets, and none are set yet.")}</QuietLine>
           </div>
         )}
       </Group>
@@ -361,9 +383,10 @@ const Intake: React.FC<{
     [entries]
   );
   const afterPct = Math.round(clock.afterSixShare * 100);
-  const timingLine = clock.early ? "Early data" : afterPct > 50 ? "Most calories after 6 PM" : `${afterPct}% of calories after 6 PM`;
+  const timingLine = clock.early ? t("Early data") : afterPct > 50 ? t("Most calories after {time}", { time: hourLabel12(18) }) : t("{pct}% of calories after {time}", { pct: afterPct, time: hourLabel12(18) });
   const tops = topFoods(entries.map((e) => ({ name: e.name, p: e.p, c: e.c, f: e.f })));
-  const topsLine = tops.fat && tops.protein ? `${tops.fat.name} tops fat; ${tops.protein.name} tops protein` : "Nothing logged in this range.";
+  // Food names are catalogue content (F13): they stay as logged.
+  const topsLine = tops.fat && tops.protein ? t("{fat} tops fat; {protein} tops protein", { fat: tops.fat.name, protein: tops.protein.name }) : t("Nothing logged in this range.");
 
   const loggedDays = new Set(entries.map((e) => e.day)).size;
   const nt = sumNutrientMaps(entries.map((e) => e.nutrients));
@@ -377,74 +400,76 @@ const Intake: React.FC<{
   const fLow = fibre != null && fT != null && fibre < fT * 0.7;
   const naHigh = sodium != null && naT != null && sodium > naT;
   const sHigh = sugar != null && sT != null && sugar > sT;
-  const fssLine = fibre == null && sugar == null && sodium == null ? "No nutrient detail in the foods logged yet." : [naHigh ? "Sodium high" : null, sHigh ? "sugar high" : null, fLow ? "fibre low" : null].filter(Boolean).join("; ").replace(/^./, (c) => c.toUpperCase()) || "Within the limits";
+  const fssLine =
+    fibre == null && sugar == null && sodium == null
+      ? t("No nutrient detail in the foods logged yet.")
+      : [naHigh ? t("Sodium high") : null, sHigh ? t("sugar high") : null, fLow ? t("fibre low") : null].filter(Boolean).join(semi()).replace(/^./, (c) => c.toUpperCase()) || t("Within the limits");
   const late = clock.late;
-  const rangeWord = pageRange === "month" ? "this month" : pageRange === "week" ? "this week" : "today";
 
   return (
     <>
       <ProChart
-        title="Calories in vs target"
-        question={`How do ${firstName}'s logged days compare with the target?`}
+        title={t("Calories in vs target")}
+        question={t("How do {firstName}'s logged days compare with the target?", { firstName })}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={lo}
         max={hi}
-        band={band ? { ...band, label: "On target" } : undefined}
+        band={band ? { ...band, label: t("On target") } : undefined}
         goal={target ?? undefined}
         series={[
-          { key: "k", label: "Calories", type: "line", color: "#7D6BB5", values: kcal },
-          { key: "g", label: "Last period", type: "line", color: INK.chT, ghost: true, values: ghost },
+          { key: "k", label: t("Calories"), type: "line", color: "#7D6BB5", values: kcal },
+          { key: "g", label: t("Last period"), type: "line", color: INK.chT, ghost: true, values: ghost },
         ]}
         tooltip={(i) => {
           const v = kcal[i];
-          if (v == null) return { title: bucketTitle(range, b[i]), lines: ["Nothing logged"] };
+          if (v == null) return { title: bucketTitle(range, b[i]), lines: [t("Nothing logged")] };
           const diff = target ? Math.round(v - target) : null;
-          return { title: bucketTitle(range, b[i]), lines: [`${fmt(v)} kcal${diff ? ` · ${fmt(Math.abs(diff))} ${diff > 0 ? "over" : "under"}` : ""}`] };
+          return { title: bucketTitle(range, b[i]), lines: [`${t("{n} kcal", { n: fmt(v) })}${diff ? ` · ${diff > 0 ? t("{n} over", { n: fmt(Math.abs(diff)) }) : t("{n} under", { n: fmt(Math.abs(diff)) })}` : ""}`] };
         }}
         insight={band ? inBandLine(inRange.map((d) => ({ day: d.day, kcal: d.kcal })), band) ?? undefined : undefined}
-        summary={`Calories on ${inRange.length} logged days${target ? `, target ${fmt(target)} kcal` : ""}.`}
+        summary={target ? tn(inRange.length, "Calories on {n} logged day, target {target} kcal.", "Calories on {n} logged days, target {target} kcal.", { target: fmt(target) }) : tn(inRange.length, "Calories on {n} logged day.", "Calories on {n} logged days.")}
       />
-      <Group id="time" icon={Clock} title="Meal timing" line={timingLine} open={open === "time"} onToggle={() => toggle("time")}>
+      <Group id="time" icon={Clock} title={t("Meal timing")} line={timingLine} open={open === "time"} onToggle={() => toggle("time")}>
         {clock.early ? (
           <div style={{ paddingBottom: 10 }}>
-            <QuietLine>{`Early data. The meal timing clock needs 3 days logged with the time eaten; ${clock.days} so far.`}</QuietLine>
+            <QuietLine>{t("Early data. The meal timing clock needs 3 days logged with the time eaten; {n} so far.", { n: clock.days })}</QuietLine>
           </div>
         ) : (
-          <MealClockView clock={clock} late={late} rangeWord={rangeWord} />
+          <MealClockView clock={clock} late={late} pageRange={pageRange} />
         )}
       </Group>
-      <Group id="foods" icon={ListOrdered} title="Top foods per macro" line={topsLine} open={open === "foods"} onToggle={() => toggle("foods")}>
+      <Group id="foods" icon={ListOrdered} title={t("Top foods per macro")} line={topsLine} open={open === "foods"} onToggle={() => toggle("foods")}>
         <ListCard
           rows={(
             [
-              ["Protein", tops.protein, "of protein"],
-              ["Carbs", tops.carbs, "of carbs"],
-              ["Fat", tops.fat, "of fat"],
+              [tk("Protein"), tops.protein, tk("{pct}% of protein")],
+              [tk("Carbs"), tops.carbs, tk("{pct}% of carbs")],
+              [tk("Fat"), tops.fat, tk("{pct}% of fat")],
             ] as const
           )
             .filter((r) => r[1])
-            .map((r) => ({ key: r[0], icon: UtensilsCrossed, title: `${r[0]}: ${r[1]!.name}`, meta: `${Math.round(r[1]!.share * 100)}% ${r[2]}` }))}
+            .map((r) => ({ key: r[0], icon: UtensilsCrossed, title: t("{macro}: {food}", { macro: t(r[0]), food: r[1]!.name }), meta: t(r[2], { pct: Math.round(r[1]!.share * 100) }) }))}
         />
       </Group>
       {fss && (
-        <Group id="fss" icon={FlaskConical} title="Fibre, sugar and sodium" line={fssLine} open={open === "fss"} onToggle={() => toggle("fss")}>
+        <Group id="fss" icon={FlaskConical} title={t("Fibre, sugar and sodium")} line={fssLine} open={open === "fss"} onToggle={() => toggle("fss")}>
           <ListCard
             rows={[
-              { key: "fi", icon: FlaskConical, title: "Fibre", meta: fibre == null ? "No data in the foods logged" : `${fmt(fibre)} g · target ${fT} g`, trailing: fLow ? <Chip label="Low" tone="req" /> : undefined },
-              { key: "su", icon: FlaskConical, title: "Sugar", meta: sugar == null ? "No data in the foods logged" : `${fmt(sugar)} g · under ${sT} g`, trailing: sHigh ? <Chip label="High" tone="att" /> : undefined },
-              { key: "na", icon: FlaskConical, title: "Sodium", meta: sodium == null ? "No data in the foods logged" : `${fmt(sodium)} mg · limit ${fmt(naT ?? 0)} mg`, trailing: naHigh ? <Chip label="High" tone="att" /> : undefined },
+              { key: "fi", icon: FlaskConical, title: t("Fibre"), meta: fibre == null ? t("No data in the foods logged") : t("{n} g · target {target} g", { n: fmt(fibre), target: fT ?? "" }), trailing: fLow ? <Chip label={tx("Low", "intake")} tone="req" /> : undefined },
+              { key: "su", icon: FlaskConical, title: t("Sugar"), meta: sugar == null ? t("No data in the foods logged") : t("{n} g · under {limit} g", { n: fmt(sugar), limit: sT ?? "" }), trailing: sHigh ? <Chip label={t("High")} tone="att" /> : undefined },
+              { key: "na", icon: FlaskConical, title: t("Sodium"), meta: sodium == null ? t("No data in the foods logged") : t("{n} mg · limit {limit} mg", { n: fmt(sodium), limit: fmt(naT ?? 0) }), trailing: naHigh ? <Chip label={t("High")} tone="att" /> : undefined },
             ]}
           />
-          {allEntries.length > 0 && <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, paddingBottom: 10 }}>Daily average over the days logged. Only foods with a full nutrient profile count.</p>}
+          {allEntries.length > 0 && <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, paddingBottom: 10 }}>{t("Daily average over the days logged. Only foods with a full nutrient profile count.")}</p>}
         </Group>
       )}
     </>
   );
 };
 
-const MealClockView: React.FC<{ clock: MealClock; late: number; rangeWord: string }> = ({ clock, late, rangeWord }) => {
+const MealClockView: React.FC<{ clock: MealClock; late: number; pageRange: PageRange }> = ({ clock, late, pageRange }) => {
   const dark = useIsDark();
   const S = 236;
   const c = S / 2;
@@ -469,7 +494,7 @@ const MealClockView: React.FC<{ clock: MealClock; late: number; rangeWord: strin
     <div style={{ paddingBottom: 6 }}>
       <div className="flex justify-center" style={{ margin: "2px 0 6px" }}>
         <div className="relative" style={{ width: S, height: S }}>
-          <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ overflow: "visible", ...NO_ICON_SCALE }} role="img" aria-label={`Average meal times on a 24-hour clock. Eating window ${hm(clock.windowMinutes)}, ${rangeMinutes12(clock.windowStart, clock.windowEnd)}.`}>
+          <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} style={{ overflow: "visible", ...NO_ICON_SCALE }} role="img" aria-label={t("Average meal times on a 24-hour clock. Eating window {window}, {range}.", { window: hm(clock.windowMinutes), range: rangeMinutes12(clock.windowStart, clock.windowEnd) })}>
             <circle cx={c} cy={c} r={R} fill="none" stroke={INK.soft} strokeWidth={16} />
             <path d={arc(clock.windowStart, clock.windowEnd, R)} fill="none" stroke={dark ? "rgba(169,145,254,0.28)" : "#E4DEF6"} strokeWidth={16} strokeLinecap="round" />
             <path d={arc(clock.windowEnd, clock.windowStart, R + 14)} fill="none" stroke={INK.tealDark} strokeWidth={1.6} strokeDasharray="3 3" />
@@ -482,7 +507,7 @@ const MealClockView: React.FC<{ clock: MealClock; late: number; rangeWord: strin
               const p = P(h * 60, R - 30);
               return (
                 <text key={h} x={p[0]} y={p[1] + 3.5} textAnchor="middle" fontSize={9} fontWeight={800} fill={INK.chF}>
-                  {h === 0 ? "12 AM" : h === 12 ? "12 PM" : `${h % 12} ${h < 12 ? "AM" : "PM"}`}
+                  {hourLabel12(h)}
                 </text>
               );
             })}
@@ -496,12 +521,12 @@ const MealClockView: React.FC<{ clock: MealClock; late: number; rangeWord: strin
               return <circle key={m.meal} cx={p[0]} cy={p[1]} r={5 + (m.share * 100) / 6} fill={colour[m.meal]} stroke={INK.card} strokeWidth={2.4} />;
             })}
             <text x={np[0]} y={np[1]} textAnchor="middle" fontSize={9} fontWeight={800} fill={INK.tealDark}>
-              {`Fast ${hm(clock.fastMinutes)}`}
+              {t("Fast {time}", { time: hm(clock.fastMinutes) })}
             </text>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <span style={{ fontSize: textPx(24), fontWeight: 800, letterSpacing: "-0.03em", color: INK.ch, lineHeight: 1 }}>{hm(clock.windowMinutes)}</span>
-            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 4 }}>eating window</span>
+            <span style={{ fontSize: textPx(10.5), color: INK.chF, marginTop: 4 }}>{t("eating window")}</span>
             <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: INK.chS }}>{rangeMinutes12(clock.windowStart, clock.windowEnd)}</span>
           </div>
         </div>
@@ -510,16 +535,24 @@ const MealClockView: React.FC<{ clock: MealClock; late: number; rangeWord: strin
         {clock.meals.map((m) => (
           <span key={m.meal} className="flex items-center" style={{ gap: 6 }}>
             <span style={{ width: 9, height: 9, borderRadius: 9999, background: colour[m.meal], flexShrink: 0 }} />
-            <span className="flex-1">{`${SLOT_LABEL[m.meal]} ${Math.round(m.share * 100)}%`}</span>
+            <span className="flex-1">{`${t(SLOT_LABEL[m.meal])} ${Math.round(m.share * 100)}%`}</span>
             <span style={{ color: INK.chF, fontVariantNumeric: "tabular-nums" }}>{formatMinutes12(m.minute)}</span>
           </span>
         ))}
       </div>
       <p className="flex items-center" style={{ gap: 6, fontSize: textPx(11), color: INK.chF, marginBottom: 8 }}>
         <span style={{ width: 7, height: 7, borderRadius: 9999, background: INK.hi }} />
-        {`Late snacks after 10:00 PM · ${late} ${rangeWord}`}
+        {pageRange === "month"
+          ? t("Late snacks after {time} · {n} this month", { time: formatMinutes12(22 * 60), n: late })
+          : pageRange === "week"
+            ? t("Late snacks after {time} · {n} this week", { time: formatMinutes12(22 * 60), n: late })
+            : t("Late snacks after {time} · {n} today", { time: formatMinutes12(22 * 60), n: late })}
       </p>
-      <InsightLine top={0}>{`${after}% of calories after 6:00 PM${biggest && latest && biggest.meal === latest.meal ? `; ${SLOT_LABEL[biggest.meal].toLowerCase()} is the biggest meal and the latest` : ""}.`}</InsightLine>
+      <InsightLine top={0}>
+        {biggest && latest && biggest.meal === latest.meal
+          ? t("{pct}% of calories after {time}; {meal} is the biggest meal and the latest.", { pct: after, time: formatMinutes12(18 * 60), meal: t(SLOT_LABEL[biggest.meal]).toLowerCase() })
+          : t("{pct}% of calories after {time}.", { pct: after, time: formatMinutes12(18 * 60) })}
+      </InsightLine>
     </div>
   );
 };
@@ -544,20 +577,20 @@ export const Micros: React.FC<{ entries: FoodEntry[]; loggedDays: number; n: num
   const any = rows.some((x) => x.per != null);
   return (
     <>
-      <SectionHead label="Micronutrients · % of target" />
+      <SectionHead label={t("Micronutrients · % of target")} />
       {!any ? (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 16, marginBottom: 12 }}>
-          <QuietLine>No nutrient detail in the foods logged yet.</QuietLine>
+          <QuietLine>{t("No nutrient detail in the foods logged yet.")}</QuietLine>
         </div>
       ) : (
         <>
-          <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, marginBottom: 8 }}>{`Micronutrient highlights · ${below} below target`}</p>
+          <p style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, marginBottom: 8 }}>{t("Micronutrient highlights · {n} below target", { n: below })}</p>
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "6px 14px", marginBottom: 12 }}>
             {rows.map((x, i) => (
               <div key={x.r.key} className="flex justify-between" style={{ padding: "9px 0", borderTop: i ? `1px solid ${INK.b06}` : "none", fontSize: textPx(12.5), gap: 8 }}>
                 <span style={{ fontWeight: 600, color: INK.ch }}>{x.r.name}</span>
                 <span className="whitespace-nowrap" style={{ color: INK.chF }}>
-                  {x.per == null ? "No data" : `${x.per >= 100 ? fmt(x.per) : Math.round(x.per * 10) / 10} ${x.r.unit} · `}
+                  {x.per == null ? t("No data") : `${x.per >= 100 ? fmt(x.per) : Math.round(x.per * 10) / 10} ${x.r.unit} · `}
                   {x.pctOf != null && <b style={{ color: x.flag ? INK.hi : INK.chS }}>{`${x.pctOf}%`}</b>}
                 </span>
               </div>
@@ -565,7 +598,7 @@ export const Micros: React.FC<{ entries: FoodEntry[]; loggedDays: number; n: num
           </div>
         </>
       )}
-      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{`From ${loggedDays} of ${n} days ${firstName} logged. Micronutrients only count foods with a full nutrient profile.`}</p>
+      <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>{t("From {logged} of {n} days {firstName} logged. Micronutrients only count foods with a full nutrient profile.", { logged: loggedDays, n, firstName })}</p>
     </>
   );
 };

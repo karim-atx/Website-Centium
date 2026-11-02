@@ -2,6 +2,8 @@
 // tested without the browser: which waiting entry a new one replaces, and
 // what is waiting in words.
 
+import { getLanguage, t, tn } from "../../i18n/core";
+
 export type OutboxKind = "water" | "weight" | "bp" | "food" | "habit" | "workout" | "message" | "goal";
 
 /** The fields the rules read; every queued entry has at least these. */
@@ -31,10 +33,30 @@ export function describeQueued(items: readonly { kind: OutboxKind }[]): string {
   for (const q of items) counts.set(q.kind, (counts.get(q.kind) ?? 0) + 1);
   const parts = (Object.keys(KIND_WORDS) as OutboxKind[])
     .filter((k) => counts.has(k))
-    .map((k) => {
-      const n = counts.get(k)!;
-      return `${n} ${KIND_WORDS[k][n === 1 ? 0 : 1]}`;
-    });
+    .map((k) => countWords(k, counts.get(k)!));
   if (parts.length <= 1) return parts[0] ?? "";
-  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+  const sep = getLanguage() === "ar" ? "، " : ", ";
+  return t("{a} and {b}", { a: parts.slice(0, -1).join(sep), b: parts[parts.length - 1] });
+}
+
+/** "2 food entries", in the app's language (KIND_WORDS is the English). */
+function countWords(k: OutboxKind, n: number): string {
+  switch (k) {
+    case "water":
+      return tn(n, "{n} water entry", "{n} water entries");
+    case "weight":
+      return tn(n, "{n} weight entry", "{n} weight entries");
+    case "bp":
+      return tn(n, "{n} blood pressure reading", "{n} blood pressure readings");
+    case "food":
+      return tn(n, "{n} food entry", "{n} food entries");
+    case "habit":
+      return tn(n, "{n} habit tick", "{n} habit ticks");
+    case "workout":
+      return tn(n, "{n} workout", "{n} workouts");
+    case "message":
+      return tn(n, "{n} message", "{n} messages");
+    default:
+      return tn(n, "{n} goal", "{n} goals");
+  }
 }

@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import clsx from "clsx";
 import type { PublicCv } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
+import { t } from "../../i18n/core";
 
 // A professional's CV as a client reads it: the public profile and the
 // professional's own "Preview as a client" both render through this one
@@ -89,8 +90,8 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
   return (
     <div className="space-y-5">
       {experience.length > 0 && (
-        <section aria-label="Experience">
-          <Label accent={accent}>Experience</Label>
+        <section aria-label={t("Experience")}>
+          <Label accent={accent}>{t("Experience")}</Label>
           <ol className={CARD}>
             {experience.map((e, i) => (
               <Dot key={e.id} accent={accent} last={i === experience.length - 1}>
@@ -105,21 +106,21 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
       )}
 
       {certifications.length > 0 && (
-        <section aria-label="Certifications">
-          <Label accent={accent}>Certifications</Label>
+        <section aria-label={t("Certifications")}>
+          <Label accent={accent}>{t("Certifications")}</Label>
           <ol className={CARD}>
             {certifications.map((c, i) => {
               const last = i === certifications.length - 1;
               if (c.kind === "licence") {
                 const l = c.l;
                 // MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill.
-                const meta = join(l.issued ? `Issued ${formatMonth(l.issued)}` : null, l.verified ? "Verified" : null);
+                const meta = join(l.issued ? t("Issued {v}", { v: formatMonth(l.issued) }) : null, l.verified ? t("Verified") : null);
                 return (
                   <Dot key={c.id} accent={accent} last={last}>
                     <p className={TITLE}>{comma(l.name, l.issuingBody)}</p>
                     {meta && <p className={SUB}>{meta}</p>}
-                    {l.expired && l.expires && <p className={SUB}>Expired {formatMonth(l.expires)}</p>}
-                    {l.credentialUrl && <CvAnchor href={l.credentialUrl}>View credential</CvAnchor>}
+                    {l.expired && l.expires && <p className={SUB}>{t("Expired {date}", { date: formatMonth(l.expires) })}</p>}
+                    {l.credentialUrl && <CvAnchor href={l.credentialUrl}>{t("View credential")}</CvAnchor>}
                   </Dot>
                 );
               }
@@ -138,8 +139,8 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
       )}
 
       {skills.length > 0 && (
-        <section aria-label="Skills">
-          <Label accent={accent}>Skills</Label>
+        <section aria-label={t("Skills")}>
+          <Label accent={accent}>{t("Skills")}</Label>
           <ul className="flex flex-wrap gap-1.5">
             {skills.map((s) => (
               <li

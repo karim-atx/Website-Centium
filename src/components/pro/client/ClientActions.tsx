@@ -7,6 +7,7 @@ import { textPx } from "../../../theme/textSize";
 import { useOnline } from "../../../hooks/useOnline";
 import { INK } from "../proInk";
 import { TAG_MAX } from "../../../services/pro/clients";
+import { t, tn } from "../../../i18n/core";
 
 /**
  * Release 3 · W3 client actions shared by CL3 (row menu, multi-select) and
@@ -63,18 +64,18 @@ export const TagsSheet: React.FC<{
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [known, extra]);
 
-  const names = targets.length === 1 ? targets[0].name : targets.length === 2 ? `${targets[0].name} and ${targets[1].name}` : `${targets.length} clients`;
+  const names = targets.length === 1 ? targets[0].name : targets.length === 2 ? t("{a} and {b}", { a: targets[0].name, b: targets[1].name }) : tn(targets.length, "{n} client", "{n} clients");
   const addDraft = () => {
-    const t = draft.trim();
-    if (!t) return;
-    if (t.length > TAG_MAX) return setError(`Keep tags to ${TAG_MAX} characters.`);
-    setExtra((x) => (x.includes(t) ? x : [...x, t]));
-    setPicked((p) => new Set(p).add(t));
+    const tag = draft.trim();
+    if (!tag) return;
+    if (tag.length > TAG_MAX) return setError(t("Keep tags to {max} characters.", { max: TAG_MAX }));
+    setExtra((x) => (x.includes(tag) ? x : [...x, tag]));
+    setPicked((p) => new Set(p).add(tag));
     setDraft("");
     setError(null);
   };
   const apply = async () => {
-    if (!online) return setError("You're offline. Try again when you're connected.");
+    if (!online) return setError(t("You're offline. Try again when you're connected."));
     setBusy(true);
     setError(null);
     const changes = targets.map((t) => ({
@@ -93,10 +94,10 @@ export const TagsSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Tags"
-      footer={<CtaButton size="sheet" className="w-full" label={targets.length > 1 ? `Apply to ${targets.length} clients` : "Save tags"} loading={busy} onClick={() => void apply()} />}
+      title={t("Tags")}
+      footer={<CtaButton size="sheet" className="w-full" label={targets.length > 1 ? tn(targets.length, "Apply to {n} client", "Apply to {n} clients") : t("Save tags")} loading={busy} onClick={() => void apply()} />}
     >
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{`Tag ${names}. Only you see tags.`}</p>
+      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 12 }}>{t("Tag {names}. Only you see tags.", { names })}</p>
       <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
         <Tag size={15} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
         <input
@@ -106,12 +107,12 @@ export const TagsSheet: React.FC<{
           onKeyDown={(e) => {
             if (e.key === "Enter") addDraft();
           }}
-          placeholder="New tag, e.g. Marathon prep"
-          aria-label="New tag"
+          placeholder={t("New tag, e.g. Marathon prep")}
+          aria-label={t("New tag")}
           className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
           style={{ fontSize: textPx(14), color: INK.ch }}
         />
-        <button type="button" onClick={addDraft} aria-label="Add tag" className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
+        <button type="button" onClick={addDraft} aria-label={t("Add tag")} className="tap flex items-center justify-center" style={{ width: 36, height: 36 }}>
           <Plus size={16} strokeWidth={1.75} aria-hidden style={{ color: INK.chF }} />
         </button>
       </div>
@@ -121,7 +122,7 @@ export const TagsSheet: React.FC<{
         </p>
       )}
       <div style={{ marginTop: 8 }}>
-        {rows.length === 0 && <p style={{ padding: "11px 0", fontSize: textPx(12), color: INK.chF }}>No tags yet. Add one above.</p>}
+        {rows.length === 0 && <p style={{ padding: "11px 0", fontSize: textPx(12), color: INK.chF }}>{t("No tags yet. Add one above.")}</p>}
         {rows.map(([tag, count], i) => {
           const on = picked.has(tag);
           return (
@@ -147,7 +148,7 @@ export const TagsSheet: React.FC<{
               <span className="flex-1" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                 {tag}
               </span>
-              <span style={{ fontSize: textPx(12), color: INK.chF }}>{`${count} client${count === 1 ? "" : "s"}`}</span>
+              <span style={{ fontSize: textPx(12), color: INK.chF }}>{tn(count, "{n} client", "{n} clients")}</span>
             </button>
           );
         })}
@@ -189,9 +190,9 @@ export const EndCoachingPopup: React.FC<{
     <CentredPopup
       open={!!name}
       onClose={onClose}
-      title={`End coaching with ${name ?? ""}?`}
+      title={t("End coaching with {name}?", { name: name ?? "" })}
       icon={<UserMinus size={22} strokeWidth={2} aria-hidden />}
-      body={`You'll no longer see anything ${name ?? "they"} shared, and they leave your ${patient ? "patients" : "clients"}. Their own data stays with them.`}
+      body={patient ? t("You'll no longer see anything {name} shared, and they leave your patients. Their own data stays with them.", { name: name ?? t("they") }) : t("You'll no longer see anything {name} shared, and they leave your clients. Their own data stays with them.", { name: name ?? t("they") })}
     >
       {error && (
         <p role="alert" className="text-center" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 4 }}>
@@ -199,8 +200,8 @@ export const EndCoachingPopup: React.FC<{
         </p>
       )}
       <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-        <CtaButton size="page" label={armed ? "Tap again to confirm" : "End coaching"} loading={busy} onClick={() => void press()} />
-        <CtaButton size="page" variant="secondary" label="Keep" onClick={onClose} disabled={busy} />
+        <CtaButton size="page" label={armed ? t("Tap again to confirm") : t("End coaching")} loading={busy} onClick={() => void press()} />
+        <CtaButton size="page" variant="secondary" label={t("Keep")} onClick={onClose} disabled={busy} />
       </div>
     </CentredPopup>
   );

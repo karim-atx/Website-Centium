@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, CircleAlert } from "lucide-react";
 import { Toast } from "../../components/ui/Toast";
 import { initials } from "./teamLogic";
+import { t } from "../../i18n/core";
 import "./team.css";
 
 // Shared pieces of the Team screens (OpsTabsV4 detail header, card shell,
@@ -18,8 +19,8 @@ export const TeamScope = ({ children, detail }: { children: ReactNode; detail?: 
 /** Back row (OP1-061 #1): 44 back button + the parent page title. */
 export const BackRow = ({ label, onBack }: { label: string; onBack: () => void }) => (
   <div className="tm-backrow">
-    <button type="button" className="tm-back tap" aria-label="Back" onClick={onBack}>
-      <ChevronLeft size={22} strokeWidth={2.2} />
+    <button type="button" className="tm-back tap" aria-label={t("Back")} onClick={onBack}>
+      <ChevronLeft size={22} strokeWidth={2.2} className="rtl:-scale-x-100" />
     </button>
     <p>{label}</p>
   </div>
@@ -31,7 +32,7 @@ export const Notice = ({ message, onRetry }: { message: string; onRetry?: () => 
     <p>{message}</p>
     {onRetry && (
       <button type="button" className="tm-retry tap" onClick={onRetry}>
-        Retry
+        {t("Retry")}
       </button>
     )}
   </div>

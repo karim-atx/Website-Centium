@@ -1,4 +1,5 @@
 import type { Enums } from "../../../lib/supabase/database.types";
+import { t, tk } from "../../i18n/core";
 
 // The vocabulary of body measurements, and the bounds the column enforces.
 //
@@ -43,27 +44,27 @@ export interface MeasurementSite {
  * the professional's view all order and name them the same way.
  */
 export const MEASUREMENT_SITES: MeasurementSite[] = [
-  { type: "neck", label: "Neck", group: "torso", unit: "cm" },
-  { type: "shoulders", label: "Shoulders", group: "torso", unit: "cm" },
-  { type: "chest", label: "Chest", group: "torso", unit: "cm" },
-  { type: "waist", label: "Waist", group: "torso", unit: "cm" },
-  { type: "hips", label: "Hips", group: "torso", unit: "cm" },
-  { type: "arm_left", label: "Left arm", group: "arms", unit: "cm" },
-  { type: "arm_right", label: "Right arm", group: "arms", unit: "cm" },
-  { type: "forearm_left", label: "Left forearm", group: "arms", unit: "cm" },
-  { type: "forearm_right", label: "Right forearm", group: "arms", unit: "cm" },
-  { type: "thigh_left", label: "Left thigh", group: "legs", unit: "cm" },
-  { type: "thigh_right", label: "Right thigh", group: "legs", unit: "cm" },
-  { type: "calf_left", label: "Left calf", group: "legs", unit: "cm" },
-  { type: "calf_right", label: "Right calf", group: "legs", unit: "cm" },
-  { type: "body_fat_pct", label: "Body fat", group: "composition", unit: "%" },
+  { type: "neck", label: tk("Neck"), group: "torso", unit: "cm" },
+  { type: "shoulders", label: tk("Shoulders"), group: "torso", unit: "cm" },
+  { type: "chest", label: tk("Chest"), group: "torso", unit: "cm" },
+  { type: "waist", label: tk("Waist"), group: "torso", unit: "cm" },
+  { type: "hips", label: tk("Hips"), group: "torso", unit: "cm" },
+  { type: "arm_left", label: tk("Left arm"), group: "arms", unit: "cm" },
+  { type: "arm_right", label: tk("Right arm"), group: "arms", unit: "cm" },
+  { type: "forearm_left", label: tk("Left forearm"), group: "arms", unit: "cm" },
+  { type: "forearm_right", label: tk("Right forearm"), group: "arms", unit: "cm" },
+  { type: "thigh_left", label: tk("Left thigh"), group: "legs", unit: "cm" },
+  { type: "thigh_right", label: tk("Right thigh"), group: "legs", unit: "cm" },
+  { type: "calf_left", label: tk("Left calf"), group: "legs", unit: "cm" },
+  { type: "calf_right", label: tk("Right calf"), group: "legs", unit: "cm" },
+  { type: "body_fat_pct", label: tk("Body fat"), group: "composition", unit: "%" },
 ];
 
 export const GROUP_LABEL: Record<MeasurementGroup, string> = {
-  torso: "Torso",
-  arms: "Arms",
-  legs: "Legs",
-  composition: "Body fat %",
+  torso: tk("Torso"),
+  arms: tk("Arms"),
+  legs: tk("Legs"),
+  composition: tk("Body fat %"),
 };
 
 export const MEASUREMENT_TYPES: MeasurementType[] = MEASUREMENT_SITES.map((s) => s.type);
@@ -97,13 +98,13 @@ export const RANGE: Record<"cm" | "%", { min: number; max: number }> = {
 /** The message for a value the column would refuse, or null if it would not. */
 export function checkValue(type: MeasurementType, value: number): string | null {
   const site = SITE_BY_TYPE.get(type);
-  if (!site) return "That isn't a measurement this app knows.";
-  if (!Number.isFinite(value)) return "That doesn't look like a number.";
+  if (!site) return t("That isn't a measurement this app knows.");
+  if (!Number.isFinite(value)) return t("That doesn't look like a number.");
   const { min, max } = RANGE[site.unit];
   if (value < min || value > max) {
     return site.unit === "%"
-      ? `Body fat should be between ${min}% and ${max}%.`
-      : `${site.label} should be between ${min} cm and ${max} cm.`;
+      ? t("Body fat should be between {min}% and {max}%.", { min, max })
+      : t("{site} should be between {min} cm and {max} cm.", { site: t(site.label), min, max });
   }
   return null;
 }

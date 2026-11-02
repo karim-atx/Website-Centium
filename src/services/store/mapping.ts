@@ -1,4 +1,5 @@
 import { BUSINESS_CLOSED_CODE, CLOSED_PLACE_ORDER, closureMessage } from "../business-closure/logic";
+import { t } from "../../i18n/core";
 import type {
   Fulfilment,
   OrderItem,
@@ -215,29 +216,29 @@ export function storeErrorText(e: StoreErr, fallback: string): string {
   if (code === "ATXE8") {
     // The server names the product: "only 1 of Protein Bar left".
     const m = /only (\d+) of (.+) left/i.exec(msg);
-    if (m) return Number(m[1]) === 0 ? `${m[2]} is out of stock. Remove it to order the rest.` : `Only ${m[1]} of ${m[2]} left. Lower the quantity and try again.`;
-    return "Some of this is out of stock. Lower the quantity and try again.";
+    if (m) return Number(m[1]) === 0 ? t("{product} is out of stock. Remove it to order the rest.", { product: m[2] }) : t("Only {n} of {product} left. Lower the quantity and try again.", { n: m[1], product: m[2] });
+    return t("Some of this is out of stock. Lower the quantity and try again.");
   }
-  if (code === "ATXE9") return "This store isn't taking orders right now.";
+  if (code === "ATXE9") return t("This store isn't taking orders right now.");
   // CP: only place_order inserts a store_orders row, so ATXAB here is the client's order.
   if (code === BUSINESS_CLOSED_CODE) return closureMessage(CLOSED_PLACE_ORDER, msg);
   if (code === "ATXF0") {
-    if (/pickup/i.test(msg)) return "This store doesn't offer pickup. Choose delivery.";
-    if (/delivery/i.test(msg)) return "This store doesn't offer delivery. Choose pickup.";
-    return "This store doesn't offer that. Choose pickup or delivery.";
+    if (/pickup/i.test(msg)) return t("This store doesn't offer pickup. Choose delivery.");
+    if (/delivery/i.test(msg)) return t("This store doesn't offer delivery. Choose pickup.");
+    return t("This store doesn't offer that. Choose pickup or delivery.");
   }
   if (code === "ATXF1") {
-    if (/exchange/i.test(msg)) return "This store doesn't offer exchanges. Ask for a refund instead.";
-    if (/already open/i.test(msg)) return "A return for this order is already open.";
-    return "Only an order completed in the last 30 days can be returned.";
+    if (/exchange/i.test(msg)) return t("This store doesn't offer exchanges. Ask for a refund instead.");
+    if (/already open/i.test(msg)) return t("A return for this order is already open.");
+    return t("Only an order completed in the last 30 days can be returned.");
   }
   // respond_return's refunded step goes through record_refund (Revenue).
-  if (code === "ATX09" && /refund/i.test(msg)) return "Recording a refund needs the Revenue permission. Ask the owner.";
-  if (code === "22023" && /has not been paid/i.test(msg)) return "This order isn't marked paid, so there's nothing to refund yet. Mark it paid on the order first.";
-  if (code === "22023" && /more than the/i.test(msg)) return "That's more than was paid for this order.";
+  if (code === "ATX09" && /refund/i.test(msg)) return t("Recording a refund needs the Revenue permission. Ask the owner.");
+  if (code === "22023" && /has not been paid/i.test(msg)) return t("This order isn't marked paid, so there's nothing to refund yet. Mark it paid on the order first.");
+  if (code === "22023" && /more than the/i.test(msg)) return t("That's more than was paid for this order.");
   if (code === "ATX10") {
-    if (/no longer be cancelled/i.test(msg)) return "This order can't be cancelled any more. The store has started on it.";
-    return "This was already updated. Refresh to see where it is now.";
+    if (/no longer be cancelled/i.test(msg)) return t("This order can't be cancelled any more. The store has started on it.");
+    return t("This was already updated. Refresh to see where it is now.");
   }
   return fallback;
 }

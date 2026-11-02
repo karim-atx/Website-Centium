@@ -19,6 +19,7 @@ import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLib
 import { Toast } from "../../components/ui/Toast";
 import { customExerciseUsage, isCustomExerciseRule } from "../../services/exercises";
 import { inlineScrolled } from "../../utils/inlineScroll";
+import { isRtl, t, tk, tn, tx } from "../../i18n/core";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -43,15 +44,22 @@ interface DbExercise {
 }
 
 const classificationLabel: Record<ExerciseClassification, string> = {
-  barbell: "Barbell",
-  dumbbell: "Dumbbell",
-  machine_other: "Machine",
-  weighted_bodyweight: "Weighted Bodyweight",
-  assisted_bodyweight: "Assisted Bodyweight",
-  reps_only: "Reps Only",
-  cardio: "Cardio",
-  duration: "Duration",
+  barbell: tk("Barbell"),
+  dumbbell: tk("Dumbbell"),
+  machine_other: tk("Machine"),
+  weighted_bodyweight: tk("Weighted Bodyweight"),
+  assisted_bodyweight: tk("Assisted Bodyweight"),
+  reps_only: tk("Reps Only"),
+  cardio: tk("Cardio"),
+  duration: tk("Duration"),
 };
+
+/**
+ * A muscle, discipline or classification label in the app's language. The
+ * labels are English constants (here and in utils/muscleGroups,
+ * utils/exerciseTags); "Back" the muscle is not "Back" the button.
+ */
+const muscle = (label: string) => (label === "Back" ? tx("Back", "muscle") : t(label));
 
 // WO5 / WO6 (Library › Body view): six figures — male, female, androgynous,
 // front and back — chosen by the Profile sex setting, live (bodyMapVariant).
@@ -79,24 +87,24 @@ const ZONE_KEY_TO_GROUP: Record<ZoneKey, MuscleGroup> = {
 // The Body view's muscle names (chips, list header, zone buttons) — plural
 // Biceps/Triceps, unlike the catalog's singular MUSCLE_GROUP_LABEL.
 const ZONE_LABEL: Record<ZoneKey, string> = {
-  shoulders: "Shoulders",
-  chest: "Chest",
+  shoulders: tk("Shoulders"),
+  chest: tk("Chest"),
   back: "Back",
-  biceps: "Biceps",
-  triceps: "Triceps",
-  forearms: "Forearms",
-  core: "Core",
-  glutes: "Glutes",
-  quads: "Quads",
-  hamstrings: "Hamstrings",
-  calves: "Calves",
+  biceps: tk("Biceps"),
+  triceps: tk("Triceps"),
+  forearms: tk("Forearms"),
+  core: tk("Core"),
+  glutes: tk("Glutes"),
+  quads: tk("Quads"),
+  hamstrings: tk("Hamstrings"),
+  calves: tk("Calves"),
 };
 
 // The figure's caption and img alt: NAME[sex] + " " + ("Front" | "Back").
 const FIGURE_NAME: Record<FigureGender, string> = {
-  male: "Male",
-  female: "Female",
-  andro: "Androgynous",
+  male: tk("Male"),
+  female: tk("Female"),
+  andro: tk("Androgynous"),
 };
 
 // The cb-fade entrance of the figure panel and the selected list.
@@ -116,7 +124,7 @@ const COLORS = {
   chevron: ["#ADA9A4", "#ADA9A4"],
 } as const;
 
-const SAVE_FAILED = "Couldn't save. Try again.";
+const SAVE_FAILED = tk("Couldn't save. Try again.");
 /** A failed custom-exercise write: the rule it broke (B3, PB-O-32), else the WO2 toast. */
 const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : SAVE_FAILED);
 
@@ -210,15 +218,16 @@ export default function LibraryTab() {
   const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
   const selectedZoneKey = sideZoneKeys.find((k) => ZONE_KEY_TO_GROUP[k] === selectedGroup);
   const selectedMuscleLabel = selectedZoneKey
-    ? ZONE_LABEL[selectedZoneKey]
+    ? muscle(ZONE_LABEL[selectedZoneKey])
     : selectedGroup
-      ? MUSCLE_GROUP_LABEL[selectedGroup]
+      ? muscle(MUSCLE_GROUP_LABEL[selectedGroup])
       : "";
   // 03 bodyMapVariant: Male → male, Female → female, Other → androgynous,
   // derived from the Profile sex setting so it switches live.
   const figureGender: FigureGender = bodyMapVariant === "androgynous" ? "andro" : bodyMapVariant;
   const figureKey = `${figureGender}-${bodySide}` as FigureKey;
-  const figureAlt = `${FIGURE_NAME[figureGender]} ${bodySide === "front" ? "Front" : "Back"}`;
+  const figureAlt =
+    bodySide === "front" ? t("{figure}, front", { figure: t(FIGURE_NAME[figureGender]) }) : t("{figure}, back", { figure: t(FIGURE_NAME[figureGender]) });
   // The exercise opened from the list or the Body view: one of the user's
   // own opens the editable popup (WO11), a built-in one the view-only popup
   // (WO12) — catalog rows are no longer edited or duplicated from here.
@@ -311,9 +320,9 @@ export default function LibraryTab() {
         byClass.set(e.classification, list);
       });
       return Array.from(byClass.entries())
-        .sort((a, b) => classificationLabel[a[0]].localeCompare(classificationLabel[b[0]]))
+        .sort((a, b) => t(classificationLabel[a[0]]).localeCompare(t(classificationLabel[b[0]])))
         .map(([key, items]) => ({
-          label: classificationLabel[key],
+          label: t(classificationLabel[key]),
           items: items.sort((a, b) => a.name.localeCompare(b.name)),
         }));
     }
@@ -330,9 +339,9 @@ export default function LibraryTab() {
         });
     });
     return Array.from(byGroup.entries())
-      .sort((a, b) => MUSCLE_GROUP_LABEL[a[0]].localeCompare(MUSCLE_GROUP_LABEL[b[0]]))
+      .sort((a, b) => muscle(MUSCLE_GROUP_LABEL[a[0]]).localeCompare(muscle(MUSCLE_GROUP_LABEL[b[0]])))
       .map(([key, items]) => ({
-        label: MUSCLE_GROUP_LABEL[key],
+        label: muscle(MUSCLE_GROUP_LABEL[key]),
         items: items.sort((a, b) => a.name.localeCompare(b.name)),
       }));
   }, [filtered, sort]);
@@ -355,8 +364,8 @@ export default function LibraryTab() {
       usage?.id === customExerciseId
         ? usage.routines
         : routines.filter((r) => r.exercises.some((ex) => ex.customExerciseId === customExerciseId)).length,
-    templates: workoutTemplates.filter((t) =>
-      t.exercises.some((ex) => ex.customExerciseId === customExerciseId)
+    templates: workoutTemplates.filter((tpl) =>
+      tpl.exercises.some((ex) => ex.customExerciseId === customExerciseId)
     ).length,
     // personal_records CASCADEs on this column, so a record for the movement
     // goes when the movement does.
@@ -408,7 +417,7 @@ export default function LibraryTab() {
               >
                 {/* WO2 #9: drawn #FFFFFF in dark; V6-02 keeps the label ink #0D0B1A. */}
                 {v === "list" ? <List size={13} /> : <User size={13} />}
-                {v === "list" ? "List" : "Body"}
+                {v === "list" ? t("List") : t("Body")}
               </button>
             );
           })}
@@ -421,8 +430,8 @@ export default function LibraryTab() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search exercises…"
-          aria-label="Search exercises"
+          placeholder={t("Search exercises…")}
+          aria-label={t("Search exercises")}
           className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingInlineStart: 36, paddingInlineEnd: 14, fontSize: textPx(14), lineHeight: linePx(21) }}
         />
@@ -444,7 +453,7 @@ export default function LibraryTab() {
           >
             {(["alphabetical", "muscleGroup", "classification"] as SortMode[]).map((srt) => (
               <button key={srt} onClick={() => setSort(srt)} aria-pressed={sort === srt} className="tap flex-none" style={controlStyle(sort === srt)}>
-                {srt === "alphabetical" ? "A–Z" : srt === "muscleGroup" ? "Muscle Group" : "Classification"}
+                {srt === "alphabetical" ? t("A–Z") : srt === "muscleGroup" ? t("Muscle Group") : t("Classification")}
               </button>
             ))}
             <button
@@ -453,7 +462,7 @@ export default function LibraryTab() {
               className="tap flex-none flex items-center"
               style={{ ...controlStyle(!!discipline), gap: 5 }}
             >
-              {discipline ? `Discipline: ${EXERCISE_TAG_LABEL[discipline]}` : "Discipline"}
+              {discipline ? t("Discipline: {name}", { name: muscle(EXERCISE_TAG_LABEL[discipline]) }) : t("Discipline")}
               <ChevronDown size={12} style={{ color: discipline ? "#FFFFFF" : tabColor("chevron") }} />
             </button>
           </div>
@@ -461,7 +470,7 @@ export default function LibraryTab() {
             <span
               aria-hidden
               className="absolute top-0 bottom-0 end-0 pointer-events-none"
-              style={{ width: 28, background: "linear-gradient(to right, rgb(var(--c-cream) / 0), rgb(var(--c-cream)))" }}
+              style={{ width: 28, background: `linear-gradient(to ${isRtl() ? "left" : "right"}, rgb(var(--c-cream) / 0), rgb(var(--c-cream)))` }}
             />
           )}
           </div>
@@ -469,8 +478,8 @@ export default function LibraryTab() {
           {/* WO2 #20: "{n} exercises · {k} yours", the suffix only while the
               filtered list holds some of the user's own (O1). */}
           <p style={{ marginBlock: "0 8px", marginInline: "2px 0", fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
-            {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
-            {yoursCount > 0 ? ` · ${yoursCount} yours` : ""}
+            {tn(filtered.length, "{n} exercise", "{n} exercises")}
+            {yoursCount > 0 ? ` · ${t("{n} yours", { n: yoursCount })}` : ""}
           </p>
 
           <div className="space-y-5">
@@ -507,7 +516,7 @@ export default function LibraryTab() {
                         </span>
                         {e.tags.length > 0 && (
                           <span className="block truncate" style={{ fontSize: textPx(11), lineHeight: linePx(14), color: "rgb(var(--c-charcoal-muted))" }}>
-                            {e.tags.map((t) => EXERCISE_TAG_LABEL[t]).join(" · ")}
+                            {e.tags.map((tag) => muscle(EXERCISE_TAG_LABEL[tag])).join(" · ")}
                           </span>
                         )}
                       </span>
@@ -521,11 +530,11 @@ export default function LibraryTab() {
                 show. A user with three of their own movements and an
                 unreachable catalog would otherwise be looking at a
                 three-exercise library with no hint that 52 are missing. */}
-            {exerciseCatalogError && <LoadErrorCard card message="Couldn't load exercises." onRetry={retryExerciseCatalog} />}
+            {exerciseCatalogError && <LoadErrorCard card message={t("Couldn't load exercises.")} onRetry={retryExerciseCatalog} />}
             {!loading && !exerciseCatalogError && groups.every((g) => g.items.length === 0) && (
               <div className="flex flex-col items-center text-center" style={{ padding: "28px 0", gap: 8 }}>
                 <p className="text-charcoal-faint" style={{ margin: 0, fontSize: textPx(13.5), lineHeight: linePx(20.3) }}>
-                  {query.trim() ? `No exercises match '${query.trim()}'.` : "No exercises match."}
+                  {query.trim() ? t("No exercises match '{query}'.", { query: query.trim() }) : t("No exercises match.")}
                 </p>
                 {query.trim() && (
                   <button
@@ -534,7 +543,7 @@ export default function LibraryTab() {
                     className="tap relative before:absolute before:-inset-[12px] before:content-['']"
                     style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: ink }}
                   >
-                    {`Create '${query.trim()}'`}
+                    {t("Create '{query}'", { query: query.trim() })}
                   </button>
                 )}
               </div>
@@ -561,7 +570,7 @@ export default function LibraryTab() {
                 color: "rgb(var(--c-charcoal-muted))",
               }}
             >
-              {bodySide === "front" ? "Front view" : "Back view"}
+              {bodySide === "front" ? t("Front view") : t("Back view")}
             </p>
             <button
               onClick={flipSide}
@@ -578,7 +587,7 @@ export default function LibraryTab() {
               }}
             >
               <RefreshCw size={13} strokeWidth={2} />
-              {bodySide === "front" ? "Back" : "Front"}
+              {bodySide === "front" ? tx("Back", "side") : t("Front")}
             </button>
           </div>
 
@@ -605,7 +614,7 @@ export default function LibraryTab() {
               selected={selectedZoneKey ?? null}
               onSelect={(zone) => setSelectedGroup(zone ? ZONE_KEY_TO_GROUP[zone] : null)}
               alt={figureAlt}
-              label={(zone) => ZONE_LABEL[zone]}
+              label={(zone) => muscle(ZONE_LABEL[zone])}
             />
             <p className="absolute" style={{ insetInlineStart: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#A79E93" }}>
               {figureAlt}
@@ -622,7 +631,7 @@ export default function LibraryTab() {
               color: "rgb(var(--c-charcoal-muted))",
             }}
           >
-            Muscle groups
+            {t("Muscle groups")}
           </p>
           <div className="flex flex-wrap" style={{ gap: 7 }}>
             {sideZoneKeys.map((zoneKey) => {
@@ -644,7 +653,7 @@ export default function LibraryTab() {
                       : { background: "rgb(var(--c-surface-raised))", border: "1px solid rgb(var(--c-border-option))", color: "rgb(var(--c-charcoal))", fontWeight: 500 }),
                   }}
                 >
-                  {ZONE_LABEL[zoneKey]}
+                  {muscle(ZONE_LABEL[zoneKey])}
                 </button>
               );
             })}
@@ -656,10 +665,10 @@ export default function LibraryTab() {
           {selectedGroup && (
             <div style={{ marginTop: 16, animation: "cb-fade .3s ease both" }}>
               <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
-                {`${selectedMuscleLabel} · ${filtered.length} ${filtered.length === 1 ? "exercise" : "exercises"}`}
+                {`${selectedMuscleLabel} · ${tn(filtered.length, "{n} exercise", "{n} exercises")}`}
               </p>
               {filtered.length === 0 ? (
-                <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
+                <p className="text-sm text-charcoal-faint text-center py-6">{t("No exercises for this group.")}</p>
               ) : (
                 <div className="flex flex-col" style={{ gap: 6 }}>
                   {filtered.map((e) => (
@@ -675,7 +684,7 @@ export default function LibraryTab() {
                       }}
                     >
                       <span style={{ fontSize: textPx(13.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{e.name}</span>
-                      <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{classificationLabel[e.classification]}</span>
+                      <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t(classificationLabel[e.classification])}</span>
                     </button>
                   ))}
                 </div>
@@ -692,8 +701,8 @@ export default function LibraryTab() {
         anchor={disciplineAnchor}
         onClose={() => setDisciplineAnchor(null)}
         options={[
-          { value: "all", label: "All" },
-          ...EXERCISE_TAGS.map((t) => ({ value: t, label: EXERCISE_TAG_LABEL[t] })),
+          { value: "all", label: t("All") },
+          ...EXERCISE_TAGS.map((tag) => ({ value: tag, label: muscle(EXERCISE_TAG_LABEL[tag]) })),
         ]}
         selected={discipline ?? "all"}
         variant="filled"
@@ -707,7 +716,7 @@ export default function LibraryTab() {
         open={creating !== null}
         initial={creating ? { name: creating } : undefined}
         onInfo={(name) => setInfo({ name, source: null })}
-        onHistory={() => setHistory({ name: "New Custom Exercise", match: {} })}
+        onHistory={() => setHistory({ name: t("New Custom Exercise"), match: {} })}
         onClose={() => setCreating(null)}
         onSave={(data: CustomExerciseData) => void addCustomExercise(data).then((error) => error && setToast(saveFailure(error)))}
       />
@@ -748,7 +757,7 @@ export default function LibraryTab() {
 
       <Toast
         open={!!toast}
-        message={toast ?? ""}
+        message={toast ? t(toast) : ""}
         icon={<AlertCircle size={16} style={{ color: dark ? "#F09A8E" : "#C0392B" }} />}
         onExpire={() => setToast(null)}
       />

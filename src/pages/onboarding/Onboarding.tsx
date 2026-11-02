@@ -38,6 +38,10 @@ import { savePreferredActivities } from "../../services/onboarding/clientProfile
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { t } from "../../i18n/core";
+import { TrialOfferStep } from "./client/TrialOfferStep";
+import { usePremium } from "../../services/premium/hooks";
+import { STORE_APPS_LIVE, trialCardDue, trialSeenKey } from "../../services/premium/model";
+import { forumAccess } from "../../services/forum/rules";
 
 export interface OnboardingDraft {
   email: string;
@@ -401,6 +405,26 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
 
   const isProfessional = draft.accountType === "professional";
 
+  // Round G1 (CF): the trial card after "You're all set", hidden while the
+  // store apps aren't live (G7 b); never for under-18s or in recovery-
+  // sensitive mode, and once per account (trialCardDue).
+  const { premium } = usePremium();
+  const [trialOpen, setTrialOpen] = useState(false);
+  const trialSeen = (uid: string) => {
+    try {
+      return window.localStorage.getItem(trialSeenKey(uid)) === "1";
+    } catch {
+      return true;
+    }
+  };
+  const markTrialSeen = (uid: string) => {
+    try {
+      window.localStorage.setItem(trialSeenKey(uid), "1");
+    } catch {
+      // Blocked storage: the card simply isn't remembered.
+    }
+  };
+
   const finish = async (): Promise<{ ok: boolean; message?: string }> => {
     // A second tap after a code failure just proceeds: everything except
     // the code was already saved on the first pass.
@@ -529,9 +553,19 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       return { ok: true };
     }
     void deleteDrafts(authUserId);
+    if (
+      !isProfessional &&
+      trialCardDue({ storeAppsLive: STORE_APPS_LIVE, premium, age: forumAccess(draft.dateOfBirth), recoverySensitive: !!draft.recoverySensitive, seen: trialSeen(authUserId) })
+    ) {
+      markTrialSeen(authUserId);
+      setTrialOpen(true);
+      return { ok: true };
+    }
     navigate(isProfessional ? "/app/pro" : "/app");
     return { ok: true };
   };
+
+  if (trialOpen && premium) return <TrialOfferStep premium={premium} onDone={() => navigate("/app")} />;
 
   if (!serverReady) {
     return (

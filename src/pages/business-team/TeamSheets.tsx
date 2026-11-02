@@ -14,6 +14,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { marketPalette } from "../../theme/marketTokens";
 import { CautionCard } from "../business-market/hiring/teamParts";
 import { inviteIdentifierKind } from "../business-market/hiring/teamModel";
+import { t, tk, tn } from "../../i18n/core";
 
 /**
  * Market + Share 3.0 · B-MA.8.7 (Business Hiring Screens codeMsg /
@@ -24,12 +25,12 @@ import { inviteIdentifierKind } from "../business-market/hiring/teamModel";
  */
 const GUARD_CARD: Record<"professional_code" | "professional_account", { title: string; hint: string }> = {
   professional_code: {
-    title: "Add professionals to your team through Hiring.",
-    hint: "This is a professional's client code. It links a client to a professional for data sharing only.",
+    title: tk("Add professionals to your team through Hiring."),
+    hint: tk("This is a professional's client code. It links a client to a professional for data sharing only."),
   },
   professional_account: {
-    title: "New professionals join through Hiring.",
-    hint: "This email belongs to a professional account. Employee invites are for front desk and other non-professional staff, and can't name class instructors.",
+    title: tk("New professionals join through Hiring."),
+    hint: tk("This email belongs to a professional account. Employee invites are for front desk and other non-professional staff, and can't name class instructors."),
   },
 };
 
@@ -49,6 +50,8 @@ const SeatTop = ({ title, sub }: { title: string; sub: string }) => (
   </div>
 );
 
+// An address, the same in every language.
+const EXAMPLE_EMAIL = "name@example.com";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
@@ -106,7 +109,7 @@ export function InviteSheet({
   useEffect(() => {
     if (!open || idKind === "other") return;
     let alive = true;
-    const t = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       // classify_code (Database Release 2): a professional's own code shows the B-MA.8.7 card; a failed read changes nothing.
       void classifyCode(trimmed).then((r) => {
         if (alive && r.ok) setGuard({ for: trimmed, kind: r.value });
@@ -114,7 +117,7 @@ export function InviteSheet({
     }, 400);
     return () => {
       alive = false;
-      window.clearTimeout(t);
+      window.clearTimeout(timer);
     };
   }, [open, businessId, trimmed, idKind]);
 
@@ -165,7 +168,7 @@ export function InviteSheet({
   const send = async () => {
     if (!valid || busy) return;
     if (isOfflineNow()) {
-      setSendError("Invite didn't send. Check your connection and try again. Nothing was sent.");
+      setSendError(t("Invite didn't send. Check your connection and try again. Nothing was sent."));
       return;
     }
     setBusy(true);
@@ -182,20 +185,20 @@ export function InviteSheet({
 
   const seatSub =
     counts.free === 0
-      ? "No seats free. Front desk and managers don't need one."
+      ? t("No seats free. Front desk and managers don't need one.")
       : counts.free === 1
-        ? "One seat left. It's used once they accept."
-        : `${counts.free} seats free. A seat is used once they accept.`;
+        ? t("One seat left. It's used once they accept.")
+        : tn(counts.free, "1 seat free. A seat is used once they accept.", "{n} seats free. A seat is used once they accept.");
   const noSeatPicked = counts.free === 0 && roleUsesSeat(role);
 
   return (
     <>
-      <BottomSheet open={open} onClose={close} title="Invite an employee" {...SHEET}>
+      <BottomSheet open={open} onClose={close} title={t("Invite an employee")} {...SHEET}>
         <div className="tm-vars">
-          <SeatTop title={`${counts.used} of ${counts.total} seats used`} sub={seatSub} />
+          <SeatTop title={t("{used} of {total} seats used", { used: counts.used, total: counts.total })} sub={seatSub} />
           <div className="tm-fld">
             <label className="tm-fld-l" htmlFor="tm-invite-id">
-              Email or code
+              {t("Email or code")}
             </label>
             <input
               ref={inputRef}
@@ -204,7 +207,7 @@ export function InviteSheet({
               type="email"
               inputMode="email"
               autoComplete="off"
-              placeholder="name@example.com"
+              placeholder={EXAMPLE_EMAIL}
               value={identifier}
               disabled={busy}
               aria-invalid={!!fieldError || !!blockedKind}
@@ -227,9 +230,9 @@ export function InviteSheet({
             <div className="tm-fld">
               <CautionCard
                 id="tm-invite-guard"
-                title={GUARD_CARD[blockedKind].title}
-                hint={GUARD_CARD[blockedKind].hint}
-                action="Go to Hiring"
+                title={t(GUARD_CARD[blockedKind].title)}
+                hint={t(GUARD_CARD[blockedKind].hint)}
+                action={t("Go to Hiring")}
                 onAction={() => {
                   onClose();
                   navigate("/app/business/hiring");
@@ -239,7 +242,7 @@ export function InviteSheet({
           )}
           <div className="tm-fld">
             <span className="tm-fld-l" id="tm-role-l">
-              Role
+              {t("Role")}
             </span>
             <button
               type="button"
@@ -259,8 +262,8 @@ export function InviteSheet({
               <ChevronDown size={16} />
             </button>
             {menu && (
-              <div ref={menuRef} className="tm-menu" role="listbox" aria-label="Role" style={{ top: menuTop }}>
-                <p className="tm-menu-h">Role</p>
+              <div ref={menuRef} className="tm-menu" role="listbox" aria-label={t("Role")} style={{ top: menuTop }}>
+                <p className="tm-menu-h">{t("Role")}</p>
                 {roles.map((o) => (
                   <button
                     key={o.value}
@@ -275,7 +278,7 @@ export function InviteSheet({
                   >
                     <span>
                       <span className="tm-opt-t">{o.label}</span>
-                      <span className="tm-opt-s">{roleUsesSeat(o.value) ? `${o.sub} · uses a seat` : o.sub}</span>
+                      <span className="tm-opt-s">{roleUsesSeat(o.value) ? `${o.sub} · ${t("uses a seat")}` : o.sub}</span>
                     </span>
                     {o.value === role && <Check size={16} strokeWidth={2.6} />}
                   </button>
@@ -285,7 +288,7 @@ export function InviteSheet({
           </div>
           <div className="tm-fld">
             <label className="tm-fld-l" htmlFor="tm-invite-msg">
-              Message (optional)
+              {t("Message (optional)")}
             </label>
             <textarea
               id="tm-invite-msg"
@@ -294,15 +297,15 @@ export function InviteSheet({
               maxLength={300}
               value={message}
               disabled={busy}
-              placeholder="Add a note for them"
+              placeholder={t("Add a note for them")}
               aria-describedby={message.length >= 250 ? "tm-invite-count" : undefined}
               onChange={(e) => setMessage(e.target.value)}
             />
             {message.length >= 250 && (
-              <p id="tm-invite-count" className="tm-fld-count">{`${message.length} of 300`}</p>
+              <p id="tm-invite-count" className="tm-fld-count">{t("{n} of {max}", { n: message.length, max: 300 })}</p>
             )}
           </div>
-          {noSeatPicked && <p className="tm-sh-note">{`${roleLabel} uses a seat and none are free. Add seats, or pick a role that doesn't need one.`}</p>}
+          {noSeatPicked && <p className="tm-sh-note">{t("{role} uses a seat and none are free. Add seats, or pick a role that doesn't need one.", { role: roleLabel })}</p>}
           <button
             type="button"
             className={busy ? "tm-sh-btn busy" : "tm-sh-btn"}
@@ -310,7 +313,7 @@ export function InviteSheet({
             style={blockedKind ? { opacity: 0.4 } : undefined}
             onClick={() => void send()}
           >
-            {busy ? "Sending…" : "Send invite"}
+            {busy ? t("Sending…") : t("Send invite")}
           </button>
           {sendError && (
             <p className="tm-sh-err" role="alert">
@@ -325,9 +328,9 @@ export function InviteSheet({
         tone="destructive"
         destructiveFill="solid"
         cancelVariant="outlined"
-        title="Discard this invite?"
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
+        title={t("Discard this invite?")}
+        confirmLabel={t("Discard")}
+        cancelLabel={t("Keep editing")}
         onCancel={() => setDiscard(false)}
         onConfirm={() => {
           setDiscard(false);
@@ -397,26 +400,27 @@ export function SeatsFullSheet({
 
   const per = price?.seatsPerUnit ?? 5;
   const zero = counts.total === 0;
-  const tail = approveName ? ` ${approveName} can join once a seat is free.` : " Send the invite again once a seat is free.";
+  const tail = approveName ? t("{name} can join once a seat is free.", { name: approveName }) : t("Send the invite again once a seat is free.");
+  const adds = t("Each seat block adds {n} seats.", { n: per });
   const note = !price
-    ? `Each seat block adds ${per} seats.${tail}`
+    ? `${adds} ${tail}`
     : price.amount === null
-      ? `Each seat block adds ${per} seats. ${missingPriceText(price.period)}.${tail}`
-      : `Each seat block is $${price.amount.toFixed(2)} ${perPeriod(price.period)} and adds ${per} seats.${tail}`;
+      ? `${adds} ${missingPriceText(price.period)}. ${tail}`
+      : `${t("Each seat block is {price} {period} and adds {n} seats.", { price: `$${price.amount.toFixed(2)}`, period: perPeriod(price.period), n: per })} ${tail}`;
 
   return (
     <>
-      <BottomSheet open={open && !buying} onClose={onClose} title="All seats in use" {...SHEET}>
+      <BottomSheet open={open && !buying} onClose={onClose} title={t("All seats in use")} {...SHEET}>
         <div className="tm-vars">
-          <SeatTop title={`${counts.used} of ${counts.total} seats used`} sub={zero ? "Add a seat block to start inviting people." : `Add a seat block for ${per} more people.`} />
-          {priceError ? <p className="tm-sh-note">Couldn't load the seat price.</p> : <p className="tm-sh-note">{note}</p>}
+          <SeatTop title={t("{used} of {total} seats used", { used: counts.used, total: counts.total })} sub={zero ? t("Add a seat block to start inviting people.") : t("Add a seat block for {n} more people.", { n: per })} />
+          {priceError ? <p className="tm-sh-note">{t("Couldn't load the seat price.")}</p> : <p className="tm-sh-note">{note}</p>}
           <button type="button" className="tm-sh-btn tap" onClick={() => setBuying(true)}>
-            Add seats
+            {t("Add seats")}
           </button>
           {onInviteNoSeat && !approveName && (
             <div style={{ textAlign: "center" }}>
               <button type="button" className="tm-link tap" onClick={onInviteNoSeat}>
-                Invite someone who doesn't need a seat
+                {t("Invite someone who doesn't need a seat")}
               </button>
             </div>
           )}

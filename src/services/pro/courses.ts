@@ -22,11 +22,12 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { t } from "../../i18n/core";
 import type { Read, Write } from "./clients";
 import type { CourseStatus } from "../courses/authorRules";
 
 const fail = (error: unknown): { ok: false; offline: boolean } => ({ ok: false, offline: isOffline(error) });
-const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
+const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? t(OFFLINE_MESSAGE) : fallback });
 
 export type DripMode = "all_at_once" | "weekly";
 
@@ -190,10 +191,10 @@ export async function fetchRevisionDrip(revisionId: string): Promise<Read<{ mode
 /** set_course_drip, then each module's opens_after_days in order (the plan from courseModel.dripPlan). */
 export async function saveDrip(courseId: string, mode: DripMode, weekday: number | null, plan: { moduleId: string; days: number }[]): Promise<Write> {
   const { error } = await rpc("set_course_drip", { p_course_id: courseId, p_mode: mode, p_weekday: weekday });
-  if (error) return failed(error, "Couldn't save how lessons unlock. Try again.");
+  if (error) return failed(error, t("Couldn't save how lessons unlock. Try again."));
   for (const p of plan) {
     const { error: e } = await rpc("set_module_opens_after", { p_module_id: p.moduleId, p_days: p.days });
-    if (e) return failed(e, "Couldn't save how lessons unlock. Try again.");
+    if (e) return failed(e, t("Couldn't save how lessons unlock. Try again."));
   }
   return { ok: true };
 }
@@ -215,7 +216,7 @@ export async function fetchQuizCounts(lessonIds: string[]): Promise<Map<string, 
 export async function suggestCourse(clientUserId: string, course: { id: string; title: string }): Promise<Write> {
   const { data: thread, error } = await rpc("start_message_thread", { p_other_user_id: clientUserId });
   const threadId = (thread as { id?: string } | null)?.id;
-  if (error || !threadId) return failed(error, "Couldn't open that chat. Try again.");
+  if (error || !threadId) return failed(error, t("Couldn't open that chat. Try again."));
   const { error: e } = await rpc("send_recommendation", {
     p_thread_id: threadId,
     p_title: course.title.slice(0, 120),
@@ -224,6 +225,6 @@ export async function suggestCourse(clientUserId: string, course: { id: string; 
     p_ref_kind: "course",
     p_ref_id: course.id,
   });
-  if (e) return failed(e, "Couldn't send the suggestion. Try again.");
+  if (e) return failed(e, t("Couldn't send the suggestion. Try again."));
   return { ok: true };
 }

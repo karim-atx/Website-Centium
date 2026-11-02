@@ -15,6 +15,8 @@
 // before that is still shown safely. A link whose address isn't http(s) (a
 // javascript: link, a relative path) shows its words without a link.
 
+import { tk } from "../../i18n/core";
+
 export type Inline =
   | { t: "text"; v: string }
   | { t: "strong"; c: Inline[] }
@@ -29,7 +31,7 @@ export type Block =
   | { t: "ol"; start: number; items: Inline[][] };
 
 /** The short help line the editors show under a lesson's text box. */
-export const FORMATTING_HELP = "You can use # Heading, **bold**, *italic*, - lists, 1. numbered lists and [links](https://…). HTML isn't allowed.";
+export const FORMATTING_HELP = tk("You can use # Heading, **bold**, *italic*, - lists, 1. numbered lists and [links](https://…). HTML isn't allowed.");
 
 /** An http or https address, normalised; null for anything else. */
 export function safeHref(raw: string): string | null {

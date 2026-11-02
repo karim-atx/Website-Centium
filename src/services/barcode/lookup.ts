@@ -2,6 +2,10 @@ import { supabase } from "../../../lib/supabase/client";
 import { lookupByBarcode, type FoodSearchResult } from "../food";
 import { normalizeGtin } from "../../utils/gtin";
 import { OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
+import { claimBarcodeScan } from "../premium/g2Calls";
+import { askPremium } from "../premium/asks";
+import { edgeRefusalOf, limitReachedText } from "../premium/g2";
 
 // What a scanned or typed barcode turns into, in the order the handover sets
 // (FO3.2 / HO2.1):
@@ -30,7 +34,10 @@ export interface OffProduct {
 }
 
 export type BarcodeLookup =
-  | { kind: "catalog"; gtin: string; food: FoodSearchResult }
+  /** Round G2: `scansLeft` is claim_barcode_scan()'s answer (null = no limit, or a Database without G2). */
+  | { kind: "catalog"; gtin: string; food: FoodSearchResult; scansLeft?: number | null }
+  /** Round G2: the free plan's scans for today are used (ATXQ2, or the Edge Function's 403). */
+  | { kind: "limit"; gtin: string; message: string }
   | { kind: "off"; gtin: string; product: OffProduct }
   | { kind: "miss"; gtin: string }
   | { kind: "invalid" }
@@ -56,11 +63,11 @@ interface FnProduct {
  */
 export function lookupErrorMessage(code: string | undefined, offline = false): string {
   if (offline) return OFFLINE_MESSAGE;
-  if (code === "rate_limited") return "You've scanned a lot in the last hour. Try again later, or enter it by hand.";
+  if (code === "rate_limited") return t("You've scanned a lot in the last hour. Try again later, or enter it by hand.");
   if (code === "upstream_rate_limited" || code === "upstream_unavailable" || code === "upstream_error")
-    return "Open Food Facts isn't answering right now. Try again, or enter it by hand.";
-  if (code === "unauthenticated") return "Your session expired. Sign in again to look products up.";
-  return "Couldn't look that barcode up. Try again, or enter it by hand.";
+    return t("Open Food Facts isn't answering right now. Try again, or enter it by hand.");
+  if (code === "unauthenticated") return t("Your session expired. Sign in again to look products up.");
+  return t("Couldn't look that barcode up. Try again, or enter it by hand.");
 }
 
 /** Maps the function's success body to the product the confirm card shows. */
@@ -84,7 +91,16 @@ export async function resolveBarcode(raw: string): Promise<BarcodeLookup> {
   if (!gtin) return { kind: "invalid" };
 
   const food = await lookupByBarcode(gtin);
-  if (food) return { kind: "catalog", gtin, food };
+  if (food) {
+    // Round G2: a scan answered from our catalogue counts toward a free
+    // member's 3 a day. Any failure but the limit lets the scan go ahead.
+    const claim = await claimBarcodeScan();
+    if (claim.kind === "limit") {
+      askPremium("barcode_scans_per_day", "refusal");
+      return { kind: "limit", gtin, message: limitReachedText("barcode_scans_per_day") };
+    }
+    return { kind: "catalog", gtin, food, scansLeft: claim.scansLeft };
+  }
 
   const { data, error } = await supabase.functions.invoke<FnProduct>("lookup-barcode", { body: { barcode: gtin } });
   if (!error && data) return { kind: "off", gtin, product: toOffProduct(data) };
@@ -103,6 +119,11 @@ export async function resolveBarcode(raw: string): Promise<BarcodeLookup> {
   // Not found, and found without usable numbers or a name, both go to the
   // manual form: the user can read the packet.
   if (status === 404 || status === 422) return { kind: "miss", gtin };
+  // Round G2: the Edge Function's own count (403 free_limit_reached).
+  if (edgeRefusalOf(status, code)) {
+    askPremium("barcode_scans_per_day", "refusal");
+    return { kind: "limit", gtin, message: limitReachedText("barcode_scans_per_day") };
+  }
   // No HTTP response at all means the request never reached the function:
   // supabase-js reports that as FunctionsFetchError, with no status or code.
   const offline =

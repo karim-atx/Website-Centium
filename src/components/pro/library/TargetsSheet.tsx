@@ -12,6 +12,7 @@ import { LockLine } from "../LockLine";
 import { ProCardSkeleton, ProError } from "../states";
 import { resolveWeights } from "../../../services/workout/coach";
 import { fmtKg, isActive } from "./libraryModel";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W5 TR14 v2 "Targets per client" for one exercise of a template.
@@ -85,7 +86,12 @@ export const TargetsSheet: React.FC<{
   const pct = exercise.intensityPct;
   const sets = exercise.sets ?? exercise.maxSets ?? exercise.minSets;
   const reps = exercise.reps ?? exercise.maxReps ?? exercise.minReps;
-  const head = [exercise.name, sets && reps ? `${sets} x ${reps}${pct ? ` at ${pct}% of 1RM` : ""}` : pct ? `${pct}% of 1RM` : null].filter(Boolean).join(" · ");
+  const head = [
+    exercise.name,
+    sets && reps ? (pct ? t("{sets} x {reps} at {pct}% of 1RM", { sets, reps, pct }) : t("{sets} x {reps}", { sets, reps })) : pct ? t("{pct}% of 1RM", { pct }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const weightFor = (clientId: string): number | null => {
     const o = override[clientId];
@@ -100,7 +106,7 @@ export const TargetsSheet: React.FC<{
       const w = weightFor(r.a.clientId);
       if (w == null || !Number.isFinite(w) || !editable[r.a.id]) continue;
       const res = await setClientCopyWeight(r.a.routineId!, { exerciseId: exercise.exerciseId, name: exercise.name }, w);
-      if (!res.ok) lines.push(`${r.client!.name}: ${res.message}`);
+      if (!res.ok) lines.push(t("{name}: {message}", { name: r.client!.name, message: t(res.message) }));
     }
     setSaving(false);
     setResult(lines);
@@ -108,13 +114,13 @@ export const TargetsSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} onBack={onBack} title="Targets per client">
+    <BottomSheet open={open} onClose={onClose} onBack={onBack} title={t("Targets per client")}>
       <div className="space-y-4 animate-fade-slide-up">
         <p style={{ fontSize: textPx(13), color: INK.chS }}>{head}</p>
-        {!exercise.exerciseId && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>Targets from 1RM work with exercises from the exercise database.</p>}
+        {!exercise.exerciseId && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("Targets from 1RM work with exercises from the exercise database.")}</p>}
         {failed && <ProError onRetry={() => setReload((n) => n + 1)} />}
         {!failed && oneRms === null && exercise.exerciseId && rows.length > 0 && <ProCardSkeleton lines={3} />}
-        {rows.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>Not assigned to anyone yet.</p>}
+        {rows.length === 0 && <p style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("Not assigned to anyone yet.")}</p>}
         {oneRms &&
           rows.map(({ a, client }, i) => {
             const c = client!;
@@ -126,7 +132,7 @@ export const TargetsSheet: React.FC<{
                     <Avatar name={c.name} url={c.avatarUrl} size={36} />
                     <span className="flex-1 truncate" style={{ fontSize: textPx(15), fontWeight: 600, color: INK.ch }}>{c.name}</span>
                   </div>
-                  <LockLine what="Progress" clientFirstName={first} />
+                  <LockLine what={t("Progress")} clientFirstName={first} />
                 </div>
               );
             }
@@ -140,25 +146,25 @@ export const TargetsSheet: React.FC<{
                 <div className="flex items-center mb-2" style={{ gap: 10 }}>
                   <Avatar name={c.name} url={c.avatarUrl} size={36} />
                   <span className="flex-1 truncate" style={{ fontSize: textPx(15), fontWeight: 600, color: INK.ch }}>{c.name}</span>
-                  <span style={{ fontSize: textPx(12.5), color: INK.chF }}>{rm != null ? `1RM ${fmtKg(rm)} kg` : "No 1RM yet"}</span>
+                  <span style={{ fontSize: textPx(12.5), color: INK.chF }}>{rm != null ? t("1RM {kg} kg", { kg: fmtKg(rm) }) : t("No 1RM yet")}</span>
                 </div>
                 <div className="flex items-center rounded-xl bg-cream-soft border border-charcoal/10" style={{ paddingBlock: "0", paddingInline: "12px 8px", gap: 8, minHeight: 44 }}>
                   <input
                     value={shown}
                     onChange={(e) => setOverride((p) => ({ ...p, [a.clientId]: e.target.value.replace(/[^\d.]/g, "") }))}
                     inputMode="decimal"
-                    placeholder="Enter weight"
-                    aria-label={`Weight in kg for ${c.name}`}
+                    placeholder={t("Enter weight")}
+                    aria-label={t("Weight in kg for {name}", { name: c.name })}
                     disabled={!editable[a.id]}
                     className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
                   />
-                  {shown && <span style={{ fontSize: textPx(13), color: INK.chS }}>kg</span>}
+                  {shown && <span style={{ fontSize: textPx(13), color: INK.chS }}>{t("kg")}</span>}
                   {!overridden && from != null && (
-                    <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.tealDark, background: INK.tealPale, borderRadius: 8, padding: "3px 8px" }}>From 1RM</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.tealDark, background: INK.tealPale, borderRadius: 8, padding: "3px 8px" }}>{t("From 1RM")}</span>
                   )}
                   {overridden && (
                     <>
-                      <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.prDeep, background: INK.prPale, borderRadius: 8, padding: "3px 8px" }}>Set by you</span>
+                      <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.prDeep, background: INK.prPale, borderRadius: 8, padding: "3px 8px" }}>{t("Set by you")}</span>
                       <button
                         type="button"
                         onClick={() =>
@@ -171,28 +177,28 @@ export const TargetsSheet: React.FC<{
                         className="tap"
                         style={{ minHeight: 44, padding: "0 4px", fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}
                       >
-                        Reset
+                        {t("Reset")}
                       </button>
                     </>
                   )}
                 </div>
                 {rm == null && !overridden && (
                   <p className="flex items-center mt-1.5" style={{ gap: 6, fontSize: textPx(12), color: INK.chF }}>
-                    <Info size={13} aria-hidden /> No 1RM recorded for this client
+                    <Info size={13} aria-hidden /> {t("No 1RM recorded for this client")}
                   </p>
                 )}
-                {!editable[a.id] && <p className="mt-1.5" style={{ fontSize: textPx(12), color: INK.chF }}>{`${first} isn't connected with you any more, so their copy can't be changed.`}</p>}
+                {!editable[a.id] && <p className="mt-1.5" style={{ fontSize: textPx(12), color: INK.chF }}>{t("{first} isn't connected with you any more, so their copy can't be changed.", { first })}</p>}
               </div>
             );
           })}
-        <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>Weight = 1RM x intensity, rounded to the nearest 2.5 kg.</p>
+        <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{t("Weight = 1RM x intensity, rounded to the nearest 2.5 kg.")}</p>
         {result?.map((l) => (
           <p key={l} className="text-[11.5px] font-semibold text-status-high">
             {l}
           </p>
         ))}
         <Button fullWidth size="lg" disabled={saving || !oneRms || rows.length === 0} onClick={() => void save()}>
-          {saving ? "Saving…" : "Save targets"}
+          {saving ? t("Saving…") : t("Save targets")}
         </Button>
       </div>
     </BottomSheet>

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeCourseError, type AccessLevel, type CourseAction, type LessonKind, type Tier } from "./rules";
 import { contactRefusal } from "../moderation/text";
+import { t, tk } from "../../i18n/core";
 
 // Courses, the learner side (Database 99ec17b).
 //
@@ -15,11 +16,11 @@ import { contactRefusal } from "../moderation/text";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string; code?: string };
 
-const GENERIC = "Something went wrong. Try again.";
+const GENERIC = tk("Something went wrong. Try again.");
 
 function fail(error: { code?: string; message?: string }, action: CourseAction): { ok: false; message: string; code?: string } {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
-  return { ok: false, message: describeCourseError(error, action) ?? GENERIC, code: error.code };
+  return { ok: false, message: describeCourseError(error, action) ?? t(GENERIC), code: error.code };
 }
 
 export interface CourseCategory {
@@ -135,7 +136,7 @@ export async function fetchAuthorNames(ids: string[]): Promise<Map<string, strin
   const unique = [...new Set(ids)];
   if (unique.length === 0) return out;
   const { data } = await supabase.from("public_profile_summary").select("id, first_name").in("id", unique);
-  for (const r of data ?? []) if (r.id) out.set(r.id, r.first_name?.trim() || "Professional");
+  for (const r of data ?? []) if (r.id) out.set(r.id, r.first_name?.trim() || t("Professional"));
   return out;
 }
 
@@ -313,7 +314,7 @@ export async function pdfLink(lessonId: string): Promise<Result<string>> {
   const { data: path, error } = await supabase.rpc("course_pdf_path", { p_lesson_id: lessonId });
   if (error || typeof path !== "string") return fail(error ?? {}, "pdf");
   const { data, error: signErr } = await supabase.storage.from("course-pdfs").createSignedUrl(path, 10 * 60, { download: true });
-  if (signErr || !data) return { ok: false, message: "The PDF couldn't be opened. Try again." };
+  if (signErr || !data) return { ok: false, message: t("The PDF couldn't be opened. Try again.") };
   return { ok: true, value: data.signedUrl };
 }
 

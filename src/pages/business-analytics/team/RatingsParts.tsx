@@ -7,6 +7,7 @@ import { ago } from "../reputation/reputationModel";
 import { ReportSheet } from "../reputation/ReviewSheets";
 import { MIN_REVIEWS, sortReviews, type ReviewSort } from "./ratingsModel";
 import { Sheet, Stars } from "./parts";
+import { t, tk, tn } from "../../../i18n/core";
 
 // AN5 Ratings parts on B14: the rating graphic (AnTeamV6 mkRatG, lg on the
 // Ratings page and sm in the scorecard's Ratings box), the scorecard
@@ -32,7 +33,7 @@ export function RatingGraphic({
 }) {
   const mx = Math.max(1, ...(dist ?? [0]));
   return (
-    <div className={`an5-ratg${size === "sm" ? " is-sm" : ""}`} role="img" aria-label={`${avg.toFixed(1)} out of 5 from ${count} reviews`}>
+    <div className={`an5-ratg${size === "sm" ? " is-sm" : ""}`} role="img" aria-label={tn(count, "{avg} out of 5 from {n} reviews", "{avg} out of 5 from {n} reviews", { avg: avg.toFixed(1) })}>
       <div className="flex flex-col items-start" style={{ gap: 4 }}>
         <span className="an5-rat-avg">{avg.toFixed(1)}</span>
         <Stars avg={avg} size={size === "lg" ? 18 : 15} />
@@ -73,7 +74,7 @@ export function Snippets({ list, onOpen }: { list: BizReview[]; onOpen: (id: str
           key={r.id}
           type="button"
           className="an5-snip tap"
-          aria-label={`${r.rating} star review from ${r.label}, ${ago(r.createdAt)}`}
+          aria-label={t("{rating} star review from {name}, {when}", { rating: r.rating ?? "", name: r.label, when: ago(r.createdAt) })}
           onClick={() => onOpen(r.id)}
         >
           <span className="an5-snip-line">
@@ -93,9 +94,9 @@ export function Snippets({ list, onOpen }: { list: BizReview[]; onOpen: (id: str
 }
 
 const SORTS: { k: ReviewSort; t: string }[] = [
-  { k: "newest", t: "Newest" },
-  { k: "highest", t: "Highest rated" },
-  { k: "lowest", t: "Lowest rated" },
+  { k: "newest", t: tk("Newest") },
+  { k: "highest", t: tk("Highest rated") },
+  { k: "lowest", t: tk("Lowest rated") },
 ];
 const PAGE = 20;
 
@@ -177,14 +178,14 @@ export function ReviewsSheet({
           <span className="an5-emptyblock-tile">
             <Star size={20} aria-hidden />
           </span>
-          <p className="an5-emptyblock-t">No reviews yet</p>
+          <p className="an5-emptyblock-t">{t("No reviews yet")}</p>
           <p className="an5-emptyblock-s">{emptyText}</p>
         </div>
       ) : (
         <>
           <div className="an5-revsum">
             {isNew ? (
-              <b className="is-new">New</b>
+              <b className="is-new">{t("New")}</b>
             ) : (
               <>
                 <span style={{ display: "flex", color: "var(--an-gold)" }}>
@@ -203,17 +204,17 @@ export function ReviewsSheet({
                   className="an5-sortbtn tap"
                   aria-haspopup="listbox"
                   aria-expanded={sortOpen}
-                  aria-label={`Sort reviews: ${SORTS.find((x) => x.k === sort)!.t}`}
+                  aria-label={t("Sort reviews: {sort}", { sort: t(SORTS.find((x) => x.k === sort)!.t) })}
                   onClick={() => setSortOpen((o) => !o)}
                 >
-                  {SORTS.find((x) => x.k === sort)!.t}
+                  {t(SORTS.find((x) => x.k === sort)!.t)}
                   <ChevronDown size={14} aria-hidden />
                 </button>
                 {sortOpen && (
                   <>
                     <div className="fixed inset-0 z-[4]" aria-hidden onClick={() => setSortOpen(false)} />
-                    <div className="an5-sortlist" role="listbox" aria-label="Sort by">
-                      <p className="an5-sortlist-l">Sort by</p>
+                    <div className="an5-sortlist" role="listbox" aria-label={t("Sort by")}>
+                      <p className="an5-sortlist-l">{t("Sort by")}</p>
                       {SORTS.map((o) => (
                         <button
                           key={o.k}
@@ -228,7 +229,7 @@ export function ReviewsSheet({
                             listRef.current?.scrollIntoView({ block: "start" });
                           }}
                         >
-                          {o.t}
+                          {t(o.t)}
                           {o.k === sort && (
                             <span className="an5-sortopt-chk">
                               <Check size={15} strokeWidth={2.6} aria-hidden />
@@ -257,7 +258,7 @@ export function ReviewsSheet({
                     {!r.redacted && !reported.has(r.id) && (
                       <button
                         type="button"
-                        aria-label={`Options for the review by ${r.label}`}
+                        aria-label={t("Options for the review by {name}", { name: r.label })}
                         aria-haspopup="menu"
                         aria-expanded={menuFor?.review.id === r.id}
                         onClick={(e) => setMenuFor({ review: r, anchor: e.currentTarget })}
@@ -268,7 +269,7 @@ export function ReviewsSheet({
                       </button>
                     )}
                     {!r.redacted && r.rating !== null && (
-                      <span className="an5-rev-r" aria-label={`${r.rating} out of 5 stars`}>
+                      <span className="an5-rev-r" aria-label={t("{rating} out of 5 stars", { rating: r.rating ?? "" })}>
                         <span style={{ display: "flex", color: "var(--an-gold)" }}>
                           <Star size={14} fill="currentColor" stroke="none" aria-hidden />
                         </span>
@@ -278,14 +279,14 @@ export function ReviewsSheet({
                   </span>
                 </div>
                 {r.redacted ? (
-                  <p className="an5-rev-t is-removed">A moderator removed this review. It no longer counts toward the rating.</p>
+                  <p className="an5-rev-t is-removed">{t("A moderator removed this review. It no longer counts toward the rating.")}</p>
                 ) : (
                   <p className="an5-rev-t">{r.body}</p>
                 )}
                 {/* R10: a reply Centium removed is hidden. */}
                 {!r.redacted && r.reply && !r.reply.redacted && (
                   <div className="an5-rev-reply">
-                    <p className="an5-rev-reply-l">Reply from {businessName}</p>
+                    <p className="an5-rev-reply-l">{t("Reply from {name}", { name: businessName })}</p>
                     <p className="an5-rev-reply-t">{r.reply.body}</p>
                   </div>
                 )}
@@ -293,8 +294,8 @@ export function ReviewsSheet({
             ))}
             {sorted.length > shown && (
               <button type="button" className="an5-more tap" style={{ marginTop: 0 }} onClick={() => setShown((n) => n + PAGE)}>
-                Show more reviews
-                <ChevronRight size={14} aria-hidden />
+                {t("Show more reviews")}
+                <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
               </button>
             )}
           </div>
@@ -305,7 +306,7 @@ export function ReviewsSheet({
         anchor={menuFor?.anchor ?? null}
         onClose={() => setMenuFor(null)}
         align="right"
-        options={[{ value: "report", label: "Report", icon: <Flag size={15} strokeWidth={1.75} /> }]}
+        options={[{ value: "report", label: t("Report"), icon: <Flag size={15} strokeWidth={1.75} /> }]}
         onSelect={() => {
           if (menuFor) setReport(menuFor.review);
           setMenuFor(null);

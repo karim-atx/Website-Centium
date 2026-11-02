@@ -1,6 +1,6 @@
 import type React from "react";
 import { ChevronDown, ChevronRight, Eye, EyeOff, RotateCw } from "lucide-react";
-import { cap } from "./tones";
+import { t } from "../../../i18n/core";
 
 // Small AN3 building blocks (AnClassesV6 template), styled by classes.css.
 
@@ -54,9 +54,10 @@ export const ListingRow: React.FC<{
   onClick: () => void;
   style?: React.CSSProperties;
 }> = ({ listed, people, disabled, onClick, style }) => {
-  const title = listed ? "Listed on Explore" : "Hidden from Explore";
-  const act = listed ? "Manage" : "Turn on";
-  const sub = listed ? `${cap(people)} can find you and book` : `Turn it on so ${people} can book`;
+  const title = listed ? t("Listed on Explore") : t("Hidden from Explore");
+  const act = listed ? t("Manage") : t("Turn on");
+  const members = people === "members";
+  const sub = listed ? (members ? t("Members can find you and book") : t("Clients can find you and book")) : members ? t("Turn it on so members can book") : t("Turn it on so clients can book");
   const Icon = listed ? Eye : EyeOff;
   return (
     <button
@@ -64,7 +65,7 @@ export const ListingRow: React.FC<{
       className="an3-listing tap"
       onClick={onClick}
       disabled={disabled}
-      aria-label={`Listing status: ${title}. ${act}`}
+      aria-label={t("Listing status: {status}. {action}", { status: title, action: act })}
       style={style}
     >
       <span
@@ -93,11 +94,11 @@ export const ListingRow: React.FC<{
 /** Error with Retry inside a card (AN3-001 O2). */
 export const ErrorBody: React.FC<{ onRetry: () => void; disabled?: boolean }> = ({ onRetry, disabled }) => (
   <div className="an3-empty" role="alert">
-    <p className="an3-empty-title">Couldn't load your class numbers</p>
-    <p className="an3-empty-body">Check your connection and try again.</p>
+    <p className="an3-empty-title">{t("Couldn't load your class numbers")}</p>
+    <p className="an3-empty-body">{t("Check your connection and try again.")}</p>
     <button type="button" className="an3-retry tap" onClick={onRetry} disabled={disabled}>
       <RotateCw size={15} aria-hidden />
-      Retry
+      {t("Retry")}
     </button>
   </div>
 );
@@ -108,7 +109,7 @@ const Sk: React.FC<{ w: number | string; h: number; r?: number; style?: React.CS
 
 /** Loading (AN3-001 O1, AN3-006 O1): the card keeps its layout. */
 export const LoadingBody: React.FC = () => (
-  <div aria-busy="true" aria-label="Loading your class numbers">
+  <div aria-busy="true" aria-label={t("Loading your class numbers")}>
     <div className="an3-fr">
       <Sk w="60%" h={11.5} />
       <Sk w={64} h={30} r={8} style={{ marginTop: 22 }} />

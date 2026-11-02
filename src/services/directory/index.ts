@@ -23,6 +23,7 @@ import type { PaymentModality } from "../professional-profile";
 // their node:test files can name it.
 export type { DirectoryListing } from "./model";
 import type { DirectoryListing } from "./model";
+import { directoryCall, directoryErrorText, firstRow, type DirRead } from "./eg";
 
 const LISTING_COLUMNS =
   "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence, playlist_url";
@@ -94,14 +95,15 @@ function describe(error: PostgrestError): string {
  * "no professionals yet" over a network error.
  */
 export async function fetchPublicDirectory(): Promise<DirectoryResult> {
-  const { data, error } = await supabase
-    .from("public_professional_directory")
-    .select(LISTING_COLUMNS)
-    .order("first_name", { ascending: true });
+  // Round G2 (EG): the counting function, the same rows ordered by first name.
+  const { data, error } = await directoryCall<DirectoryRow[]>("directory_professionals", { p_profile_id: null }, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    supabase.from("public_professional_directory").select(LISTING_COLUMNS).order("first_name", { ascending: true }) as unknown as PromiseLike<DirRead<DirectoryRow[]>>
+  );
 
   if (error) {
     console.error("[directory] Could not read the directory:", error.message);
-    return { ok: false, message: describe(error) };
+    return { ok: false, message: directoryErrorText(error) ?? describe(error as PostgrestError) };
   }
 
   const listings: DirectoryListing[] = ((data ?? []) as unknown as DirectoryRow[])
@@ -128,13 +130,13 @@ export async function fetchPublicDirectory(): Promise<DirectoryResult> {
  * both end at "Professional not found" and the row may genuinely not exist.
  */
 export async function fetchListing(profileId: string): Promise<DirectoryListing | null> {
-  const { data, error } = await supabase
-    .from("public_professional_directory")
-    .select(LISTING_COLUMNS)
-    .eq("profile_id", profileId)
-    .maybeSingle();
+  // Round G2 (EG): the counting function, one professional by profile id.
+  const { data, error } = await directoryCall<DirectoryRow[] | DirectoryRow>("directory_professionals", { p_profile_id: profileId }, () =>
+    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
+    supabase.from("public_professional_directory").select(LISTING_COLUMNS).eq("profile_id", profileId).maybeSingle() as unknown as PromiseLike<DirRead<DirectoryRow>>
+  );
 
-  const row = data as unknown as DirectoryRow | null;
+  const row = firstRow(data);
   if (error || !row?.profile_id) {
     if (error) console.error("[directory] Could not read the listing:", error.message);
     return null;

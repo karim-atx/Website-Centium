@@ -6,6 +6,7 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { acceptFor } from "../../../services/storage";
 import { useHealthMode, rowRule, tileFill, deepInk, HelpLine, INK, INK_FAINT } from "./kit";
 import { t } from "../../../i18n/core";
+import { PremiumLabel } from "../../premium/PremiumAskHost";
 
 // OURS-upload-choice: "camera or files" for Labs "Upload a report", Imaging
 // "Add imaging", the web "Scan a report" (HE1.9.2 is NATIVE: the live camera
@@ -26,7 +27,9 @@ export const UploadChoiceSheet: React.FC<{
   onTypeIt?: () => void;
   /** Round E · Scan a report: the line saying the report is read on the phone. */
   note?: string;
-}> = ({ open, onClose, title, bucket, onFile, onTypeIt, note }) => {
+  /** Round G2: scanning a report needs Premium while the free limits apply; the photo and file rows ask instead ("Type it in" stays free). */
+  premiumScan?: { locked: boolean; ask: () => void };
+}> = ({ open, onClose, title, bucket, onFile, onTypeIt, note, premiumScan }) => {
   const { dark, hc } = useHealthMode();
   const camera = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -44,9 +47,11 @@ export const UploadChoiceSheet: React.FC<{
     onFile(file);
   };
 
-  const rows: { key: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; title: string; sub: string; onClick: () => void }[] = [
-    { key: "photo", icon: Camera, title: t("Take a photo"), sub: t("Use your camera"), onClick: () => camera.current?.click() },
-    { key: "file", icon: FileText, title: t("Choose a file"), sub: t("PDF, JPG or PNG"), onClick: () => picker.current?.click() },
+  const locked = premiumScan?.locked === true;
+  const askPremiumScan = () => premiumScan?.ask();
+  const rows: { key: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; title: string; sub: string; onClick: () => void; premium?: boolean }[] = [
+    { key: "photo", icon: Camera, title: t("Take a photo"), sub: t("Use your camera"), onClick: () => (locked ? askPremiumScan() : camera.current?.click()), premium: locked },
+    { key: "file", icon: FileText, title: t("Choose a file"), sub: t("PDF, JPG or PNG"), onClick: () => (locked ? askPremiumScan() : picker.current?.click()), premium: locked },
   ];
   if (onTypeIt) rows.push({ key: "type", icon: PenLine, title: t("Type it in"), sub: t("No file, just the details"), onClick: onTypeIt });
 
@@ -81,6 +86,7 @@ export const UploadChoiceSheet: React.FC<{
               {r.sub}
             </span>
           </span>
+          {r.premium && <PremiumLabel className="shrink-0" />}
           <ChevronRight size={17} style={{ color: INK_FAINT }} aria-hidden />
         </button>
       ))}

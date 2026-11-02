@@ -4,6 +4,7 @@ import { textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { INK } from "../proInk";
 import { fieldBox } from "./courseStyles";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W6 Courses: the board's pieces for MO18 v3 and MO28, literal
@@ -36,11 +37,11 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
     <button
       type="button"
       onClick={onBack}
-      aria-label="Back"
+      aria-label={t("Back")}
       className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']"
       style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}
     >
-      <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+      <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
     </button>
     <div className="min-w-0" style={{ marginTop: 3 }}>
       <h1 style={{ fontSize: textPx(size), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>{title}</h1>
@@ -50,7 +51,7 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
 );
 
 export const StepBar: React.FC<{ steps: readonly string[]; at: number; onStep?: (i: number) => void }> = ({ steps, at, onStep }) => (
-  <div className="flex" style={{ gap: 6, marginBottom: 14 }} role="list" aria-label="Steps">
+  <div className="flex" style={{ gap: 6, marginBottom: 14 }} role="list" aria-label={t("Steps")}>
     {steps.map((s, i) => {
       const body = (
         <>
@@ -59,7 +60,7 @@ export const StepBar: React.FC<{ steps: readonly string[]; at: number; onStep?: 
             className="block whitespace-nowrap overflow-hidden text-ellipsis"
             style={{ fontSize: textPx(10.5), fontWeight: 700, color: i === at ? INK.prDeep : INK.chF, marginTop: 5 }}
           >
-            {i + 1} · {s}
+            {i + 1} · {t(s)}
           </span>
         </>
       );

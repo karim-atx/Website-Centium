@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AlertCircle, Baby, Bell, CalendarClock, Droplet, Eye, Globe, Moon, Pill, RefreshCw, Trash2, XCircle } from "lucide-react";
+import { AlertCircle, Baby, Bell, CalendarClock, Droplet, Eye, Globe, Moon, Pill, RefreshCw, Sparkles, Trash2, XCircle } from "lucide-react";
 import { CycleCalendarIcon } from "../icons/PartBIcons";
 import { CONDITIONS, PERIOD_REMINDER_DAYS, SETTINGS_LIMITS, type Condition, type CycleSettings } from "../../services/cycle/types";
 import * as G from "../../services/cycle/guidance";
@@ -11,6 +11,42 @@ import type { Method } from "../../services/contraception";
 import { zonePlace } from "../settings/timezoneOptions";
 import { t, tn, tx } from "../../i18n/core";
 import { CycleCard, CycleFooter, CycleHelp, CycleRow, CycleSection, OptionButton, type, useCycleMode } from "./cycleUi";
+import { useApp } from "../../context/AppContext";
+import { usePremium } from "../../services/premium/hooks";
+import { useG4Available } from "../premium/g4/useG4";
+import { insightsToggleShown } from "../../services/premium/g4";
+import { getInsightsEnabled } from "../../services/cycle";
+
+/**
+ * undrawn (Round G, no handover)
+ * Round G4 (G fixes): the member's own switch for the Premium phase insights
+ * (cycle_settings.insights_enabled, on by default), read on its own (see
+ * getInsightsEnabled) and saved like the other cycle settings. Shown only
+ * while the Premium switch is on and the Database has G4; nothing otherwise.
+ */
+function useInsightsSwitch(): { shown: boolean; on: boolean; set: (on: boolean) => void } {
+  const { authUserId } = useApp();
+  const { premium } = usePremium();
+  const g4 = useG4Available();
+  const ask = !!authUserId && g4 && premium?.premiumOn === true;
+  const [value, setValue] = useState<{ userId: string; on: boolean | null } | null>(null);
+  useEffect(() => {
+    if (!ask || !authUserId) return;
+    let live = true;
+    void getInsightsEnabled(authUserId).then((on) => live && setValue({ userId: authUserId, on }));
+    return () => {
+      live = false;
+    };
+  }, [ask, authUserId]);
+  const on = value && value.userId === authUserId ? value.on : null;
+  return {
+    shown: insightsToggleShown(premium, g4, on),
+    on: on === true,
+    set: (next) => {
+      if (authUserId) setValue({ userId: authUserId, on: next });
+    },
+  };
+}
 
 // HE1.10.b, the Settings tab, in the open Settings layout: lavender section
 // lines, one-line rows with 36 tiles, toggles and chevrons. Every repo
@@ -47,6 +83,10 @@ export const CycleSettingsTab: React.FC<{
   const { settings } = p;
   const pregnancyWeek = p.pregnancy ? gestationOn(p.today, p.pregnancy) : null;
   const zoneCity = p.timezone ? zonePlace(p.timezone) : t(G.SETTINGS_TIMEZONE_NOT_SET);
+  const insights = useInsightsSwitch();
+  const setInsights = async (on: boolean) => {
+    if (await p.save({ insightsEnabled: on })) insights.set(on);
+  };
 
   return (
     <div data-cycle-tab="settings">
@@ -146,6 +186,13 @@ export const CycleSettingsTab: React.FC<{
       </CycleSection>
 
       <CycleSection label={t(G.SETTINGS_MORE)} style={{ marginTop: 32 }}>
+        {insights.shown && (
+          <CycleRow
+            icon={Sparkles}
+            title={t("Phase insights")}
+            toggle={{ checked: insights.on, onChange: (on) => void setInsights(on), disabled: p.busy, label: t("Phase insights") }}
+          />
+        )}
         <CycleRow
           icon={Pill}
           title={t(G.SETTINGS_CONTRACEPTION)}

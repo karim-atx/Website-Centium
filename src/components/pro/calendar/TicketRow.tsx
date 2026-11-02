@@ -5,6 +5,7 @@ import { liftInk } from "../../market/marketColor";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
+import { t } from "../../../i18n/core";
 
 // Market + Share 3.0 · W5 · the P-CA agenda row as a ticket (Professional
 // Calendar Screens lines 52–59, the `hired()` / `own()` rows): position
@@ -64,9 +65,7 @@ export const TicketRow: React.FC<TicketRowProps> = ({ title, sub, colour, mark, 
           </span>
           {mark ? (
             <span style={{ marginTop: 2, display: "inline-flex", alignItems: "center", gap: 4, fontSize: textPx(10), fontWeight: 700, color: ink }}>
-              <TicketCheck size={11} />
-              Hired via Centium
-            </span>
+              <TicketCheck size={11} />{t("Hired via Centium")}</span>
           ) : null}
         </span>
         {badge ? <span style={{ fontSize: textPx(11), fontWeight: 600, whiteSpace: "nowrap", color: badge.ink, flexShrink: 0 }}>{badge.text}</span> : null}
@@ -106,9 +105,9 @@ export const TicketRow: React.FC<TicketRowProps> = ({ title, sub, colour, mark, 
 
 /** The badge words and inks for a class row (P-CA.5.2 / 5.3 / 5.4). */
 export function classBadgeText(badge: string | null, colour: string, dark: boolean): { text: string; ink: string } | null {
-  if (badge === "cancelled") return { text: "Cancelled", ink: dark ? "#F09A8E" : hc() ? "#A13023" : "#C0392B" };
-  if (badge === "completed") return { text: "Completed", ink: INK.good };
-  if (badge === "updated") return { text: "Updated", ink: classInk(colour, dark) };
+  if (badge === "cancelled") return { text: t("Cancelled"), ink: dark ? "#F09A8E" : hc() ? "#A13023" : "#C0392B" };
+  if (badge === "completed") return { text: t("Completed"), ink: INK.good };
+  if (badge === "updated") return { text: t("Updated"), ink: classInk(colour, dark) };
   return null;
 }
 

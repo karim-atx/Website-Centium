@@ -13,7 +13,7 @@ import { dayMonthYear, type PassState } from "../venues/venueLogic";
 import type { VenueMember } from "../venues/consoleLogic";
 import { clock12 } from "../../utils/time12";
 import { appLocale } from "../../i18n/format";
-import { t } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // ---------------------------------------------------------------------------
 // Dates
@@ -140,23 +140,23 @@ export interface ScanResultView {
  * so a valid pass says "{name}'s pass is valid" (R2), never "checked in".
  */
 export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; sellsDayPass: boolean }): ScanResultView {
-  const name = check.firstName ?? "This member";
+  const name = check.firstName ?? t("This member");
   const minor = check.isMinor && check.state !== "unknown" && check.state !== "code_expired";
   const until = check.expiresOn ? dayMonthYear(check.expiresOn) : null;
-  const base = { minor, primary: "scan-next" as const, primaryLabel: "Scan next" };
+  const base = { minor, primary: "scan-next" as const, primaryLabel: t("Scan next") };
   switch (check.state) {
     case "valid": {
-      const validLine = until ? `valid until ${until}` : "no end date";
-      const body = check.planName ? `${check.planName} · ${validLine}` : until ? `Valid until ${until}` : "Valid, with no end date";
+      const validLine = until ? t("valid until {date}", { date: until }) : t("no end date");
+      const body = check.planName ? `${check.planName} · ${validLine}` : until ? t("Valid until {date}", { date: until }) : t("Valid, with no end date");
       return {
         ...base,
         kind: "valid",
         tone: "good",
         icon: "check",
-        title: opts.checkInsLive ? `${name} is checked in` : `${possessive(name)} pass is valid`,
+        title: opts.checkInsLive ? t("{name} is checked in", { name }) : t("{name}'s pass is valid", { name }),
         body,
         secondary: "done",
-        secondaryLabel: "Done",
+        secondaryLabel: t("Done"),
       };
     }
     case "awaiting_payment":
@@ -165,12 +165,12 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "awaiting_payment",
         tone: "warn",
         icon: "banknote",
-        title: "Payment due",
-        body: `${possessive(name)} membership isn't paid yet. Take the payment, then mark it as paid.`,
+        title: t("Payment due"),
+        body: t("{name}'s membership isn't paid yet. Take the payment, then mark it as paid.", { name }),
         primary: "mark-paid",
-        primaryLabel: "Mark as paid",
+        primaryLabel: t("Mark as paid"),
         secondary: "not-now",
-        secondaryLabel: "Not now",
+        secondaryLabel: t("Not now"),
       };
     case "expired":
       return {
@@ -178,10 +178,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "expired",
         tone: "high",
         icon: "x",
-        title: "Pass expired",
-        body: until ? `${possessive(name)} pass ended on ${until}. They can renew in the app.` : `${possessive(name)} pass has ended. They can renew in the app.`,
+        title: t("Pass expired"),
+        body: until ? t("{name}'s pass ended on {date}. They can renew in the app.", { name, date: until }) : t("{name}'s pass has ended. They can renew in the app.", { name }),
         secondary: opts.sellsDayPass ? "sell-day-pass" : "done",
-        secondaryLabel: opts.sellsDayPass ? "Sell a day pass" : "Done",
+        secondaryLabel: opts.sellsDayPass ? t("Sell a day pass") : t("Done"),
       };
     case "cancelled":
       return {
@@ -189,10 +189,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "cancelled",
         tone: "high",
         icon: "x",
-        title: "Membership cancelled",
-        body: `${possessive(name)} membership was cancelled. They can buy a new one in the app.`,
+        title: t("Membership cancelled"),
+        body: t("{name}'s membership was cancelled. They can buy a new one in the app.", { name }),
         secondary: "done",
-        secondaryLabel: "Done",
+        secondaryLabel: t("Done"),
       };
     case "upcoming":
       return {
@@ -200,10 +200,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "upcoming",
         tone: "primary",
         icon: "scan",
-        title: "Pass not active yet",
-        body: `This pass is for ${possessive(name)} next period, which hasn't started yet.`,
+        title: t("Pass not active yet"),
+        body: t("This pass is for {name}'s next period, which hasn't started yet.", { name }),
         secondary: "check-in",
-        secondaryLabel: "Check someone in",
+        secondaryLabel: t("Check someone in"),
       };
     case "refunded":
       return {
@@ -211,10 +211,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "refunded",
         tone: "high",
         icon: "x",
-        title: "Pass refunded",
-        body: `${possessive(name)} membership was refunded, so this pass no longer works.`,
+        title: t("Pass refunded"),
+        body: t("{name}'s membership was refunded, so this pass no longer works.", { name }),
         secondary: "done",
-        secondaryLabel: "Done",
+        secondaryLabel: t("Done"),
       };
     case "unavailable":
       return {
@@ -223,10 +223,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "unavailable",
         tone: "soft",
         icon: "scan",
-        title: "Status unavailable",
-        body: "This pass's status couldn't be read. Check them in by name instead.",
+        title: t("Status unavailable"),
+        body: t("This pass's status couldn't be read. Check them in by name instead."),
         secondary: "check-in",
-        secondaryLabel: "Check someone in",
+        secondaryLabel: t("Check someone in"),
       };
     case "unknown":
       return {
@@ -235,10 +235,10 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         kind: "unknown",
         tone: "high",
         icon: "scan",
-        title: "Pass not recognised",
-        body: "This isn't a pass for your gym. Check them in by name instead.",
+        title: t("Pass not recognised"),
+        body: t("This isn't a pass for your gym. Check them in by name instead."),
         secondary: "check-in",
-        secondaryLabel: "Check someone in",
+        secondaryLabel: t("Check someone in"),
       };
     case "code_expired":
       // Round F2 AB5: a screenshot, or a phone whose clock is off.
@@ -251,7 +251,7 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
         title: t("Code expired"),
         body: t("This code has expired. Ask the member to open their pass."),
         secondary: "check-in",
-        secondaryLabel: "Check someone in",
+        secondaryLabel: t("Check someone in"),
       };
   }
 }
@@ -263,17 +263,17 @@ export function scanResultView(check: PassCheck, opts: { checkInsLive: boolean; 
  * time is the earlier entry's, when today's list has it.
  */
 export function alreadyInView(firstName: string | null, at: Date | string | null): ScanResultView {
-  const name = firstName ?? "This member";
+  const name = firstName ?? t("This member");
   return {
     kind: "already",
     tone: "primary",
     icon: "user-check",
-    title: "Already checked in",
-    body: at ? `${name} came in at ${clock12(at)}.` : `${name} came in within the last ${ALREADY_IN_HOURS} hours.`,
+    title: t("Already checked in"),
+    body: at ? t("{name} came in at {time}.", { name, time: clock12(at) }) : t("{name} came in within the last {n} hours.", { name, n: ALREADY_IN_HOURS }),
     primary: "scan-next",
-    primaryLabel: "Scan next",
+    primaryLabel: t("Scan next"),
     secondary: "done",
-    secondaryLabel: "Done",
+    secondaryLabel: t("Done"),
     minor: false,
   };
 }
@@ -298,7 +298,7 @@ export function checkInView(c: CheckIn, opts: { sellsDayPass: boolean; alreadyAt
   });
   const live = { checkInsLive: true, sellsDayPass: opts.sellsDayPass };
   if (c.result === "in") return scanResultView(asCheck("valid", true), live);
-  const name = c.firstName ?? "This member";
+  const name = c.firstName ?? t("This member");
   switch (c.denyReason) {
     case "unpaid":
       return scanResultView(asCheck(c.passState === "refunded" ? "refunded" : "awaiting_payment"), live);
@@ -311,12 +311,12 @@ export function checkInView(c: CheckIn, opts: { sellsDayPass: boolean; alreadyAt
         kind: "other_venue",
         tone: "high",
         icon: "x",
-        title: "Pass for another venue",
-        body: `${possessive(name)} pass is for another of your venues.`,
+        title: t("Pass for another venue"),
+        body: t("{name}'s pass is for another of your venues.", { name }),
         primary: "scan-next",
-        primaryLabel: "Scan next",
+        primaryLabel: t("Scan next"),
         secondary: opts.sellsDayPass ? "sell-day-pass" : "done",
-        secondaryLabel: opts.sellsDayPass ? "Sell a day pass" : "Done",
+        secondaryLabel: opts.sellsDayPass ? t("Sell a day pass") : t("Done"),
         minor: c.isMinor,
       };
     case "under_min_age":
@@ -324,12 +324,12 @@ export function checkInView(c: CheckIn, opts: { sellsDayPass: boolean; alreadyAt
         kind: "under_min_age",
         tone: "high",
         icon: "x",
-        title: "Under the minimum age",
-        body: `${name} is under this venue's minimum entry age.`,
+        title: t("Under the minimum age"),
+        body: t("{name} is under this venue's minimum entry age.", { name }),
         primary: "scan-next",
-        primaryLabel: "Scan next",
+        primaryLabel: t("Scan next"),
         secondary: "done",
-        secondaryLabel: "Done",
+        secondaryLabel: t("Done"),
         minor: false,
       };
     default: {
@@ -348,12 +348,12 @@ export const VERIFY_FAILED_VIEW: ScanResultView = {
   kind: "error",
   tone: "soft",
   icon: "retry",
-  title: "Couldn't check this pass",
-  body: "Something went wrong. Try scanning again.",
+  title: t("Couldn't check this pass"),
+  body: t("Something went wrong. Try scanning again."),
   primary: "scan-again",
-  primaryLabel: "Scan again",
+  primaryLabel: t("Scan again"),
   secondary: "done",
-  secondaryLabel: "Done",
+  secondaryLabel: t("Done"),
   minor: false,
 };
 
@@ -423,32 +423,32 @@ export function toCheckIn(row: CheckInRow | null | undefined): CheckIn | null {
 
 /** The reason as the Entries row sub says it ("{reason} · {time}", OP1-013 row 19). */
 export const DENIED_LABEL: Record<DenyReason, string> = {
-  no_pass: "Not recognised",
-  other_venue: "Another venue's pass",
-  expired: "Expired",
-  unpaid: "Payment due",
-  not_started: "Not started yet",
-  under_min_age: "Under the minimum age",
-  guest_limit: "Guest limit reached",
+  no_pass: tk("Not recognised"),
+  other_venue: tk("Another venue's pass"),
+  expired: tk("Expired"),
+  unpaid: tk("Payment due"),
+  not_started: tk("Not started yet"),
+  under_min_age: tk("Under the minimum age"),
+  guest_limit: tk("Guest limit reached"),
 };
 
 /** The check-in sheet's line for a refusal it recorded (OP1-015 O4 slot). */
 export function deniedLine(reason: DenyReason): string {
   switch (reason) {
     case "expired":
-      return "Not checked in: the pass has expired.";
+      return t("Not checked in: the pass has expired.");
     case "unpaid":
-      return "Not checked in: the membership isn't paid yet. Take the payment, then mark it as paid.";
+      return t("Not checked in: the membership isn't paid yet. Take the payment, then mark it as paid.");
     case "not_started":
-      return "Not checked in: this pass hasn't started yet.";
+      return t("Not checked in: this pass hasn't started yet.");
     case "other_venue":
-      return "Not checked in: this pass is for another of your venues.";
+      return t("Not checked in: this pass is for another of your venues.");
     case "under_min_age":
-      return "Not checked in: they're under this venue's minimum entry age.";
+      return t("Not checked in: they're under this venue's minimum entry age.");
     case "guest_limit":
-      return "Not checked in: no guest passes left this month.";
+      return t("Not checked in: no guest passes left this month.");
     default:
-      return "Not checked in: there's no valid pass.";
+      return t("Not checked in: there's no valid pass.");
   }
 }
 
@@ -487,7 +487,7 @@ export interface Entry {
 
 export function toEntry(r: EntryRow): Entry {
   const guest = !r.person_id && !!r.guest_label?.trim();
-  const title = r.member_first_name?.trim() || r.guest_label?.trim() || (r.person_id ? "Member" : "Unknown pass");
+  const title = r.member_first_name?.trim() || r.guest_label?.trim() || (r.person_id ? t("Member") : t("Unknown pass"));
   return {
     id: r.check_in_id,
     at: r.at,
@@ -512,11 +512,11 @@ export const isDeskMethod = (m: CheckInMethod): boolean => m === "manual";
  * "Guest of {host} · 6:42 PM".
  */
 export function entrySub(e: Entry): string {
-  const t = clock12(e.at);
-  if (e.result === "denied") return `${DENIED_LABEL[e.reason ?? "no_pass"]} · ${t}`;
-  if (e.isDayPass) return `Day pass · ${t}`;
-  if (e.isGuest) return e.hostName ? `Guest of ${e.hostName} · ${t}` : `Guest · ${t}`;
-  return isDeskMethod(e.method) ? `Checked in at desk · ${t}` : `QR pass · ${t}`;
+  const at = clock12(e.at);
+  if (e.result === "denied") return `${t(DENIED_LABEL[e.reason ?? "no_pass"])} · ${at}`;
+  if (e.isDayPass) return `${t("Day pass")} · ${at}`;
+  if (e.isGuest) return e.hostName ? `${t("Guest of {host}", { host: e.hostName })} · ${at}` : `${t("Guest")} · ${at}`;
+  return isDeskMethod(e.method) ? `${t("Checked in at desk")} · ${at}` : `${t("QR pass")} · ${at}`;
 }
 
 export type SummaryRow = {
@@ -564,7 +564,7 @@ export function toDeskSummary(r: SummaryRow | null | undefined): DeskSummary {
 
 /** DA1-007 row 3: Quiet / Steady / Busy; null → "Not enough data yet" (HANDOVER_API B10). */
 export function rightNowLabel(r: RightNow | null): string {
-  return r === "quiet" ? "Quiet" : r === "steady" ? "Steady" : r === "busy" ? "Busy" : "Not enough data yet";
+  return r === "quiet" ? t("Quiet") : r === "steady" ? tx("Steady", "busyness") : r === "busy" ? t("Busy") : t("Not enough data yet");
 }
 
 export type BusyRow = { weekday: number | string; hour: number | string; average_entries: number | string | null };
@@ -652,7 +652,7 @@ export interface DayPassPlan {
 export function dayPassPlans(rows: PlanRow[]): DayPassPlan[] {
   return rows
     .filter((p) => (p.status ?? "active") === "active" && (p.plan_type === "day_pass" || p.billing === "daily" || p.valid_for_days === 1))
-    .map((p) => ({ id: p.id, name: p.name.trim() || "Day pass", price: num(p.price) }))
+    .map((p) => ({ id: p.id, name: p.name.trim() || t("Day pass"), price: num(p.price) }))
     .sort((a, b) => a.price - b.price || a.name.localeCompare(b.name));
 }
 
@@ -690,9 +690,9 @@ export interface DeskSale {
 export function toDeskSale(r: DeskSaleRow): DeskSale {
   return {
     id: r.id,
-    planName: r.plan_name?.trim() || "Day pass",
+    planName: r.plan_name?.trim() || t("Day pass"),
     personId: r.person_id ?? null,
-    who: r.guest_label?.trim() || "Member",
+    who: r.guest_label?.trim() || t("Member"),
     amount: num(r.amount),
     paid: r.payment_status === "paid",
     soldAt: r.sold_at,
@@ -716,19 +716,19 @@ export function mondayOf(d: Date): string {
 export function deskMessage(code: string | undefined, fallback: string): string {
   switch (code) {
     case "ATXE6":
-      return "Check-in at the desk is turned off for this venue.";
+      return t("Check-in at the desk is turned off for this venue.");
     case "ATXE7":
-      return "They're under this venue's minimum entry age.";
+      return t("They're under this venue's minimum entry age.");
     case "ATXC4":
-      return "This day pass is paused, so it can't be sold.";
+      return t("This day pass is paused, so it can't be sold.");
     case "ATX82":
-      return "That day pass isn't offered at this venue.";
+      return t("That day pass isn't offered at this venue.");
     case "ATX03":
-      return "You don't have access to the front desk here.";
+      return t("You don't have access to the front desk here.");
     case "ATX10":
-      return "This sale is already paid.";
+      return t("This sale is already paid.");
     case "ATX08":
-      return "That couldn't be found. Reload and try again.";
+      return t("That couldn't be found. Reload and try again.");
     default:
       return fallback;
   }
@@ -745,7 +745,7 @@ export function barHeights(values: number[]): number[] {
 export function hourShort(h: number): string {
   const hh = ((h % 24) + 24) % 24;
   const n = hh % 12 === 0 ? 12 : hh % 12;
-  return `${n}${hh < 12 ? "a" : "p"}`;
+  return `${n}${hh < 12 ? tx("a", "hour short") : tx("p", "hour short")}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -795,9 +795,9 @@ export function toDeskMember(r: DeskMemberRow): DeskMember {
     membershipId: r.membership_id,
     personId: r.person_id ?? null,
     memberNumber: r.member_number ?? null,
-    firstName: r.member_first_name?.trim() || "Member",
+    firstName: r.member_first_name?.trim() || t("Member"),
     isMinor: r.member_is_minor === true,
-    planName: r.plan_name?.trim() || "Membership",
+    planName: r.plan_name?.trim() || t("Membership"),
     status: r.status,
     paymentStatus: r.payment_status ?? null,
     expiresOn: r.expires_on ?? null,
@@ -865,7 +865,7 @@ export interface RenewalDue {
  * never $0.
  */
 export function grantedRenewal(price: number | null | undefined, fmt: (n: number) => string = deskMoney): string {
-  return `granted with a code, renewing charges ${price != null ? fmt(price) : "the plan price"}`;
+  return price != null ? t("granted with a code, renewing charges {price}", { price: fmt(price) }) : t("granted with a code, renewing charges the plan price");
 }
 
 /** renewal_price: undefined when the column is absent, null when it is NULL. */
@@ -883,9 +883,9 @@ export function toRenewalDue(r: RenewalDueRow, gymId: string): RenewalDue {
     gymId,
     personId: r.person_id ?? null,
     memberNumber: r.member_number ?? null,
-    label: r.member_label?.trim() || "Member",
+    label: r.member_label?.trim() || t("Member"),
     isMinor: r.member_is_minor === true,
-    planName: r.plan_name?.trim() || "Membership",
+    planName: r.plan_name?.trim() || t("Membership"),
     expiresOn: r.expires_on,
     daysLeft: Number.isFinite(n) ? n : 0,
     cancelAtPeriodEnd: r.cancel_at_period_end === true,
@@ -908,12 +908,12 @@ export const toChase = (rows: RenewalDue[]): RenewalDue[] => rows.filter((r) => 
 /** OP1-017 row 9 sub: "{plan} · renews in {n} days", or what has already been decided. */
 export function renewalSub(r: RenewalDue): string {
   const plan = r.planName;
-  if (r.alreadyRenewed) return `${plan} · renewed, next period from ${dayMonthYear(r.expiresOn)}`;
-  if (r.cancelAtPeriodEnd) return `${plan} · ends ${dayMonthYear(r.expiresOn)}`;
+  if (r.alreadyRenewed) return `${plan} · ${t("renewed, next period from {date}", { date: dayMonthYear(r.expiresOn) })}`;
+  if (r.cancelAtPeriodEnd) return `${plan} · ${t("ends {date}", { date: dayMonthYear(r.expiresOn) })}`;
   const grant = r.granted ? ` · ${grantedRenewal(r.renewalPrice)}` : "";
-  if (r.daysLeft <= 0) return `${plan} · renews today${grant}`;
-  if (r.daysLeft === 1) return `${plan} · renews tomorrow${grant}`;
-  return `${plan} · renews in ${r.daysLeft} days${grant}`;
+  if (r.daysLeft <= 0) return `${plan} · ${t("renews today")}${grant}`;
+  if (r.daysLeft === 1) return `${plan} · ${t("renews tomorrow")}${grant}`;
+  return `${plan} · ${tn(r.daysLeft, "renews in {n} day", "renews in {n} days")}${grant}`;
 }
 
 export type RenewalStatsRow = {
@@ -945,7 +945,7 @@ export function toRenewalStats(r: RenewalStatsRow): RenewalStats {
 
 /** "84%", or "–" when nothing was due (never 0% or 100% over an empty period). */
 export function renewalRateLabel(s: Pick<RenewalStats, "rate"> | null): { value: string; note: string | null } {
-  if (!s || s.rate === null) return { value: "–", note: "No renewals were due" };
+  if (!s || s.rate === null) return { value: "–", note: t("No renewals were due") };
   return { value: `${Math.round(s.rate * 100)}%`, note: null };
 }
 
@@ -953,19 +953,19 @@ export function renewalRateLabel(s: Pick<RenewalStats, "rate"> | null): { value:
 export function membershipActionMessage(code: string | undefined, action: "renew" | "end"): string {
   switch (code) {
     case "ATX10":
-      return action === "renew" ? "This membership has already been renewed." : "This membership has already ended.";
+      return action === "renew" ? t("This membership has already been renewed.") : t("This membership has already ended.");
     case "ATX25":
       return action === "renew"
-        ? "This plan has been archived. Move the member to a current plan first."
-        : "This membership has no end date, so it can't end at the period end. End it now instead.";
+        ? t("This plan has been archived. Move the member to a current plan first.")
+        : t("This membership has no end date, so it can't end at the period end. End it now instead.");
     case "ATXC5":
       // 20261121020000: renewing a membership set to end is refused.
-      return action === "renew" ? "This membership is set to end, so it can't be renewed." : "Couldn't end the membership. Try again.";
+      return action === "renew" ? t("This membership is set to end, so it can't be renewed.") : t("Couldn't end the membership. Try again.");
     case "ATX09":
-      return "You don't have permission to manage members.";
+      return t("You don't have permission to manage members.");
     case "ATX08":
-      return "That membership couldn't be found.";
+      return t("That membership couldn't be found.");
     default:
-      return action === "renew" ? "Couldn't renew the membership. Try again." : "Couldn't end the membership. Try again.";
+      return action === "renew" ? t("Couldn't renew the membership. Try again.") : t("Couldn't end the membership. Try again.");
   }
 }

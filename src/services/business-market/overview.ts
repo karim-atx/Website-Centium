@@ -15,6 +15,7 @@
 
 import { marketRpc, num, type MarketResult } from "../market/rpc";
 import { parseOverview, REORDER_NOT_YOURS, type MarketplaceOverview } from "./overviewModel";
+import { t } from "../../i18n/core";
 
 export function fetchMarketplaceOverview(businessId: string): Promise<MarketResult<MarketplaceOverview | null>> {
   return marketRpc("business_marketplace_overview", { p_business_id: businessId }, "Couldn't load your marketplace figures.", parseOverview);
@@ -23,6 +24,6 @@ export function fetchMarketplaceOverview(businessId: string): Promise<MarketResu
 /** Saves a shelf's order (ids top to bottom); the value is how many rows moved. */
 export async function reorderShowcase(ids: string[]): Promise<MarketResult<number>> {
   const r = await marketRpc("reorder_showcase_items", { p_ids: ids }, "Couldn't save the order. Try again.", (data) => num(data) ?? 0);
-  if (!r.ok && r.code === "ATX96") return { ...r, message: REORDER_NOT_YOURS };
+  if (!r.ok && r.code === "ATX96") return { ...r, message: t(REORDER_NOT_YOURS) };
   return r;
 }
