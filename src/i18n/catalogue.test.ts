@@ -30,13 +30,14 @@ import * as proforms from "./ar/proforms.ts";
 import * as proinsights from "./ar/proinsights.ts";
 import * as provitals from "./ar/provitals.ts";
 import * as procourses from "./ar/procourses.ts";
+import * as pronetwork from "./ar/pronetwork.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

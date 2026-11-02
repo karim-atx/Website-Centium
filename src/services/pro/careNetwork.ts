@@ -24,6 +24,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
+import { t } from "../../i18n/core";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -31,9 +32,9 @@ const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(e
 function message(error: unknown, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
   const e = error as { code?: string; message?: string } | null;
-  if (e?.code === "ATX12") return "That person isn't your client any more.";
-  if (e?.code === "ATX09") return "Refer only to colleagues in your care network.";
-  if (e?.code === "ATX08") return "This has already been answered.";
+  if (e?.code === "ATX12") return t("That person isn't your client any more.");
+  if (e?.code === "ATX09") return t("Refer only to colleagues in your care network.");
+  if (e?.code === "ATX08") return t("This has already been answered.");
   // 22023: the function's own raised text is not shown (a raw server message); logged, and the fallback said.
   if (e?.code === "22023") console.warn("[care-network] refused:", e.message);
   return fallback;
@@ -159,17 +160,17 @@ export async function fetchLinks(me: string): Promise<Read<CareLink[]>> {
 
 export async function requestLink(professionalId: string): Promise<Write> {
   const { error } = await rpc("request_care_link", { p_professional: professionalId });
-  return error ? { ok: false, message: message(error, "Couldn't send the request. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send the request. Try again.")) } : { ok: true };
 }
 
 export async function respondLink(linkId: string, accept: boolean): Promise<Write> {
   const { error } = await rpc("respond_care_link", { p_link_id: linkId, p_accept: accept });
-  return error ? { ok: false, message: message(error, "Couldn't answer. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't answer. Try again.")) } : { ok: true };
 }
 
 export async function removeLink(linkId: string): Promise<Write> {
   const { error } = await rpc("remove_care_link", { p_link_id: linkId });
-  return error ? { ok: false, message: message(error, "Couldn't remove it. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't remove it. Try again.")) } : { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,7 +241,7 @@ export async function fetchReferrals(me: string): Promise<Read<{ received: Refer
 
 export async function referClient(clientId: string, toProfessional: string, reason: string): Promise<Write> {
   const { error } = await rpc("refer_client", { p_client_id: clientId, p_to_professional: toProfessional, p_reason: reason.trim() });
-  return error ? { ok: false, message: message(error, "Couldn't send the referral. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send the referral. Try again.")) } : { ok: true };
 }
 
 /**
@@ -252,17 +253,17 @@ export async function referClient(clientId: string, toProfessional: string, reas
 export async function respondReferral(id: string, accept: boolean, reason?: string | null): Promise<Write> {
   const why = !accept ? (reason ?? "").trim() : "";
   const { error } = await rpc("respond_care_referral", { p_referral_id: id, p_accept: accept, p_reason: why || null });
-  return error ? { ok: false, message: message(error, "Couldn't answer the referral. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't answer the referral. Try again.")) } : { ok: true };
 }
 
 export async function withdrawReferral(id: string): Promise<Write> {
   const { error } = await rpc("withdraw_care_referral", { p_referral_id: id });
-  return error ? { ok: false, message: message(error, "Couldn't withdraw it. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't withdraw it. Try again.")) } : { ok: true };
 }
 
 export async function disputeReferral(id: string, reason: string): Promise<Write> {
   const { error } = await rpc("dispute_care_referral", { p_referral_id: id, p_reason: reason.trim() });
-  return error ? { ok: false, message: message(error, "Couldn't send it to support. Try again.") } : { ok: true };
+  return error ? { ok: false, message: message(error, t("Couldn't send it to support. Try again.")) } : { ok: true };
 }
 
 /** Received items that need my answer: referrals the client agreed to, and colleagues asking to connect. */

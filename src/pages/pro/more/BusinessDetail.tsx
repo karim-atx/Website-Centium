@@ -17,6 +17,7 @@ import { textPx } from "../../../theme/textSize";
 import { todayLocal } from "../../../utils/date";
 import { range12, time12 } from "../../../utils/time12";
 import { appLocale } from "../../../i18n/format";
+import { t, tx } from "../../../i18n/core";
 
 /**
  * Release 3 · a business's page (/app/more/businesses/:id; MO13, gen/r13.js
@@ -70,9 +71,9 @@ export default function BusinessDetail() {
     onClick: () => navigate(`/app/pro/calendar?day=${c.date}`),
   }));
   const contact: ListRow[] = [
-    ...(facts?.email ? [{ key: "email", icon: Mail, title: facts.email, meta: "Email", onClick: () => window.open(`mailto:${facts.email}`, "_self") }] : []),
-    ...(facts?.phone ? [{ key: "phone", icon: Phone, title: facts.phone, meta: "Phone", onClick: () => window.open(`tel:${facts.phone}`, "_self") }] : []),
-    ...(facts?.location ? [{ key: "address", icon: MapPin, title: facts.location, meta: "Address" }] : []),
+    ...(facts?.email ? [{ key: "email", icon: Mail, title: facts.email, meta: t("Email"), onClick: () => window.open(`mailto:${facts.email}`, "_self") }] : []),
+    ...(facts?.phone ? [{ key: "phone", icon: Phone, title: facts.phone, meta: t("Phone"), onClick: () => window.open(`tel:${facts.phone}`, "_self") }] : []),
+    ...(facts?.location ? [{ key: "address", icon: MapPin, title: facts.location, meta: t("Address") }] : []),
   ];
 
   const leave = async () => {
@@ -105,14 +106,14 @@ export default function BusinessDetail() {
       if (kind !== undefined) reload();
       return;
     }
-    setToast(`You joined ${name}.`);
+    setToast(t("You joined {business}.", { business: name }));
     invalidateConsoleAccess();
     reload();
   };
 
   return (
     <div data-pro-business="">
-      <EyebrowHead eyebrow="Business" title={name || " "} onBack={back} />
+      <EyebrowHead eyebrow={t("Business")} title={name || " "} onBack={back} />
       {offline && <OfflineLine />}
       {failed ? (
         <ProError onRetry={reload} />
@@ -142,43 +143,43 @@ export default function BusinessDetail() {
           <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
             <div className="min-w-0" style={{ flex: "0 0 calc(50% - 4px)", background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 12px 11px" }}>
               <p className="truncate" style={{ fontSize: textPx(10.5), fontWeight: 600, color: INK.chF }}>
-                Classes this month
+                {t("Classes this month")}
               </p>
               <p className="flex items-baseline" style={{ gap: 6, marginTop: 6 }}>
                 <span style={{ fontSize: textPx(22), fontWeight: 800, letterSpacing: "-0.02em", color: INK.ch, lineHeight: 1 }}>{thisMonth}</span>
                 {delta !== 0 && (
                   <span className="inline-flex items-center" style={{ gap: 2, fontSize: textPx(11), fontWeight: 700, color: delta > 0 ? INK.good : INK.hi }}>
                     {delta > 0 ? <TrendingUp size={12} aria-hidden /> : <TrendingDown size={12} aria-hidden />}
-                    {delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`}
+                    <bdi>{delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`}</bdi>
                   </span>
                 )}
               </p>
-              <p className="truncate" style={{ fontSize: textPx(10), color: INK.chT, marginTop: 4 }}>{`At ${name}`}</p>
+              <p className="truncate" style={{ fontSize: textPx(10), color: INK.chT, marginTop: 4 }}>{t("At {name}", { name })}</p>
             </div>
           </div>
 
-          <SectionHead label="Your schedule here" />
+          <SectionHead label={t("Your schedule here")} />
           {schedule.length > 0 ? (
             <ListCard rows={schedule} />
           ) : (
-            <p style={{ fontSize: textPx(12.5), color: INK.chF, margin: "0 0 12px" }}>No classes scheduled for you here.</p>
+            <p style={{ fontSize: textPx(12.5), color: INK.chF, margin: "0 0 12px" }}>{t("No classes scheduled for you here.")}</p>
           )}
 
-          <SectionHead label="Business console" />
+          <SectionHead label={t("Business console")} />
           <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
             <ConsoleLinks businessId={id} businessName={name} bare />
           </div>
 
           {contact.length > 0 && (
             <>
-              <SectionHead label="Contact" />
+              <SectionHead label={tx("Contact", "section")} />
               <ListCard rows={contact} />
             </>
           )}
 
           {e?.acceptedAt && (
             <button type="button" onClick={() => setLeaving(true)} className="tap w-full flex items-center justify-center" style={{ minHeight: 48, fontSize: textPx(15), fontWeight: 700, color: INK.hi, marginTop: 4 }}>
-              {`Leave ${name}`}
+              {t("Leave {business}", { business: name })}
             </button>
           )}
         </>

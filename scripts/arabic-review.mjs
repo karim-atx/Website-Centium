@@ -41,6 +41,7 @@ const AREAS = [
   ["proinsights", "Professional tools: Client and practice insights"],
   ["provitals", "Professional tools: Biomarkers, vitals and sleep"],
   ["procourses", "Professional tools: Courses"],
+  ["pronetwork", "Professional tools: Care network and businesses"],
 ];
 
 const rows = [];

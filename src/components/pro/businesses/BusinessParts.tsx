@@ -12,9 +12,10 @@ import type { BusinessFacts, MyClass } from "../../../services/pro/businesses";
 import { linePx, textPx } from "../../../theme/textSize";
 import { initialsOf } from "../client/clientFormat";
 import { INK } from "../proInk";
-import { classWhen, monthYear, ROLE_NAME, typeLine } from "./useBusinesses";
+import { classWhen, monthYear, roleName, typeLine } from "./useBusinesses";
 import { deadInvitationLine, invitationExpiry, invitationState, type InvitationState } from "./invitationLogic";
 import { appLocale } from "../../../i18n/format";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · MO9 v3 / MO13 building blocks, literal from gen/r13.js
@@ -25,8 +26,8 @@ import { appLocale } from "../../../i18n/format";
 /** ui.js pageHead: back 36 (2 down), gap 6; title 27 / 700 -0.022em on 1.5; subtitle 13 / 500 text.faint 6 under; 20 below. */
 export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => void }> = ({ title, sub, onBack }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 20 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginTop: 2 }}>
-      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
+    <button type="button" onClick={onBack} aria-label={t("Back")} className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginTop: 2 }}>
+      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} className="rtl:-scale-x-100" aria-hidden />
     </button>
     <div className="min-w-0">
       <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", lineHeight: 1.5, color: INK.ch }}>{title}</h1>
@@ -38,8 +39,8 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
 /** head19 with the eyebrow: back 36 (-6 in, 2 down), gap 10; eyebrow 10.5 / 600 caps 0.11em text.faint, 2 under; title 19 / 700 -0.03em; 13 below. */
 export const EyebrowHead: React.FC<{ eyebrow: string; title: string; onBack: () => void }> = ({ eyebrow, title, onBack }) => (
   <div className="flex items-start" style={{ gap: 10, marginBottom: 13 }}>
-    <button type="button" onClick={onBack} aria-label="Back" className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
+    <button type="button" onClick={onBack} aria-label={t("Back")} className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
+      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} className="rtl:-scale-x-100" aria-hidden />
     </button>
     <div className="min-w-0">
       <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{eyebrow}</p>
@@ -81,14 +82,14 @@ export const BizCard: React.FC<{
   upcoming: MyClass[];
   onOpen: () => void;
 }> = ({ e, facts, upcoming, onOpen }) => {
-  const role = e.role && ROLE_NAME[e.role];
+  const role = roleName(e.role);
   const lines = [
-    { icon: Briefcase, text: [role, e.acceptedAt ? `Since ${monthYear(e.acceptedAt)}` : null].filter(Boolean).join(" · ") },
+    { icon: Briefcase, text: [role, e.acceptedAt ? t("Since {date}", { date: monthYear(e.acceptedAt) }) : null].filter(Boolean).join(" · ") },
     ...(upcoming.length ? [{ icon: CalendarDays, text: upcoming.slice(0, 2).map((c) => `${c.title} ${classWhen(c)}`).join(" · ") }] : []),
   ].filter((l) => l.text);
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 16px", marginBottom: 10 }}>
-      <button type="button" onClick={onOpen} className="tap w-full text-start" aria-label={`Open ${e.businessName}`}>
+      <button type="button" onClick={onOpen} className="tap w-full text-start" aria-label={t("Open {name}", { name: e.businessName })}>
         <span className="flex items-center" style={{ gap: 12 }}>
           <LogoTile name={e.businessName} logoUrl={facts?.logoUrl} />
           <span className="flex-1 min-w-0">
@@ -97,7 +98,7 @@ export const BizCard: React.FC<{
             </span>
             {facts && <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{typeLine(facts)}</span>}
           </span>
-          <ChevronRight size={16} strokeWidth={2} style={{ color: INK.chF }} aria-hidden />
+          <ChevronRight size={16} strokeWidth={2} style={{ color: INK.chF }} className="rtl:-scale-x-100" aria-hidden />
         </span>
         {lines.length > 0 && (
           <span className="flex flex-col" style={{ gap: 4, marginTop: 10, fontSize: textPx(12), color: INK.chS, lineHeight: linePx(17) }}>
@@ -139,22 +140,22 @@ export const ConsoleLinks: React.FC<{ businessId: string; businessName: string; 
       <button type="button" onClick={() => open(to)} className="tap w-full flex items-center text-start" style={{ minHeight: 48, gap: 12 }}>
         <span className="min-w-0 flex-1">
           <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch }}>
-            {label}
+            {t(label)}
           </span>
           <span className="block" style={{ fontSize: textPx(11.5), lineHeight: linePx(16), color: INK.chF }}>
-            {desc}
+            {t(desc)}
           </span>
         </span>
-        <ChevronRight size={16} aria-hidden style={{ color: INK.chF }} className="shrink-0" />
+        <ChevronRight size={16} aria-hidden style={{ color: INK.chF }} className="shrink-0 rtl:-scale-x-100" />
       </button>
     </li>
   );
   return (
     <div style={bare ? undefined : { marginTop: 12, paddingTop: 4, borderTop: `1px solid ${INK.b06}` }}>
       {areas.length === 0 ? (
-        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: INK.chF, paddingTop: 8 }}>{`${businessName}'s owner hasn't turned on anything you can do in their business console yet.`}</p>
+        <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: INK.chF, paddingTop: 8 }}>{t("{business}'s owner hasn't turned on anything you can do in their business console yet.", { business: businessName })}</p>
       ) : (
-        <ul aria-label={`What you can do at ${businessName}`}>{areas.map((a) => row(a.key, a.label, a.desc, a.to))}</ul>
+        <ul aria-label={t("What you can do at {business}", { business: businessName })}>{areas.map((a) => row(a.key, a.label, a.desc, a.to))}</ul>
       )}
     </div>
   );
@@ -184,9 +185,10 @@ export const InvitationCard: React.FC<{
         <Building2 size={18} style={{ color: INK.prDeep }} aria-hidden />
       </span>
       <div className="min-w-0 flex-1">
-        <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{`${e.businessName} invited you to their team`}</p>
+        <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("{business} invited you to their team", { business: e.businessName })}</p>
         <p style={{ fontSize: textPx(12), color: INK.chF }}>
-          {`Invited ${new Date(e.invitedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" })}` + (e.role && ROLE_NAME[e.role] ? ` · as ${ROLE_NAME[e.role]}` : "")}
+          {t("Invited {date}", { date: new Date(e.invitedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric", year: "numeric" }) }) +
+            (roleName(e.role) ? ` · ${t("as {role}", { role: roleName(e.role) ?? "" })}` : "")}
         </p>
         {expiry && (
           <p style={{ fontSize: textPx(12), fontWeight: state === "open" ? 500 : 700, color: state === "open" ? INK.chS : INK.hi }}>{expiry}</p>
@@ -195,7 +197,7 @@ export const InvitationCard: React.FC<{
     </div>
     {e.message && (
       <blockquote className="whitespace-pre-line" style={{ marginTop: 12, borderRadius: 12, background: INK.soft, padding: "10px 14px", fontSize: textPx(12.5), lineHeight: linePx(18), color: INK.ch }}>
-        <span className="block" style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginBottom: 4 }}>{`Message from ${e.businessName}`}</span>
+        <span className="block" style={{ fontSize: textPx(11), fontWeight: 600, color: INK.chF, marginBottom: 4 }}>{t("Message from {business}", { business: e.businessName })}</span>
         {e.message}
       </blockquote>
     )}
@@ -205,17 +207,17 @@ export const InvitationCard: React.FC<{
           {dead}
         </p>
         <div style={{ marginTop: 12 }}>
-          <CtaButton size="base" variant="outline" label={busy ? "Removing…" : "Remove"} icon={<X size={15} aria-hidden />} disabled={busy} onClick={onRemove ?? onDecline} />
+          <CtaButton size="base" variant="outline" label={busy ? t("Removing…") : t("Remove")} icon={<X size={15} aria-hidden />} disabled={busy} onClick={onRemove ?? onDecline} />
         </div>
       </>
     ) : (
       <>
         <p style={{ fontSize: textPx(12), lineHeight: linePx(17), color: INK.chS, marginTop: 12 }}>
-          {`Accepting lets ${e.businessName} schedule you and see your licences. While you're on a team, your public listing in the directory is turned off. You can leave at any time.`}
+          {t("Accepting lets {business} schedule you and see your licences. While you're on a team, your public listing in the directory is turned off. You can leave at any time.", { business: e.businessName })}
         </p>
         <div className="grid grid-cols-2" style={{ gap: 8, marginTop: 12 }}>
-          <CtaButton size="base" variant="outline" label="Decline" icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} />
-          <CtaButton size="base" label={busy ? "Accepting…" : "Accept"} icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} />
+          <CtaButton size="base" variant="outline" label={t("Decline")} icon={<X size={15} aria-hidden />} disabled={busy} onClick={onDecline} />
+          <CtaButton size="base" label={busy ? t("Accepting…") : t("Accept")} icon={<Check size={15} aria-hidden />} disabled={busy} onClick={onAccept} />
         </div>
       </>
     )}
@@ -234,14 +236,14 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
   const [sending, setSending] = useState(false);
   const send = async () => {
     const c = code.trim().toUpperCase();
-    if (c.length !== 6) return setError("A business ID has 6 letters and numbers.");
+    if (c.length !== 6) return setError(t("A business ID has 6 letters and numbers."));
     setSending(true);
     setError(null);
     const r = await requestToJoin(c);
     setSending(false);
     if (!r.ok) return setError(r.message);
     setCode("");
-    onToast("Request sent. You join once the business approves and you accept.");
+    onToast(t("Request sent. You join once the business approves and you accept."));
     onSent();
   };
   return (
@@ -249,7 +251,7 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
       <div className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${error ? INK.hi : INK.b10}`, paddingBlock: "0", paddingInline: "12px 4px", gap: 8 }}>
         <Building2 size={15} strokeWidth={2} style={{ color: INK.chF }} className="shrink-0" aria-hidden />
         <label htmlFor="join-code" className="sr-only">
-          Business ID
+          {t("Business ID")}
         </label>
         <input
           id="join-code"
@@ -257,7 +259,7 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
           maxLength={6}
           autoCapitalize="characters"
           autoComplete="off"
-          placeholder="Enter a business ID"
+          placeholder={t("Enter a business ID")}
           aria-invalid={!!error}
           aria-describedby={error ? "join-code-err" : "join-code-help"}
           onChange={(ev) => {
@@ -270,8 +272,8 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
           className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint"
           style={{ fontSize: textPx(14), color: INK.ch, letterSpacing: code ? "0.08em" : undefined, fontWeight: code ? 700 : 400 }}
         />
-        <button type="button" onClick={() => void send()} disabled={sending || code.length === 0} aria-label="Send request" className="tap flex items-center justify-center shrink-0 disabled:opacity-40" style={{ width: 36, height: 36 }}>
-          <ArrowRight size={16} strokeWidth={1.75} style={{ color: INK.chF }} aria-hidden />
+        <button type="button" onClick={() => void send()} disabled={sending || code.length === 0} aria-label={t("Send request")} className="tap flex items-center justify-center shrink-0 disabled:opacity-40" style={{ width: 36, height: 36 }}>
+          <ArrowRight size={16} strokeWidth={1.75} style={{ color: INK.chF }} className="rtl:-scale-x-100" aria-hidden />
         </button>
       </div>
       {error ? (
@@ -289,20 +291,20 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
 
 /** MO9 "leave confirmation" (ui.js popup with log-out): Leave business, Stay. */
 export const LeavePopup: React.FC<{ name: string | null; busy: boolean; onLeave: () => void; onClose: () => void }> = ({ name, busy, onLeave, onClose }) => (
-  <CentredPopup open={!!name} onClose={onClose} title={`Leave ${name ?? ""}?`} icon={<LogOut size={22} strokeWidth={2} aria-hidden />} body="You lose access to their business. Your own account and clients stay.">
+  <CentredPopup open={!!name} onClose={onClose} title={t("Leave {business}?", { business: name ?? "" })} icon={<LogOut size={22} strokeWidth={2} aria-hidden />} body={t("You lose access to their business. Your own account and clients stay.")}>
     <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-      <CtaButton size="page" label="Leave business" loading={busy} onClick={onLeave} />
-      <CtaButton size="page" variant="secondary" label="Stay" onClick={onClose} disabled={busy} />
+      <CtaButton size="page" label={t("Leave business")} loading={busy} onClick={onLeave} />
+      <CtaButton size="page" variant="secondary" label={t("Stay")} onClick={onClose} disabled={busy} />
     </div>
   </CentredPopup>
 );
 
 /** Kept from the old Your businesses page: declining an invitation, confirmed. */
 export const DeclinePopup: React.FC<{ name: string | null; busy: boolean; onDecline: () => void; onClose: () => void }> = ({ name, busy, onDecline, onClose }) => (
-  <CentredPopup open={!!name} onClose={onClose} title={`Decline ${name ?? ""}'s invitation?`} icon={<X size={22} strokeWidth={2} aria-hidden />} body="They can invite you again later.">
+  <CentredPopup open={!!name} onClose={onClose} title={t("Decline {business}'s invitation?", { business: name ?? "" })} icon={<X size={22} strokeWidth={2} aria-hidden />} body={t("They can invite you again later.")}>
     <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-      <CtaButton size="page" label="Decline" loading={busy} onClick={onDecline} />
-      <CtaButton size="page" variant="secondary" label="Keep it" onClick={onClose} disabled={busy} />
+      <CtaButton size="page" label={t("Decline")} loading={busy} onClick={onDecline} />
+      <CtaButton size="page" variant="secondary" label={t("Keep it")} onClick={onClose} disabled={busy} />
     </div>
   </CentredPopup>
 );
