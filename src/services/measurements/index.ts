@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { t } from "../../i18n/core";
 
 // Tape-measure readings and body fat, in public.health_metrics.
 //
@@ -71,15 +72,15 @@ export interface MeasurementWriteResult {
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to save this.";
+    return t("Your session expired. Sign in again to save this.");
   }
   // 23514 is the range CHECK; 22003 is numeric overflow. Both mean the number
   // was out of range, and the client-side check should have caught it — this
   // is the message for the case where it did not.
   if (code === "23514" || code === "22003") {
-    return "That measurement is outside the range this can store.";
+    return t("That measurement is outside the range this can store.");
   }
-  return "Couldn't save that. Check your connection and try again.";
+  return t("Couldn't save that. Check your connection and try again.");
 }
 
 /**
@@ -103,7 +104,7 @@ export async function logMeasurements(params: {
     MeasurementType,
     number,
   ][];
-  if (entries.length === 0) return { ok: false, message: "Fill in at least one measurement." };
+  if (entries.length === 0) return { ok: false, message: t("Fill in at least one measurement.") };
 
   for (const [type, value] of entries) {
     const problem = checkValue(type, value);
@@ -199,7 +200,7 @@ export async function updateMeasurement(
   // A row-policy rejection on UPDATE is SILENT — zero rows, no error — so the
   // returned rows are what says it happened. The same trap deleteDiaryEntry
   // and deleteWorkoutSession both document.
-  if (!data || data.length === 0) return { ok: false, message: "That reading couldn't be updated." };
+  if (!data || data.length === 0) return { ok: false, message: t("That reading couldn't be updated.") };
   return { ok: true };
 }
 
@@ -209,7 +210,7 @@ export async function deleteMeasurement(id: string): Promise<MeasurementWriteRes
     console.error("[measurements] Could not delete a reading:", error.message);
     return { ok: false, message: describe(error) };
   }
-  if (!data || data.length === 0) return { ok: false, message: "That reading couldn't be deleted." };
+  if (!data || data.length === 0) return { ok: false, message: t("That reading couldn't be deleted.") };
   return { ok: true };
 }
 
@@ -283,6 +284,6 @@ export async function setMeasurementGoal(
     console.error("[measurements] Could not set a goal:", inserted.error.message);
     return { ok: false, message: describe(inserted.error) };
   }
-  if (!inserted.data || inserted.data.length === 0) return { ok: false, message: "That goal couldn't be saved." };
+  if (!inserted.data || inserted.data.length === 0) return { ok: false, message: t("That goal couldn't be saved.") };
   return { ok: true };
 }

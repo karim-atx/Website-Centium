@@ -15,6 +15,7 @@ import {
 } from "../../services/workout/oneRepMax";
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
@@ -60,20 +61,20 @@ export const OneRepMaxesSheet: React.FC<{
   const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, todayLocal()), sort), [workoutSessions, sort]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="One-rep maxes" titleIcon={<OrmIcon size={26} />} handle>
+    <BottomSheet open={open} onClose={onClose} title={t("One-rep maxes")} titleIcon={<OrmIcon size={26} />} handle>
       <div className="animate-fade-slide-up">
         {lifts.length === 0 ? (
           <div className="flex flex-col items-center text-center" style={{ padding: "28px 12px", gap: 14 }}>
             <OrmIcon size={36} />
             <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5), lineHeight: 1.5 }}>
-              No lifts yet. Log a set to see your one-rep maxes here.
+              {t("No lifts yet. Log a set to see your one-rep maxes here.")}
             </p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between" style={{ marginBottom: 9 }}>
               <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>
-                {lifts.length} lift{lifts.length === 1 ? "" : "s"}
+                {tn(lifts.length, "{n} lift", "{n} lifts")}
               </span>
               <button
                 onClick={(e) => setAnchor(e.currentTarget)}
@@ -92,14 +93,14 @@ export const OneRepMaxesSheet: React.FC<{
                 }}
               >
                 <ArrowDownWideNarrow size={13} style={{ color: "rgb(var(--c-charcoal-soft))" }} />
-                {LIFT_SORT_LABEL[sort]}
+                {t(LIFT_SORT_LABEL[sort])}
                 <ChevronDown size={12} style={{ color: "rgb(var(--c-charcoal-muted))" }} />
               </button>
               <PopupMenu
                 open={!!anchor}
                 anchor={anchor}
                 onClose={() => setAnchor(null)}
-                options={SORTS}
+                options={SORTS.map((o) => ({ ...o, label: t(o.label) }))}
                 selected={sort}
                 onSelect={(value) => {
                   setSort(value);
@@ -121,7 +122,7 @@ export const OneRepMaxesSheet: React.FC<{
                         {lift.name}
                       </span>
                       <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), marginTop: 2 }}>
-                        Last trained {shortDate(lift.lastTrained)}
+                        {t("Last trained {date}", { date: shortDate(lift.lastTrained) })}
                       </span>
                     </span>
                     <span className="flex flex-col items-end flex-none">
@@ -131,7 +132,7 @@ export const OneRepMaxesSheet: React.FC<{
                       </span>
                       <Change value={lift.change30} dark={dark} />
                     </span>
-                    <ChevronRight size={14} className="flex-none" style={{ color: ormColor("faint", dark) }} />
+                    <ChevronRight size={14} className="flex-none rtl:-scale-x-100" style={{ color: ormColor("faint", dark) }} />
                   </button>
                 </li>
               ))}
@@ -156,7 +157,7 @@ const Change: React.FC<{ value: number | null; dark: boolean }> = ({ value, dark
       style={{ color: up ? ormColor("teal", dark) : "rgb(var(--c-charcoal-tertiary))", fontSize: textPx(10), fontWeight: 600, marginTop: 2, gap: 3 }}
     >
       <Icon size={11} />
-      {up ? `+${kg}` : Math.abs(kg)} kg
+      {`${up ? `+${kg}` : Math.abs(kg)} kg`}
     </span>
   );
 };

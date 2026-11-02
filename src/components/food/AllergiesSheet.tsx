@@ -5,6 +5,7 @@ import { PopupMenu } from "../ui/PopupMenu";
 import { textPx } from "../../theme/textSize";
 import { saveMyAllergies } from "../../services/nutrition/client";
 import { ALLERGENS, SEVERITIES, severityLabel, type Allergen, type AllergySeverity, type MyAllergy } from "../../services/nutrition/clientNutritionModel";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · CU15 "Allergies sheet (new)", source gen/r23.js allergySheet23:
@@ -67,7 +68,7 @@ export function AllergiesSheet({
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Allergies"
+      title={t("Allergies")}
       footer={
         <div>
           {error && (
@@ -82,15 +83,15 @@ export function AllergiesSheet({
             className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
             style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
           >
-            {saving ? "Saving…" : "Save allergies"}
+            {saving ? t("Saving…") : t("Save allergies")}
           </button>
         </div>
       }
     >
       <p style={{ margin: "0 0 8px", fontSize: textPx(12.5), lineHeight: 1.5, color: "rgb(var(--c-charcoal-soft))" }}>
-        Pick anything you're allergic to. Foods that contain them are flagged in your diary, and professionals you share them with see them on every plan.
+        {t("Pick anything you're allergic to. Foods that contain them are flagged in your diary, and professionals you share them with see them on every plan.")}
       </p>
-      <div role="group" aria-label="Allergens">
+      <div role="group" aria-label={t("Allergens")}>
         {ALLERGENS.map((a, i) => {
           const sev = draft.get(a.value);
           const on = !!sev;
@@ -123,19 +124,19 @@ export function AllergiesSheet({
                   {on && <Check size={12} strokeWidth={3} />}
                 </span>
                 <span className="min-w-0" style={{ fontSize: textPx(13.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-                  {a.label}
+                  {t(a.label)}
                 </span>
               </button>
               {on && (
                 <button
                   type="button"
                   onClick={(e) => setMenu({ allergen: a.value, anchor: e.currentTarget })}
-                  aria-label={`${a.label} severity: ${severityLabel(sev)}`}
+                  aria-label={t("{allergen} severity: {severity}", { allergen: t(a.label), severity: t(severityLabel(sev)) })}
                   aria-haspopup="menu"
                   className="tap relative shrink-0 inline-flex items-center bg-status-high-bg text-status-high before:absolute before:-inset-[8px] before:content-['']"
                   style={{ gap: 3, borderRadius: 8, padding: "4px 8px", fontSize: textPx(11.5), fontWeight: 700 }}
                 >
-                  {severityLabel(sev)}
+                  {t(severityLabel(sev))}
                   <ChevronDown size={11} strokeWidth={2.2} />
                 </button>
               )}
@@ -147,7 +148,7 @@ export function AllergiesSheet({
         open={!!menu}
         anchor={menu?.anchor ?? null}
         onClose={() => setMenu(null)}
-        options={SEVERITIES}
+        options={SEVERITIES.map((s) => ({ ...s, label: t(s.label) }))}
         selected={menu ? draft.get(menu.allergen) ?? null : null}
         onSelect={(v) => {
           if (menu) setDraft((prev) => new Map(prev).set(menu.allergen, v));

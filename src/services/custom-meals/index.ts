@@ -4,6 +4,7 @@ import { findCatalogFoodByName, isUuid } from "../food";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { CustomMeal, CustomMealItem, Food, MealType, ServingUnit } from "../../types";
+import { t } from "../../i18n/core";
 
 // Custom meal DEFINITIONS — the saved groupings, not the diary rows logging
 // one produces.
@@ -50,9 +51,9 @@ async function resolveItemSource(
 }
 
 function describe(error: PostgrestError): string {
-  if (error.code === "42501") return "You don't have permission to do that.";
+  if (error.code === "42501") return t("You don't have permission to do that.");
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 export interface CustomMealsResult {
@@ -204,7 +205,7 @@ async function writeItems(mealId: string, items: CustomMealItem[]): Promise<stri
     // Refuse the whole save rather than dropping the item. A meal that
     // silently comes back with three of its four foods is worse than one that
     // did not save, because nothing tells the user which is missing.
-    if (!source) return `"${item.food.name}" isn't in the food database yet, so this meal can't be saved.`;
+    if (!source) return t("“{food}” isn't in the food database yet, so this meal can't be saved.", { food: item.food.name });
     rows.push({
       custom_meal_id: mealId,
       ...source,
@@ -237,7 +238,7 @@ export async function createCustomMeal(
 
   if (error || !data) {
     console.error("[custom-meals] Could not create meal:", error?.message);
-    return { ok: false, message: error ? describe(error) : "Something went wrong. Please try again." };
+    return { ok: false, message: error ? describe(error) : t("Something went wrong. Please try again.") };
   }
 
   const itemError = await writeItems(data.id, items);

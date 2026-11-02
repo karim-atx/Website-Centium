@@ -3,6 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { rpeOptions, percentFromRpe, weightFromRpe } from "../../services/workout";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 
 // WO23: RPE chips run ascending, 6 → 10.
 const RPE_ASCENDING = [...rpeOptions].sort((a, b) => a - b);
@@ -62,11 +63,11 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
   const pct = ready ? Math.round(percentFromRpe(r, rpe)) : null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="RPE Calculator">
+    <BottomSheet open={open} onClose={onClose} title={t("RPE Calculator")}>
       <div className="flex flex-col" style={{ gap: 18 }}>
         <div className="grid grid-cols-2" style={{ gap: 11 }}>
           <label className="block min-w-0">
-            <span style={fieldLabel}>Known 1RM (kg)</span>
+            <span style={fieldLabel}>{t("Known 1RM (kg)")}</span>
             <input
               value={oneRm}
               onChange={(e) => setOneRm(e.target.value.replace(/[^\d.]/g, ""))}
@@ -76,7 +77,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
             />
           </label>
           <label className="block min-w-0">
-            <span style={fieldLabel}>Target reps</span>
+            <span style={fieldLabel}>{t("Target reps")}</span>
             <input
               value={reps}
               onChange={(e) => setReps(e.target.value.replace(/\D/g, ""))}
@@ -88,7 +89,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
         </div>
 
         <div>
-          <span style={fieldLabel}>Target RPE</span>
+          <span style={fieldLabel}>{t("Target RPE")}</span>
           <div className="flex" style={{ gap: 5 }}>
             {RPE_ASCENDING.map((v) => {
               const on = rpe === v;
@@ -121,7 +122,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
               className="uppercase"
               style={{ margin: 0, fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.1em", color: rpeColor("label", dark) }}
             >
-              Suggested weight
+              {t("Suggested weight")}
             </p>
             <p className="tabular-nums" style={{ margin: 0, lineHeight: linePx(34) }}>
               <span style={{ fontSize: textPx(30), fontWeight: 800, color: rpeColor("hero", dark), letterSpacing: "-0.02em" }}>
@@ -133,9 +134,9 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
           {ready && (
             <div className="text-end flex-none" style={{ paddingBottom: 4 }}>
               <p style={{ margin: 0, fontSize: textPx(11), fontWeight: 700, color: rpeColor("support", dark) }}>
-                {r} {r === 1 ? "rep" : "reps"} @ RPE {rpe}
+                {tn(r, "{n} rep @ RPE {rpe}", "{n} reps @ RPE {rpe}", { rpe })}
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: rpeColor("support", dark) }}>{pct}% of 1RM</p>
+              <p style={{ margin: "2px 0 0", fontSize: textPx(10.5), color: rpeColor("support", dark) }}>{t("{pct}% of 1RM", { pct: pct ?? 0 })}</p>
             </div>
           )}
         </div>

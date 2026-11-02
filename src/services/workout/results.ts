@@ -1,5 +1,6 @@
 import type { BlockResult, EnduranceResult, WorkoutBlock } from "../../types";
 import { blockHeading, formatClock, formatPace, formatSeconds } from "./prescription";
+import { t, tn } from "../../i18n/core";
 
 // What a block scored, and what an endurance effort produced, in one line each.
 //
@@ -35,14 +36,14 @@ export function blockScore(result: BlockResult): string {
       return "";
     case "amrap": {
       const rounds = roundWord(result.roundsCompleted ?? 0);
-      return result.extraReps ? `${rounds} + ${result.extraReps} reps` : rounds;
+      return result.extraReps ? `${rounds} + ${repWord(result.extraReps)}` : rounds;
     }
     case "emom": {
       const done = result.roundsCompleted ?? 0;
       // OUT OF HOW MANY, when the plan said. An EMOM's whole shape is a fixed
       // number of rounds, so "8 rounds" alone hides whether that was all of
       // them or two thirds of them.
-      return result.rounds ? `${done} of ${result.rounds} rounds` : roundWord(done);
+      return result.rounds ? t("{done} of {total} rounds", { done, total: result.rounds }) : roundWord(done);
     }
     case "for_time": {
       const time = formatClock(result.timeSeconds ?? 0);
@@ -56,9 +57,9 @@ export function blockScore(result: BlockResult): string {
       // athlete got, and it is the number that distinguishes two people who
       // both reached round 2. Until that migration extra_reps was forbidden
       // on this kind and the "+ 14" had to be rounded away.
-      const parts = [`Capped at ${time}`];
+      const parts = [t("Capped at {time}", { time })];
       if (result.roundsCompleted != null) parts.push(roundWord(result.roundsCompleted));
-      if (result.extraReps) parts.push(`${result.extraReps} reps`);
+      if (result.extraReps) parts.push(repWord(result.extraReps));
       // "2 rounds + 14 reps" joins with a plus; the clock with a middot.
       const score = parts.slice(1).join(" + ");
       return score ? `${parts[0]} · ${score}` : parts[0];
@@ -67,7 +68,9 @@ export function blockScore(result: BlockResult): string {
 
 }
 
-const roundWord = (n: number): string => `${n} ${n === 1 ? "round" : "rounds"}`;
+const roundWord = (n: number): string => tn(n, "{n} round", "{n} rounds");
+/** "14 reps", always the plural in English, as the score has always read. */
+const repWord = (n: number): string => tn(n, "{n} reps", "{n} reps");
 
 /**
  * A distance somebody COVERED, which is not the same problem as a distance
@@ -97,10 +100,10 @@ export function enduranceResultLine(result: EnduranceResult): string {
   if (result.duration_seconds) parts.push(formatClock(result.duration_seconds));
   if (result.distance_meters) parts.push(formatDistance(result.distance_meters));
   if (result.intervals_completed) {
-    parts.push(`${result.intervals_completed} ${result.intervals_completed === 1 ? "interval" : "intervals"}`);
+    parts.push(tn(result.intervals_completed, "{n} interval", "{n} intervals"));
   }
-  if (result.avg_pace_sec_per_km) parts.push(`avg ${formatPace(result.avg_pace_sec_per_km)} /km`);
-  if (result.avg_hr) parts.push(`avg ${result.avg_hr} bpm`);
+  if (result.avg_pace_sec_per_km) parts.push(t("avg {pace} /km", { pace: formatPace(result.avg_pace_sec_per_km) }));
+  if (result.avg_hr) parts.push(t("avg {n} bpm", { n: result.avg_hr }));
   return parts.join(" · ");
 }
 
@@ -157,18 +160,18 @@ export function checkBlockResult(result: BlockResult): string | null {
     case "superset":
       return null;
     case "amrap":
-      return result.roundsCompleted == null ? "How many rounds did you get?" : null;
+      return result.roundsCompleted == null ? t("How many rounds did you get?") : null;
     case "emom":
-      return result.roundsCompleted == null ? "How many rounds did you hold?" : null;
+      return result.roundsCompleted == null ? t("How many rounds did you hold?") : null;
     case "for_time":
       // time_seconds is NOT NULL for this kind AND must be > 0, so a For Time
       // that was never started cannot be recorded at all.
-      if (!result.timeSeconds) return "Start the clock before finishing this block.";
+      if (!result.timeSeconds) return t("Start the clock before finishing this block.");
       // extra_reps is legal ONLY on a capped result — a finished For Time has
       // no remainder, so a row claiming one is this client's bug and the
       // constraint is where it would surface. Caught here instead.
       if (result.extraReps != null && result.capped !== true) {
-        return "Leftover reps only make sense when the cap stopped the block.";
+        return t("Leftover reps only make sense when the cap stopped the block.");
       }
       return null;
   }
@@ -178,15 +181,19 @@ export function checkBlockResult(result: BlockResult): string | null {
 export function blockRunHint(block: WorkoutBlock): string {
   switch (block.kind) {
     case "superset":
-      return "One set of each, in order, then rest.";
+      return t("One set of each, in order, then rest.");
     case "amrap":
-      return `As many rounds as possible in ${block.timeCapSeconds ? formatSeconds(block.timeCapSeconds) : "the time"}.`;
+      return block.timeCapSeconds
+        ? t("As many rounds as possible in {time}.", { time: formatSeconds(block.timeCapSeconds) })
+        : t("As many rounds as possible in the time.");
     case "emom":
-      return `One round at the top of every ${block.intervalSeconds ? formatClock(block.intervalSeconds) : "interval"}.`;
+      return block.intervalSeconds
+        ? t("One round at the top of every {time}.", { time: formatClock(block.intervalSeconds) })
+        : t("One round at the top of every interval.");
     case "for_time":
       return block.timeCapSeconds
-        ? `Finish as fast as you can (cap ${formatSeconds(block.timeCapSeconds)}).`
-        : "Finish as fast as you can.";
+        ? t("Finish as fast as you can (cap {time}).", { time: formatSeconds(block.timeCapSeconds) })
+        : t("Finish as fast as you can.");
   }
 }
 

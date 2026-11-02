@@ -1,4 +1,5 @@
 import { appLocale } from "../../i18n/format";
+import { t, tn } from "../../i18n/core";
 // Release 3 · W7 (CU1): the client's "From your coach" section, as pure logic.
 // Kept apart from ./programmes (which talks to Supabase) so it can be tested.
 //
@@ -70,20 +71,19 @@ export function weekDayOf(a: ProgrammeAssignment, day: string): { week: number; 
   return { week: a.joinWeek + Math.floor(d / 7), day: (d % 7) + 1 };
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-
 /**
  * The coach folder's count line: "Week 3 of 8 · 3 routines" (CU1 v4). Before
  * the start, "Starts Oct 20 · 1 routine"; with no end date, "Week 3 · 1 routine".
  */
 export function programmeCountLine(a: ProgrammeAssignment, today: string, routineCount: number): string {
-  const routinesText = plural(routineCount, "routine", "routines");
-  if (a.startsOn && a.startsOn > today) return `Starts ${shortDay(a.startsOn)} · ${routinesText}`;
+  const routinesText = tn(routineCount, "{n} routine", "{n} routines");
+  if (a.startsOn && a.startsOn > today) return t("Starts {date} · {routines}", { date: shortDay(a.startsOn), routines: routinesText });
   const now = a.startsOn ? weekDayOf(a, today) : null;
   if (!now) return routinesText;
   const total = a.durationWeeks;
   const week = total != null ? Math.min(now.week, total) : now.week;
-  return `${total != null ? `Week ${week} of ${total}` : `Week ${week}`} · ${routinesText}`;
+  const weekText = total != null ? t("Week {week} of {total}", { week, total }) : t("Week {week}", { week });
+  return `${weekText} · ${routinesText}`;
 }
 
 /**
@@ -108,9 +108,9 @@ export function coachRoutineMeta(
   exerciseCount: number,
   durationMin: number
 ): string {
-  const base = `${exerciseCount} exercises • ~${durationMin} min`;
+  const base = `${tn(exerciseCount, "{n} exercise", "{n} exercises")} • ${t("~{n} min", { n: durationMin })}`;
   const at = next ? weekDayOf(a, next) : null;
-  return at ? `Week ${at.week}, day ${at.day} • ${base}` : base;
+  return at ? `${t("Week {week}, day {day}", { week: at.week, day: at.day })} • ${base}` : base;
 }
 
 /**
@@ -125,7 +125,7 @@ export function wasUpdatedByCoach(a: Pick<ProgrammeAssignment, "assignedAt" | "c
 
 /** "Foundations, ended Sep 28 · Mobility reset, ended Jul 2" (CU1 v4 past programmes). */
 export function pastProgrammesLine(past: { name: string; endedOn: string | null }[]): string {
-  return past.map((p) => (p.endedOn ? `${p.name}, ended ${shortDay(p.endedOn)}` : p.name)).join(" · ");
+  return past.map((p) => (p.endedOn ? t("{name}, ended {date}", { name: p.name, date: shortDay(p.endedOn) }) : p.name)).join(" · ");
 }
 
 /**

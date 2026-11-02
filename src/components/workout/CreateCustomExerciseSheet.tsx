@@ -12,6 +12,8 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
 import { CUSTOM_EXERCISE_COPY } from "../../services/exercises";
+import { t, tn, tx } from "../../i18n/core";
+import { muscleLabel } from "./muscleLabel";
 
 /**
  * v6 PB-O-32: a custom exercise's name is 2 to 60 characters and unique among
@@ -189,12 +191,12 @@ export const CreateCustomExerciseSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={name.trim() || "New Custom Exercise"}
+      title={name.trim() || t("New Custom Exercise")}
     >
       <div className="space-y-5 animate-fade-slide-up">
         <div>
           <label htmlFor="custom-exercise-name" className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Name
+            {t("Name")}
           </label>
           <div className="flex" style={{ gap: 9 }}>
             <input
@@ -205,14 +207,14 @@ export const CreateCustomExerciseSheet: React.FC<{
               maxLength={CUSTOM_EXERCISE_NAME_MAX}
               aria-invalid={!!problem.name}
               aria-describedby={problem.name ? "custom-exercise-name-error" : undefined}
-              placeholder="e.g. Abdallah's Bungees"
+              placeholder={t("e.g. Abdallah's Bungees")}
               className="flex-1 min-w-0 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               style={{ height: 46, borderRadius: 16, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "0 16px", fontSize: textPx(14) }}
             />
             <button
-              onClick={() => onInfo?.(name.trim() || "New Custom Exercise")}
+              onClick={() => onInfo?.(name.trim() || t("New Custom Exercise"))}
               disabled={!onInfo}
-              aria-label="Exercise information"
+              aria-label={t("Exercise information")}
               className="tap flex-none flex items-center justify-center disabled:opacity-40"
               style={squareStyle(46, true, dark)}
             >
@@ -221,19 +223,19 @@ export const CreateCustomExerciseSheet: React.FC<{
           </div>
           {problem.name && (
             <p id="custom-exercise-name-error" className="text-[11.5px] font-semibold text-status-high" style={{ marginTop: 6 }}>
-              {problem.name}
+              {t(problem.name)}
             </p>
           )}
         </div>
 
         <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-1 block">Muscle Group</span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-1 block">{t("Muscle Group")}</span>
           <p className="text-[11px] text-charcoal-faint mb-2">
-            Click once for main, twice for secondary, three times to clear.
+            {t("Click once for main, twice for secondary, three times to clear.")}
           </p>
           {triedSave && problem.muscle && (
             <p role="alert" className="text-[11.5px] font-semibold text-status-high mb-2">
-              {problem.muscle}
+              {t(problem.muscle)}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -253,7 +255,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                       : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                   )}
                 >
-                  {mg.label}
+                  {muscleLabel(mg.label)}
                   {isSecondary && <span className="ms-1 text-[9px] align-super">2°</span>}
                 </button>
               );
@@ -266,19 +268,19 @@ export const CreateCustomExerciseSheet: React.FC<{
             anatomical answer, and a movement can belong to several. */}
         <div className="grid grid-cols-2" style={{ gap: 11 }}>
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Classification</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Classification")}</span>
             <button
               onClick={(e) => setClassAnchor(e.currentTarget)}
               aria-haspopup="menu"
               className="tap w-full flex items-center justify-between text-start"
               style={{ ...dropdownStyle, color: "rgb(var(--c-charcoal))" }}
             >
-              <span className="truncate">{classificationOptions.find((c) => c.value === classification)?.label}</span>
+              <span className="truncate">{t(classificationOptions.find((c) => c.value === classification)?.label ?? "")}</span>
               <ChevronDown size={14} className="flex-none" style={{ color: color("chevron", dark) }} />
             </button>
           </div>
           <div className="min-w-0">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Discipline</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Discipline")}</span>
             <button
               onClick={(e) => setTagAnchor(e.currentTarget)}
               aria-haspopup="menu"
@@ -286,7 +288,7 @@ export const CreateCustomExerciseSheet: React.FC<{
               style={{ ...dropdownStyle, color: tags.length ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-muted))" }}
             >
               <span className="truncate">
-                {disciplineSummary(tags) ?? "Select"}
+                {disciplineSummary(tags) ?? t("Select")}
               </span>
               <ChevronDown size={14} className="flex-none" style={{ color: color("chevron", dark) }} />
             </button>
@@ -298,7 +300,7 @@ export const CreateCustomExerciseSheet: React.FC<{
           anchor={classAnchor}
           align="left"
           onClose={() => setClassAnchor(null)}
-          options={classificationOptions}
+          options={classificationOptions.map((o) => ({ ...o, label: t(o.label) }))}
           selected={classification}
           variant="filled"
           onSelect={setClassification}
@@ -322,12 +324,12 @@ export const CreateCustomExerciseSheet: React.FC<{
             className="tap flex-1 flex items-center justify-center disabled:opacity-60"
             style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
           >
-            Save exercise
+            {t("Save exercise")}
           </button>
           <button
             onClick={onHistory}
             disabled={!onHistory}
-            aria-label="Exercise history"
+            aria-label={t("Exercise history")}
             className="tap flex-none flex items-center justify-center disabled:opacity-40"
             style={squareStyle(52, false, dark)}
           >
@@ -355,32 +357,30 @@ export const CreateCustomExerciseSheet: React.FC<{
                 }}
               >
                 <p className="text-[13px] font-bold text-charcoal mb-1.5">
-                  Delete “{name.trim() || initial?.name}”?
+                  {t("Delete “{name}”?", { name: name.trim() || initial?.name || "" })}
                 </p>
                 <ul className="text-[11.5px] text-charcoal-soft" style={{ margin: 0, paddingInlineStart: 16 }}>
                   {/* B3 custom_exercise_usage: the count of the user's own
                       routines using it, from the server (the caller). */}
                   {impact && impact.routines > 0 && (
                     <li>
-                      Used in {impact.routines} {impact.routines === 1 ? "routine" : "routines"}. Deleting takes it out of{" "}
-                      {impact.routines === 1 ? "that routine" : "each of them"}.
+                      {tn(impact.routines, "Used in 1 routine. Deleting takes it out of that routine.", "Used in {n} routines. Deleting takes it out of each of them.")}
                     </li>
                   )}
                   {impact && impact.templates > 0 && (
                     <li>
-                      It is removed from {impact.templates}{" "}
-                      {impact.templates === 1 ? "template" : "templates"}.
+                      {tn(impact.templates, "It is removed from 1 template.", "It is removed from {n} templates.")}
                     </li>
                   )}
                   {impact && impact.routines === 0 && impact.templates === 0 && (
-                    <li>No routine or template uses it.</li>
+                    <li>{t("No routine or template uses it.")}</li>
                   )}
-                  {impact?.hasPersonalRecord && <li>Its personal record is deleted with it.</li>}
-                  <li>Past workouts keep it. Logged sets are not touched.</li>
+                  {impact?.hasPersonalRecord && <li>{t("Its personal record is deleted with it.")}</li>}
+                  <li>{t("Past workouts keep it. Logged sets are not touched.")}</li>
                 </ul>
                 <div className="flex" style={{ gap: 8, marginTop: 10 }}>
                   <Button variant="outline" fullWidth onClick={() => setConfirmDelete(false)}>
-                    Keep it
+                    {tx("Keep it", "exercise")}
                   </Button>
                   <Button
                     fullWidth
@@ -390,7 +390,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                       onClose();
                     }}
                   >
-                    Delete
+                    {t("Delete")}
                   </Button>
                 </div>
               </div>
@@ -405,7 +405,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                     sheet's "Delete exercise" takes a movement out of one
                     routine, while this removes the movement itself from the
                     user's library. */}
-                <Trash2 size={14} /> Delete custom exercise
+                <Trash2 size={14} /> {t("Delete custom exercise")}
               </Button>
             )}
           </div>

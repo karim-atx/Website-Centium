@@ -1,6 +1,7 @@
 import type { Exercise } from "../../types";
 import { formatCompactDuration } from "./index";
 import { formatMeters, formatStep, formatTarget, isRepBased } from "./prescription";
+import { t, tk } from "../../i18n/core";
 
 // WO21: an exercise row in a starter program is a split card, the name on the
 // left and a value block on the right. 03 "WO21" gives three shapes:
@@ -47,11 +48,11 @@ function repsValue(ex: Exercise): string {
 function qualifiers(ex: Exercise): string[] {
   const out: string[] = [];
   if (ex.intensityPct) out.push(`@ ${ex.intensityPct}%`);
-  if (ex.repMaxKg) out.push(`${ex.repMaxKg} kg rep max`);
-  else if (ex.weightKg === 0) out.push("Bodyweight");
+  if (ex.repMaxKg) out.push(t("{kg} kg rep max", { kg: ex.repMaxKg }));
+  else if (ex.weightKg === 0) out.push(t("Bodyweight"));
   else if (ex.weightKg) out.push(`${ex.weightKg} kg`);
   if (ex.rpe) out.push(`RPE ${ex.rpe}`);
-  if (ex.tempo) out.push(`Tempo ${ex.tempo}`);
+  if (ex.tempo) out.push(t("Tempo {tempo}", { tempo: ex.tempo }));
   return out;
 }
 
@@ -61,26 +62,26 @@ export function programRow(ex: Exercise): ProgramRow {
   if (ex.classification === "cardio") {
     const plan = ex.endurancePlan;
     const around = [
-      plan?.warmup ? `Warm-up ${formatStep(plan.warmup)}` : "",
-      plan?.cooldown ? `Cool-down ${formatStep(plan.cooldown)}` : "",
+      plan?.warmup ? t("Warm-up {step}", { step: formatStep(plan.warmup) }) : "",
+      plan?.cooldown ? t("Cool-down {step}", { step: formatStep(plan.cooldown) }) : "",
     ].filter(Boolean);
     if (plan?.main.type === "intervals") {
       return {
         value: String(plan.main.repeats),
-        label: "rounds",
+        label: tk("rounds"),
         detail: [`${formatStep(plan.main.work)} / ${formatStep(plan.main.recovery)}`, ...around].join(" · "),
       };
     }
     if (plan?.main.type === "steady") {
       const step = plan.main.step;
       const repeats = Number(sets) || 1;
-      if (repeats > 1) return { value: String(repeats), label: "rounds", detail: [formatStep(step), ...around].join(" · ") };
+      if (repeats > 1) return { value: String(repeats), label: tk("rounds"), detail: [formatStep(step), ...around].join(" · ") };
       const target = formatTarget(step.target);
       return step.measure === "time"
-        ? { value: compactSeconds(step.seconds), label: "duration", detail: [target, ...around].filter(Boolean).join(" · ") }
-        : { value: formatMeters(step.meters), label: "distance", detail: [target, ...around].filter(Boolean).join(" · ") };
+        ? { value: compactSeconds(step.seconds), label: tk("duration"), detail: [target, ...around].filter(Boolean).join(" · ") }
+        : { value: formatMeters(step.meters), label: tk("distance"), detail: [target, ...around].filter(Boolean).join(" · ") };
     }
-    if (ex.cardioDurationMin) return { value: compactSeconds(ex.cardioDurationMin * 60), label: "duration", detail: "" };
+    if (ex.cardioDurationMin) return { value: compactSeconds(ex.cardioDurationMin * 60), label: tk("duration"), detail: "" };
     return { value: "", label: "", detail: "" };
   }
 
@@ -88,17 +89,17 @@ export function programRow(ex: Exercise): ProgramRow {
     const n = Number(sets);
     return {
       value: compactSeconds(ex.durationSeconds),
-      label: "duration",
-      detail: [n > 1 || sets.includes(EN) ? `${sets} sets` : "", ...qualifiers(ex)].filter(Boolean).join(" · "),
+      label: tk("duration"),
+      detail: [n > 1 || sets.includes(EN) ? t("{sets} sets", { sets }) : "", ...qualifiers(ex)].filter(Boolean).join(" · "),
     };
   }
 
   if (isRepBased(ex.classification) || ex.reps || ex.minReps || ex.maxReps) {
     const reps = repsValue(ex);
     return sets
-      ? { value: `${sets} × ${reps}`, label: "sets × reps", detail: qualifiers(ex).join(" · ") }
-      : { value: reps, label: "reps", detail: qualifiers(ex).join(" · ") };
+      ? { value: `${sets} × ${reps}`, label: tk("sets × reps"), detail: qualifiers(ex).join(" · ") }
+      : { value: reps, label: tk("reps"), detail: qualifiers(ex).join(" · ") };
   }
 
-  return { value: sets, label: sets ? "sets" : "", detail: qualifiers(ex).join(" · ") };
+  return { value: sets, label: sets ? tk("sets") : "", detail: qualifiers(ex).join(" · ") };
 }

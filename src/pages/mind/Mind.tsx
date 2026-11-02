@@ -36,9 +36,18 @@ import { journalStreak as journalStreakFrom } from "../../services/journal/strea
 import { useBack } from "../../hooks/useBack";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { t, tk, tn } from "../../i18n/core";
 
 type Section = MindSection;
 const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
+
+// The auto streaks' names on the hub (the stored label, without "streak").
+const AUTO_LABEL: Record<NonNullable<Streak["category"]>, string> = {
+  logging: tk("Logging"),
+  movement: tk("Movement"),
+  workout: tk("Workout"),
+  nutrition: tk("Nutrition"),
+};
 
 const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
   logging: ClipboardList,
@@ -72,7 +81,7 @@ function useCoachHabits(userId: string | null, habitCount: number) {
       if (cancelled) return;
       const next: Record<string, { name: string; avatarUrl: string | null }> = {};
       for (const [id, r] of rows) {
-        if (r.ok && r.professional) next[id] = { name: r.professional.firstName?.trim() || "Your coach", avatarUrl: r.professional.avatarUrl };
+        if (r.ok && r.professional) next[id] = { name: r.professional.firstName?.trim() || t("Your coach"), avatarUrl: r.professional.avatarUrl };
       }
       setCoaches(next);
       setShared(sharing);
@@ -230,7 +239,7 @@ export default function Mind() {
         check={
           <button
             onClick={() => toggleHabit(h.id)}
-            aria-label={`${h.label}, today: ${h.done ? "done" : "not done"}`}
+            aria-label={h.done ? t("{habit}, today: done", { habit: h.label }) : t("{habit}, today: not done", { habit: h.label })}
             aria-pressed={h.done}
             // MO1.1 #6 (2x frame): done #4F7F78 with a white tick, open
             // a 1 px #6F9993-at-35% ring on the strip (decision 22).
@@ -249,9 +258,9 @@ export default function Mind() {
   const meditationLine =
     meditationSummary && !isEmptySummary(meditationSummary)
       ? meditationSummary.secondsToday > 0
-        ? `${formatMeditationTime(meditationSummary.secondsToday)} today`
-        : `${formatMeditationTime(meditationSummary.secondsThisWeek)} this week`
-      : "Start a session";
+        ? t("{time} today", { time: formatMeditationTime(meditationSummary.secondsToday) })
+        : t("{time} this week", { time: formatMeditationTime(meditationSummary.secondsThisWeek) })
+      : t("Start a session");
 
   if (section) {
     // Each section renders its own header (components/mind/MindHeader.tsx):
@@ -274,14 +283,14 @@ export default function Mind() {
       <div className="flex items-start gap-2.5 mb-[13px]">
         <button
           onClick={back}
-          aria-label="Back"
+          aria-label={t("Back")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
         >
-          <ChevronLeft size={18} />
+          <ChevronLeft size={18} className="rtl:-scale-x-100" />
         </button>
         <div>
-          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Mind</p>
-          <p className="mt-[3px] text-[11px] text-charcoal-tertiary">Habits, journalling &amp; meditation</p>
+          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">{t("Mind")}</p>
+          <p className="mt-[3px] text-[11px] text-charcoal-tertiary">{t("Habits, journalling & meditation")}</p>
         </div>
       </div>
 
@@ -299,20 +308,20 @@ export default function Mind() {
             fill={dark ? "rgb(var(--th-aea1dc) / .14)" : "rgb(var(--th-aea1dc) / .06)"}
             well={dark ? "rgb(var(--th-aea1dc) / .24)" : "rgb(var(--th-aea1dc) / .27)"}
             icon={<BookOpen size={28} strokeWidth={1.5} className="text-primary-deep-text" />}
-            title="Journal"
+            title={t("Journal")}
             line={
               journalLoading ? (
                 <LineSkeleton />
               ) : hideNumbers ? (
                 // Recovery-sensitive mode: whether today has an entry, not a streak.
-                writtenToday ? "Written today" : "Not written today"
+                writtenToday ? t("Written today") : t("Not written today")
               ) : (
                 // MO1.1 #2 (2x frame): the handover's leaf, outlined in
                 // #7D6BB5 with a white inside, 6 × 10 pt over its 1 pt
                 // stroke, 6 pt before the count.
                 <span className="inline-flex items-center gap-1.5">
                   <StreakLeaf variant="outline" height={9} className="text-primary-dark dark:text-primary-deep-text" />
-                  {journalDays} {journalDays === 1 ? "day" : "days"}
+                  {tn(journalDays, "{n} day", "{n} days")}
                 </span>
               )
             }
@@ -323,7 +332,7 @@ export default function Mind() {
             well={dark ? "rgb(var(--th-a2c8c2) / .3)" : "rgb(var(--th-6f9993) / .206)"}
             // MO1.1 icons list: Flower2 28/1.5.
             icon={<Flower2 size={28} strokeWidth={1.5} className="text-team-teal-deep dark:text-teal-dark" />}
-            title="Meditation"
+            title={t("Meditation")}
             // Restore round 2: the live minutes, as on main; MO1.1's "Start a
             // session" when there are none.
             line={meditationLine}
@@ -335,8 +344,8 @@ export default function Mind() {
             fill={dark ? "rgba(217,164,65,.15)" : "#FCF9F2"}
             well={dark ? "rgba(217,164,65,.24)" : "#F6EBD6"}
             icon={<Trophy size={28} strokeWidth={1.5} className="text-[#A67C2E] dark:text-team-gold-deep" />}
-            title="Achievements"
-            line={achievements === null ? <LineSkeleton /> : `${achievementCounts.earned} of ${achievementCounts.total}`}
+            title={t("Achievements")}
+            line={achievements === null ? <LineSkeleton /> : t("{a} of {b}", { a: achievementCounts.earned, b: achievementCounts.total })}
           />
         </div>
 
@@ -345,12 +354,12 @@ export default function Mind() {
           // Recovery-sensitive mode: no streak hero (count, personal best, or
           // a habit picked for its streak); today's progress ring stays.
           <div className="flex items-center gap-3 rounded-[20px] bg-primary-pale px-4 py-3.5 mb-6 min-h-[84px]">
-            <p className="flex-1 min-w-0 text-[13.5px] font-bold text-charcoal">Today's habits</p>
+            <p className="flex-1 min-w-0 text-[13.5px] font-bold text-charcoal">{t("Today's habits")}</p>
             <DoneRing done={doneHabits} total={habits.length} />
             <span className="text-[10.5px] leading-[1.3] text-charcoal-soft shrink-0 whitespace-nowrap">
-              Habits
+              {t("Habits")}
               <br />
-              done today
+              {t("done today")}
             </span>
           </div>
         ) : lead && LeadIcon ? (
@@ -365,18 +374,18 @@ export default function Mind() {
             <div className="flex-1 min-w-0">
               <p className="flex items-baseline min-w-0">
                 <span className="text-[26px] leading-none font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">{lead.streakDays}</span>
-                <span className="ms-1 text-[12px] font-semibold text-charcoal-soft">{lead.streakDays === 1 ? "day" : "days"}</span>
+                <span className="ms-1 text-[12px] font-semibold text-charcoal-soft">{tn(lead.streakDays, "day", "days")}</span>
                 <span className="ms-2 text-[12px] font-bold text-primary-dark truncate">{lead.label}</span>
               </p>
               <p className="mt-[5px] text-[10.5px] text-charcoal-muted dark:text-charcoal-faint">
-                Personal best · <span className="font-bold text-charcoal">{leadBest} {leadBest === 1 ? "day" : "days"}</span>
+                {t("Personal best")} · <span className="font-bold text-charcoal">{tn(leadBest, "{n} day", "{n} days")}</span>
               </p>
             </div>
             <DoneRing done={doneHabits} total={habits.length} />
             <span className="text-[10.5px] leading-[1.3] text-charcoal-soft shrink-0 whitespace-nowrap">
-              Habits
+              {t("Habits")}
               <br />
-              done today
+              {t("done today")}
             </span>
           </div>
         ) : habitsLoading ? (
@@ -387,12 +396,12 @@ export default function Mind() {
 
         {/* MO1.1 #4–6: Today, with the Auto-tracked group and the habits. */}
         <div className="flex items-center justify-between mb-2.5 px-1">
-          <p className={todayLabel}>Today</p>
+          <p className={todayLabel}>{t("Today")}</p>
           <button
             onClick={() => navigate("/app/mind/habits")}
             className="tap flex items-center gap-0.5 text-[12px] font-bold text-primary-dark"
           >
-            View all habits <ChevronRight size={13} />
+            {t("View all habits")} <ChevronRight size={13} className="rtl:-scale-x-100" />
           </button>
         </div>
         {/* New since the redesign: the frame's 1 px #AEA1DC outline (decision 22). */}
@@ -407,14 +416,14 @@ export default function Mind() {
                 className="tap w-full flex items-center gap-2 px-3.5 py-3 text-start border-b border-charcoal/[0.08]"
                 style={{ background: "rgb(var(--th-aea1dc) / 0.08)" }}
               >
-                <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint">Auto-tracked</span>
+                <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint">{t("Auto-tracked")}</span>
                 {/* 20 × 13 pill (measured on the 2x frame). */}
                 <span className="min-w-[20px] h-[13px] px-1 rounded-full bg-primary-pale text-[10px] leading-[13px] font-bold text-primary-dark flex items-center justify-center tabular-nums">
                   {autoStreaks.length}
                 </span>
                 <ChevronRight
                   size={15}
-                  className={clsx("ms-auto text-charcoal-faint transition-transform duration-200", autoOpen && "rotate-90")}
+                  className={clsx("ms-auto text-charcoal-faint transition-transform duration-200", autoOpen ? "rotate-90" : "rtl:-scale-x-100")}
                 />
               </button>
               {autoOpen &&
@@ -425,7 +434,7 @@ export default function Mind() {
                       key={s.id}
                       divider={i > 0}
                       icon={<Icon size={14} strokeWidth={1.75} className="text-primary-dark" />}
-                      label={`${s.label.replace(/\s*streak$/i, "")}`}
+                      label={s.category ? t(AUTO_LABEL[s.category]) : s.label.replace(/\s*streak$/i, "")}
                       days={s.days}
                     />
                   );
@@ -437,7 +446,7 @@ export default function Mind() {
               the full-width rule; tickable, not editable. */}
           {coachGroups.map((g, gi) => {
             const info = coachHabits.coaches[g.professionalId];
-            const name = info?.name ?? "Your coach";
+            const name = info?.name ?? t("Your coach");
             const folded = foldedCoaches.has(g.professionalId);
             return (
               <React.Fragment key={g.professionalId}>
@@ -460,14 +469,14 @@ export default function Mind() {
                 >
                   <CoachAvatar name={name} avatarUrl={info?.avatarUrl} size={20} tone={coachTone(gi)} />
                   <span className="text-[10px] font-bold tracking-[.14em] uppercase text-charcoal-muted dark:text-charcoal-faint truncate min-w-0">
-                    From {name}
+                    {t("From {name}", { name })}
                   </span>
                   <span className="min-w-[20px] h-[13px] px-1 rounded-full bg-primary-pale text-[10px] leading-[13px] font-bold text-primary-dark flex items-center justify-center tabular-nums shrink-0">
                     {g.habits.length}
                   </span>
                   <ChevronRight
                     size={15}
-                    className={clsx("ms-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded && "rotate-90")}
+                    className={clsx("ms-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded ? "rotate-90" : "rtl:-scale-x-100")}
                   />
                 </button>
                 {!folded && g.habits.map((h, i) => habitRow(h, i > 0))}
@@ -497,24 +506,24 @@ export default function Mind() {
               onClick={() => navigate("/app/mind/habits")}
               className="tap w-full px-4 py-4 text-start text-[13px] text-charcoal-soft"
             >
-              No habits yet. <span className="font-bold text-primary-dark">Add one</span>
+              {t("No habits yet.")} <span className="font-bold text-primary-dark">{t("Add one")}</span>
             </button>
           )}
         </div>
         <p className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
           {hideNumbers
-            ? "To track something new, add a habit."
-            : "Auto streaks count from what you log across the app. To track something new, add a habit."}
+            ? t("To track something new, add a habit.")
+            : t("Auto streaks count from what you log across the app. To track something new, add a habit.")}
         </p>
         {/* CU28: the helper line under the card, per coach. "Sees your
             streaks" only while the client shares Habits with them. */}
         {coachGroups.map((g) => {
-          const name = coachHabits.coaches[g.professionalId]?.name ?? "your coach";
+          const name = coachHabits.coaches[g.professionalId]?.name ?? t("your coach");
           const Name = name.charAt(0).toUpperCase() + name.slice(1);
           return (
             <p key={g.professionalId} className="mt-2.5 px-1 text-[11px] leading-[1.45] text-charcoal-muted dark:text-charcoal-faint">
-              Habits from {name} can be ticked but not edited.
-              {coachHabits.sharedWith.has(g.professionalId) ? ` ${Name} sees your streaks.` : ""}
+              {t("Habits from {name} can be ticked but not edited.", { name })}
+              {coachHabits.sharedWith.has(g.professionalId) ? ` ${t("{name} sees your streaks.", { name: Name })}` : ""}
             </p>
           );
         })}
@@ -528,7 +537,7 @@ function LineSkeleton() {
   return (
     <>
       <span aria-hidden className="inline-block align-middle w-12 h-[11px] rounded bg-cream-soft" />
-      <span className="sr-only">Loading</span>
+      <span className="sr-only">{t("Loading")}</span>
     </>
   );
 }

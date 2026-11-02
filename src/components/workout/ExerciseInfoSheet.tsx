@@ -7,6 +7,7 @@ import {
 } from "../../services/exercises";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
+import { t } from "../../i18n/core";
 
 const heading: React.CSSProperties = { margin: "0 0 10px", fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 700, color: "rgb(var(--c-charcoal))" };
 const body: React.CSSProperties = { fontSize: textPx(13), lineHeight: linePx(19), color: "rgb(var(--c-charcoal-soft))" };
@@ -75,32 +76,32 @@ export const ExerciseInfoSheet: React.FC<{
         {imageUrl && (
           <img
             src={imageUrl}
-            alt={`${name} demonstration`}
+            alt={t("{name} demonstration", { name })}
             className="w-full object-cover"
             style={{ height: 190, borderRadius: 16, background: c("imageBg"), marginBottom: 22 }}
           />
         )}
 
         {!source ? (
-          <p className="text-center" style={{ ...body, marginTop: 2 }}>Instructions coming soon</p>
+          <p className="text-center" style={{ ...body, marginTop: 2 }}>{t("Instructions coming soon")}</p>
         ) : !loaded ? (
-          <p className="text-center text-sm text-charcoal-faint" style={{ marginTop: 2 }}>Loading…</p>
+          <p className="text-center text-sm text-charcoal-faint" style={{ marginTop: 2 }}>{t("Loading…")}</p>
         ) : loaded.error ? (
           <p className="text-center text-sm text-status-high" style={{ marginTop: 2 }}>{loaded.error}</p>
         ) : hasNoInstructions(i) ? (
-          <p className="text-center" style={{ ...body, marginTop: 2 }}>Instructions coming soon</p>
+          <p className="text-center" style={{ ...body, marginTop: 2 }}>{t("Instructions coming soon")}</p>
         ) : (
           i && (
             <div className="flex flex-col" style={{ gap: 22 }}>
               {i.difficulty && (
                 <p style={{ margin: "-8px 0 -8px", fontSize: textPx(11.5), fontWeight: 700, color: c("ink") }}>
-                  {i.difficulty[0].toUpperCase() + i.difficulty.slice(1)}
+                  {t(i.difficulty[0].toUpperCase() + i.difficulty.slice(1))}
                 </p>
               )}
 
               {(i.setup.length > 0 || i.steps.length > 0) && (
                 <section>
-                  <h3 style={heading}>How to do it</h3>
+                  <h3 style={heading}>{t("How to do it")}</h3>
                   {i.setup.length > 0 && (
                     <div style={{ marginBottom: i.steps.length ? 12 : 0 }}>
                       <Bullets items={i.setup} />
@@ -124,44 +125,44 @@ export const ExerciseInfoSheet: React.FC<{
 
               {i.cues.length > 0 && (
                 <section>
-                  <h3 style={heading}>Tips</h3>
+                  <h3 style={heading}>{t("Tips")}</h3>
                   <Bullets items={i.cues} />
                 </section>
               )}
 
               {i.breathing && (
                 <section>
-                  <h3 style={heading}>Breathing</h3>
+                  <h3 style={heading}>{t("Breathing")}</h3>
                   <p style={{ ...body, margin: 0 }}>{i.breathing}</p>
                 </section>
               )}
 
               {i.commonMistakes.length > 0 && (
                 <section>
-                  <h3 style={heading}>Common mistakes</h3>
+                  <h3 style={heading}>{t("Common mistakes")}</h3>
                   <Bullets items={i.commonMistakes} />
                 </section>
               )}
 
               {i.safetyNotes.length > 0 && (
                 <section>
-                  <h3 style={heading}>Safety</h3>
+                  <h3 style={heading}>{t("Safety")}</h3>
                   <Bullets items={i.safetyNotes} />
                 </section>
               )}
 
               {(i.easierVariation || i.harderVariation) && (
                 <section>
-                  <h3 style={heading}>Variations</h3>
+                  <h3 style={heading}>{t("Variations")}</h3>
                   <div className="flex flex-col" style={{ gap: 4, ...body }}>
                     {i.easierVariation && (
                       <p style={{ margin: 0 }}>
-                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>Easier:</b> {i.easierVariation}
+                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>{t("Easier:")}</b> {i.easierVariation}
                       </p>
                     )}
                     {i.harderVariation && (
                       <p style={{ margin: 0 }}>
-                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>Harder:</b> {i.harderVariation}
+                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>{t("Harder:")}</b> {i.harderVariation}
                       </p>
                     )}
                   </div>

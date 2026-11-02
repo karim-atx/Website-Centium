@@ -18,6 +18,7 @@ import {
   type OnlineSource,
 } from "../../services/food/onlineSearchModel";
 import type { FoodSearchResult } from "../../services/food";
+import { t } from "../../i18n/core";
 
 // Round D · DP (PLAN D-S17 / D-S18): the online results inside Add Food, and
 // the card a result is checked on before anything is saved. In
@@ -50,7 +51,7 @@ export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: (
       >
         <Globe size={16} className="shrink-0" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))" }} />
         <span className="min-w-0">
-          Not what you want? <span style={{ fontWeight: 700, color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))" }}>Search online</span>
+          {t("Not what you want?")} <span style={{ fontWeight: 700, color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))" }}>{t("Search online")}</span>
         </span>
       </button>
     );
@@ -62,7 +63,7 @@ export const SearchOnlineButton: React.FC<{ variant: "row" | "empty"; onClick: (
       className="tap inline-flex items-center justify-center self-center"
       style={{ gap: 8, height: 42, padding: "0 18px", borderRadius: 12, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 700 }}
     >
-      <Globe size={15} /> Search online
+      <Globe size={15} /> {t("Search online")}
     </button>
   );
 };
@@ -104,9 +105,9 @@ export const OnlineResults: React.FC<{
     <div className="animate-fade-slide-up flex flex-col" style={{ gap: 6 }}>
       <div style={{ marginBottom: 6 }}>
         <p className="truncate" style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
-          Online results for “{term}”
+          {t("Online results for “{term}”", { term })}
         </p>
-        <p style={{ ...muted, margin: "2px 0 0" }}>From USDA FoodData Central and Open Food Facts</p>
+        <p style={{ ...muted, margin: "2px 0 0" }}>{t("From USDA FoodData Central and Open Food Facts")}</p>
       </div>
 
       {result === null &&
@@ -119,7 +120,7 @@ export const OnlineResults: React.FC<{
             </span>
           </div>
         ))}
-      {result === null && <span className="sr-only">Searching online…</span>}
+      {result === null && <span className="sr-only">{t("Searching online…")}</span>}
 
       {result && !result.ok && (
         <div className="flex flex-col items-center text-center" style={{ gap: 12, padding: "20px 4px" }}>
@@ -127,11 +128,11 @@ export const OnlineResults: React.FC<{
           <div className="flex" style={{ gap: 10 }}>
             {(result.kind === "error" || result.kind === "unavailable" || result.kind === "offline") && (
               <button type="button" onClick={onRetry} className="tap" style={{ ...secondaryButton(dark), height: 42, padding: "0 16px" }}>
-                Try again
+                {t("Try again")}
               </button>
             )}
             <button type="button" onClick={onAddYourself} className="tap" style={{ ...secondaryButton(dark), height: 42, padding: "0 16px" }}>
-              Add it yourself
+              {t("Add it yourself")}
             </button>
           </div>
         </div>
@@ -139,10 +140,10 @@ export const OnlineResults: React.FC<{
 
       {result?.ok && result.results.length === 0 && (
         <div className="flex flex-col items-center text-center" style={{ gap: 12, padding: "20px 4px" }}>
-          <p style={{ margin: 0, fontSize: textPx(13.5), color: "rgb(var(--c-charcoal-soft))" }}>Nothing online either.</p>
+          <p style={{ margin: 0, fontSize: textPx(13.5), color: "rgb(var(--c-charcoal-soft))" }}>{t("Nothing online either.")}</p>
           {note && <p style={{ ...muted, margin: 0 }}>{note}</p>}
           <button type="button" onClick={onAddYourself} className="tap" style={{ ...secondaryButton(dark), height: 42, padding: "0 16px" }}>
-            Add it yourself
+            {t("Add it yourself")}
           </button>
         </div>
       )}
@@ -175,13 +176,13 @@ export const OnlineResults: React.FC<{
                 <span className="flex flex-col items-end shrink-0" style={{ gap: 4 }}>
                   <SourceBadge source={f.source} />
                   {!hide && (
-                    <span style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{Math.round(f.calories)} kcal</span>
+                    <span style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("{n} kcal", { n: Math.round(f.calories) })}</span>
                   )}
                 </span>
               </button>
             ))}
           </div>
-          {!hide && <p style={{ ...muted, fontSize: textPx(10.5), margin: "6px 0 0" }}>Values are per serving.</p>}
+          {!hide && <p style={{ ...muted, fontSize: textPx(10.5), margin: "6px 0 0" }}>{t("Values are per serving.")}</p>}
           {offNotice && <p style={{ ...muted, fontSize: textPx(10.5), margin: "4px 0 0", lineHeight: 1.45 }}>{offNotice}</p>}
         </>
       )}
@@ -240,10 +241,10 @@ export const FoundFoodCard: React.FC<{
         {!hide && (
           <div className="grid grid-cols-4 text-center" style={{ marginTop: 12 }}>
             {[
-              [`${Math.round(food.calories)}`, "kcal"],
-              [`${Math.round(food.protein * 10) / 10}g`, "protein"],
-              [`${Math.round(food.carbs * 10) / 10}g`, "carbs"],
-              [`${Math.round(food.fat * 10) / 10}g`, "fat"],
+              [`${Math.round(food.calories)}`, t("kcal")],
+              [t("{n}g", { n: Math.round(food.protein * 10) / 10 }), t("protein")],
+              [t("{n}g", { n: Math.round(food.carbs * 10) / 10 }), t("carbs")],
+              [t("{n}g", { n: Math.round(food.fat * 10) / 10 }), t("fat")],
             ].map(([v, l]) => (
               <div key={l}>
                 <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>{v}</p>
@@ -263,14 +264,14 @@ export const FoundFoodCard: React.FC<{
             className="tap w-full flex items-center text-start"
             style={{ gap: 8, padding: "6px 2px" }}
           >
-            <span style={{ flex: 1, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>Vitamins and minerals</span>
+            <span style={{ flex: 1, fontSize: textPx(12.5), fontWeight: 700, color: "rgb(var(--c-charcoal-soft))" }}>{t("Vitamins and minerals")}</span>
             <span className="flex" style={{ color: "rgb(var(--c-charcoal-muted))", transform: nutrientsOpen ? "rotate(180deg)" : "none", transition: "transform .18s ease" }}>
               <ChevronDown size={14} />
             </span>
           </button>
           {nutrientsOpen &&
             (lines.length === 0 ? (
-              <p style={{ margin: "2px 2px 0", fontSize: textPx(12), color: "rgb(var(--c-charcoal-muted))" }}>This source has no other nutrients for this food.</p>
+              <p style={{ margin: "2px 2px 0", fontSize: textPx(12), color: "rgb(var(--c-charcoal-muted))" }}>{t("This source has no other nutrients for this food.")}</p>
             ) : (
               <div className="animate-fade-slide-up flex flex-col" style={{ marginTop: 2 }}>
                 {lines.map((l) => (
@@ -298,13 +299,13 @@ export const FoundFoodCard: React.FC<{
               className="inline-flex items-center"
               style={{ color: link, fontWeight: 600, gap: 3 }}
             >
-              View on Open Food Facts <ExternalLink size={11} />
+              {t("View on Open Food Facts")} <ExternalLink size={11} />
             </a>
           </>
         )}
       </p>
       <p style={{ margin: "6px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
-        It's saved to your own foods, where you can edit it.
+        {t("It's saved to your own foods, where you can edit it.")}
       </p>
 
       {error && (
@@ -316,24 +317,24 @@ export const FoundFoodCard: React.FC<{
       {saved ? (
         <>
           <p className="flex items-center justify-center" style={{ gap: 6, margin: "14px 0 0", fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
-            <Check size={15} /> Saved to your foods
+            <Check size={15} /> {t("Saved to your foods")}
           </p>
           <div className="flex" style={{ gap: 10, marginTop: 10 }}>
             <button type="button" onClick={onDone} className="tap flex-1" style={secondaryButton(dark)}>
-              Done
+              {t("Done")}
             </button>
             <button type="button" onClick={() => onLog(saved)} className="tap flex-1" style={primaryButton}>
-              Add to diary too
+              {t("Add to diary too")}
             </button>
           </div>
         </>
       ) : (
         <div className="flex" style={{ gap: 10, marginTop: 14 }}>
           <button type="button" onClick={() => void save("save")} disabled={!!saving} className="tap flex-1 disabled:opacity-60" style={secondaryButton(dark)}>
-            {saving === "save" ? "Saving…" : "Save to my foods"}
+            {saving === "save" ? t("Saving…") : t("Save to my foods")}
           </button>
           <button type="button" onClick={() => void save("log")} disabled={!!saving} className="tap flex-1 disabled:opacity-60" style={primaryButton}>
-            {saving === "log" ? "Saving…" : "Add to diary"}
+            {saving === "log" ? t("Saving…") : t("Add to diary")}
           </button>
         </div>
       )}

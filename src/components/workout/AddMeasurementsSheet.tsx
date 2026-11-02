@@ -23,6 +23,7 @@ import {
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 
 // Recording one set of tape measurements.
 //
@@ -110,7 +111,7 @@ export const AddMeasurementsSheet: React.FC<{
       return;
     }
     if (filled === 0) {
-      setError("Fill in at least one measurement.");
+      setError(t("Fill in at least one measurement."));
       return;
     }
     setSaving(true);
@@ -132,19 +133,19 @@ export const AddMeasurementsSheet: React.FC<{
   if (hideNumbers) return null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add measurements">
+    <BottomSheet open={open} onClose={onClose} title={t("Add measurements")}>
       <div className="animate-fade-slide-up">
         {/* WO4.1: "Measured" centred, bold and purple; the field opens the
             calendar popup with a wheel time picker (no future). */}
         <p className="text-center" style={{ color: c("purple"), fontSize: textPx(13), fontWeight: 700 }}>
-          Measured
+          {t("Measured")}
         </p>
         <button
           onClick={() => {
             setDraftTime(timeParts(when));
             setPickerOpen(true);
           }}
-          aria-label="When these were measured"
+          aria-label={t("When these were measured")}
           className="tap w-full flex items-center justify-between"
           style={{
             marginTop: 10,
@@ -176,7 +177,7 @@ export const AddMeasurementsSheet: React.FC<{
                   fontWeight: 800,
                 }}
               >
-                {GROUP_LABEL[group]}
+                {t(GROUP_LABEL[group])}
               </span>
               <span className="flex-1" style={{ height: 2, background: c("groupTint") }} />
             </div>
@@ -184,7 +185,7 @@ export const AddMeasurementsSheet: React.FC<{
               {MEASUREMENT_SITES.filter((s) => s.group === group).map((site) => (
                 <label key={site.type} className="block">
                   <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), marginBottom: 5 }}>
-                    {site.label}
+                    {t(site.label)}
                   </span>
                   <span className="relative block">
                     <input
@@ -192,7 +193,7 @@ export const AddMeasurementsSheet: React.FC<{
                       onChange={(e) => setRaw((r) => ({ ...r, [site.type]: e.target.value }))}
                       placeholder="–"
                       inputMode="decimal"
-                      aria-label={site.label}
+                      aria-label={t(site.label)}
                       className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
                       style={{
                         height: 39,
@@ -233,17 +234,17 @@ export const AddMeasurementsSheet: React.FC<{
           style={{ marginTop: 18, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
           {saving
-            ? "Saving…"
+            ? t("Saving…")
             : filled === 0
-              ? "Fill in at least one"
-              : `Save ${filled} measurement${filled === 1 ? "" : "s"}`}
+              ? t("Fill in at least one")
+              : tn(filled, "Save {n} measurement", "Save {n} measurements")}
         </button>
       </div>
 
       <CalendarPickerSheet
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        title="Measured on"
+        title={t("Measured on")}
         selectedDate={localDay(when)}
         today={localDay(now)}
         maxDate={localDay(now)}
@@ -258,26 +259,26 @@ export const AddMeasurementsSheet: React.FC<{
                 className="text-center"
                 style={{ color: c("timeLabel"), fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
               >
-                TIME
+                {t("Time")}
               </p>
               <WheelPicker
                 columns={[
                   {
-                    label: "Hours",
+                    label: t("Hours"),
                     value: draftTime.hour,
                     options: HOURS.map((h) => ({ value: h, label: String(h), disabled: later.hour(h) })),
                     onChange: (v) => setDraftTime((t) => ({ ...t, hour: Number(v) })),
                   },
                   {
-                    label: "Minutes",
+                    label: t("Minutes"),
                     value: draftTime.minute,
                     options: MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0"), disabled: later.minute(m) })),
                     onChange: (v) => setDraftTime((t) => ({ ...t, minute: Number(v) })),
                   },
                   {
-                    label: "AM or PM",
+                    label: t("AM or PM"),
                     value: draftTime.meridiem,
-                    options: MERIDIEMS.map((m) => ({ value: m, label: m, disabled: later.meridiem(m) })),
+                    options: MERIDIEMS.map((m) => ({ value: m, label: t(m), disabled: later.meridiem(m) })),
                     onChange: (v) => setDraftTime((t) => ({ ...t, meridiem: v as Meridiem })),
                   },
                 ]}

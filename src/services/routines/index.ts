@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
+import { t, tk } from "../../i18n/core";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   BlockKind,
@@ -83,24 +84,24 @@ export function resolveExerciseRef(ex: Exercise, lookup: ExerciseLookup): Exerci
  * routine folders cannot word the same refusal two different ways.
  */
 /** OURS (WO1 B-1, B3 PB-O-36): a routine's name rule. */
-export const ROUTINE_NAME_RULE = "A routine name is 1 to 60 characters.";
+export const ROUTINE_NAME_RULE = tk("A routine name is 1 to 60 characters.");
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   // Round E: the playlist link refused (ATXN0 / ATXN1 / ATXN2).
   const playlist = playlistSaveError(code);
   if (playlist) return playlist;
-  if (code === "42501") return "You don't have permission to do that.";
+  if (code === "42501") return t("You don't have permission to do that.");
   // 23503 is the foreign key: a folder or exercise that is not there.
-  if (code === "23503") return "Something this refers to no longer exists. Try again.";
+  if (code === "23503") return t("Something this refers to no longer exists. Try again.");
   // Database B3 (PB-O-36): routines.name is 1 to 60 trimmed; the screen caps
   // and trims it already, so this is the server's backstop.
-  if (code === "23514" && (error.message ?? "").includes("routines_name_check")) return ROUTINE_NAME_RULE;
+  if (code === "23514" && (error.message ?? "").includes("routines_name_check")) return t(ROUTINE_NAME_RULE);
   if (code === "23514" || code === "22003") {
-    return "One of those numbers is outside the range this can store.";
+    return t("One of those numbers is outside the range this can store.");
   }
   if (isOffline(error)) return OFFLINE_MESSAGE;
-  return "Something went wrong. Please try again.";
+  return t("Something went wrong. Please try again.");
 }
 
 /**
@@ -312,7 +313,7 @@ async function writeBlocks(
     .select(BLOCK_COLUMNS);
   if (error || !data) {
     console.error("[routines] Could not write blocks:", error?.message);
-    return { message: error ? describe(error) : "Could not save the blocks in this routine." };
+    return { message: error ? describe(error) : t("Could not save the blocks in this routine.") };
   }
 
   // INSERT ORDER IS THE ONLY LINK between what went in and what came back —
@@ -408,7 +409,7 @@ export async function createRoutine(
     console.error("[routines] Could not create routine:", error?.message);
     return {
       ok: false,
-      message: error ? describe(error) : "Something went wrong. Please try again.",
+      message: error ? describe(error) : t("Something went wrong. Please try again."),
     };
   }
 

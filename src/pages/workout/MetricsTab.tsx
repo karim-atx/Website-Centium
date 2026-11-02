@@ -42,6 +42,7 @@ import { ShareEntryButton } from "../../components/share/client/ShareEntryButton
 import { prCard } from "../../components/share/client/clientCardModel";
 import { isNewPr, prFacts } from "../../components/share/client/clientShareData";
 import { appLocale } from "../../i18n/format";
+import { getLanguage, t, tn, tx } from "../../i18n/core";
 
 // Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
 // the scrubbed point's stats), One-rep maxes (the six highest; All opens
@@ -207,7 +208,7 @@ export default function MetricsTab() {
     if (!id) return;
     void (async () => {
       const result = await deleteMeasurement(id);
-      if (!result.ok) setMeasurementsError(result.message ?? "Couldn't delete that reading.");
+      if (!result.ok) setMeasurementsError(result.message ? t(result.message) : t("Couldn't delete that reading."));
       await loadMeasurements();
       setHiddenIds((prev) => {
         const next = new Set(prev);
@@ -283,6 +284,8 @@ export default function MetricsTab() {
   const dominant = topGroup && dominantShare > 0.45 ? topGroup[0] : null;
   const chip = dominant ? themedChip(balanceColors[dominant] ?? "#B8AFC8", dark) : null;
   const groupLabel = (g: string) => g.charAt(0).toUpperCase() + g.slice(1).replace(/_/g, " ");
+  // The muscle group in the app's language ("Back" the muscle is not "Back" the button).
+  const groupName = (g: string) => (g === "back" ? tx("Back", "muscle") : t(groupLabel(g)));
 
   return (
     <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
@@ -295,11 +298,11 @@ export default function MetricsTab() {
           <>
             <div className="flex items-center justify-between" style={{ padding: "0 17px", height: 26 }}>
               <span style={{ color: "rgba(255,255,255,0.75)", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.14em" }}>
-                VOLUME
+                {t("VOLUME")}
               </span>
               <div
                 role="tablist"
-                aria-label="Volume by"
+                aria-label={t("Volume by")}
                 className="flex"
                 style={{ height: 26, padding: 2, gap: 2, borderRadius: 9, background: "rgba(255,255,255,0.22)" }}
               >
@@ -323,7 +326,7 @@ export default function MetricsTab() {
                       color: volumeMode === m ? (dark ? "rgb(var(--c-charcoal))" : "rgb(var(--thi-463a80))") : "#FFFFFF",
                     }}
                   >
-                    {m === "workout" ? "By workout" : "By week"}
+                    {m === "workout" ? t("By workout") : t("By week")}
                   </button>
                 ))}
               </div>
@@ -334,7 +337,7 @@ export default function MetricsTab() {
               color="#FFFFFF"
               unit="kg"
               formatDate={(t) => shortDay(new Date(t).toISOString().slice(0, 10))}
-              ariaLabel={volumeMode === "workout" ? "Volume by workout" : "Volume by week"}
+              ariaLabel={volumeMode === "workout" ? t("Volume by workout") : t("Volume by week")}
               tone="card"
               geometry={HERO_GEOMETRY}
               unitOnAxis={false}
@@ -344,7 +347,7 @@ export default function MetricsTab() {
               formatTick={kiloTick}
               scrubText={(p) => p.label}
               dateCount={4}
-              emptyText="No sessions yet"
+              emptyText={t("No sessions yet")}
               selected={heroPick}
               onSelect={setHeroPick}
             />
@@ -354,29 +357,29 @@ export default function MetricsTab() {
           // Decision 10: all six stats fit without scrolling, as two rows of
           // three (one row needed 392px, more than the card at 360-430).
           <div className="grid grid-cols-3" style={{ columnGap: 12, rowGap: 10, padding: "12px 16px" }}>
-            <HeroFigure value={stats ? stats.volumeKg.toLocaleString(appLocale()) : null} unit="kg" label="Volume" accent />
-            <HeroFigure value={stats?.oneRmKg != null ? kgWhole(stats.oneRmKg) : null} unit="kg" label="1RM" />
-            <HeroFigure value={stats?.maxWeightKg ?? null} unit="kg" label="Max weight" />
-            <HeroFigure value={stats ? stats.sets : null} label="Sets" />
-            <HeroFigure value={stats ? stats.reps : null} label="Reps" />
-            <HeroFigure value={stats?.seconds ?? null} label="Seconds" />
+            <HeroFigure value={stats ? stats.volumeKg.toLocaleString(appLocale()) : null} unit="kg" label={t("Volume")} accent />
+            <HeroFigure value={stats?.oneRmKg != null ? kgWhole(stats.oneRmKg) : null} unit="kg" label={t("1RM")} />
+            <HeroFigure value={stats?.maxWeightKg ?? null} unit="kg" label={t("Max weight")} />
+            <HeroFigure value={stats ? stats.sets : null} label={t("Sets")} />
+            <HeroFigure value={stats ? stats.reps : null} label={t("Reps")} />
+            <HeroFigure value={stats?.seconds ?? null} label={t("Seconds")} />
           </div>
         }
       />
 
       <MetricCard
         icon="/metrics/orm-teal.png"
-        title="One-rep maxes"
+        title={t("One-rep maxes")}
         right={
           lifts.length === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>None yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("None yet")}</span>
           ) : (
             <button
               onClick={() => setOneRmOpen(true)}
               className="tap flex items-center"
               style={{ color: c("teal"), fontSize: textPx(12.5), fontWeight: 600, gap: 3 }}
             >
-              All {lifts.length} <ChevronRight size={13} />
+              {t("All {n}", { n: lifts.length })} <ChevronRight size={13} className="rtl:-scale-x-100" />
             </button>
           )
         }
@@ -404,7 +407,7 @@ export default function MetricsTab() {
                 <ShareEntryButton
                   size={28}
                   ring={false}
-                  label={`Share your ${lift.name} personal best`}
+                  label={t("Share your {name} personal best", { name: lift.name })}
                   onPress={() => share.open(prCard(prFacts(lift, today)))}
                   style={{ position: "absolute", insetInlineEnd: 0, top: 0 }}
                 />
@@ -418,15 +421,15 @@ export default function MetricsTab() {
 
       <MetricCard
         icon="/metrics/balance.png"
-        title="Balance"
+        title={t("Balance")}
         right={
           totalSets === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>No sets yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("No sets yet")}</span>
           ) : chip ? (
             <span
               style={{ ...chip, borderRadius: 6, padding: "2px 7px", fontSize: textPx(11.5), fontWeight: 600 }}
             >
-              {groupLabel(dominant!)}-heavy lately
+              {t("{group}-heavy lately", { group: groupName(dominant!) })}
             </span>
           ) : null
         }
@@ -443,7 +446,7 @@ export default function MetricsTab() {
                 <div key={group} className="min-w-0">
                   <span className="flex items-center truncate" style={{ gap: 4, color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5) }}>
                     <span className="flex-none" style={{ width: 6, height: 6, borderRadius: 3, background: balanceColors[group] ?? "#B8AFC8" }} />
-                    {groupLabel(group)}
+                    {groupName(group)}
                   </span>
                   <span className="block" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(13), fontWeight: 800, marginTop: 2 }}>
                     {Math.round((count / totalSets) * 100)}%
@@ -457,7 +460,7 @@ export default function MetricsTab() {
                 className="tap flex items-center"
                 style={{ color: c("purple"), fontSize: textPx(12), fontWeight: 700, gap: 3 }}
               >
-                Full breakdown <ChevronRight size={13} />
+                {t("Full breakdown")} <ChevronRight size={13} className="rtl:-scale-x-100" />
               </button>
             </div>
           </>
@@ -466,19 +469,19 @@ export default function MetricsTab() {
 
       <MetricCard
         icon="/metrics/freq.png"
-        title="Training frequency"
+        title={t("Training frequency")}
         right={
           workoutSessions.length === 0 ? (
-            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>No sessions yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("No sessions yet")}</span>
           ) : (
             <span style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(20), fontWeight: 800 }}>
               {frequency.perWeek}
-              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginInlineStart: 3 }}>/ week</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11), fontWeight: 500, marginInlineStart: 3 }}>{t("/ week")}</span>
             </span>
           )
         }
       >
-        <div className="flex items-end" style={{ height: 33, gap: 6, marginTop: 11 }} aria-label="Sessions per week, last 8 weeks">
+        <div className="flex items-end" style={{ height: 33, gap: 6, marginTop: 11 }} aria-label={t("Sessions per week, last 8 weeks")}>
           {frequency.weeks.map((count, i) => (
             <span
               key={i}
@@ -492,16 +495,17 @@ export default function MetricsTab() {
           ))}
         </div>
         <div className="flex justify-between" style={{ marginTop: 6, fontSize: textPx(9.5) }}>
-          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>8 wks ago</span>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>{t("8 wks ago")}</span>
           <span style={{ color: c("purple"), fontWeight: 700 }}>
-            This week{workoutSessions.length ? ` · ${frequency.weeks[7]}` : ""}
+            {t("This week")}
+            {workoutSessions.length ? ` · ${frequency.weeks[7]}` : ""}
           </span>
         </div>
       </MetricCard>
 
       <MetricCard
         icon="/metrics/body.png"
-        title="Body measurements"
+        title={t("Body measurements")}
         right={
           hideNumbers ? undefined : measuredSites.length === 0 && !measurementsError ? (
             <button
@@ -509,7 +513,7 @@ export default function MetricsTab() {
               className="tap flex items-center"
               style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "rgb(var(--th-6f9993))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(12), fontWeight: 700 }}
             >
-              <Plus size={12} /> Add
+              <Plus size={12} /> {t("Add")}
             </button>
           ) : (
             <button
@@ -517,18 +521,18 @@ export default function MetricsTab() {
               className="tap flex items-center"
               style={{ color: c("teal"), fontSize: textPx(12.5), fontWeight: 700, gap: 4 }}
             >
-              <Plus size={13} /> Add
+              <Plus size={13} /> {t("Add")}
             </button>
           )
         }
       >
         {hideNumbers ? (
           <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(12.5), marginTop: 10 }}>
-            {RECOVERY_HIDDEN_LINE}
+            {t(RECOVERY_HIDDEN_LINE)}
           </p>
         ) : measurementsError ? (
           <p className="text-sm text-status-high" style={{ marginTop: 10 }}>
-            {measurementsError}
+            {t(measurementsError)}
           </p>
         ) : (
           measuredSites.length > 0 && (
@@ -545,7 +549,7 @@ export default function MetricsTab() {
                   <button
                     key={site.type}
                     onClick={() => setHistoryType(site.type)}
-                    aria-label={`${site.label} history`}
+                    aria-label={t("{name} history", { name: t(site.label) })}
                     className="tap text-start min-w-0"
                     style={{ background: c("tealTile"), borderRadius: 10, padding: "9px 10px" }}
                   >
@@ -561,7 +565,7 @@ export default function MetricsTab() {
                       )}
                     </span>
                     <span className="block truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), marginTop: 3 }}>
-                      {site.label}
+                      {t(site.label)}
                     </span>
                     {change != null && change !== 0 && (
                       <span className="block" style={{ color: change > 0 ? c("up") : c("down"), fontSize: textPx(10.5), fontWeight: 700 }}>
@@ -586,12 +590,12 @@ export default function MetricsTab() {
         open={addMeasurementsOpen && !hideNumbers}
         onClose={() => setAddMeasurementsOpen(false)}
         onSave={async (values, recordedAt) => {
-          if (!authUserId) return "You need to be signed in to save measurements.";
+          if (!authUserId) return t("You need to be signed in to save measurements.");
           const result = await logMeasurements({ userId: authUserId, values, recordedAt });
           // first_measurements is earned from health_metrics, so a successful
           // save is a moment an achievement can land.
           if (result.ok) refreshAchievements();
-          if (!result.ok) return result.message ?? "Couldn't save that.";
+          if (!result.ok) return result.message ? t(result.message) : t("Couldn't save that.");
           await loadMeasurements();
           return null;
         }}
@@ -620,12 +624,12 @@ export default function MetricsTab() {
           const result = await setMeasurementGoal(authUserId, type, goal);
           if (!result.ok) {
             apply(before);
-            setMeasurementsError(result.message ?? "Couldn't save that goal.");
+            setMeasurementsError(result.message ? t(result.message) : t("Couldn't save that goal."));
           }
         }}
         onEdit={async (id, type, value) => {
           const result = await updateMeasurement(id, type, value);
-          if (!result.ok) return result.message ?? "Couldn't update that.";
+          if (!result.ok) return result.message ? t(result.message) : t("Couldn't update that.");
           await loadMeasurements();
           return null;
         }}
@@ -639,7 +643,7 @@ export default function MetricsTab() {
 
       <Toast
         open={!!toast}
-        message="Reading deleted."
+        message={t("Reading deleted.")}
         onUndo={() => {
           if (toast && pendingDelete.current === toast.id) pendingDelete.current = null;
           const id = toast?.id;
@@ -656,17 +660,17 @@ export default function MetricsTab() {
         }}
       />
 
-      <BottomSheet open={balanceOpen} onClose={() => setBalanceOpen(false)} title="Training balance">
+      <BottomSheet open={balanceOpen} onClose={() => setBalanceOpen(false)} title={t("Training balance")}>
         <div className="space-y-2.5 animate-fade-slide-up">
-          <p className="text-xs text-charcoal-faint mb-1">Completed sets by primary muscle group, all time.</p>
+          <p className="text-xs text-charcoal-faint mb-1">{t("Completed sets by primary muscle group, all time.")}</p>
           {sortedGroups.map(([group, count]) => (
             <div key={group} className="flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm text-charcoal">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: balanceColors[group] ?? "#B8AFC8" }} />
-                {group.replace(/_/g, " ")}
+                {getLanguage() === "en" ? group.replace(/_/g, " ") : groupName(group)}
               </span>
               <span className="text-sm font-semibold text-charcoal-soft">
-                {count} sets · {Math.round((count / totalSets) * 100)}%
+                {tn(count, "{n} set", "{n} sets")} · {Math.round((count / totalSets) * 100)}%
               </span>
             </div>
           ))}

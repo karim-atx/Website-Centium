@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 
 // Reads food_nutrients — per-nutrient data for CATALOG foods only, imported
 // from USDA FoodData Central by scripts/import-fdc-nutrients.ts. There is no
@@ -38,7 +39,7 @@ export async function getFoodNutrients(foodIds: string[]): Promise<FoodNutrients
   if (error) {
     if (isOffline(error)) return { ok: false, byFoodId: {}, message: OFFLINE_MESSAGE };
     console.error("[food-nutrients] fetch failed:", error.message);
-    return { ok: false, byFoodId: {}, message: "Could not load nutrient data. Please try again." };
+    return { ok: false, byFoodId: {}, message: t("Could not load nutrient data. Please try again.") };
   }
 
   const byFoodId: Record<string, Record<string, number>> = {};

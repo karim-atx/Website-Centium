@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, KeyRound, Lock } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { t, tk } from "../../i18n/core";
 
 // MO1.1.2.2 · Journal · Locked folder, and the password prompt that stands in
 // for its Face ID on the web (backend stage 3, Database docs/HANDOVER_API.md:
@@ -57,15 +58,15 @@ export function LockedFolderView({ folderName, onUnlock }: { folderName: string;
         style={{ boxShadow: "0 12px 32px rgb(var(--th-5f5093) / 0.18)" }}
       >
         <Lock size={30} strokeWidth={2.25} aria-hidden className="text-th-7d6bb5 dark:text-primary-deep-text" />
-        <p className="mt-3 text-[14px] leading-5 font-semibold text-charcoal whitespace-nowrap">This folder is locked</p>
+        <p className="mt-3 text-[14px] leading-5 font-semibold text-charcoal whitespace-nowrap">{t("This folder is locked")}</p>
         <button
           type="button"
           onClick={onUnlock}
-          aria-label={`Unlock ${folderName}`}
+          aria-label={t("Unlock {folder}", { folder: folderName })}
           className="tap mt-2 w-full h-[38px] rounded-xl inline-flex items-center justify-center gap-2 bg-[rgb(var(--c-fill-cta))] text-on-primary-fill text-[13px] font-bold active:brightness-[0.92]"
         >
           <KeyRound size={15} strokeWidth={1.75} aria-hidden />
-          Unlock
+          {t("Unlock")}
         </button>
       </div>
     </div>
@@ -78,10 +79,10 @@ export function LockedFolderView({ folderName, onUnlock }: { folderName: string;
 export type PasswordPurpose = "unlock" | "remove" | "delete" | "write";
 
 const COPY: Record<PasswordPurpose, { title: string; body: (name: string) => string; cta: string }> = {
-  unlock: { title: "Enter your password", body: (n) => `${n} stays open for five minutes.`, cta: "Unlock" },
-  write: { title: "Enter your password", body: (n) => `${n} is locked. Unlock it for five minutes to save here.`, cta: "Unlock" },
-  delete: { title: "Enter your password", body: (n) => `${n} is locked. Unlock it to delete the folder.`, cta: "Unlock" },
-  remove: { title: "Remove the lock?", body: (n) => `Enter your password and ${n} stops locking.`, cta: "Remove lock" },
+  unlock: { title: tk("Enter your password"), body: (n) => t("{folder} stays open for five minutes.", { folder: n }), cta: tk("Unlock") },
+  write: { title: tk("Enter your password"), body: (n) => t("{folder} is locked. Unlock it for five minutes to save here.", { folder: n }), cta: tk("Unlock") },
+  delete: { title: tk("Enter your password"), body: (n) => t("{folder} is locked. Unlock it to delete the folder.", { folder: n }), cta: tk("Unlock") },
+  remove: { title: tk("Remove the lock?"), body: (n) => t("Enter your password and {folder} stops locking.", { folder: n }), cta: tk("Remove lock") },
 };
 
 /**
@@ -122,7 +123,7 @@ export function JournalPasswordPopup({
   const submit = async () => {
     if (busy) return;
     if (!password) {
-      setError("Enter your password.");
+      setError(t("Enter your password."));
       return;
     }
     setBusy(true);
@@ -141,12 +142,12 @@ export function JournalPasswordPopup({
       open
       onClose={busy ? () => {} : onClose}
       icon={<Lock size={22} strokeWidth={1.75} />}
-      title={copy.title}
+      title={t(copy.title)}
       body={copy.body(folderName)}
-      cta={{ label: copy.cta, onClick: () => void submit(), loading: busy }}
+      cta={{ label: t(copy.cta), onClick: () => void submit(), loading: busy }}
     >
       <label className="block relative">
-        <span className="sr-only">Password</span>
+        <span className="sr-only">{t("Password")}</span>
         <input
           ref={inputRef}
           value={password}
@@ -162,7 +163,7 @@ export function JournalPasswordPopup({
           }}
           type={visibility.shown ? "text" : "password"}
           autoComplete="current-password"
-          placeholder="Password"
+          placeholder={t("Password")}
           aria-invalid={!!error || undefined}
           className={`w-full h-11 rounded-xl bg-cream-soft border border-charcoal/10 ps-3.5 pe-11 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))] ${
             error ? "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-status-high))]" : ""
@@ -172,14 +173,14 @@ export function JournalPasswordPopup({
           type="button"
           onClick={visibility.toggle}
           className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
-          aria-label={visibility.shown ? "Hide password" : "Show password"}
+          aria-label={visibility.shown ? t("Hide password") : t("Show password")}
         >
           {visibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </label>
       {error && (
         <p role="alert" className="mt-1.5 text-[11.5px] leading-4 font-medium text-status-high">
-          {error}
+          {t(error)}
         </p>
       )}
     </CentredPopup>

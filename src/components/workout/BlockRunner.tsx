@@ -18,6 +18,7 @@ import {
   type Stopwatch,
 } from "../../services/workout/clock";
 import { textPx } from "../../theme/textSize";
+import { t, tx } from "../../i18n/core";
 
 // Running a block, as opposed to reading one.
 //
@@ -224,11 +225,11 @@ const ScoreBoard: React.FC<{
     const over = cap > 0 && capReached(watch, cap, now);
     return (
       <Panel>
-        <Clock value={formatClock(left)} ink={over ? runnerColor("danger", dark) : ink} label={over ? "Time" : cap ? "Remaining" : "Elapsed"} />
+        <Clock value={formatClock(left)} ink={over ? runnerColor("danger", dark) : ink} label={over ? t("Time") : cap ? t("Remaining") : t("Elapsed")} />
         <Transport running={isRunning(watch)} onToggle={start} onReset={reset} />
-        <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} fill={fill} />
+        <Counter label={t("Rounds")} value={rounds} onChange={bump} ink={ink} fill={fill} />
         <NumberBox
-          label="Extra reps"
+          label={t("Extra reps")}
           value={result?.extraReps}
           onChange={(v) => onResult({ extraReps: v })}
         />
@@ -271,10 +272,10 @@ const ScoreBoard: React.FC<{
       <Clock
         value={formatClock(finished ? result!.timeSeconds! : hitCap ? cap : elapsed)}
         ink={hitCap ? runnerColor("danger", dark) : ink}
-        label={finished ? (result!.capped ? "Capped" : "Finished") : hitCap ? "At the cap" : "Elapsed"}
+        label={finished ? (result!.capped ? t("Capped") : t("Finished")) : hitCap ? t("At the cap") : t("Elapsed")}
       />
       {!finished && <Transport running={isRunning(watch)} onToggle={start} onReset={reset} />}
-      {block.rounds ? <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} fill={fill} /> : null}
+      {block.rounds ? <Counter label={t("Rounds")} value={rounds} onChange={bump} ink={ink} fill={fill} /> : null}
       {/* ROUNDS PLUS REPS IS THE SCORE OF A CAPPED PIECE, and the clock is
           not — it reads the cap, the same value for everyone it stopped. The
           field appears only once the cap has actually been recorded, because
@@ -282,7 +283,7 @@ const ScoreBoard: React.FC<{
           on a finished one, where there is no remainder to have. */}
       {wasCapped && (
         <NumberBox
-          label="Reps in the unfinished round"
+          label={t("Reps in the unfinished round")}
           value={result?.extraReps}
           onChange={(v) => onResult({ extraReps: v })}
         />
@@ -299,7 +300,7 @@ const ScoreBoard: React.FC<{
           className="tap text-[11px] font-semibold"
           style={{ color: ink }}
         >
-          Undo finish
+          {t("Undo finish")}
         </button>
       ) : (
         <button
@@ -320,7 +321,7 @@ const ScoreBoard: React.FC<{
             color: elapsed <= 0 ? runnerColor("disabledInk", dark) : "#FFFFFF",
           }}
         >
-          {hitCap ? "Record cap" : "Finish"}
+          {hitCap ? t("Record cap") : t("Finish")}
         </button>
       )}
     </Panel>
@@ -359,25 +360,25 @@ const EmomPanel: React.FC<{
       <Clock
         value={formatClock(pos.remaining)}
         ink={pos.done ? "rgb(var(--c-charcoal-muted))" : ink}
-        label={pos.done ? "Done" : `Round ${pos.round}${planned ? ` of ${planned}` : ""}`}
+        label={pos.done ? t("Done") : planned ? t("Round {round} of {total}", { round: pos.round, total: planned }) : t("Round {round}", { round: pos.round })}
       />
       <Transport running={running} onToggle={onToggle} onReset={onReset} />
       <button
         onClick={onSound}
         aria-pressed={sound}
-        aria-label={sound ? "Mute the interval beep" : "Unmute the interval beep"}
+        aria-label={sound ? t("Mute the interval beep") : t("Unmute the interval beep")}
         className="tap w-7 h-7 rounded-full flex items-center justify-center"
         style={{ background: "rgb(var(--c-cream-card))", color: sound ? ink : runnerColor("disabledInk", dark) }}
       >
         {sound ? <Volume2 size={13} /> : <VolumeX size={13} />}
       </button>
-      <Counter label="Held" value={rounds} onChange={onBump} ink={ink} fill={fill} />
+      <Counter label={t("Held")} value={rounds} onChange={onBump} ink={ink} fill={fill} />
       {/* MISSING A ROUND IS A THING THAT HAPPENS, and an EMOM where you cannot
           say so records a workout nobody did. It is the same counter read the
           other way: rounds held out of rounds planned. */}
       {planned > 0 && (
         <span className="text-[10.5px] text-charcoal-faint">
-          {planned - rounds > 0 ? `${planned - rounds} missed` : "all held"}
+          {planned - rounds > 0 ? tx("{n} missed", "rounds", { n: planned - rounds }) : t("all held")}
         </span>
       )}
     </Panel>
@@ -415,14 +416,14 @@ const Transport: React.FC<{ running: boolean; onToggle: () => void; onReset: () 
   <span className="flex items-center" style={{ gap: 6 }}>
     <button
       onClick={onToggle}
-      aria-label={running ? "Pause the block timer" : "Start the block timer"}
+      aria-label={running ? t("Pause the block timer") : t("Start the block timer")}
       className="tap w-8 h-8 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
     >
       {running ? <Pause size={13} fill="white" /> : <Play size={13} fill="white" />}
     </button>
     <button
       onClick={onReset}
-      aria-label="Reset the block timer"
+      aria-label={t("Reset the block timer")}
       className="tap w-8 h-8 rounded-full bg-cream-soft text-charcoal-soft flex items-center justify-center"
     >
       <RotateCcw size={13} />
@@ -440,7 +441,7 @@ const Counter: React.FC<{ label: string; value: number; onChange: (by: number) =
   <span className="flex items-center" style={{ gap: 6 }}>
     <button
       onClick={() => onChange(-1)}
-      aria-label={`One fewer ${label.toLowerCase()}`}
+      aria-label={t("One fewer {label}", { label: label.toLowerCase() })}
       disabled={value <= 0}
       className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal-soft flex items-center justify-center disabled:opacity-40"
     >
@@ -454,7 +455,7 @@ const Counter: React.FC<{ label: string; value: number; onChange: (by: number) =
     </span>
     <button
       onClick={() => onChange(1)}
-      aria-label={`One more ${label.toLowerCase()}`}
+      aria-label={t("One more {label}", { label: label.toLowerCase() })}
       className="tap w-8 h-8 rounded-full flex items-center justify-center text-white"
       style={{ background: fill }}
     >

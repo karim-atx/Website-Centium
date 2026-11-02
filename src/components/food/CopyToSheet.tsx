@@ -6,6 +6,7 @@ import { shiftDate } from "../../utils/date";
 import { COPY_MEALS, COPY_MEAL_LABEL, copyDayLabel } from "../../utils/copyTo";
 import type { MealType } from "../../types";
 import { textPx } from "../../theme/textSize";
+import { t, tn } from "../../i18n/core";
 
 // Handover 2026-09-29 FO1.1 "Copy to…": where copied diary entries go. An
 // iOS-style wheel in two columns, Day and Meal, defaulting to Tomorrow and
@@ -31,7 +32,7 @@ export const CopyToSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title="Copy to…"
+      title={t("Copy to…")}
       footer={
         <button
           onClick={() => onConfirm(day, toMeal)}
@@ -39,33 +40,33 @@ export const CopyToSheet: React.FC<{
           className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
           style={{ height: 52, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(15), fontWeight: 700 }}
         >
-          <Copy size={16} /> {busy ? "Copying…" : `Copy ${count} item${count === 1 ? "" : "s"}`}
+          <Copy size={16} /> {busy ? t("Copying…") : tn(count, "Copy {n} item", "Copy {n} items")}
         </button>
       }
     >
       <WheelPicker
         columns={[
           {
-            label: "Day",
+            label: t("Day"),
             flex: 1.2,
             value: day,
             options: days.map((d) => ({ value: d, label: copyDayLabel(d, today) })),
             onChange: (v) => setDay(String(v)),
           },
           {
-            label: "Meal",
+            label: t("Meal"),
             value: toMeal,
-            options: COPY_MEALS.map((m) => ({ value: m, label: COPY_MEAL_LABEL[m] })),
+            options: COPY_MEALS.map((m) => ({ value: m, label: t(COPY_MEAL_LABEL[m]) })),
             onChange: (v) => setToMeal(v as MealType),
           },
         ]}
       />
       <div className="flex" style={{ marginTop: 8, color: "rgb(var(--thi-9a94b3))", fontSize: textPx(9.5), fontWeight: 700, letterSpacing: "0.12em" }}>
         <span className="text-center" style={{ flex: 1.2 }}>
-          DAY
+          {t("DAY")}
         </span>
         <span className="text-center" style={{ flex: 1 }}>
-          MEAL
+          {t("MEAL")}
         </span>
       </div>
     </BottomSheet>
