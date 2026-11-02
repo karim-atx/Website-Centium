@@ -14,6 +14,7 @@ import { itemAllows } from "./heldShareModel";
 import { HeldShareNote, PausedLink } from "./HeldShareParts";
 import { copyText } from "./shareActions";
 import { useSharePro } from "./useSharePro";
+import { t } from "../../i18n/core";
 
 type Load = { status: "loading" } | { status: "error"; offline: boolean } | { status: "missing" } | { status: "found"; item: OwnedSharedItem };
 
@@ -68,14 +69,14 @@ export const HeldShareCardSheet: React.FC<{ itemId: string | null; onClose: () =
   };
 
   return (
-    <BottomSheet open={!!itemId} onClose={onClose} title="Shared card" footer={<CtaButton label="Done" size="sheet" onClick={onClose} />}>
+    <BottomSheet open={!!itemId} onClose={onClose} title={t("Shared card")} footer={<CtaButton label={t("Done")} size="sheet" onClick={onClose} />}>
       {load.status === "loading" || (found && !pro) ? (
         <ProCardSkeleton lines={3} />
       ) : load.status === "error" ? (
-        <ProError onRetry={() => setAttempt((a) => a + 1)} message={load.offline ? OFFLINE_MESSAGE : "Couldn't load this card."} />
+        <ProError onRetry={() => setAttempt((a) => a + 1)} message={load.offline ? OFFLINE_MESSAGE : t("Couldn't load this card.")} />
       ) : load.status === "missing" || !found || !allows ? (
         <p className="text-center" style={{ fontSize: textPx(13), color: INK.chS, padding: "12px 0" }}>
-          This card is no longer in your shared cards.
+          {t("This card is no longer in your shared cards.")}
         </p>
       ) : (
         <div>
@@ -89,25 +90,25 @@ export const HeldShareCardSheet: React.FC<{ itemId: string | null; onClose: () =
           ) : found.state === "live" ? (
             <p role="status" className="flex items-center justify-center" style={{ gap: 6, fontSize: textPx(13), fontWeight: 700, color: INK.good }}>
               <Check size={15} strokeWidth={2.4} aria-hidden style={{ ...NO_ICON_SCALE, flex: "none" }} />
-              Your shared card is live.
+              {t("Your shared card is live.")}
             </p>
           ) : found.state === "removal_requested" ? (
             <p className="text-center" style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS }}>
-              The client asked you to remove this card.
+              {t("The client asked you to remove this card.")}
             </p>
           ) : null}
           <div style={{ marginTop: 12 }}>
             {allows.link ? (
               <>
-                <CtaButton label="Copy link" icon={<Link2 size={15} aria-hidden />} size="sheet" variant="outline" onClick={() => void copy()} />
+                <CtaButton label={t("Copy link")} icon={<Link2 size={15} aria-hidden />} size="sheet" variant="outline" onClick={() => void copy()} />
                 {copied !== null && (
                   <p role="status" className="text-center" style={{ fontSize: textPx(12), color: copied ? INK.chS : INK.hi, marginTop: 6 }}>
-                    {copied ? "Link copied." : "Couldn't copy the link."}
+                    {copied ? t("Link copied.") : t("Couldn't copy the link.")}
                   </p>
                 )}
               </>
             ) : (
-              <PausedLink line={allows.line ?? ""} label={found.state === "removed" ? "Copy link" : undefined} />
+              <PausedLink line={allows.line ?? ""} label={found.state === "removed" ? t("Copy link") : undefined} />
             )}
           </div>
         </div>

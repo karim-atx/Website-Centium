@@ -21,6 +21,7 @@ import {
 import { marketPalette } from "../../theme/marketTokens";
 import { linePx, textPx } from "../../theme/textSize";
 import { time12 } from "../../utils/time12";
+import { isRtl, t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · B-SH.6 the share-link page (Business Sharing Screens
 // `linkLanding`, lines 247 to 270; HANDOVER §4 "Additions … B-SH.6", D-47),
@@ -50,37 +51,37 @@ import { time12 } from "../../utils/time12";
 // Board-only (D-52), not shipped: the "9:41" status bar, the browser address
 // bar, the centium.app address, and the sample business and offer.
 
-const NOUN: Record<string, string> = { o: "this offer", c: "this class", m: "this plan", i: "this item", j: "this opening", week: "this schedule", none: "this business" };
-const nounOf = (kind: ShareLinkKind | null) => NOUN[kind ?? "none"];
+const NOUN: Record<string, string> = { o: tk("this offer"), c: tk("this class"), m: tk("this plan"), i: tk("this item"), j: tk("this opening"), week: tk("this schedule"), none: tk("this business") };
+const nounOf = (kind: ShareLinkKind | null) => t(NOUN[kind ?? "none"]);
 
 function itemLines(card: ShareLinkCard): { eyebrow: string; title: string; value: { big: string; leaf: boolean; unit: string } | null; line: string | null; image: string | null } {
   const it: ShareLinkItem = card.item;
   switch (it.kind) {
     case "o": {
       const o = it.offer;
-      if (!o) return { eyebrow: "Offer", title: card.business.name, value: null, line: `Open it in Centium to see ${nounOf("o")}.`, image: null };
+      if (!o) return { eyebrow: t("Offer"), title: card.business.name, value: null, line: t("Open it in Centium to see {item}.", { item: nounOf("o") }), image: null };
       return {
-        eyebrow: "Offer",
+        eyebrow: t("Offer"),
         title: o.headline,
-        value: { big: pointsText(o.pointsCost), leaf: true, unit: "points" },
-        line: [o.validUntil ? `Valid until ${longDay(o.validUntil)}` : null, o.where ? (whereLabel(o.where as OfferData["where"]) ?? null) : null].filter(Boolean).join(" · ") || null,
+        value: { big: pointsText(o.pointsCost), leaf: true, unit: t("points") },
+        line: [o.validUntil ? t("Valid until {date}", { date: longDay(o.validUntil) }) : null, o.where ? (whereLabel(o.where as OfferData["where"]) ?? null) : null].filter(Boolean).join(" · ") || null,
         image: null,
       };
     }
     case "c": {
       const when = [it.date ? dayLabel(it.date) : null, it.startTime ? time12(it.startTime) : null].filter(Boolean).join(" · ");
-      return { eyebrow: "Class", title: it.title, value: null, line: when || null, image: null };
+      return { eyebrow: t("Class"), title: it.title, value: null, line: when || null, image: null };
     }
     case "m":
-      return { eyebrow: "Membership", title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: null, image: null };
+      return { eyebrow: t("Membership"), title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: null, image: null };
     case "i":
-      return { eyebrow: "From our shop", title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: it.description, image: it.imageUrl };
+      return { eyebrow: t("From our shop"), title: it.name, value: it.price ? { big: it.price, leaf: false, unit: "" } : null, line: it.description, image: it.imageUrl };
     case "j":
-      return { eyebrow: "Now hiring", title: card.business.name, value: null, line: `Open it in Centium to see ${nounOf("j")}.`, image: null };
+      return { eyebrow: t("Now hiring"), title: card.business.name, value: null, line: t("Open it in Centium to see {item}.", { item: nounOf("j") }), image: null };
     case "week":
-      return { eyebrow: "Weekly schedule", title: `This week at ${card.business.name}`, value: null, line: null, image: null };
+      return { eyebrow: t("Weekly schedule"), title: t("This week at {name}", { name: card.business.name }), value: null, line: null, image: null };
     default:
-      return { eyebrow: "Find us on Centium", title: card.business.name, value: null, line: null, image: null };
+      return { eyebrow: t("Find us on Centium"), title: card.business.name, value: null, line: null, image: null };
   }
 }
 
@@ -133,7 +134,7 @@ export default function BusinessLinkPage() {
         className="tap flex items-center justify-center transition-transform duration-[140ms] ease-out active:scale-[0.97]"
         style={{ height: 52, borderRadius: 16, background: m.fill, color: m.onfill, fontSize: textPx(15), fontWeight: 800 }}
       >
-        Open in Centium
+        {t("Open in Centium")}
       </a>
       <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         {["App Store", "Google Play"].map((s) => (
@@ -141,16 +142,16 @@ export default function BusinessLinkPage() {
             key={s}
             role="link"
             aria-disabled="true"
-            aria-label={`${s}, coming soon`}
+            aria-label={t("{store}, coming soon", { store: s })}
             className="flex flex-col items-center justify-center"
             style={{ minHeight: 48, borderRadius: 14, border: `1px solid ${m.border}`, color: m.ink, opacity: 0.4 }}
           >
             <span style={{ fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(16) }}>{s}</span>
-            <span style={{ fontSize: textPx(10.5), fontWeight: 600, lineHeight: linePx(13), color: m.faint }}>Coming soon</span>
+            <span style={{ fontSize: textPx(10.5), fontWeight: 600, lineHeight: linePx(13), color: m.faint }}>{t("Coming soon")}</span>
           </span>
         ))}
       </div>
-      <p style={{ margin: 0, textAlign: "center", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>Already have Centium? The link opens {noun} in the app.</p>
+      <p style={{ margin: 0, textAlign: "center", fontSize: textPx(11.5), lineHeight: linePx(16), color: m.faint }}>{t("Already have Centium? The link opens {item} in the app.", { item: noun })}</p>
     </div>
   );
 
@@ -158,7 +159,7 @@ export default function BusinessLinkPage() {
   let showFooter = true;
   if (state.status === "loading") {
     body = (
-      <div aria-busy="true" role="status" aria-label="Loading" style={{ marginTop: 18 }}>
+      <div aria-busy="true" role="status" aria-label={t("Loading")} style={{ marginTop: 18 }}>
         <span aria-hidden className="block animate-skeleton-pulse" style={{ height: 217, borderRadius: 24, background: m.soft }} />
         <span aria-hidden className="block animate-skeleton-pulse" style={{ height: 22, width: "70%", borderRadius: 8, background: m.soft, marginTop: 16 }} />
         <span aria-hidden className="block animate-skeleton-pulse" style={{ height: 40, borderRadius: 8, background: m.soft, marginTop: 8 }} />
@@ -168,15 +169,15 @@ export default function BusinessLinkPage() {
   } else if (state.status === "error") {
     body = (
       <div role="alert" style={{ marginTop: 18, borderRadius: 20, background: m.soft, padding: "20px 18px", textAlign: "center" }}>
-        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>Couldn't load this link</p>
-        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>{state.offline ? OFFLINE_MESSAGE : "Check your connection and try again."}</p>
+        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>{t("Couldn't load this link")}</p>
+        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>{state.offline ? OFFLINE_MESSAGE : t("Check your connection and try again.")}</p>
         <button
           type="button"
           onClick={() => setReload((n) => n + 1)}
           className="tap"
           style={{ marginTop: 12, minHeight: 44, padding: "0 18px", borderRadius: 12, border: `1px solid ${m.border}`, background: m.card, color: m.cancelink, fontSize: textPx(13), fontWeight: 800 }}
         >
-          Retry
+          {t("Retry")}
         </button>
       </div>
     );
@@ -184,16 +185,16 @@ export default function BusinessLinkPage() {
   } else if (state.status === "missing") {
     body = (
       <div style={{ marginTop: 18, borderRadius: 20, background: m.soft, padding: "20px 18px", textAlign: "center" }}>
-        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>This link isn't available.</p>
-        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>It may have been removed, or it isn't public on Centium right now.</p>
+        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>{t("This link isn't available.")}</p>
+        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>{t("It may have been removed, or it isn't public on Centium right now.")}</p>
       </div>
     );
     showFooter = false;
   } else if (state.status === "disabled") {
     body = (
       <div style={{ marginTop: 18, borderRadius: 20, background: m.soft, padding: "20px 18px", textAlign: "center" }}>
-        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>This link was taken down.</p>
-        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>Centium removed it, so it can't be opened any more.</p>
+        <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 800, color: m.ink }}>{t("This link was taken down.")}</p>
+        <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2 }}>{t("Centium removed it, so it can't be opened any more.")}</p>
       </div>
     );
     showFooter = false;
@@ -233,13 +234,13 @@ export default function BusinessLinkPage() {
             </div>
           </div>
           {lines.image && <img src={lines.image} alt="" className="block w-full object-cover" style={{ marginTop: 16, height: 160, borderRadius: 14 }} />}
-          <div style={{ marginTop: 18, fontSize: textPx(10.5), fontWeight: 800, lineHeight: "normal", letterSpacing: "0.14em", textTransform: "uppercase" }}>{lines.eyebrow}</div>
+          <div style={{ marginTop: 18, fontSize: textPx(10.5), fontWeight: 800, lineHeight: "normal", letterSpacing: isRtl() ? 0 : "0.14em", textTransform: "uppercase" }}>{lines.eyebrow}</div>
           <div style={{ marginTop: 4, fontSize: textPx(26), fontWeight: 800, lineHeight: 1.15, letterSpacing: "-0.02em" }}>{lines.title}</div>
           {lines.value && (
             <div className="flex items-baseline" style={{ gap: 5, marginTop: 10 }}>
               <span style={{ fontSize: textPx(36), fontWeight: 800, lineHeight: 1, letterSpacing: "-0.03em" }}>{lines.value.big}</span>
               {lines.value.leaf && (
-                <svg width="9" height="16" viewBox={CARD_LEAF_VIEWBOX} preserveAspectRatio="none" role="img" aria-label="points" style={{ display: "inline-block" }}>
+                <svg width="9" height="16" viewBox={CARD_LEAF_VIEWBOX} preserveAspectRatio="none" role="img" aria-label={t("points")} style={{ display: "inline-block" }}>
                   <path d={CARD_LEAF_PATH} fill="#FFFFFF" />
                 </svg>
               )}
@@ -250,9 +251,9 @@ export default function BusinessLinkPage() {
         </section>
         {offer && (
           <>
-            <h2 style={{ margin: "16px 0 0", fontSize: textPx(18), fontWeight: 800, lineHeight: 1.3, color: m.ink }}>Redeem with Centium Points</h2>
+            <h2 style={{ margin: "16px 0 0", fontSize: textPx(18), fontWeight: 800, lineHeight: 1.3, color: m.ink }}>{t("Redeem with Centium Points")}</h2>
             <p style={{ margin: "6px 0 0", fontSize: textPx(13), lineHeight: 1.55, color: m.ink2 }}>
-              Earn points by logging your food, workouts and health on Centium, then spend them on offers like this one. Points have no cash value.
+              {t("Earn points by logging your food, workouts and health on Centium, then spend them on offers like this one. Points have no cash value.")}
             </p>
           </>
         )}

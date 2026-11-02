@@ -15,20 +15,27 @@ import { useSharePro } from "./useSharePro";
 import { fetchClientWins, fetchMyOwnedSharedItems, fetchMyShareRequests, fetchMySharedItemsFor, type MySharedItem, type OwnedSharedItem, type ShareRequest } from "../../services/share";
 import { HELD_CHIP, strongestState, type HeldReason } from "./heldShareModel";
 import { HeldShareNote } from "./HeldShareParts";
+import { t } from "../../i18n/core";
 
 /** "Yesterday", "Today" or "Oct 12" ("Oct 12, 2025" in another year; the app's short date, shareDate). */
 function whenWord(iso: string, today: string): string {
   const day = iso.slice(0, 10);
-  if (day === today) return "Today";
-  if (day === shiftIso(today, -1)) return "Yesterday";
+  if (day === today) return t("Today");
+  if (day === shiftIso(today, -1)) return t("Yesterday");
   return shareDate(iso);
+}
+
+/** The always-on row's label: a PR row's title without its "New PR · " lead, in either language. */
+function stripPrPrefix(title: string): string {
+  const lead = t("New PR · {exercise} {load} kg").split("{exercise}")[0];
+  return lead && title.startsWith(lead) ? title.slice(lead.length) : title;
 }
 
 /** The local calendar month of `today` ("Wins this month"). */
 const inMonth = (iso: string, today: string) => {
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-  const t = new Date(`${today}T00:00:00`);
-  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth();
+  const td = new Date(`${today}T00:00:00`);
+  return d.getFullYear() === td.getFullYear() && d.getMonth() === td.getMonth();
 };
 
 interface Row {
@@ -124,42 +131,42 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
   const mayAsk = canAskToShare(winSharing);
   const right = (r: Row) => {
     const s = r.request?.status;
-    if (r.removal) return <SharePill tone="gold">Removal asked</SharePill>;
-    if (r.held) return <SharePill tone="gold">{HELD_CHIP}</SharePill>;
-    if (s === "pending") return <SharePill tone="gold">{`Waiting for ${firstName}`}</SharePill>;
-    if (s === "declined") return <SharePill>Declined</SharePill>;
-    if (s === "withdrawn") return <SharePill>Withdrawn</SharePill>;
+    if (r.removal) return <SharePill tone="gold">{t("Removal asked")}</SharePill>;
+    if (r.held) return <SharePill tone="gold">{t(HELD_CHIP)}</SharePill>;
+    if (s === "pending") return <SharePill tone="gold">{t("Waiting for {name}", { name: firstName })}</SharePill>;
+    if (s === "declined") return <SharePill>{t("Declined")}</SharePill>;
+    if (s === "withdrawn") return <SharePill>{t("Withdrawn")}</SharePill>;
     if (s === "allowed" || s === "allowed_no_name")
       return (
         <span className="flex items-center shrink-0" style={{ gap: 6 }}>
-          <SharePill tone="teal">Allowed</SharePill>
-          {mayAsk && <ShareIconButton on label={`Share ${r.title}`} disabled={!pro} onClick={() => setSharing(r)} />}
+          <SharePill tone="teal">{t("Allowed")}</SharePill>
+          {mayAsk && <ShareIconButton on label={t("Share {title}", { title: r.title })} disabled={!pro} onClick={() => setSharing(r)} />}
         </span>
       );
-    return mayAsk ? <ShareIconButton label={`Ask ${firstName} to share ${r.title}`} disabled={!pro} onClick={() => setAsking(r)} /> : null;
+    return mayAsk ? <ShareIconButton label={t("Ask {name} to share {title}", { name: firstName, title: r.title })} disabled={!pro} onClick={() => setAsking(r)} /> : null;
   };
   const note = (r: Row) => {
     const s = r.request?.status;
-    if (r.removal) return `${firstName} asked you to remove this card.`;
-    if (s === "declined") return `${firstName} declined. You can't ask again for this win.`;
-    if (s === "allowed_no_name") return `${firstName} allowed it without their name.`;
+    if (r.removal) return t("{name} asked you to remove this card.", { name: firstName });
+    if (s === "declined") return t("{name} declined. You can't ask again for this win.", { name: firstName });
+    if (s === "allowed_no_name") return t("{name} allowed it without their name.", { name: firstName });
     return null;
   };
   const sub = (r: Row) => {
     const when = whenWord(r.win.occurredAt, today);
-    return r.win.kind === "pr" ? `${when} · estimated 1RM` : when;
+    return r.win.kind === "pr" ? t("{when} · estimated 1RM", { when }) : when;
   };
 
   if (state === "loading") return <div style={{ marginBottom: 12 }}><ProCardSkeleton lines={3} /></div>;
-  if (state === "error" && !wins) return <div style={{ marginBottom: 12 }}><ProError onRetry={() => void load()} message="Couldn't load wins." /></div>;
+  if (state === "error" && !wins) return <div style={{ marginBottom: 12 }}><ProError onRetry={() => void load()} message={t("Couldn't load wins.")} /></div>;
 
   return (
     <div style={{ marginBottom: 12 }}>
       {state === "offline" && <OfflineLine />}
       <div style={{ borderRadius: 18, background: INK.card, border: `1px solid ${INK.bCard}`, overflow: "hidden" }}>
-        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, padding: "12px 14px 10px" }}>Wins this month</p>
+        <p style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, padding: "12px 14px 10px" }}>{t("Wins this month")}</p>
         {rows.length === 0 ? (
-          <p style={{ fontSize: textPx(12), color: INK.chF, padding: "12px 14px", borderTop: `1px solid ${INK.b06}` }}>{`No wins yet this month. ${firstName}'s wins show here from what they share with you.`}</p>
+          <p style={{ fontSize: textPx(12), color: INK.chF, padding: "12px 14px", borderTop: `1px solid ${INK.b06}` }}>{t("No wins yet this month. {name}'s wins show here from what they share with you.", { name: firstName })}</p>
         ) : (
           rows.map((r) => {
             const n = note(r);
@@ -204,7 +211,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
           onSent={(req) => {
             setAsking(null);
             setRequests((rs) => [...rs.filter((x) => x.id !== req.id), req]);
-            setToast(req.status === "pending" ? `Request sent to ${firstName}. You'll be notified.` : `${firstName} lets professionals share wins by initials. You can share it now.`);
+            setToast(req.status === "pending" ? t("Request sent to {name}. You'll be notified.", { name: firstName }) : t("{name} lets professionals share wins by initials. You can share it now.", { name: firstName }));
           }}
         />
       )}
@@ -215,7 +222,7 @@ export const ClientWinsCard: React.FC<{ clientId: string; name: string; firstNam
           spec={sharing.spec}
           pro={pro}
           kind="win"
-          win={{ consent: { fullName: name, firstName, allowed: sharing.request.visibility }, requestId: sharing.request.id, label: sharing.title.replace(/^New PR · /, "") }}
+          win={{ consent: { fullName: name, firstName, allowed: sharing.request.visibility }, requestId: sharing.request.id, label: stripPrPrefix(sharing.title) }}
           onShared={() => void load()}
         />
       )}

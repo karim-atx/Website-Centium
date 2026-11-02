@@ -19,6 +19,7 @@
 
 import { siteHref, siteText } from "../../config/site";
 import { appLocale } from "../../i18n/format";
+import { t, tn, tx } from "../../i18n/core";
 
 export type ShareFormat = "story" | "post" | "square" | "sticker";
 export type ShareStyle = "L" | "D" | "B" | "P";
@@ -112,6 +113,34 @@ export const FORMATS: ShareFormat[] = ["story", "post", "square", "sticker"];
 export type EditorStyle = ShareStyle | "Y";
 export const EDITOR_STYLES: EditorStyle[] = [...STYLES, "Y"];
 export const EDITOR_STYLE_LABEL: Record<EditorStyle, string> = { ...STYLE_LABEL, Y: "Your photo" };
+/** A style's name where it is shown (the constants above stay English, for the tests and as keys). */
+export function editorStyleLabel(s: EditorStyle): string {
+  switch (s) {
+    case "L":
+      return tx("Light", "card style");
+    case "D":
+      return tx("Dark", "card style");
+    case "B":
+      return t("Brand");
+    case "P":
+      return t("Photo");
+    case "Y":
+      return t("Your photo");
+  }
+}
+/** A format's name where it is shown. */
+export function formatLabel(f: ShareFormat): string {
+  switch (f) {
+    case "story":
+      return t("Story");
+    case "post":
+      return tx("Post", "share format");
+    case "square":
+      return t("Square");
+    case "sticker":
+      return t("Sticker");
+  }
+}
 export const cardStyleOf = (s: EditorStyle): ShareStyle => (s === "Y" ? "P" : s);
 /** The editor shows the overlay (and exports the photo and layer) only for Your photo on Story, Post or Square. */
 export const usesOverlay = (style: EditorStyle, format: ShareFormat): format is "story" | "post" | "square" => style === "Y" && format !== "sticker";
@@ -159,6 +188,20 @@ export function cardHeight(format: ShareFormat, width: number): number {
 /** Exports (SH1 "Type and numbers"): 1080 wide; Story 1920, Post 1350, Square 1080, Sticker a transparent 1080 × 1920. */
 export const EXPORT_WIDTH = 1080;
 
+/**
+ * Round G (EH3): the cards keep their drawn layout in every language (the
+ * export draws the same left-to-right page), so in Arabic each line of text
+ * takes its own direction from its first strong letter (CSS unicode-bidi:
+ * plaintext on the DOM card, ctx.direction on the canvas) and no line is
+ * tracked (letter-spacing breaks Arabic joins). English draws as before.
+ */
+export function textDirection(text: string): "ltr" | "rtl" {
+  const m = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF\u200E]|[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF\u200F]/.exec(text);
+  return m && /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF\u200F]/.test(m[0]) ? "rtl" : "ltr";
+}
+/** The DOM card's classes for that rule (none in English). */
+export const cardBidiClass = (rtlApp: boolean) => (rtlApp ? "[&_*]:[unicode-bidi:plaintext] [&_*]:!tracking-normal" : "");
+
 /** The canvas font for a weight and size (drawShareCard, the layer layout, the link fit). */
 export const cardFont = (weight: number, size: number) => `${weight} ${size}px Manrope, "IBM Plex Sans Arabic", sans-serif`;
 
@@ -186,7 +229,7 @@ export type Visibility = "name" | "initials" | "none";
 /** CL31: Name is the first name, Initials "S.R.", Nothing "A client". */
 export function clientShownAs(fullName: string, visibility: Visibility): string {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (visibility === "none" || parts.length === 0) return "A client";
+  if (visibility === "none" || parts.length === 0) return t("A client");
   if (visibility === "name") return parts[0];
   return parts
     .slice(0, 2)
@@ -244,39 +287,39 @@ export function winCard(w: ClientWin): CardSpec | null {
       const kg = num(v.pr_load_kg);
       if (!ex || kg == null) return null;
       // client_wins gives the estimated 1RM of the set (personal_records.estimated_one_rep_max_kg).
-      return { template: "pr", eyebrow: "New personal record", hero: "num", big: fmtLoad(kg), unit: "kg", heroKey: "pr_load_kg", subject: ex, line: "{c} · estimated 1RM", stats: [] };
+      return { template: "pr", eyebrow: t("New personal record"), hero: "num", big: fmtLoad(kg), unit: t("kg"), heroKey: "pr_load_kg", subject: ex, line: t("{c} · estimated 1RM"), stats: [] };
     }
     case "programme_complete": {
       const name = str(v.programme_name);
       if (!name) return null;
       const weeks = num(v.programme_weeks);
       return weeks
-        ? { template: "prog", eyebrow: "Programme complete", hero: "num", big: fmtInt(weeks), unit: "weeks", heroKey: "programme_weeks", subject: name, line: "{c} finished the programme", stats: [] }
-        : { template: "prog", eyebrow: "Programme complete", hero: "title", title: name, meta: "{c} finished the programme", stats: [] };
+        ? { template: "prog", eyebrow: t("Programme complete"), hero: "num", big: fmtInt(weeks), unit: tn(weeks, "weeks", "weeks"), heroKey: "programme_weeks", subject: name, line: t("{c} finished the programme"), stats: [] }
+        : { template: "prog", eyebrow: t("Programme complete"), hero: "title", title: name, meta: t("{c} finished the programme"), stats: [] };
     }
     case "consistency": {
       const n = num(v.workouts_count);
       const weeks = num(v.weeks_count) ?? 4;
       if (n == null) return null;
-      return { template: "cons", eyebrow: "Consistency", hero: "num", big: fmtInt(n), unit: "workouts", heroKey: "workouts_count", subject: `in the last ${weeks} weeks`, line: "{c}", stats: [] };
+      return { template: "cons", eyebrow: t("Consistency"), hero: "num", big: fmtInt(n), unit: tn(n, "workouts", "workouts"), heroKey: "workouts_count", subject: tn(weeks, "in the last {n} weeks", "in the last {n} weeks"), line: "{c}", stats: [] };
     }
     case "streak": {
       const n = num(v.streak_days);
       if (n == null) return null;
       // The habit's own name is never drawn: a habit can name a medicine or a condition.
-      return { template: "streak", eyebrow: "Streak milestone", hero: "num", big: fmtInt(n), unit: "days", heroKey: "streak_days", subject: "Habit streak", line: "{c}", extra: "leaves", stats: [] };
+      return { template: "streak", eyebrow: t("Streak milestone"), hero: "num", big: fmtInt(n), unit: tn(n, "days", "days"), heroKey: "streak_days", subject: t("Habit streak"), line: "{c}", extra: "leaves", stats: [] };
     }
     case "logging_streak": {
       const n = num(v.logging_streak_days);
       if (n == null) return null;
       const end = new Date(w.occurredAt.length === 10 ? `${w.occurredAt}T00:00:00` : w.occurredAt);
       const since = Number.isNaN(end.getTime()) ? "" : shareDate(new Date(end.getTime() - (n - 1) * 86400000).toISOString());
-      return { template: "logging", eyebrow: "Streak milestone", hero: "num", big: fmtInt(n), unit: "days", heroKey: "logging_streak_days", subject: "Logging every day", line: since ? `{c} · since ${since}` : "{c}", extra: "leaves", stats: [] };
+      return { template: "logging", eyebrow: t("Streak milestone"), hero: "num", big: fmtInt(n), unit: tn(n, "days", "days"), heroKey: "logging_streak_days", subject: t("Logging every day"), line: since ? t("{c} · since {date}", { date: since }) : "{c}", extra: "leaves", stats: [] };
     }
     case "meal_plan_complete": {
       const name = str(v.meal_plan_name);
       if (!name) return null;
-      return { template: "mealplan", eyebrow: "Meal plan complete", hero: "title", title: name, meta: "{c} reached the end of the plan", stats: [] };
+      return { template: "mealplan", eyebrow: t("Meal plan complete"), hero: "title", title: name, meta: t("{c} reached the end of the plan"), stats: [] };
     }
     default:
       return null;
@@ -293,27 +336,27 @@ export function winRowText(w: ClientWin): { title: string; icon: WinIcon; tone: 
     case "pr": {
       const ex = str(v.pr_exercise);
       const kg = num(v.pr_load_kg);
-      return ex && kg != null ? { title: `New PR · ${ex} ${fmtLoad(kg)} kg`, icon: "trophy", tone: "gold" } : null;
+      return ex && kg != null ? { title: t("New PR · {exercise} {load} kg", { exercise: ex, load: fmtLoad(kg) }), icon: "trophy", tone: "gold" } : null;
     }
     case "programme_complete": {
       const name = str(v.programme_name);
-      return name ? { title: `Programme complete · ${name}`, icon: "flag", tone: "pr" } : null;
+      return name ? { title: t("Programme complete · {name}", { name }), icon: "flag", tone: "pr" } : null;
     }
     case "consistency": {
       const n = num(v.workouts_count);
-      return n != null ? { title: `${fmtInt(n)} workouts in ${num(v.weeks_count) ?? 4} weeks`, icon: "calendar-check", tone: "pr" } : null;
+      return n != null ? { title: tn(n, "{n} workouts in {weeks} weeks", "{n} workouts in {weeks} weeks", { n: fmtInt(n), weeks: num(v.weeks_count) ?? 4 }), icon: "calendar-check", tone: "pr" } : null;
     }
     case "streak": {
       const n = num(v.streak_days);
-      return n != null ? { title: `${fmtInt(n)}-day habit streak`, icon: "leaf", tone: "teal" } : null;
+      return n != null ? { title: tn(n, "{n}-day habit streak", "{n}-day habit streak", { n: fmtInt(n) }), icon: "leaf", tone: "teal" } : null;
     }
     case "logging_streak": {
       const n = num(v.logging_streak_days);
-      return n != null ? { title: `${fmtInt(n)}-day logging streak`, icon: "leaf", tone: "teal" } : null;
+      return n != null ? { title: tn(n, "{n}-day logging streak", "{n}-day logging streak", { n: fmtInt(n) }), icon: "leaf", tone: "teal" } : null;
     }
     case "meal_plan_complete": {
       const name = str(v.meal_plan_name);
-      return name ? { title: `Meal plan complete · ${name}`, icon: "flag", tone: "pr" } : null;
+      return name ? { title: t("Meal plan complete · {name}", { name }), icon: "flag", tone: "pr" } : null;
     }
     default:
       return null;
@@ -340,19 +383,19 @@ export function reachedMilestone(sessions: number): number | null {
   return hit;
 }
 
-const yearsValue = (y: number) => (y === 1 ? "1 year" : `${y} years`);
+const yearsValue = (y: number) => tn(y, "1 year", "{n} years");
 
 /** SH3 Practice milestone: the milestone reached (sessionsDelivered), then clients, rating and years (each only when known). */
 export function milestoneCard(f: PracticeFacts): CardSpec {
-  const stats: CardStat[] = [{ key: "clients_coached", value: fmtInt(f.clientsCoached), label: "clients coached" }];
-  if (f.averageRating != null && f.reviewCount > 0) stats.push({ key: "rating", value: f.averageRating.toFixed(1), label: "average rating" });
-  if (f.yearsOnCentium != null && f.yearsOnCentium >= 1) stats.push({ key: "years_on_centium", value: yearsValue(f.yearsOnCentium), label: "on Centium" });
-  return { template: "mile", eyebrow: "Practice milestone", hero: "num", big: fmtInt(f.sessionsDelivered), unit: "", heroKey: "sessions_delivered", subject: "sessions delivered", line: "Thank you to everyone I train", stats };
+  const stats: CardStat[] = [{ key: "clients_coached", value: fmtInt(f.clientsCoached), label: t("clients coached") }];
+  if (f.averageRating != null && f.reviewCount > 0) stats.push({ key: "rating", value: f.averageRating.toFixed(1), label: t("average rating") });
+  if (f.yearsOnCentium != null && f.yearsOnCentium >= 1) stats.push({ key: "years_on_centium", value: yearsValue(f.yearsOnCentium), label: t("on Centium") });
+  return { template: "mile", eyebrow: t("Practice milestone"), hero: "num", big: fmtInt(f.sessionsDelivered), unit: "", heroKey: "sessions_delivered", subject: t("sessions delivered"), line: t("Thank you to everyone I train"), stats };
 }
 
 /** SH3 Review: the published review, the reviewer as the public profile shows them. */
 export function reviewCard(r: { rating: number; body: string; reviewer: string }): CardSpec {
-  return { template: "review", eyebrow: "New review", hero: "quote", stars: Math.max(1, Math.min(5, Math.round(r.rating))), quote: r.body, by: r.reviewer, stats: [] };
+  return { template: "review", eyebrow: t("New review"), hero: "quote", stars: Math.max(1, Math.min(5, Math.round(r.rating))), quote: r.body, by: r.reviewer, stats: [] };
 }
 
 export interface ProfileFacts {
@@ -370,8 +413,8 @@ export interface ProfileFacts {
 /** SH3 Profile: the public profile in one card. */
 export function profileCard(p: ProfileFacts): CardSpec {
   const stats: CardStat[] = [];
-  if (p.averageRating != null && p.reviewCount > 0) stats.push({ key: "rating", value: p.averageRating.toFixed(1), label: `${p.reviewCount} review${p.reviewCount === 1 ? "" : "s"}` });
-  if (p.clients != null && p.clients > 0) stats.push({ key: "clients_coached", value: fmtInt(p.clients), label: "clients" });
+  if (p.averageRating != null && p.reviewCount > 0) stats.push({ key: "rating", value: p.averageRating.toFixed(1), label: tn(p.reviewCount, "{n} review", "{n} reviews") });
+  if (p.clients != null && p.clients > 0) stats.push({ key: "clients_coached", value: fmtInt(p.clients), label: t("clients") });
   if (p.price) stats.push({ key: "price", value: p.price.value, label: p.price.label });
   return { template: "profile", eyebrow: p.eyebrow, hero: "profile", title: p.name, head: p.headline ?? undefined, role: p.role, stats };
 }
@@ -385,21 +428,32 @@ export interface PromoFacts {
   stats: CardStat[];
 }
 
-const PROMO_EYEBROW: Record<PromoKind, string> = { programme: "New programme", meal_plan: "New meal plan", course: "New course", package: "New package" };
+function promoEyebrow(kind: PromoKind): string {
+  switch (kind) {
+    case "programme":
+      return t("New programme");
+    case "meal_plan":
+      return t("New meal plan");
+    case "course":
+      return t("New course");
+    case "package":
+      return t("New package");
+  }
+}
 
 /** SH3 Programme, course or package (from the Library, Courses or Services). */
 export function promoCard(p: PromoFacts): CardSpec {
-  return { template: "promo", eyebrow: PROMO_EYEBROW[p.kind], hero: "title", title: p.title, meta: p.meta, stats: p.stats.slice(0, 3) };
+  return { template: "promo", eyebrow: promoEyebrow(p.kind), hero: "title", title: p.title, meta: p.meta, stats: p.stats.slice(0, 3) };
 }
 
 /** SH3 Open slots: this week only, the first three times on chips. */
 export function slotsCard(times: string[], line: string | null): CardSpec {
-  return { template: "slots", eyebrow: "Open this week", hero: "num", big: String(times.length), unit: times.length === 1 ? "slot" : "slots", subject: "for new clients", line: line ?? undefined, extra: "slots", slots: times.slice(0, 3), stats: [] };
+  return { template: "slots", eyebrow: t("Open this week"), hero: "num", big: String(times.length), unit: tn(times.length, "slot", "slots"), subject: t("for new clients"), line: line ?? undefined, extra: "slots", slots: times.slice(0, 3), stats: [] };
 }
 
 /** SH3 Community tip: a published post, on the professional's own photo. */
 export function tipCard(firstName: string, body: string, topic: string | null): CardSpec {
-  return { template: "tip", eyebrow: `Tip from ${firstName}`, hero: "quote", quote: body, by: topic ? `From my Community post · ${topic}` : "From my Community post", stats: [] };
+  return { template: "tip", eyebrow: t("Tip from {name}", { name: firstName }), hero: "quote", quote: body, by: topic ? t("From my Community post · {topic}", { topic }) : t("From my Community post"), stats: [] };
 }
 
 /** Long quotes stop at a word, with an ellipsis, so the card keeps its shape. */
@@ -436,38 +490,59 @@ export function cardPayload(spec: CardSpec, format: ShareFormat, style: EditorSt
   const fill = (t?: string) => (t == null ? undefined : shownAs == null ? t : fillClient(t, shownAs));
   const stats: CardStat[] = [];
   if (spec.hero === "num" && spec.heroKey && spec.big != null) stats.push({ key: spec.heroKey, value: spec.big, label: spec.unit ?? "" });
-  if (spec.template === "review" && spec.stars) stats.push({ key: "rating", value: String(spec.stars), label: "stars" });
+  if (spec.template === "review" && spec.stars) stats.push({ key: "rating", value: String(spec.stars), label: t("stars") });
   (spec.slots ?? []).forEach((s) => stats.push({ key: "slot_time", value: s, label: "" }));
   stats.push(...spec.stats);
   const title = spec.hero === "num" ? spec.subject : spec.hero === "quote" ? spec.quote : spec.hero === "profile" ? spec.head : spec.title;
   const subtitle = spec.hero === "num" ? spec.line : spec.hero === "quote" ? spec.by : spec.hero === "profile" ? spec.role : spec.meta;
   const out: CardPayload = { format, style: storedStyle(style), template: spec.template, stats: stats.slice(0, 6) };
-  const t = fill(title);
+  const tt = fill(title);
   const s = fill(subtitle);
-  if (t) out.title = t;
+  if (tt) out.title = tt;
   if (s) out.subtitle = s;
   if (shownAs != null) out.name_display = shownAs;
   return out;
 }
 
-const EYEBROW: Partial<Record<CardTemplate, string>> = {
-  pr: "New personal record",
-  prog: "Programme complete",
-  cons: "Consistency",
-  streak: "Streak milestone",
-  logging: "Streak milestone",
-  mealplan: "Meal plan complete",
-  mile: "Practice milestone",
-  review: "New review",
-  slots: "Open this week",
-};
+function eyebrowFor(template: CardTemplate): string | null {
+  switch (template) {
+    case "pr":
+      return t("New personal record");
+    case "prog":
+      return t("Programme complete");
+    case "cons":
+      return t("Consistency");
+    case "streak":
+    case "logging":
+      return t("Streak milestone");
+    case "mealplan":
+      return t("Meal plan complete");
+    case "mile":
+      return t("Practice milestone");
+    case "review":
+      return t("New review");
+    case "slots":
+      return t("Open this week");
+    default:
+      return null;
+  }
+}
 
 /** A promo payload carries no kind: its stats tell a course, package or programme apart; none is a meal plan. */
 function promoEyebrowFrom(stats: CardStat[]): string {
-  if (stats.some((s) => s.key === "course_lessons")) return PROMO_EYEBROW.course;
-  if (stats.some((s) => s.key === "package_sessions")) return PROMO_EYEBROW.package;
-  if (stats.some((s) => s.key === "programme_weeks")) return PROMO_EYEBROW.programme;
-  return PROMO_EYEBROW.meal_plan;
+  if (stats.some((s) => s.key === "course_lessons")) return promoEyebrow("course");
+  if (stats.some((s) => s.key === "package_sessions")) return promoEyebrow("package");
+  if (stats.some((s) => s.key === "programme_weeks")) return promoEyebrow("programme");
+  return promoEyebrow("meal_plan");
+}
+
+/**
+ * A stat label as stored: the words the card wrote in English ("kg",
+ * "clients coached") show in the viewer's language; anything else (a label
+ * stored in Arabic, a price's unit) shows as it was stored.
+ */
+function storedLabel(label: string): string {
+  return label ? t(label) : label;
 }
 
 /** A stored payload back to a spec (the client's CU29 / CU30 view, the public card). Null when unreadable. */
@@ -481,7 +556,7 @@ export function specFromPayload(raw: unknown, proFirstName: string): { spec: Car
   const stats: CardStat[] = Array.isArray(p.stats)
     ? (p.stats as unknown[])
         .filter((s): s is Record<string, unknown> => !!s && typeof s === "object")
-        .map((s) => ({ key: s.key as StatKey, value: typeof s.value === "string" ? s.value : String(s.value ?? ""), label: typeof s.label === "string" ? s.label : "" }))
+        .map((s) => ({ key: s.key as StatKey, value: typeof s.value === "string" ? s.value : String(s.value ?? ""), label: typeof s.label === "string" ? storedLabel(s.label) : "" }))
         .filter((s) => (STAT_KEYS as readonly string[]).includes(s.key))
     : [];
   const title = str(p.title) ?? undefined;
@@ -490,9 +565,9 @@ export function specFromPayload(raw: unknown, proFirstName: string): { spec: Car
   let spec: CardSpec;
   if (template === "review" || template === "tip") {
     const rating = stats.find((s) => s.key === "rating");
-    spec = { template, eyebrow: template === "tip" ? `Tip from ${proFirstName}` : "New review", hero: "quote", quote: title, by: subtitle, stars: template === "review" && rating ? Number(rating.value) || 5 : undefined, stats: [] };
+    spec = { template, eyebrow: template === "tip" ? t("Tip from {name}", { name: proFirstName }) : t("New review"), hero: "quote", quote: title, by: subtitle, stars: template === "review" && rating ? Number(rating.value) || 5 : undefined, stats: [] };
   } else if (template === "profile") {
-    spec = { template, eyebrow: "Train with me", hero: "profile", head: title, role: subtitle, stats };
+    spec = { template, eyebrow: t("Train with me"), hero: "profile", head: title, role: subtitle, stats };
   } else if (template === "slots") {
     const slots = stats.filter((s) => s.key === "slot_time").map((s) => s.value);
     spec = slotsCard(slots, subtitle ?? null);
@@ -500,8 +575,8 @@ export function specFromPayload(raw: unknown, proFirstName: string): { spec: Car
     const hero = stats.find((s) => heroKeys.includes(s.key));
     const rest = stats.filter((s) => s !== hero);
     spec = hero
-      ? { template, eyebrow: EYEBROW[template] ?? "", hero: "num", big: hero.value, unit: hero.label, heroKey: hero.key, subject: title, line: subtitle, extra: template === "streak" || template === "logging" ? "leaves" : undefined, stats: rest }
-      : { template, eyebrow: EYEBROW[template] ?? promoEyebrowFrom(rest), hero: "title", title, meta: subtitle, stats: rest };
+      ? { template, eyebrow: eyebrowFor(template) ?? "", hero: "num", big: hero.value, unit: hero.label, heroKey: hero.key, subject: title, line: subtitle, extra: template === "streak" || template === "logging" ? "leaves" : undefined, stats: rest }
+      : { template, eyebrow: eyebrowFor(template) ?? promoEyebrowFrom(rest), hero: "title", title, meta: subtitle, stats: rest };
   }
   return { spec, format, style };
 }
@@ -558,8 +633,8 @@ export function shareableWins<W extends { clientId: string }>(wins: W[], setting
  * professionals share wins by initials". Never allow: one neutral line.
  */
 export function winsShieldLine(firstName: string, lane: "full_coaching" | "nutrition" | "clinical_overview", setting: WinSharingSetting): string {
-  if (setting === "never") return `${firstName} doesn't want wins shared.`;
-  const lead = setting === "always_allow" ? `${firstName} lets professionals share wins by initials.` : `Sharing a win asks ${firstName} first.`;
-  if (lane === "nutrition") return `${lead} Food entries and photos are never on a card.`;
-  return `${lead} ${firstName}'s setting: ${setting === "always_allow" ? "Always allow" : "Always ask"}.`;
+  if (setting === "never") return t("{name} doesn't want wins shared.", { name: firstName });
+  const lead = setting === "always_allow" ? t("{name} lets professionals share wins by initials.", { name: firstName }) : t("Sharing a win asks {name} first.", { name: firstName });
+  if (lane === "nutrition") return `${lead} ${t("Food entries and photos are never on a card.")}`;
+  return `${lead} ${t("{name}'s setting: {setting}.", { name: firstName, setting: setting === "always_allow" ? t("Always allow") : t("Always ask") })}`;
 }

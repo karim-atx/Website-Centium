@@ -11,6 +11,7 @@ import { specFromPayload } from "../shareCardModel";
 import { answerShareRequest, type ShareRequest } from "../../../services/share";
 import { OFFLINE_MESSAGE } from "../../../services/network-error";
 import { askBody, askTitle, type ShareAnswerKind } from "./sharingText";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W8 CU29: a professional asks to share the client's win, one
@@ -45,7 +46,7 @@ export const WinPermissionPopup: React.FC<{
   onDismiss: () => void;
 }> = ({ open, index, count, request, proName, proAvatarUrl, proHandle = null, onAnswered, onGone, onDismiss }) => {
   const dark = useIsDark();
-  const tn = toneSet("pr", dark);
+  const tone = toneSet("pr", dark);
   const [busy, setBusy] = useState<ShareAnswerKind | null>(null);
   const [error, setError] = useState<string | null>(null);
   const card = specFromPayload(request.card, proName);
@@ -59,7 +60,7 @@ export const WinPermissionPopup: React.FC<{
     setBusy(null);
     if (r.ok) return onAnswered(a);
     if (r.code === "ATX08") return onGone();
-    setError(r.offline ? OFFLINE_MESSAGE : "Couldn't send your answer. Try again.");
+    setError(r.offline ? OFFLINE_MESSAGE : t("Couldn't send your answer. Try again."));
   };
 
   return (
@@ -76,10 +77,10 @@ export const WinPermissionPopup: React.FC<{
       className="!px-[18px] !pt-[18px] !pb-[14px] !shadow-[0_16px_40px_rgba(0,0,0,0.18)]"
       iconBare
       iconWell={{ size: 38, radius: 12 }}
-      icon={<ReminderIcon kind="share_request" tone={tn} proName={proName} proAvatarUrl={proAvatarUrl} />}
+      icon={<ReminderIcon kind="share_request" tone={tone} proName={proName} proAvatarUrl={proAvatarUrl} />}
       titleAside={
         <span style={{ position: "relative", display: "block", top: -10, insetInlineEnd: -4, fontSize: textPx(11), lineHeight: "normal", fontWeight: 700, color: INK.chF }}>
-          {index + 1} of {count}
+          {t("{n} of {total}", { n: index + 1, total: count })}
         </span>
       }
     >
@@ -91,7 +92,7 @@ export const WinPermissionPopup: React.FC<{
             format={card.format}
             style={card.style}
             width={176}
-            client={typeof shownAs === "string" && shownAs.trim() ? shownAs : "A client"}
+            client={typeof shownAs === "string" && shownAs.trim() ? shownAs : t("A client")}
           />
         </div>
       )}
@@ -101,8 +102,8 @@ export const WinPermissionPopup: React.FC<{
         </p>
       )}
       <div className="grid" style={{ gap: 8 }}>
-        <CtaButton size="page" label="Allow" loading={busy === "allowed"} disabled={!!busy && busy !== "allowed"} onClick={() => void answer("allowed")} />
-        <CtaButton size="page" variant="secondary" label="Allow without my name" loading={busy === "allowed_no_name"} disabled={!!busy && busy !== "allowed_no_name"} onClick={() => void answer("allowed_no_name")} />
+        <CtaButton size="page" label={t("Allow")} loading={busy === "allowed"} disabled={!!busy && busy !== "allowed"} onClick={() => void answer("allowed")} />
+        <CtaButton size="page" variant="secondary" label={t("Allow without my name")} loading={busy === "allowed_no_name"} disabled={!!busy && busy !== "allowed_no_name"} onClick={() => void answer("allowed_no_name")} />
         <button
           type="button"
           disabled={!!busy}
@@ -110,7 +111,7 @@ export const WinPermissionPopup: React.FC<{
           className="tap flex items-center justify-center disabled:opacity-60"
           style={{ height: 44, fontSize: textPx(14), fontWeight: 700, color: INK.chS }}
         >
-          {busy === "declined" ? "Sending…" : "Decline"}
+          {busy === "declined" ? t("Sending…") : t("Decline")}
         </button>
       </div>
       <div className="flex justify-center" aria-hidden style={{ gap: 5, marginTop: 6 }}>

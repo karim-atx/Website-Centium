@@ -27,6 +27,7 @@ import {
   type ClientFormat,
 } from "./clientCardModel";
 import { useShareLocks } from "./useShareLocks";
+import { t, tk, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · C-SH.2 the client share sheet, C-SH.5 "Your photo",
 // C-SH.6 the confirmations. Literal values from the Client Sharing screen
@@ -58,7 +59,31 @@ import { useShareLocks } from "./useShareLocks";
 const LIGHT_CHECK = SHARE_TOKENS.checkerLight;
 const PHOTO_SWATCH = "repeating-linear-gradient(135deg, #3E3A36 0 3px, #37332F 3px 6px)";
 const BRAND_SWATCH = "linear-gradient(150deg, #7D6BB5, #4F7F78)";
-const DEST_NOTE = "Only what you select is shared. In a browser, Instagram and WhatsApp open through your device's share options.";
+const DEST_NOTE = tk("Only what you select is shared. In a browser, Instagram and WhatsApp open through your device's share options.");
+
+/** The photo layer's name for screen readers ("Your workout stats"). */
+function layerLabelFor(template: string): string {
+  switch (template) {
+    case "workout":
+      return t("Your workout stats");
+    case "pr":
+      return t("Your personal best stats");
+    case "streak":
+      return t("Your streak stats");
+    case "achievement":
+      return t("Your achievement stats");
+    case "steps":
+      return t("Your steps stats");
+    case "sleep":
+      return t("Your sleep stats");
+    case "water":
+      return t("Your water stats");
+    case "food":
+      return t("Your food day stats");
+    default:
+      return t("Your stats");
+  }
+}
 
 const SHIELD = "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z";
 
@@ -114,7 +139,7 @@ export const ClientShareSheet: React.FC<ClientShareSheetProps> = ({ spec, onClos
       {strip &&
         createPortal(
           <div className="fixed start-0 end-0 z-[60] mx-auto w-full max-w-[430px]" style={{ top: "calc(env(safe-area-inset-top) + 10px)", padding: "0 16px" }}>
-            <ConfirmationStrip text={strip.text} action="Done" onAction={finish} tone={strip.tone} />
+            <ConfirmationStrip text={strip.text} action={t("Done")} onAction={finish} tone={strip.tone} />
           </div>,
           document.body,
         )}
@@ -136,7 +161,7 @@ const Switch: React.FC<{ on: boolean; label: string; onChange: (on: boolean) => 
     >
       <span
         aria-hidden
-        style={{ position: "absolute", left: on ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: "left 160ms ease" }}
+        style={{ position: "absolute", insetInlineStart: on ? 18 : 2, top: 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: "inset-inline-start 160ms ease" }}
       />
     </button>
   );
@@ -224,26 +249,26 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
       setBusy(false);
     }
   };
-  const errorStrip: Strip = { text: "Couldn't share the card. Try again.", tone: "error" };
+  const errorStrip: Strip = { text: t("Couldn't share the card. Try again."), tone: "error" };
   const name = exportFileName(spec.template, format);
   const viaShare = () =>
     act(async () => {
       if (!ready) return null;
       const r = await shareCanvas(ready.card, name);
-      return r === "shared" ? { text: "Card shared", tone: "success" } : r === "saved" ? { text: "Saved to Photos", tone: "success" } : r === "aborted" ? null : errorStrip;
+      return r === "shared" ? { text: t("Card shared"), tone: "success" } : r === "saved" ? { text: t("Saved to Photos"), tone: "success" } : r === "aborted" ? null : errorStrip;
     });
   const items: Destination[] = [
-    { key: "ig", label: "Instagram Story", onPress: () => void viaShare() },
+    { key: "ig", label: t("Instagram Story"), onPress: () => void viaShare() },
     { key: "wa", label: "WhatsApp", onPress: () => void viaShare() },
     {
       key: "save",
-      label: "Save image",
+      label: t("Save image"),
       onPress: () =>
         void act(async () => {
           if (!ready) return null;
           try {
             saveCanvas(ready.card, name);
-            return { text: "Saved to Photos", tone: "success" };
+            return { text: t("Saved to Photos"), tone: "success" };
           } catch {
             return errorStrip;
           }
@@ -253,18 +278,18 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
       ? [
           {
             key: "copy" as const,
-            label: "Copy sticker",
+            label: t("Copy sticker"),
             onPress: () =>
               void act(async () => {
                 if (!ready?.sticker) return null;
-                return (await copyCanvasImage(ready.sticker)) ? { text: "Sticker copied. Paste it onto your photo.", tone: "success" } : errorStrip;
+                return (await copyCanvasImage(ready.sticker)) ? { text: t("Sticker copied. Paste it onto your photo."), tone: "success" } : errorStrip;
               }),
           },
         ]
       : []),
     // D-49: Share to Community stays hidden until Community takes image posts (and always for under-18s).
-    ...(!locks.communityHidden ? [{ key: "comm" as const, label: "Share to Community", onPress: () => undefined }] : []),
-    { key: "more", label: "More", onPress: () => void viaShare() },
+    ...(!locks.communityHidden ? [{ key: "comm" as const, label: t("Share to Community"), onPress: () => undefined }] : []),
+    { key: "more", label: t("More"), onPress: () => void viaShare() },
   ];
 
   const toggle = (key: string, value: boolean) =>
@@ -285,7 +310,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
             <path d={SHIELD} />
           </svg>
-          Only what you select is shared.
+          {t("Only what you select is shared.")}
         </div>
         <button
           type="button"
@@ -299,12 +324,12 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
             void prepare();
           }}
         >
-          Next
+          {t("Next")}
         </button>
       </>
     ) : (
       <button type="button" className="tap" style={ctaStyle} onClick={onClose}>
-        Done
+        {t("Done")}
       </button>
     );
 
@@ -316,7 +341,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
         open
         onClose={onClose}
         onBack={step === "dest" ? () => setStep("edit") : undefined}
-        title={step === "edit" ? spec.sheetTitle : "Share"}
+        title={step === "edit" ? spec.sheetTitle : t("Share")}
         size="tall"
         bodyPadding={{ top: 18, right: 18, bottom: 18, left: 18 }}
         footer={footer}
@@ -324,7 +349,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
       >
         {step === "edit" ? (
           <>
-            <div role="radiogroup" aria-label="Format" className="flex" style={{ gap: 5, padding: 4, borderRadius: 14, background: m.segtrack }}>
+            <div role="radiogroup" aria-label={t("Format")} className="flex" style={{ gap: 5, padding: 4, borderRadius: 14, background: m.segtrack }}>
               {(["story", "post", "sticker"] as const).map((f) => {
                 const a = f === format;
                 return (
@@ -337,7 +362,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                     className="tap flex items-center justify-center"
                     style={{ flex: 1, height: 34, borderRadius: 11, background: a ? m.segactive : m.segidle, color: a ? (dark ? m.onfill : "#FFFFFF") : m.segink, fontSize: textPx(12), fontWeight: 700 }}
                   >
-                    {f === "story" ? "Story" : f === "post" ? "Post" : "Sticker"}
+                    {f === "story" ? t("Story") : f === "post" ? tx("Post", "share format") : t("Sticker")}
                   </button>
                 );
               })}
@@ -354,7 +379,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                   anchor="corner"
                   chrome="client"
                   hintKey={authUserId ? `centium.overlayHint.${authUserId}` : null}
-                  layerLabel={`Your ${spec.template === "pr" ? "personal best" : spec.template === "food" ? "food day" : spec.template} stats`}
+                  layerLabel={layerLabelFor(spec.template)}
                   onChange={(s) => (overlay.current = s)}
                 />
               </div>
@@ -366,13 +391,13 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
 
             {format !== "sticker" ? (
               <>
-                {label("Background")}
-                <div role="radiogroup" aria-label="Background" className="flex flex-wrap" style={{ gap: 6 }}>
+                {label(t("Background"))}
+                <div role="radiogroup" aria-label={t("Background")} className="flex flex-wrap" style={{ gap: 6 }}>
                   {(
                     [
                       ["B", "Centium", BRAND_SWATCH],
                       ["I", spec.patternLabel, METRIC_IDENTITY[spec.id][0]],
-                      ["P", "Your photo", PHOTO_SWATCH],
+                      ["P", t("Your photo"), PHOTO_SWATCH],
                     ] as const
                   ).map(([k, n, sw]) => {
                     const a = k === "P" ? photoMode : background === k;
@@ -405,10 +430,10 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onFile(e)} />
               </>
             ) : (
-              <div style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: m.faint, marginTop: 10 }}>Transparent, with white stats. Copy it, then paste it onto your own photo or video.</div>
+              <div style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: m.faint, marginTop: 10 }}>{t("Transparent, with white stats. Copy it, then paste it onto your own photo or video.")}</div>
             )}
 
-            <div style={{ margin: "14px 0 4px", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>Show on the card</div>
+            <div style={{ margin: "14px 0 4px", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("Show on the card")}</div>
             {rows.map((r) => (
               <div key={r.key} className="flex items-center" style={{ gap: 12, padding: "9px 0", borderTop: `1px solid ${m.div}` }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
@@ -418,14 +443,14 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                 {r.kind === "headline" ? (
                   <span className="inline-flex items-center" style={{ gap: 4, fontSize: textPx(11), fontWeight: 600, color: m.faint }}>
                     <Lock />
-                    Always on
+                    {t("Always on")}
                   </span>
                 ) : r.kind === "locked" ? (
-                  <span className="inline-flex items-center" role="img" aria-label="Locked" style={{ color: m.faint }}>
+                  <span className="inline-flex items-center" role="img" aria-label={t("Locked")} style={{ color: m.faint }}>
                     <Lock />
                   </span>
                 ) : (
-                  <Switch on={r.on} label={`Show ${r.title.toLowerCase()} on the card`} onChange={(v) => toggle(r.key, v)} />
+                  <Switch on={r.on} label={t("Show {title} on the card", { title: r.title.toLowerCase() })} onChange={(v) => toggle(r.key, v)} />
                 )}
               </div>
             ))}
@@ -435,7 +460,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
             <div className="flex justify-center" style={{ marginBottom: 14 }}>
               {photoMode ? (
                 ready ? (
-                  <img src={ready.url} alt="Your card" style={{ width: DEST_PREVIEW_W, borderRadius: previewRadius(DEST_PREVIEW_W), boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)", display: "block" }} />
+                  <img src={ready.url} alt={t("Your card")} style={{ width: DEST_PREVIEW_W, borderRadius: previewRadius(DEST_PREVIEW_W), boxShadow: "0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(36,31,27,0.10)", display: "block" }} />
                 ) : (
                   <div className="animate-skeleton-pulse" style={{ width: DEST_PREVIEW_W, height: format === "post" ? 150 : 213.3, borderRadius: previewRadius(DEST_PREVIEW_W), background: m.soft }} />
                 )
@@ -446,13 +471,13 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
               )}
             </div>
             {failed ? (
-              <ConfirmationStrip text="Couldn't make the card. Try again." action="Retry"
+              <ConfirmationStrip text={t("Couldn't make the card. Try again.")} action={t("Retry")}
                 onAction={() => {
                   setFailed(false);
                   void prepare();
                 }} tone="error" notchBg={m.sbody} still />
             ) : (
-              <ShareDestinations items={items} note={DEST_NOTE} disabled={!ready || busy} />
+              <ShareDestinations items={items} note={t(DEST_NOTE)} disabled={!ready || busy} />
             )}
           </>
         )}

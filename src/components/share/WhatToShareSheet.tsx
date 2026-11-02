@@ -38,6 +38,7 @@ import {
   type WinSharingSetting,
 } from "./shareCardModel";
 import { fetchClientStages } from "../../services/pro/clients";
+import { t, tn } from "../../i18n/core";
 
 type Step = { at: "menu" } | { at: "wins"; kinds: WinKind[]; title: string } | { at: "reviews" } | { at: "promo" } | { at: "posts" };
 type Flow = { spec: CardSpec; kind: ItemKind };
@@ -46,7 +47,6 @@ const inMonth = (iso: string, now: Date) => {
   const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 };
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 /**
  * Release 3 · W8 SH4 "What do you want to share?" (source/gen/r31.js
@@ -117,52 +117,53 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
     onClose();
   };
 
-  const nameOf = (clientId: string) => professionalClients.find((c) => c.clientId === clientId)?.name ?? "A client";
+  const nameOf = (clientId: string) => professionalClients.find((c) => c.clientId === clientId)?.name ?? t("A client");
   const monthWins = Array.isArray(wins) ? shareableWins(wins, sharing).filter((w) => inMonth(w.occurredAt, now)) : [];
   const of = (kinds: WinKind[]) => monthWins.filter((w) => kinds.includes(w.kind));
   const winGroups: { kinds: WinKind[]; label: string; icon: keyof typeof SHARE_ICONS; tone: "gold" | "pr" | "teal"; sub: () => string }[] =
     lane === "nutrition"
       ? [
-          { kinds: ["logging_streak"], label: "Logging streak", icon: "leaf", tone: "teal", sub: () => `${plural(of(["logging_streak"]).length, "milestone", "milestones")} this month` },
-          { kinds: ["meal_plan_complete"], label: "Meal plan complete", icon: "flag", tone: "pr", sub: () => `${plural(new Set(of(["meal_plan_complete"]).map((w) => w.clientId)).size, "client", "clients")} this month` },
+          { kinds: ["logging_streak"], label: t("Logging streak"), icon: "leaf", tone: "teal", sub: () => tn(of(["logging_streak"]).length, "{n} milestone this month", "{n} milestones this month") },
+          { kinds: ["meal_plan_complete"], label: t("Meal plan complete"), icon: "flag", tone: "pr", sub: () => tn(new Set(of(["meal_plan_complete"]).map((w) => w.clientId)).size, "{n} client this month", "{n} clients this month") },
         ]
       : [
           {
             kinds: ["pr"],
-            label: "Strength PR",
+            label: t("Strength PR"),
             icon: "trophy",
             tone: "gold",
             sub: () => {
               const w = of(["pr"])[0];
-              const t = w ? winRowText(w) : null;
-              return w && t ? `${nameOf(w.clientId)} · ${t.title.replace(/^New PR · /, "")}` : "No PRs this month";
+              const row = w ? winRowText(w) : null;
+              const lead = t("New PR · {exercise} {load} kg").split("{exercise}")[0];
+              return w && row ? `${nameOf(w.clientId)} · ${lead && row.title.startsWith(lead) ? row.title.slice(lead.length) : row.title}` : t("No PRs this month");
             },
           },
-          { kinds: ["programme_complete"], label: "Programme complete", icon: "flag", tone: "pr", sub: () => `${plural(new Set(of(["programme_complete"]).map((w) => w.clientId)).size, "client", "clients")} this month` },
-          { kinds: ["streak", "logging_streak", "consistency"], label: "Streak or consistency", icon: "leaf", tone: "teal", sub: () => `${plural(of(["streak", "logging_streak", "consistency"]).length, "milestone", "milestones")} this month` },
+          { kinds: ["programme_complete"], label: t("Programme complete"), icon: "flag", tone: "pr", sub: () => tn(new Set(of(["programme_complete"]).map((w) => w.clientId)).size, "{n} client this month", "{n} clients this month") },
+          { kinds: ["streak", "logging_streak", "consistency"], label: t("Streak or consistency"), icon: "leaf", tone: "teal", sub: () => tn(of(["streak", "logging_streak", "consistency"]).length, "{n} milestone this month", "{n} milestones this month") },
         ];
 
-  const t = totals && totals !== "error" ? totals : null;
-  const milestone = t ? reachedMilestone(t.sessionsDelivered) : null;
+  const tot = totals && totals !== "error" ? totals : null;
+  const milestone = tot ? reachedMilestone(tot.sessionsDelivered) : null;
   const avg = averageOf(reviews);
   const counted = reviews.filter((r) => !r.redactedAt);
   const published = counted.filter((r) => (r.body ?? "").trim());
 
   const openMilestone = () => {
-    if (!t || milestone == null) return;
-    setFlow({ spec: milestoneCard({ ...t, sessionsDelivered: milestone }), kind: "milestone" });
+    if (!tot || milestone == null) return;
+    setFlow({ spec: milestoneCard({ ...tot, sessionsDelivered: milestone }), kind: "milestone" });
   };
   const openProfile = () => {
-    const rate = own?.monthlyRate ? { value: priceLabel(own.monthlyRate), label: "a month" } : own?.consultationRate ? { value: priceLabel(own.consultationRate), label: "a session" } : null;
+    const rate = own?.monthlyRate ? { value: priceLabel(own.monthlyRate), label: t("a month") } : own?.consultationRate ? { value: priceLabel(own.consultationRate), label: t("a session") } : null;
     setFlow({
       spec: profileCard({
         name: pro?.name ?? user.firstName ?? "",
-        eyebrow: lane === "full_coaching" ? "Train with me" : "Work with me",
+        eyebrow: lane === "full_coaching" ? t("Train with me") : t("Work with me"),
         headline: cv?.profile.headline?.trim() || own?.specialty || null,
         role: [typeLabel(user.professionalSubtype), own?.location].filter(Boolean).join(" · "),
         averageRating: counted.length >= 1 ? avg : null,
         reviewCount: counted.length,
-        clients: t ? t.clientsCoached : null,
+        clients: tot ? tot.clientsCoached : null,
         price: rate,
       }),
       kind: "profile",
@@ -175,16 +176,23 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
   const openPromo = (p: PromoItem) => {
     const stats: CardStat[] = [];
     if (p.kind === "course") {
-      stats.push({ key: "price", value: priceLabel(p.price ?? 0), label: "full course" });
-      if (p.lessons) stats.push({ key: "course_lessons", value: String(p.lessons), label: p.lessons === 1 ? "lesson" : "lessons" });
-      if (p.rating != null && (p.ratings ?? 0) > 0) stats.push({ key: "rating", value: p.rating.toFixed(1), label: plural(p.ratings ?? 0, "rating", "ratings") });
+      stats.push({ key: "price", value: priceLabel(p.price ?? 0), label: t("full course") });
+      if (p.lessons) stats.push({ key: "course_lessons", value: String(p.lessons), label: tn(p.lessons, "lesson", "lessons") });
+      if (p.rating != null && (p.ratings ?? 0) > 0) stats.push({ key: "rating", value: p.rating.toFixed(1), label: tn(p.ratings ?? 0, "{n} rating", "{n} ratings") });
     }
     if (p.kind === "package") {
-      stats.push({ key: "price", value: priceLabel(p.price ?? 0), label: p.priceIsMonthly === "monthly" ? "a month" : "per period" });
-      if (p.sessions) stats.push({ key: "package_sessions", value: String(p.sessions), label: p.sessions === 1 ? "session" : "sessions" });
+      stats.push({ key: "price", value: priceLabel(p.price ?? 0), label: p.priceIsMonthly === "monthly" ? t("a month") : t("per period") });
+      if (p.sessions) stats.push({ key: "package_sessions", value: String(p.sessions), label: tn(p.sessions, "session", "sessions") });
     }
-    if (p.kind === "programme" && p.weeks) stats.push({ key: "programme_weeks", value: String(p.weeks), label: p.weeks === 1 ? "week" : "weeks" });
-    const meta = p.kind === "course" ? [plural(p.weeks ?? 0, "week", "weeks"), p.level].filter(Boolean).join(" · ") : p.kind === "programme" ? [p.level].filter(Boolean).join(" · ") || "Programme" : p.kind === "meal_plan" ? `${plural(p.days ?? 0, "day", "days")} plan` : plural(p.sessions ?? 0, "session", "sessions");
+    if (p.kind === "programme" && p.weeks) stats.push({ key: "programme_weeks", value: String(p.weeks), label: tn(p.weeks, "week", "weeks") });
+    const meta =
+      p.kind === "course"
+        ? [tn(p.weeks ?? 0, "{n} week", "{n} weeks"), p.level].filter(Boolean).join(" · ")
+        : p.kind === "programme"
+          ? [p.level].filter(Boolean).join(" · ") || t("Programme")
+          : p.kind === "meal_plan"
+            ? tn(p.days ?? 0, "{n} day plan", "{n} days plan")
+            : tn(p.sessions ?? 0, "{n} session", "{n} sessions");
     setFlow({ spec: promoCard({ kind: p.kind, title: p.title, meta, stats }), kind: p.kind });
   };
 
@@ -205,14 +213,14 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
       </div>
     );
 
-  let title = "What do you want to share?";
+  let title = t("What do you want to share?");
   let body: React.ReactNode;
   if (step.at === "wins") {
     title = step.title;
     const ws = of(step.kinds);
     body = (
       <>
-        <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, marginBottom: 10 }}>The client is asked first. Pick a win to open it on the client's page.</p>
+        <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, marginBottom: 10 }}>{t("The client is asked first. Pick a win to open it on the client's page.")}</p>
         {list(
           wins === "error" ? "error" : wins === null ? null : ws.map((w) => {
             const rt = winRowText(w);
@@ -221,65 +229,65 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
               navigate(proClientPath(w.clientId, "progress"));
             } };
           }),
-          "No wins of this kind this month.",
+          t("No wins of this kind this month."),
           () => void fetchAllWins().then((r) => setWins(r.ok ? r.data : "error"))
         )}
       </>
     );
   } else if (step.at === "reviews") {
-    title = "A review";
+    title = t("A review");
     body = list(
-      reviewsLoading && !reviews.length ? null : published.map((r) => ({ id: r.id, label: `"${clipQuote(r.body ?? "", 60)}"`, sub: `${reviewerLabel(r.reviewerName)} · ${r.rating} star${r.rating === 1 ? "" : "s"}`, icon: "star" as const, tone: "gold" as const, onClick: () => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: reviewerLabel(r.reviewerName) }), kind: "review" }) })),
-      "Written reviews show here after clients review you.",
+      reviewsLoading && !reviews.length ? null : published.map((r) => ({ id: r.id, label: `"${clipQuote(r.body ?? "", 60)}"`, sub: `${reviewerLabel(r.reviewerName)} · ${tn(r.rating, "{n} star", "{n} stars")}`, icon: "star" as const, tone: "gold" as const, onClick: () => setFlow({ spec: reviewCard({ rating: r.rating, body: clipQuote(r.body ?? ""), reviewer: reviewerLabel(r.reviewerName) }), kind: "review" }) })),
+      t("Written reviews show here after clients review you."),
       () => undefined
     );
   } else if (step.at === "promo") {
-    title = lane === "nutrition" ? "A meal plan, course or package" : "A programme, course or package";
+    title = lane === "nutrition" ? t("A meal plan, course or package") : t("A programme, course or package");
     body = list(
       promo === "error" ? "error" : promo === null ? null : promo.map((p) => ({ id: `${p.kind}-${p.id}`, label: p.title, sub: p.sub, icon: "book-open" as const, tone: "pr" as const, onClick: () => openPromo(p) })),
-      "Your programmes, published courses and packages show here.",
+      t("Your programmes, published courses and packages show here."),
       loadPromo
     );
   } else if (step.at === "posts") {
-    title = "A Community post";
+    title = t("A Community post");
     body = list(
-      posts === "error" ? "error" : posts === null ? null : posts.map((p) => ({ id: p.id, label: p.title || clipQuote(p.body, 60), sub: cats.get(p.categoryKey) ?? "Community", icon: "lightbulb" as const, tone: "gold" as const, onClick: () => setFlow({ spec: tipCard((user.firstName ?? "").split(" ")[0] || "me", clipQuote(p.body), cats.get(p.categoryKey) ?? null), kind: "content" }) })),
-      "Posts you publish in the Community under your name show here.",
+      posts === "error" ? "error" : posts === null ? null : posts.map((p) => ({ id: p.id, label: p.title || clipQuote(p.body, 60), sub: cats.get(p.categoryKey) ?? t("Community"), icon: "lightbulb" as const, tone: "gold" as const, onClick: () => setFlow({ spec: tipCard((user.firstName ?? "").split(" ")[0] || t("me"), clipQuote(p.body), cats.get(p.categoryKey) ?? null), kind: "content" }) })),
+      t("Posts you publish in the Community under your name show here."),
       loadPosts
     );
   } else {
     body = (
       <>
-        <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS }}>Pick what to turn into a card. You'll choose the format and style next.</p>
+        <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS }}>{t("Pick what to turn into a card. You'll choose the format and style next.")}</p>
         {!clinical && (
           <>
-            <GroupLabel>Client wins · the client is asked first</GroupLabel>
+            <GroupLabel>{t("Client wins · the client is asked first")}</GroupLabel>
             {wins === "error" ? (
               <ProError onRetry={() => void fetchAllWins().then((r) => setWins(r.ok ? r.data : "error"))} />
             ) : (
               winGroups.map((g) => (
-                <PickRow key={g.label} icon={SHARE_ICONS[g.icon]} tone={g.tone} label={g.label} sub={wins === null ? "Loading…" : g.sub()} onClick={() => setStep({ at: "wins", kinds: g.kinds, title: g.label })} />
+                <PickRow key={g.label} icon={SHARE_ICONS[g.icon]} tone={g.tone} label={g.label} sub={wins === null ? t("Loading…") : g.sub()} onClick={() => setStep({ at: "wins", kinds: g.kinds, title: g.label })} />
               ))
             )}
           </>
         )}
-        <GroupLabel>Your practice</GroupLabel>
+        <GroupLabel>{t("Your practice")}</GroupLabel>
         <PickRow
           icon={SHARE_ICONS.trophy}
           tone="pr"
-          label="Practice milestone"
-          sub={totals === undefined ? "Loading…" : milestone != null ? `${fmtInt(milestone)} sessions delivered` : "Shows after your first 10 sessions"}
+          label={t("Practice milestone")}
+          sub={totals === undefined ? t("Loading…") : milestone != null ? tn(milestone, "{n} sessions delivered", "{n} sessions delivered", { n: fmtInt(milestone) }) : t("Shows after your first 10 sessions")}
           onClick={milestone != null ? openMilestone : undefined}
         />
-        <PickRow icon={SHARE_ICONS.star} tone="gold" label="A review" sub="From your public reviews" onClick={() => setStep({ at: "reviews" })} />
-        <PickRow icon={SHARE_ICONS["user-round"]} tone="teal" label="Your profile" sub="Card with your QR code" onClick={pro ? openProfile : undefined} />
-        {onProfileLink && <PickRow icon={Link2} tone="teal" label="Profile link" sub="Copy or send your link" onClick={onProfileLink} />}
+        <PickRow icon={SHARE_ICONS.star} tone="gold" label={t("A review")} sub={t("From your public reviews")} onClick={() => setStep({ at: "reviews" })} />
+        <PickRow icon={SHARE_ICONS["user-round"]} tone="teal" label={t("Your profile")} sub={t("Card with your QR code")} onClick={pro ? openProfile : undefined} />
+        {onProfileLink && <PickRow icon={Link2} tone="teal" label={t("Profile link")} sub={t("Copy or send your link")} onClick={onProfileLink} />}
         {!clinical && (
           <PickRow
             icon={SHARE_ICONS["book-open"]}
             tone="pr"
-            label={lane === "nutrition" ? "A meal plan, course or package" : "A programme, course or package"}
-            sub="From your Library"
+            label={lane === "nutrition" ? t("A meal plan, course or package") : t("A programme, course or package")}
+            sub={t("From your Library")}
             onClick={() => {
               loadPromo();
               setStep({ at: "promo" });
@@ -289,15 +297,15 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
         <PickRow
           icon={SHARE_ICONS["calendar-days"]}
           tone="teal"
-          label="Open slots"
-          sub={slots === undefined ? "Loading…" : slots === "error" ? "Couldn't load your availability" : slots === null ? "Add a session type to show open slots" : slots.length ? "From your availability" : "No open slots left this week"}
+          label={t("Open slots")}
+          sub={slots === undefined ? t("Loading…") : slots === "error" ? t("Couldn't load your availability") : slots === null ? t("Add a session type to show open slots") : slots.length ? t("From your availability") : t("No open slots left this week")}
           onClick={Array.isArray(slots) && slots.length ? openSlots : undefined}
         />
         <PickRow
           icon={SHARE_ICONS.lightbulb}
           tone="gold"
-          label="A Community post"
-          sub="Your published tips"
+          label={t("A Community post")}
+          sub={t("Your published tips")}
           onClick={() => {
             loadPosts();
             setStep({ at: "posts" });
@@ -305,8 +313,8 @@ export const WhatToShareSheet: React.FC<{ open: boolean; onClose: () => void; la
         />
         <LockNote icon={Lock}>
           {clinical
-            ? "Clinical overview shares only your profile, reviews, availability and Community posts. Results, vitals, diagnoses, care plans and medications are never shareable."
-            : "Health records, results, vitals, diagnoses, care plans and medications are never shareable."}
+            ? t("Clinical overview shares only your profile, reviews, availability and Community posts. Results, vitals, diagnoses, care plans and medications are never shareable.")
+            : t("Health records, results, vitals, diagnoses, care plans and medications are never shareable.")}
         </LockNote>
       </>
     );

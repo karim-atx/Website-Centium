@@ -9,6 +9,7 @@ import { fetchMyWinSharing, fetchSharedAboutMe, requestSharedItemRemoval, setMyW
 import { fetchProSummaries, fetchRequestVisibilities } from "../../../services/share/client";
 import { OFFLINE_MESSAGE } from "../../../services/network-error";
 import { WIN_SHARING_LABEL, WIN_SHARING_OPTIONS, sharedSub, sharedTitle, visibilityFromPayload } from "./sharingText";
+import { t } from "../../../i18n/core";
 
 /**
  * Release 3 · W8 CU30 "Sharing your wins" (source/gen/r31.js clientSet31,
@@ -51,7 +52,7 @@ async function loadShared(me: string): Promise<{ ok: true; rows: Row[] } | { ok:
     ok: true,
     rows: r.data.map((item) => ({
       item,
-      proName: names.get(item.professionalId)?.firstName ?? "Your professional",
+      proName: names.get(item.professionalId)?.firstName ?? t("Your professional"),
       visibility: (item.shareRequestId && vis.get(item.shareRequestId)) || visibilityFromPayload(item.card),
     })),
   };
@@ -102,7 +103,7 @@ export const SharingYourWinsSheet: React.FC<{
       return;
     }
     setSetting(before);
-    setSettingError(r.offline ? OFFLINE_MESSAGE : "Couldn't save your choice. Try again.");
+    setSettingError(r.offline ? OFFLINE_MESSAGE : t("Couldn't save your choice. Try again."));
   };
 
   const askRemove = async (row: Row) => {
@@ -119,7 +120,7 @@ export const SharingYourWinsSheet: React.FC<{
       setRows((list) => list.filter((x) => x.item.id !== row.item.id));
       return;
     }
-    setRowError({ id: row.item.id, message: r.offline ? OFFLINE_MESSAGE : "Couldn't ask for removal. Try again." });
+    setRowError({ id: row.item.id, message: r.offline ? OFFLINE_MESSAGE : t("Couldn't ask for removal. Try again.") });
   };
 
   const onKeyRadios = (e: React.KeyboardEvent) => {
@@ -140,15 +141,15 @@ export const SharingYourWinsSheet: React.FC<{
         setRowError(null);
         onClose();
       }}
-      title="Sharing your wins"
+      title={t("Sharing your wins")}
     >
       <div data-sharing-wins>
         <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, marginBottom: 6 }}>
-          Your professionals can turn your wins into a card for Instagram and other apps. Nothing about your health records is ever shared.
+          {t("Your professionals can turn your wins into a card for Instagram and other apps. Nothing about your health records is ever shared.")}
         </p>
 
         {status === "loading" && (
-          <div aria-busy="true" role="status" aria-label="Loading">
+          <div aria-busy="true" role="status" aria-label={t("Loading")}>
             <span aria-hidden className="block h-[11px] w-56 rounded bg-cream-soft animate-skeleton-pulse" style={{ margin: "14px 0 8px" }} />
             {[0, 1, 2].map((i) => (
               <span key={i} aria-hidden className="block h-[54px] rounded-xl bg-cream-soft animate-skeleton-pulse" style={{ marginTop: 8 }} />
@@ -161,7 +162,7 @@ export const SharingYourWinsSheet: React.FC<{
         {(status === "error" || status === "offline") && (
           <div className="flex items-center" style={{ gap: 10, borderRadius: 16, background: INK.soft, paddingBlock: "6px", paddingInline: "14px 6px", marginTop: 14 }}>
             <p role="alert" className="flex-1 min-w-0" style={{ fontSize: textPx(12), lineHeight: 1.45, color: INK.chS }}>
-              {status === "offline" ? "You're offline. Your sharing settings show when you're back online." : "Couldn't load your sharing settings."}
+              {status === "offline" ? t("You're offline. Your sharing settings show when you're back online.") : t("Couldn't load your sharing settings.")}
             </p>
             <button
               type="button"
@@ -170,7 +171,7 @@ export const SharingYourWinsSheet: React.FC<{
                 void load();
               }} className="tap inline-flex items-center justify-center shrink-0" style={{ minHeight: 44, padding: "0 12px", gap: 5, fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
               <RotateCw size={13} strokeWidth={2.2} aria-hidden />
-              Retry
+              {t("Retry")}
             </button>
           </div>
         )}
@@ -178,7 +179,7 @@ export const SharingYourWinsSheet: React.FC<{
         {status === "ready" && (
           <>
             <p id="win-sharing-label" style={{ ...sectionLabel, margin: "14px 0 2px" }}>
-              When a professional wants to share a win
+              {t("When a professional wants to share a win")}
             </p>
             <div role="radiogroup" aria-labelledby="win-sharing-label" onKeyDown={onKeyRadios}>
               {WIN_SHARING_OPTIONS.map((o) => {
@@ -204,11 +205,11 @@ export const SharingYourWinsSheet: React.FC<{
                     </span>
                     <span className="flex-1 min-w-0">
                       <span className="flex items-center flex-wrap" style={{ gap: 6, fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>
-                        {o.title}
-                        {o.isDefault && <Pill label="Default" />}
+                        {t(o.title)}
+                        {o.isDefault && <Pill label={t("Default")} />}
                       </span>
                       <span className="block" style={{ fontSize: textPx(11.5), lineHeight: 1.45, color: INK.chF, marginTop: 2 }}>
-                        {o.desc}
+                        {t(o.desc)}
                       </span>
                     </span>
                   </button>
@@ -221,9 +222,9 @@ export const SharingYourWinsSheet: React.FC<{
               </p>
             )}
 
-            <p style={{ ...sectionLabel, margin: "18px 0 2px" }}>Shared so far</p>
+            <p style={{ ...sectionLabel, margin: "18px 0 2px" }}>{t("Shared so far")}</p>
             {rows.length === 0 ? (
-              <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chF, padding: "10px 0", borderTop: `1px solid ${INK.b06}` }}>Nothing has been shared yet.</p>
+              <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chF, padding: "10px 0", borderTop: `1px solid ${INK.b06}` }}>{t("Nothing has been shared yet.")}</p>
             ) : (
               rows.map((row) => {
                 const card = specFromPayload(row.item.card, row.proName);
@@ -240,21 +241,21 @@ export const SharingYourWinsSheet: React.FC<{
                           width={40}
                           qr={false}
                           flat
-                          client={typeof shownAs === "string" && shownAs.trim() ? shownAs : "A client"}
+                          client={typeof shownAs === "string" && shownAs.trim() ? shownAs : t("A client")}
                         />
                       ) : (
                         <span aria-hidden className="shrink-0 rounded-[10px]" style={{ width: 40, height: 50, background: INK.soft }} />
                       )}
                       <span className="flex-1 min-w-0">
                         <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>
-                          {card ? sharedTitle(card.spec) : "Shared card"}
+                          {card ? sharedTitle(card.spec) : t("Shared card")}
                         </span>
                         <span className="block" style={{ fontSize: textPx(11), lineHeight: 1.45, color: INK.chF }}>
                           {sharedSub(row.proName, row.item.createdAt, row.visibility)}
                         </span>
                       </span>
                       {row.item.removalRequestedAt ? (
-                        <Pill label="Removal asked" gold />
+                        <Pill label={t("Removal asked")} gold />
                       ) : (
                         <button
                           type="button"
@@ -264,7 +265,7 @@ export const SharingYourWinsSheet: React.FC<{
                           className="tap flex items-center shrink-0 whitespace-nowrap disabled:opacity-60"
                           style={{ height: 44, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}
                         >
-                          {busy === row.item.id ? "Asking…" : "Ask to remove"}
+                          {busy === row.item.id ? t("Asking…") : t("Ask to remove")}
                         </button>
                       )}
                     </div>
@@ -278,7 +279,7 @@ export const SharingYourWinsSheet: React.FC<{
               })
             )}
             <p style={{ fontSize: textPx(11), lineHeight: 1.5, color: INK.chF, marginTop: 12 }}>
-              Asking to remove stops new shares of that card straight away and asks the professional to delete their post.
+              {t("Asking to remove stops new shares of that card straight away and asks the professional to delete their post.")}
             </p>
           </>
         )}
@@ -325,10 +326,10 @@ export const SharingYourWinsRow: React.FC<{ me: string | null; connectedCount: n
           <Trophy size={16} strokeWidth={1.75} className="text-primary-dark" />
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block text-[15px] font-semibold text-charcoal">Sharing your wins</span>
-          {setting && <span className="block text-[11.5px] leading-tight text-charcoal-faint">{WIN_SHARING_LABEL[setting]}</span>}
+          <span className="block text-[15px] font-semibold text-charcoal">{t("Sharing your wins")}</span>
+          {setting && <span className="block text-[11.5px] leading-tight text-charcoal-faint">{t(WIN_SHARING_LABEL[setting])}</span>}
         </span>
-        <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
+        <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
       </button>
       <SharingYourWinsSheet open={open} onClose={() => setOpen(false)} me={me} onSettingChange={setSetting} />
     </>

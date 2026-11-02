@@ -21,6 +21,7 @@ import { bizShareHref, bizShareText, isBizSlug, type ShareLinkKind } from "../..
 import type { MembershipPlanRow } from "../../../services/membership-plans/types";
 import { billingLabel, daysLabel, priceLine } from "../../../pages/business-ops/plans/planModel";
 import { appLocale } from "../../../i18n/format";
+import { getLanguage, t, tk, tn, tx } from "../../../i18n/core";
 
 export type BizTemplate = "schedule" | "class" | "offer" | "product" | "plan" | "profile" | "hiring";
 export type BizFormat = "story" | "post" | "sticker";
@@ -235,14 +236,28 @@ export interface ToggleRow {
 /** DEF_HIDE: off by default per template (the board's: hiring pay). */
 export const DEF_HIDE: Partial<Record<BizTemplate, string[]>> = { hiring: ["pay"] };
 
-const WHERE: Record<OfferData["where"], string> = { in_store: "In store", online: "Online", both: "In store and online", in_person: "In person" };
-export const whereLabel = (w: OfferData["where"]) => WHERE[w];
+export function whereLabel(w: OfferData["where"]): string {
+  switch (w) {
+    case "in_store":
+      return t("In store");
+    case "online":
+      return tx("Online", "session format");
+    case "both":
+      return t("In store and online");
+    case "in_person":
+      return t("In person");
+  }
+}
+
+/** Arabic dates through the app's Arabic locale (Arabic day and month names, Western digits). */
+const arabic = () => getLanguage() === "ar";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "Dec 31, 2026" (month first). */
 export function longDay(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
   if (!m) return iso;
+  if (arabic()) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).toLocaleDateString(appLocale(), { month: "short", day: "numeric", year: "numeric" });
   return `${MONTHS[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}`;
 }
 
@@ -254,54 +269,54 @@ export function toggleRows(data: TemplateData, brand: Pick<BizBrand, "name" | "c
     case "offer": {
       const o = data.d;
       return [
-        { key: "headline", title: "Offer headline", sub: o.headline, lock: true },
-        { key: "points", title: "Points cost", sub: `${pointsText(o.pointsCost)} points`, lock: false },
-        ...(o.validUntil ? [{ key: "valid", title: "Validity dates", sub: `Until ${longDay(o.validUntil)}`, lock: false }] : []),
-        { key: "where", title: "Where", sub: whereLabel(o.where), lock: false },
+        { key: "headline", title: t("Offer headline"), sub: o.headline, lock: true },
+        { key: "points", title: t("Points cost"), sub: tn(o.pointsCost, "{n} point", "{n} points", { n: pointsText(o.pointsCost) }), lock: false },
+        ...(o.validUntil ? [{ key: "valid", title: t("Validity dates"), sub: t("Until {date}", { date: longDay(o.validUntil) }), lock: false }] : []),
+        { key: "where", title: t("Where"), sub: whereLabel(o.where), lock: false },
       ];
     }
     case "class": {
       const c = data.d;
       return [
-        { key: "when", title: "Class and time", sub: `${c.title} · ${c.whenShort}`, lock: true },
-        { key: "dur", title: "Duration", sub: c.duration, lock: false },
-        ...(c.instructor ? [{ key: "instr", title: "Instructor", sub: c.instructor, lock: false }] : []),
-        ...(c.spotsLeft !== null ? [{ key: "spots", title: "Spots left", sub: `${c.spotsLeft} of ${c.capacity}`, lock: false }] : []),
+        { key: "when", title: t("Class and time"), sub: `${c.title} · ${c.whenShort}`, lock: true },
+        { key: "dur", title: t("Duration"), sub: c.duration, lock: false },
+        ...(c.instructor ? [{ key: "instr", title: t("Instructor"), sub: c.instructor, lock: false }] : []),
+        ...(c.spotsLeft !== null ? [{ key: "spots", title: t("Spots left"), sub: t("{n} of {total}", { n: c.spotsLeft, total: c.capacity }), lock: false }] : []),
       ];
     }
     case "plan": {
       const p = data.d;
       return [
-        { key: "plan", title: "Plan and price", sub: [p.name, p.price].filter(Boolean).join(" · "), lock: true },
-        ...(p.duration ? [{ key: "dur", title: "Duration", sub: p.duration, lock: false }] : []),
-        ...(p.includes ? [{ key: "inc", title: "Includes", sub: p.includes, lock: false }] : []),
+        { key: "plan", title: t("Plan and price"), sub: [p.name, p.price].filter(Boolean).join(" · "), lock: true },
+        ...(p.duration ? [{ key: "dur", title: t("Duration"), sub: p.duration, lock: false }] : []),
+        ...(p.includes ? [{ key: "inc", title: t("Includes"), sub: p.includes, lock: false }] : []),
       ];
     }
     case "product": {
       const p = data.d;
       return [
-        { key: "product", title: "Product and price", sub: [p.name, p.price].filter(Boolean).join(" · "), lock: true },
-        ...(p.imageUrl ? [{ key: "img", title: "Photo", sub: "From your showcase", lock: false }] : []),
-        ...(p.description ? [{ key: "desc", title: "Description", sub: p.description, lock: false }] : []),
+        { key: "product", title: t("Product and price"), sub: [p.name, p.price].filter(Boolean).join(" · "), lock: true },
+        ...(p.imageUrl ? [{ key: "img", title: t("Photo"), sub: t("From your showcase"), lock: false }] : []),
+        ...(p.description ? [{ key: "desc", title: t("Description"), sub: p.description, lock: false }] : []),
       ];
     }
     case "profile":
       return [
-        { key: "name", title: "Name", sub: brand.name, lock: true },
-        { key: "cat", title: "Category", sub: brand.category, lock: false },
-        ...(brand.location ? [{ key: "loc", title: "Location", sub: brand.location, lock: false }] : []),
-        ...(data.d.rating ? [{ key: "rating", title: "Rating", sub: data.d.rating, lock: false }] : []),
+        { key: "name", title: t("Name"), sub: brand.name, lock: true },
+        { key: "cat", title: t("Category"), sub: brand.category, lock: false },
+        ...(brand.location ? [{ key: "loc", title: t("Location"), sub: brand.location, lock: false }] : []),
+        ...(data.d.rating ? [{ key: "rating", title: t("Rating"), sub: data.d.rating, lock: false }] : []),
       ];
     case "hiring": {
       const h = data.d;
       return [
-        { key: "role", title: "Role and schedule", sub: h.title, lock: true },
-        { key: "type", title: "Type", sub: h.typeLabel, lock: false },
-        ...(h.pay ? [{ key: "pay", title: "Pay", sub: h.pay, lock: false, offText: "off by default" }] : []),
+        { key: "role", title: t("Role and schedule"), sub: h.title, lock: true },
+        { key: "type", title: t("Type"), sub: h.typeLabel, lock: false },
+        ...(h.pay ? [{ key: "pay", title: t("Pay"), sub: h.pay, lock: false, offText: t("off by default") }] : []),
       ];
     }
     case "schedule":
-      return [{ key: "week", title: "This week's classes", sub: `${data.d.count} ${data.d.count === 1 ? "class" : "classes"}`, lock: true }];
+      return [{ key: "week", title: t("This week's classes"), sub: tn(data.d.count, "{n} class", "{n} classes"), lock: true }];
   }
 }
 
@@ -314,7 +329,7 @@ export function toggleHide(hide: readonly string[], rows: readonly ToggleRow[], 
 }
 
 /** The row's line with its state: "6 of 20 · off" when off (TG: "6 of 20 · off"). */
-export const toggleSub = (row: ToggleRow, on: boolean) => (row.lock || on ? row.sub : [row.sub, row.offText ?? "off"].filter(Boolean).join(" · "));
+export const toggleSub = (row: ToggleRow, on: boolean) => (row.lock || on ? row.sub : [row.sub, row.offText ?? t("off")].filter(Boolean).join(" · "));
 
 // ---------------------------------------------------------------------------
 // The card's content (SPEC + bcard's row filter)
@@ -356,20 +371,20 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
   const base: CardContent = { eyebrow: "", isNew: false, title: "", small: false, img: null, val: null, leaf: false, unit: "", sub: null, rows: [], sched: null };
   switch (data.t) {
     case "schedule":
-      return { ...base, eyebrow: "Weekly schedule", title: `This week at ${brand.name}`, small: true, sched: data.d.days };
+      return { ...base, eyebrow: t("Weekly schedule"), title: t("This week at {name}", { name: brand.name }), small: true, sched: data.d.days };
     case "class": {
       const c = data.d;
       return {
         ...base,
-        eyebrow: "Class spotlight",
+        eyebrow: t("Class spotlight"),
         isNew: c.isNew,
         title: c.title,
         sub: clip(c.about),
         rows: keep([
-          { key: "when", k: "When", v: c.when },
-          { key: "dur", k: "Duration", v: c.duration },
-          ...(c.instructor ? [{ key: "instr", k: "Instructor", v: c.instructor }] : []),
-          ...(c.spotsLeft !== null ? [{ key: "spots", k: "Spots left", v: `${c.spotsLeft} of ${c.capacity}` }] : []),
+          { key: "when", k: t("When"), v: c.when },
+          { key: "dur", k: t("Duration"), v: c.duration },
+          ...(c.instructor ? [{ key: "instr", k: t("Instructor"), v: c.instructor }] : []),
+          ...(c.spotsLeft !== null ? [{ key: "spots", k: t("Spots left"), v: t("{n} of {total}", { n: c.spotsLeft, total: c.capacity }) }] : []),
         ]).filter((r) => r.key === "when" || r.v),
       };
     }
@@ -378,33 +393,33 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
       const pts = !off("points");
       return {
         ...base,
-        eyebrow: "Offer",
+        eyebrow: t("Offer"),
         title: o.headline,
         val: pts ? pointsText(o.pointsCost) : null,
         leaf: pts,
-        unit: pts ? "points" : "",
-        sub: "Redeem with Centium Points",
+        unit: pts ? t("points") : "",
+        sub: t("Redeem with Centium Points"),
         rows: keep([
-          ...(o.validUntil ? [{ key: "valid", k: "Valid", v: `Until ${longDay(o.validUntil)}` }] : []),
-          { key: "where", k: "Where", v: whereLabel(o.where) },
+          ...(o.validUntil ? [{ key: "valid", k: t("Valid"), v: t("Until {date}", { date: longDay(o.validUntil) }) }] : []),
+          { key: "where", k: t("Where"), v: whereLabel(o.where) },
         ]),
       };
     }
     case "product": {
       const p = data.d;
-      return { ...base, eyebrow: "From our shop", img: off("img") ? null : p.imageUrl, title: p.name, val: p.price || null, sub: off("desc") ? null : clip(p.description, 110) };
+      return { ...base, eyebrow: t("From our shop"), img: off("img") ? null : p.imageUrl, title: p.name, val: p.price || null, sub: off("desc") ? null : clip(p.description, 110) };
     }
     case "plan": {
       const p = data.d;
       return {
         ...base,
-        eyebrow: "Membership",
+        eyebrow: t("Membership"),
         title: p.name,
         val: p.price || null,
         unit: p.unit,
         rows: keep([
-          { key: "dur", k: "Duration", v: p.duration },
-          ...(p.includes ? [{ key: "inc", k: "Includes", v: p.includes }] : []),
+          { key: "dur", k: t("Duration"), v: p.duration },
+          ...(p.includes ? [{ key: "inc", k: t("Includes"), v: p.includes }] : []),
         ]).filter((r) => r.v),
       };
     }
@@ -412,25 +427,25 @@ export function cardContent(brand: Pick<BizBrand, "name" | "category" | "locatio
       const h = data.d;
       return {
         ...base,
-        eyebrow: "Now hiring",
+        eyebrow: t("Now hiring"),
         title: h.title,
-        sub: "Apply on Centium",
+        sub: t("Apply on Centium"),
         rows: keep([
-          { key: "type", k: "Type", v: h.typeLabel },
-          { key: "sched", k: "Schedule", v: h.schedule },
-          ...(h.pay ? [{ key: "pay", k: "Pay", v: h.pay }] : []),
+          { key: "type", k: t("Type"), v: h.typeLabel },
+          { key: "sched", k: t("Schedule"), v: h.schedule },
+          ...(h.pay ? [{ key: "pay", k: t("Pay"), v: h.pay }] : []),
         ]).filter((r) => r.v),
       };
     }
     case "profile":
       return {
         ...base,
-        eyebrow: "Find us on Centium",
+        eyebrow: t("Find us on Centium"),
         title: brand.name,
         rows: keep([
-          { key: "cat", k: "Category", v: brand.category },
-          ...(brand.location ? [{ key: "loc", k: "Location", v: brand.location }] : []),
-          ...(data.d.rating ? [{ key: "rating", k: "Rating", v: data.d.rating }] : []),
+          { key: "cat", k: t("Category"), v: brand.category },
+          ...(brand.location ? [{ key: "loc", k: t("Location"), v: brand.location }] : []),
+          ...(data.d.rating ? [{ key: "rating", k: t("Rating"), v: data.d.rating }] : []),
         ]),
       };
   }
@@ -500,6 +515,8 @@ export function isNewClass(createdAt: string | null, now: Date = new Date()): bo
 
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** Monday-first day i's short name: English as the board, Arabic from the locale (2024-01-01 was a Monday). */
+const dayShort = (i: number, caps = false) => (arabic() ? new Date(2024, 0, 1 + i).toLocaleDateString(appLocale(), { weekday: "short" }) : caps ? DAYS[i] : DAY_SHORT[i]);
 const at = (iso: string) => new Date(`${iso}T00:00:00`);
 const isoOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 /** 0 = Monday (Monday-first weeks). */
@@ -531,8 +548,8 @@ export function weekSchedule(sessions: readonly { date: string; startTime: strin
     const list = (byDay.get(i) ?? []).slice().sort((a, b) => a.startTime.localeCompare(b.startTime) || a.title.localeCompare(b.title));
     if (!list.length) continue;
     const items = list.slice(0, SCHED_PER_DAY).map((s) => ({ t: time12(s.startTime), n: s.title }));
-    if (list.length > SCHED_PER_DAY) items.push({ t: `+${list.length - SCHED_PER_DAY}`, n: "more" });
-    days.push({ d: DAYS[i], items });
+    if (list.length > SCHED_PER_DAY) items.push({ t: `+${list.length - SCHED_PER_DAY}`, n: t("more") });
+    days.push({ d: dayShort(i, true), items });
   }
   return { days, count: live.length };
 }
@@ -550,12 +567,13 @@ export function durationText(start: string, end: string): string {
   const d = b - a;
   const h = Math.floor(d / 60);
   const m = d % 60;
-  return h ? `${h} hr${m ? ` ${m} min` : ""}` : `${m} min`;
+  return h ? (m ? t("{h} hr {m} min", { h, m }) : t("{h} hr", { h })) : t("{n} min", { n: m });
 }
 
 /** "Sun, Oct 25" */
 export function dayLabel(iso: string): string {
   const d = at(iso);
+  if (arabic()) return d.toLocaleDateString(appLocale(), { weekday: "short", month: "short", day: "numeric" });
   return `${DAY_SHORT[monIdx(d)]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
 
@@ -569,7 +587,7 @@ export function classData(
     title: s.title,
     about: o.about,
     when: o.repeat ?? `${dayLabel(s.date)} · ${time12(s.startTime)}`,
-    whenShort: `${DAY_SHORT[monIdx(d)]} ${time12(s.startTime)}`,
+    whenShort: `${dayShort(monIdx(d))} ${time12(s.startTime)}`,
     duration: durationText(s.startTime, s.endTime),
     spotsLeft: Math.max(0, s.maxCapacity - s.booked),
     capacity: s.maxCapacity,
@@ -584,11 +602,11 @@ export function planData(p: Pick<MembershipPlanRow, "id" | "name" | "price" | "b
   const unit = line.startsWith(p.price) ? line.slice(p.price.length).trim() : "";
   const duration =
     p.kind === "class_pack"
-      ? [p.sessionsInPack ? `${p.sessionsInPack} classes` : "", p.validForDays ? daysLabel(p.validForDays) : ""].filter(Boolean).join(" · ")
+      ? [p.sessionsInPack ? tn(p.sessionsInPack, "{n} class", "{n} classes") : "", p.validForDays ? daysLabel(p.validForDays) : ""].filter(Boolean).join(" · ")
       : p.kind === "day_pass"
-        ? "1 day"
+        ? t("1 day")
         : p.kind === "drop_in"
-          ? "1 class"
+          ? t("1 class")
           : p.kind === "intro_offer"
             ? daysLabel(p.validForDays)
             : billingLabel(p.billing);
@@ -603,24 +621,24 @@ export function productData(o: { id: string; title: string; price: string; descr
 
 /** The sheet's title per template (board: "Share offer", "Share class"). */
 export const SHEET_TITLE: Record<BizTemplate, string> = {
-  schedule: "Share schedule",
-  class: "Share class",
-  offer: "Share offer",
-  product: "Share item",
-  plan: "Share plan",
-  profile: "Share profile",
-  hiring: "Share opening",
+  schedule: tk("Share schedule"),
+  class: tk("Share class"),
+  offer: tk("Share offer"),
+  product: tk("Share item"),
+  plan: tk("Share plan"),
+  profile: tk("Share profile"),
+  hiring: tk("Share opening"),
 };
 
 /** What the QR opens, for the Destinations note and the public page ("this offer"). */
 export const ITEM_NOUN: Record<BizTemplate, string> = {
-  schedule: "this week's schedule",
-  class: "this class",
-  offer: "this offer",
-  product: "this item",
-  plan: "this plan",
-  profile: "your profile",
-  hiring: "this opening",
+  schedule: tk("this week's schedule"),
+  class: tk("this class"),
+  offer: tk("this offer"),
+  product: tk("this item"),
+  plan: tk("this plan"),
+  profile: tk("your profile"),
+  hiring: tk("this opening"),
 };
 
 /**

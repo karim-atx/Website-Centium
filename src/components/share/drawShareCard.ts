@@ -1,8 +1,9 @@
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../icons/StreakLeaf";
 import { qrRows } from "./ShareQr";
-import { loadArabicForCanvas } from "../../i18n/fonts";
-import { EXPORT_WIDTH, PALETTE, cardFont, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
+import { hasArabic, loadArabicForCanvas } from "../../i18n/fonts";
+import { isRtl, t } from "../../i18n/core";
+import { EXPORT_WIDTH, PALETTE, textDirection, cardFont, cardHeight, cardLink, cardQrValue, fillClient, fitLinkSize, type CardPro, type CardSpec, type ShareFormat, type ShareStyle } from "./shareCardModel";
 import { photoRect, toExport } from "./overlayModel";
 import { LAYER, layoutShareLayer, type CardBox, type CardLayout, type CardMeasure, type CardOp, type Drop, type LayerInput, type LayerPlacement } from "./shareLayerModel";
 
@@ -76,7 +77,7 @@ interface Item {
 export function layoutShareCard(o: CardLayoutInput, m: CardMeasure): CardLayout {
   const { spec: c, pro, format, style } = o;
   const W = o.width;
-  const client = o.client ?? "A client";
+  const client = o.client ?? t("A client");
   const P = PALETTE[style];
   const u = W / 100;
   const stk = format === "sticker";
@@ -201,7 +202,7 @@ export function layoutShareCard(o: CardLayoutInput, m: CardMeasure): CardLayout 
   const markH = (sq ? 7.3 : 8.3) * u; // CentiumMark's height attribute is not rounded
   const nameS: TextStyle = { weight: 800, size: r1((sq ? 3.5 : 3.8) * u), lh: 1.15, color: ink, shadow: hasShadow };
   const handleS: TextStyle = { weight: 600, size: r1((sq ? 2.8 : 3) * u), lh: 1.25, color: sub, shadow: hasShadow };
-  const handleText = pro.handle ? `@${pro.handle} on Centium` : null;
+  const handleText = pro.handle ? t("@{handle} on Centium", { handle: pro.handle }) : null;
   const headGap = r1(2.4 * u);
   const nameW = widthOf(pro.name, nameS);
   const handleW = handleText ? widthOf(handleText, handleS) : 0;
@@ -404,7 +405,7 @@ export function layoutShareCard(o: CardLayoutInput, m: CardMeasure): CardLayout 
       linkS.size = fitted;
       linkW = widthOf(link, linkS);
     }
-    const scan = "Scan to see my profile";
+    const scan = t("Scan to see my profile");
     const scanW = stk ? 0 : widthOf(scan, scanS);
     const textH = linkS.lh * linkS.size + (stk ? 0 : scanS.lh * scanS.size);
     const footH = stk ? textH : Math.max(tile, textH);
@@ -475,8 +476,11 @@ const hasLetterSpacing = (ctx: CanvasRenderingContext2D) => "letterSpacing" in c
 function canvasMeasure(ctx: CanvasRenderingContext2D): CardMeasure {
   const native = hasLetterSpacing(ctx);
   const extents = new Map<string, { ascent: number; descent: number }>();
+  const rtl = isRtl();
   return {
-    width(text, font, ls) {
+    width(text, font, lsIn) {
+      // Arabic: no tracking, as the DOM card (shareCardModel cardBidiClass).
+      const ls = rtl ? 0 : lsIn;
       ctx.font = font;
       if (native) {
         ctx.letterSpacing = `${ls}px`;
@@ -498,9 +502,14 @@ function canvasMeasure(ctx: CanvasRenderingContext2D): CardMeasure {
   };
 }
 
-function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, ls: number) {
-  if (hasLetterSpacing(ctx)) {
-    ctx.letterSpacing = `${ls}px`;
+function fillText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, lsIn: number) {
+  // Arabic: each line in its own direction and untracked, as the DOM card;
+  // textAlign stays "left", so the line still starts at x.
+  const rtl = isRtl();
+  const ls = rtl ? 0 : lsIn;
+  if (rtl) ctx.direction = textDirection(text);
+  if (hasLetterSpacing(ctx) || hasArabic(text)) {
+    if (hasLetterSpacing(ctx)) ctx.letterSpacing = `${ls}px`;
     ctx.fillText(text, x, y);
     return;
   }
