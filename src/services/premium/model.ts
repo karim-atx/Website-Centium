@@ -392,18 +392,19 @@ export interface PlanLevelPrice {
 
 export interface PlanLevel {
   businessPlansOn: boolean;
-  /** A business created under the switch has no plan level bought yet (G1 fixes). */
+  /** A business created under the switch must choose a level before it goes on onboarding. */
   mustChooseLevel: boolean;
   planActive: boolean;
-  /**
-   * Today's Database: a level is chosen and its plan isn't confirmed yet.
-   * Plan levels are bought in the Centium app only (G fixes 2), so the web
-   * reads this as "the purchase isn't confirmed yet" and never shows a charge.
-   */
-  awaitingPayment: boolean;
+  /** A level is chosen and its purchase in the Centium app isn't confirmed yet. */
+  awaitingPurchase: boolean;
+  /** The level the owner chose (choose_business_plan_level), to buy in the Centium app. */
+  chosenSeatBlocks: number | null;
+  chosenBillingPeriod: PlanPeriod | null;
   seatBlocks: number | null;
   billingPeriod: PlanPeriod | null;
-  choiceDue: boolean;
+  renewsAt: string | null;
+  /** The plan comes from the store (bought in the Centium app). */
+  boughtInApp: boolean;
 }
 
 const period = (v: unknown): PlanPeriod | null => (v === "monthly" || v === "yearly" ? v : null);
@@ -426,10 +427,13 @@ export function parseLevel(data: unknown): PlanLevel | null {
     businessPlansOn: bool(r.business_plans_on),
     mustChooseLevel: bool(r.must_choose_level),
     planActive: bool(r.plan_active),
-    awaitingPayment: bool(r.awaiting_payment),
+    awaitingPurchase: bool(r.awaiting_purchase),
+    chosenSeatBlocks: numOrNull(r.chosen_seat_blocks),
+    chosenBillingPeriod: period(r.chosen_billing_period),
     seatBlocks: numOrNull(r.seat_blocks),
     billingPeriod: period(r.billing_period),
-    choiceDue: bool(r.choice_due),
+    renewsAt: strOrNull(r.renews_at),
+    boughtInApp: bool(r.bought_in_app),
   };
 }
 
@@ -446,38 +450,58 @@ export function planLevelPriceText(row: PlanLevelPrice, p: PlanPeriod): string |
   return v ? (p === "monthly" ? t("{price} a month", { price: v }) : t("{price} a year", { price: v })) : null;
 }
 
-/** A business created under the switch has no plan level bought yet. Only on the switch. */
+/** A business created under the switch must choose a level before it goes on onboarding. Only on the switch. */
 export const mustChooseLevel = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && l.mustChooseLevel;
 
-/** Today's Database's "awaiting payment", read as the app purchase not confirmed yet. Only on the switch. */
-export const planPurchasePending = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && !l.planActive && l.awaitingPayment;
+/** A level is chosen and its purchase in the Centium app isn't confirmed yet. Only on the switch. */
+export const awaitingPurchase = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && !l.planActive && l.awaitingPurchase;
 
-/** The gentle renewal line, pointing to the app. */
-export const choiceDue = (l: PlanLevel | null | undefined): boolean => !!l && l.businessPlansOn && l.choiceDue;
+/**
+ * A level's name and billing period: "Base + 5 seats · Yearly". The seat
+ * count comes from business_plan_level_prices() when it has loaded (else
+ * "Base + 1 seat block"). Null with no level.
+ */
+export function planChoiceLine(seatBlocks: number | null | undefined, p: PlanPeriod | null | undefined, prices: PlanLevelPrice[] | null | undefined): string | null {
+  if (seatBlocks == null) return null;
+  const list = prices ?? [];
+  const base = list.find((x) => x.seatBlocks === 0) ?? null;
+  const row = list.find((x) => x.seatBlocks === seatBlocks) ?? { seatBlocks, seats: 0 };
+  const name = planLevelName(row, row.seats > 0 ? base : null);
+  return p ? `${name} · ${p === "monthly" ? t("Monthly") : t("Yearly")}` : name;
+}
 
-/** The business home's plan card: buy a level in the app, the purchase not confirmed yet, or the renewal line. Null: no card (today). */
-export type PlanHomeCard = "choose" | "purchase_pending" | "choice_due" | null;
+/**
+ * choose_business_plan_level's arguments (G fixes 3): exactly these three.
+ * It only records the level (no charge); the wording key, language, refund
+ * policy version and platform are gone.
+ */
+export const choosePlanLevelArgs = (businessId: string, seatBlocks: number, p: PlanPeriod) => ({ p_business_id: businessId, p_seat_blocks: seatBlocks, p_period: p });
+
+/** ATXD7 (an older Database's "already chosen") reads as chosen, like a repeat choice. */
+export const choiceAlreadyMade = (code: string | null | undefined): boolean => code === "ATXD7";
+
+/** The business home's plan card: choose a level, or buy the chosen one in the Centium app. Null: no card (today). */
+export type PlanHomeCard = "choose" | "awaiting_purchase" | null;
 
 export function planHomeCard(l: PlanLevel | null | undefined): PlanHomeCard {
   if (mustChooseLevel(l)) return "choose";
-  if (planPurchasePending(l)) return "purchase_pending";
-  if (choiceDue(l)) return "choice_due";
+  if (awaitingPurchase(l)) return "awaiting_purchase";
   return null;
 }
 
 /**
- * Business onboarding's plan step (G fixes 2): the levels and "Buy in the
- * Centium app", shown in front of the venue ("Where") step and every step
- * after it while the business must choose a level, until the owner carries
- * on. Continue is always there: the plan is bought in the app, never here,
- * so this step is never a dead end (the venue step's opening is the
- * Database's to decide).
+ * Business onboarding's plan step (G fixes 3): shown in front of the venue
+ * ("Where") step and every step after it while the business must choose a
+ * level. "Choose this plan" records the level (choose_business_plan_level,
+ * no charge); the step then stays on screen, saying to buy it in the Centium
+ * app, until the owner carries on. Continue is always there, so the step is
+ * never a dead end.
  *
  * - "plan": the plan step;
  * - "loading": the plan step's skeleton (the switch is on for the owner and
  *   the business's answer is still coming);
  * - "skip": today's step. The switch off, unknown or loading, no business
- *   row yet (offline), a level already bought, or the owner carried on.
+ *   row yet (offline), a level already chosen, or the owner carried on.
  */
 export type PlanStepGate = "plan" | "loading" | "skip";
 
@@ -486,10 +510,13 @@ export function onboardingPlanStep(input: {
   businessId: string | null | undefined;
   level: PlanLevel | null | undefined;
   levelLoading: boolean;
+  /** "Choose this plan" succeeded on this screen. */
+  chosen: boolean;
   /** The owner pressed Continue on the plan step. */
   carriedOn: boolean;
 }): PlanStepGate {
   if (input.carriedOn || !input.businessId) return "skip";
+  if (input.chosen) return "plan";
   if (input.levelLoading) return businessPlansOn(input.switches) ? "loading" : "skip";
   return mustChooseLevel(input.level) ? "plan" : "skip";
 }
@@ -507,8 +534,6 @@ export interface CreditPack {
 export interface HiringCredits {
   creditsOn: boolean;
   free: number;
-  price1: number | null;
-  price3: number | null;
   packs: CreditPack[];
 }
 
@@ -519,7 +544,7 @@ export function parseHiringCredits(data: unknown): HiringCredits {
     if (!p) return [];
     return [{ quantity: intOr0(p.quantity), used: intOr0(p.used), remaining: intOr0(p.remaining), startsAt: strOrNull(p.starts_at), endsAt: strOrNull(p.ends_at) }];
   });
-  return { creditsOn: bool(r?.credits_on), free: intOr0(r?.free), price1: numOrNull(r?.price_1), price3: numOrNull(r?.price_3), packs };
+  return { creditsOn: bool(r?.credits_on), free: intOr0(r?.free), packs };
 }
 
 /** A role offer uses a credit instead of the fee line, only when credits are on. Class-slot hires are unchanged. */
@@ -542,14 +567,14 @@ export function premiumCodeMessage(code: string | null | undefined, opts: { deta
     case "ATXQ2":
       return limitReachedText(premiumRefusalOf({ code: "ATXQ2", details: opts.detail ?? null })?.feature);
     case "ATXQ3":
-      // G fixes 2: plan levels are bought in the Centium app only. Approval
-      // waits for the purchase to be confirmed; anything else asks for the
-      // plan to be chosen in the app first.
-      return /\bnot paid\b|\bconfirm/i.test(opts.message ?? "")
+      // G fixes 3: the level is chosen on the web (choose_business_plan_level)
+      // and bought in the Centium app. Approval waits for the purchase to be
+      // confirmed; a venue or the verification waits for the choice.
+      return /\bnot bought\b|\bnot paid\b|\bconfirm/i.test(opts.message ?? "")
         ? t("Your verification is approved once your plan purchase is confirmed.")
-        : t("Choose your business plan in the Centium app first.");
+        : t("Choose your business plan first.");
     case "ATXQ4":
-      return t("No hiring credit left. A role offer needs one.");
+      return t("Buy a hiring credit in the Centium app to send this offer.");
     case "ATXQ6":
       return passReasonText(opts.detail ?? /\(([a-z_]+)\)/.exec(opts.message ?? "")?.[1] ?? null);
     default:

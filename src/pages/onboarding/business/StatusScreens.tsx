@@ -64,8 +64,8 @@ export const PendingScreen: React.FC<{
   submittedAt: string | null;
   footer: BizFooter;
   /**
-   * Round G1 fixes, G fixes 2 (only with business_plans_on): the plan isn't
-   * bought in the Centium app yet ("choose"), or its purchase isn't
+   * Round G1 fixes, G fixes 2 and 3 (only with business_plans_on): no plan
+   * level is chosen yet ("choose"), or its purchase in the Centium app isn't
    * confirmed yet ("pending"), so approval waits for it.
    */
   planWait?: "choose" | "pending" | null;
@@ -84,7 +84,7 @@ export const PendingScreen: React.FC<{
       {planWait && (
         <ObTip icon={Clock3} heading={t("Business plan")} tone="warn" margin="0 0 16px" role="status">
           {planWait === "choose"
-            ? t("Buy it in the Centium app. Your verification is approved once the purchase is confirmed.")
+            ? t("Choose your business plan first.")
             : t("Your verification is approved once your plan purchase is confirmed.")}
         </ObTip>
       )}

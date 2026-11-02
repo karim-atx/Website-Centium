@@ -9,7 +9,7 @@ import type { LaneStepProps } from "./laneTypes";
 import { t } from "../../../i18n/core";
 import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { useSwitches } from "../../../services/premium/hooks";
-import { businessPlansOn, mustChooseLevel, planPurchasePending } from "../../../services/premium/model";
+import { businessPlansOn, mustChooseLevel, awaitingPurchase } from "../../../services/premium/model";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 
 // OB-232 / 266 / 294: Step 5 · Payments. Cash now (venue_payment_method cash);
@@ -24,12 +24,12 @@ export const PaymentsStep: React.FC<LaneStepProps> = ({ biz, setBiz, flowKey, on
   // Round G1 (#15, G fixes; G fixes 2): the plan is bought in the Centium app,
   // and verification approval waits for that purchase to be confirmed. A
   // business already created reads its own answer (business_plan_level: a
-  // level still to buy, or its purchase not confirmed yet); one not yet
+  // level still to choose, or its purchase not confirmed yet); one not yet
   // created will need one when the business plans switch is on for its
   // owner. Off, or loading: as today.
   const { switches } = useSwitches();
   const { level, loading: levelLoading } = usePlanLevel(biz.businessId);
-  const approvalWaits = biz.businessId ? !levelLoading && (mustChooseLevel(level) || planPurchasePending(level)) : businessPlansOn(switches);
+  const approvalWaits = biz.businessId ? !levelLoading && (mustChooseLevel(level) || awaitingPurchase(level)) : businessPlansOn(switches);
   return (
     <BizFrame
       step={flowKey}

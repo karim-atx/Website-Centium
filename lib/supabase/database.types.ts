@@ -27741,17 +27741,13 @@ export type Database = {
       business_plan_level: {
         Args: { p_business_id: string }
         Returns: {
-          awaiting_payment: boolean
+          awaiting_purchase: boolean
           billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          bought_in_app: boolean
           business_plans_on: boolean
-          choice_due: boolean
           chosen_billing_period: Database["public"]["Enums"]["subscription_billing_period"]
           chosen_seat_blocks: number
           must_choose_level: boolean
-          pending_amount: number
-          pending_billing_period: Database["public"]["Enums"]["subscription_billing_period"]
-          pending_charge_id: string
-          pending_seat_blocks: number
           plan_active: boolean
           renews_at: string
           seat_blocks: number
@@ -27893,17 +27889,6 @@ export type Database = {
       business_user_can: {
         Args: { p_business_id: string; p_permission: string; p_user: string }
         Returns: boolean
-      }
-      buy_hiring_credits: {
-        Args: {
-          p_business_id: string
-          p_language: string
-          p_pack: number
-          p_platform?: string
-          p_refund_policy_version: string
-          p_wording_key: string
-        }
-        Returns: string
       }
       buy_seat_blocks: {
         Args: { p_blocks: number; p_business_id: string }
@@ -28242,12 +28227,8 @@ export type Database = {
       choose_business_plan_level: {
         Args: {
           p_business_id: string
-          p_language: string
           p_period: Database["public"]["Enums"]["subscription_billing_period"]
-          p_platform?: string
-          p_refund_policy_version: string
           p_seat_blocks: number
-          p_wording_key: string
         }
         Returns: string
       }
@@ -30315,8 +30296,6 @@ export type Database = {
           credits_on: boolean
           free: number
           packs: Json
-          price_1: number
-          price_3: number
         }[]
       }
       my_history_from_ts: { Args: never; Returns: string }
