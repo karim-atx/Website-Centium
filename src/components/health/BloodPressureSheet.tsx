@@ -158,7 +158,7 @@ export const BloodPressureSheet: React.FC<{
     const opensPopup = shouldOpenBpVeryHigh({ systolic, diastolic }, pregnancyFlags);
     const queue = () => {
       enqueueLog(authUserId, { kind: "bp", reading, day, recordedAt });
-      setToast(QUEUED_COPY);
+      setToast(t(QUEUED_COPY));
       // The severe check still runs on the device: the message is put in
       // front of the person while the reading waits for a connection.
       if (opensPopup) setVeryHigh({ ...reading, recordedAt });

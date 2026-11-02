@@ -67,7 +67,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     const requestId = newQueueId();
     const queue = () => {
       enqueueLog(authUserId, { kind: "water", ml: amount, day, loggedAt: when.toISOString() }, requestId);
-      setToast(QUEUED_COPY);
+      setToast(t(QUEUED_COPY));
       onClose();
     };
     if (browserOffline()) return queue();

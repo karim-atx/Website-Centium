@@ -1,6 +1,7 @@
 import { CircleAlert, TriangleAlert } from "lucide-react";
 import { textPx } from "../../theme/textSize";
-import type { FoodBadge, addNotice } from "../../services/nutrition/clientNutritionModel";
+import { severityLabel, type FoodBadge, type addNotice } from "../../services/nutrition/clientNutritionModel";
+import { t } from "../../i18n/core";
 
 const TONE = {
   red: { bg: "rgb(var(--c-status-high-bg))", ink: "rgb(var(--c-status-high))" },
@@ -17,13 +18,13 @@ const TONE = {
  * (clientNutritionModel.badgeFor).
  */
 export function FoodConflictBadge({ badge }: { badge: FoodBadge }) {
-  const t = TONE[badge.tone];
+  const tone = TONE[badge.tone];
   return (
     <span
       // The same classes as the client's own "Not compatible" badge (so Larger text treats both alike).
       className="text-[9px] font-bold uppercase rounded-full px-1.5 py-0.5 shrink-0 whitespace-nowrap"
-      aria-label={badge.kind === "allergy_confirmed" && badge.severity ? `${badge.text}, ${badge.severity}` : undefined}
-      style={{ background: t.bg, color: t.ink }}
+      aria-label={badge.kind === "allergy_confirmed" && badge.severity ? t("{allergy}, {severity}", { allergy: badge.text, severity: t(severityLabel(badge.severity)).toLowerCase() }) : undefined}
+      style={{ background: tone.bg, color: tone.ink }}
     >
       {badge.text}
     </span>

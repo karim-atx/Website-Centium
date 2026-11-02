@@ -964,7 +964,7 @@ export const WorkoutSessionSheet: React.FC<{
     let closeAfter = 900;
     // Round D outbox: finished with no connection, kept on this device.
     if (result.queued) {
-      setResultsToast(SAVED_ON_DEVICE);
+      setResultsToast(t(SAVED_ON_DEVICE));
       closeAfter = 2600;
     } else if (coachId && authUserId && routineId) {
       const sent = await readResultsSent(authUserId, routineId, payload.startedAt);

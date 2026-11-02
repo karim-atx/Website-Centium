@@ -26,7 +26,7 @@ import { NutritionDetails } from "./NutritionDetails";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { fetchFoodConflicts } from "../../services/nutrition/client";
 import { addNotice, type ConflictRow } from "../../services/nutrition/clientNutritionModel";
-import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
+import { dietLabel } from "../../utils/dietaryRestrictions";
 import { FoodConflictNotice } from "./FoodConflictBadge";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
@@ -431,9 +431,8 @@ export const AddFoodSheet: React.FC<{
       cancelled = true;
     };
   }, [selectedFood, authUserId]);
-  const restrictionName = (r: string) => dietaryRestrictionOptions.find((o) => o.value === r)?.label ?? r;
   const conflictNotice =
-    selectedFood && conflictRows?.id === selectedFood.id ? addNotice(selectedFood.name, conflictRows.rows, restrictionName) : null;
+    selectedFood && conflictRows?.id === selectedFood.id ? addNotice(selectedFood.name, conflictRows.rows, dietLabel) : null;
   const addBlocked = !!conflictNotice?.blocks;
 
   // Foods the user created before custom-food writes were wired to Supabase

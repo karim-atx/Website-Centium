@@ -20,6 +20,7 @@ export const FILES: string[] = [
   "components/reminders/PersonalReminderSheet.tsx",
   "components/security/recoveryCodesText.ts",
   "components/market/filterModel.ts",
+  "components/outbox/Outbox.tsx",
 ];
 
 // note (whole file): "hire" is «توظيف» as decided in Round F (a hire «توظيف»,
@@ -167,6 +168,21 @@ const misc: Catalogue = {
   "client|customer type": "عميل",
   "regular|customer type": "منتظم",
   "athlete|customer type": "رياضي",
+  // == EH final · Waiting to save (components/outbox/Outbox: the chip, the sheet and the sign-out warning) ==
+  // note (outbox): the chip is the offline outbox; what waits can be health data (water, weight, blood pressure), named only by kind.
+  "{n} waiting to save": { zero: "لا شيء بانتظار الحفظ", one: "عنصر واحد بانتظار الحفظ", two: "عنصران بانتظار الحفظ", few: "{n} عناصر بانتظار الحفظ", many: "{n} عنصرًا بانتظار الحفظ", other: "{n} عنصر بانتظار الحفظ" },
+  "{n} waiting to save. Show what is waiting": { zero: "لا شيء بانتظار الحفظ. عرض ما ينتظر", one: "عنصر واحد بانتظار الحفظ. عرض ما ينتظر", two: "عنصران بانتظار الحفظ. عرض ما ينتظر", few: "{n} عناصر بانتظار الحفظ. عرض ما ينتظر", many: "{n} عنصرًا بانتظار الحفظ. عرض ما ينتظر", other: "{n} عنصر بانتظار الحفظ. عرض ما ينتظر" },
+  "{what} couldn't be saved.": "تعذّر حفظ {what}.",
+  "{what} couldn't be saved: {message}": "تعذّر حفظ {what}: {message}",
+  "Nothing is waiting.": "لا شيء بانتظار الحفظ.",
+  "{what} are kept on this device and will save when you reconnect. Keep this app open or open it again once you're online.": "محفوظ على هذا الجهاز: {what}. سيُحفظ عند عودة الاتصال. أبقِ التطبيق مفتوحًا أو افتحه مجددًا عندما تتصل.",
+  Ticked: "تم التحديد",
+  Unticked: "أُلغي التحديد",
+  "Steps goal": "هدف الخطوات",
+  "Logged|outbox entry": "إدخال مسجّل",
+  "{what} haven't saved yet": "لم يُحفظ بعد: {what}",
+  "Signing out removes them from this device. Connect to the internet first to keep them.": "تسجيل الخروج يحذفها من هذا الجهاز. اتصل بالإنترنت أولًا للاحتفاظ بها.",
+  "Stay signed in": "البقاء مسجّلًا الدخول",
 };
 
 export default misc;

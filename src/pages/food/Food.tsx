@@ -27,7 +27,7 @@ import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
 import { todayLocal } from "../../utils/date";
 import type { MealType, FoodLogEntry } from "../../types";
 import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check, AlertCircle } from "lucide-react";
-import { dietaryRestrictionOptions, isFoodRestricted } from "../../utils/dietaryRestrictions";
+import { dietLabel, isFoodRestricted } from "../../utils/dietaryRestrictions";
 import { FoodConflictBadge } from "../../components/food/FoodConflictBadge";
 import { FoodFeedbackLine } from "../../components/food/FoodFeedbackLine";
 import { worstBadge } from "../../services/nutrition/clientNutritionModel";
@@ -87,12 +87,6 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: s
 
 const SWIPE_THRESHOLD = 60;
 
-// Release 3 · CU13: a food_conflicts restriction or preference named as the
-// dropdown names it ("Dairy-Free").
-const restrictionName = (r: string) => {
-  const label = dietaryRestrictionOptions.find((o) => o.value === r)?.label;
-  return label ? t(label) : r;
-};
 const SAVE_FAILED = tk("Couldn't save. Try again.");
 // Round D (O12): a write refused for want of a connection says so.
 const failedLine = (lead: string, offline: boolean) => t("{lead} {reason}", { lead, reason: offline ? t(OFFLINE_MESSAGE) : t("Try again.") });
@@ -741,7 +735,7 @@ export default function Food() {
                             // Release 3 · CU13: the worst food_conflicts row as a badge beside
                             // the client's own one (a restriction already flagged above is
                             // not flagged twice). Only a confirmed allergy tints the row red.
-                            const conflict = worstBadge(conflicts.get(e.id) ?? [], restrictionName);
+                            const conflict = worstBadge(conflicts.get(e.id) ?? [], dietLabel);
                             const conflictBadge = conflict && !(restricted && (conflict.kind === "restriction" || conflict.kind === "preference")) ? conflict : null;
                             const flagged = restricted || conflictBadge?.kind === "allergy_confirmed";
                             const entryFeedback = feedback.get(e.id) ?? [];

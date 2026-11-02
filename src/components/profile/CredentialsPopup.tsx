@@ -120,7 +120,7 @@ export const CredentialsPopup: React.FC<{ open: boolean; onClose: () => void }> 
     const nickChanged = showNickname && nick !== (savedNickname ?? "");
     if (nickChanged && nick) {
       const problem = nicknameProblem(nick, reserved, [user.firstName]);
-      if (problem) next.nickname = NICKNAME_PROBLEM_TEXT[problem];
+      if (problem) next.nickname = t(NICKNAME_PROBLEM_TEXT[problem]);
     }
 
     setBusy(true);

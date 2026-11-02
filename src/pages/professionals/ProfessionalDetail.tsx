@@ -35,7 +35,7 @@ import {
   type BookableSession,
   type Workplace,
 } from "../../services/public-pro";
-import { ROLE_LABEL } from "../business-team/teamLogic";
+import { ROLE_LABEL, roleLabel } from "../business-team/teamLogic";
 import type { BusinessRole } from "../../services/business-team/types";
 import { recordProfessionalEvent } from "../../services/marketplace/listingEvents";
 import { getMyAccessRequests, type AccessRequest } from "../../services/access-requests";
@@ -846,8 +846,7 @@ function withWorkplaces(where: WhereRow[] | null, list: Workplace[]): WhereRow[]
   const rows: WhereRow[] = list.map((w) => ({
     icon: "business",
     title: w.name,
-    // ROLE_LABEL's English, translated here (the roleLabel() helper is on feat/eh-business, not this base).
-    line: [w.role && ROLE_LABEL[w.role as BusinessRole] ? t(ROLE_LABEL[w.role as BusinessRole]) : null, w.location].filter(Boolean).join(" · ") || t("Works here"),
+    line: [w.role && ROLE_LABEL[w.role as BusinessRole] ? roleLabel(w.role as BusinessRole) : null, w.location].filter(Boolean).join(" · ") || t("Works here"),
   }));
   const places = where.filter((w) => w.icon === "place");
   return [...places, ...rows, ...where.filter((w) => w.icon !== "place")];

@@ -376,7 +376,7 @@ export const MembershipsCard: React.FC = () => {
           <span className="block text-xs text-charcoal-faint truncate">
             {m.planName} · {validRange(m.startedOn, m.expiresOn)}
           </span>
-          {m.granted && <span className="block text-[11.5px] font-semibold text-charcoal-soft truncate">{GRANTED_LABEL}</span>}
+          {m.granted && <span className="block text-[11.5px] font-semibold text-charcoal-soft truncate">{t(GRANTED_LABEL)}</span>}
           {lines && <span className="block text-[11.5px] text-charcoal-faint truncate">{lines.join(" · ")}</span>}
         </span>
         <MemberTag label={tag.label} tone={tag.tone} />
