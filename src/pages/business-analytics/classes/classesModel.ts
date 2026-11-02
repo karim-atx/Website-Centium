@@ -2,6 +2,8 @@ import { minutesOfDay, range12 } from "../../../utils/time12";
 import { DAY_LONG, DAY_SHORT, mondayIndex, startOfWeekISO } from "../../../utils/week";
 import { localDayOf, shiftDate } from "../../../utils/date";
 import type { ClassAnalyticsRow } from "../../../services/business-analytics/model";
+import { t, tn, tx } from "../../../i18n/core";
+import { appLocale } from "../../../i18n/format";
 
 // AN3 Analytics › Classes: New vs returning, Top classes and member
 // cancellations come from B15 class_analytics (CL-07); the session-level
@@ -54,19 +56,12 @@ export interface RawData {
 // ---------------------------------------------------------------------------
 // Dates and wording
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const at = (iso: string) => new Date(`${iso}T00:00:00`);
 export const dayCol = (iso: string) => mondayIndex(at(iso).getDay());
 /** "Wed, Oct 7" */
-export const dayDate = (iso: string) => {
-  const d = at(iso);
-  return `${DAY_SHORT[mondayIndex(d.getDay())]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
-};
+export const dayDate = (iso: string) => at(iso).toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" });
 /** "Sep 8" */
-export const dayMonth = (iso: string) => {
-  const d = at(iso);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
-};
+export const dayMonth = (iso: string) => at(iso).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" });
 export const daysBetween = (a: string, b: string) => Math.round((at(b).getTime() - at(a).getTime()) / 86400000);
 export const rangeDayCount = (r: { from: string; to: string }) => daysBetween(r.from, r.to) + 1;
 export const prevOf = (r: { from: string; to: string }) => {
@@ -86,7 +81,7 @@ export function slotLabel(start: string): string {
   const h24 = Math.floor(m / 60);
   const min = m % 60;
   const h = h24 % 12 === 0 ? 12 : h24 % 12;
-  const mer = h24 < 12 ? "AM" : "PM";
+  const mer = h24 < 12 ? t("AM") : t("PM");
   return min === 0 ? `${h} ${mer}` : `${h}:${String(min).padStart(2, "0")} ${mer}`;
 }
 /** "9:30 AM" (minutes always, as the source's ft()). */
@@ -94,7 +89,7 @@ export function timeLabel(start: string): string {
   const m = minutesOfDay(start) ?? 0;
   const h24 = Math.floor(m / 60);
   const h = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${h}:${String(m % 60).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}`;
+  return `${h}:${String(m % 60).padStart(2, "0")} ${h24 < 12 ? t("AM") : t("PM")}`;
 }
 const hhmm = (t: string) => {
   const m = minutesOfDay(t) ?? 0;
@@ -110,20 +105,33 @@ export function periodWords(r: RangeIn): string {
   if (r.key === "12w") return "12 weeks";
   return plural(rangeDayCount(r), "day", "days");
 }
-/** "Previous 4 weeks" (S158) and its variants. */
+/** "Previous 4 weeks" (S158) and its variants (the English is periodWords' words). */
 export function previousLabel(r: RangeIn): string {
-  if (r.key === "week") return "Previous week";
-  return `Previous ${periodWords(r)}`;
+  if (r.key === "week") return t("Previous week");
+  if (r.key === "4w") return t("Previous 4 weeks");
+  if (r.key === "12w") return t("Previous 12 weeks");
+  return tn(rangeDayCount(r), "Previous 1 day", "Previous {n} days");
 }
 /** "in 4 weeks" / "this week" / "in 12 weeks" / "in this range". */
 export function inPeriod(r: RangeIn): string {
-  if (r.key === "week") return "this week";
-  if (r.key === "custom") return "in this range";
-  return `in ${periodWords(r)}`;
+  if (r.key === "week") return t("this week");
+  if (r.key === "custom") return t("in this range");
+  if (r.key === "4w") return t("in 4 weeks");
+  return t("in 12 weeks");
 }
 /** "the 4 weeks before" / "the week before" / "the {n} days before". */
 export function theBefore(r: RangeIn): string {
-  return `the ${periodWords(r)} before`;
+  if (r.key === "week") return t("the week before");
+  if (r.key === "4w") return t("the 4 weeks before");
+  if (r.key === "12w") return t("the 12 weeks before");
+  return tn(rangeDayCount(r), "the 1 day before", "the {n} days before");
+}
+/** "over 4 weeks" / "this week" / "in this range" (the By day caption). */
+export function overPeriod(r: RangeIn): string {
+  if (r.key === "week") return t("this week");
+  if (r.key === "custom") return t("in this range");
+  if (r.key === "4w") return t("over 4 weeks");
+  return t("over 12 weeks");
 }
 
 // ---------------------------------------------------------------------------
@@ -273,7 +281,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
       .map(([k, xs]) => ({
         key: k,
         label: label(k, xs),
-        sub: plural(xs.length, "session", "sessions"),
+        sub: tn(xs.length, "1 session", "{n} sessions"),
         pct: avg(xs),
         sessions: xs.length,
         booked: xs.reduce((s, x) => s + x.booked, 0),
@@ -283,7 +291,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
   };
   const byType = group(
     (s) => (s.type?.trim() ? s.type.trim() : "Other"),
-    (k) => k
+    (k) => (k === "Other" ? t("Other") : k)
   );
   const byInstructor = group(
     (s) => (s.proId && raw.names[s.proId] ? s.proId : null),
@@ -293,11 +301,11 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
   // How sessions are filled (AN3-001 row 25).
   const bandOf = (s: Session) => (s.full ? 4 : s.pct >= 90 ? 3 : s.pct >= 70 ? 2 : s.pct >= 40 ? 1 : 0);
   const bands: Band[] = [
-    { short: "Under 40", long: "Under 40% booked", tone: "high", sessions: [] },
-    { short: "40 to 69", long: "40 to 69% booked", tone: "caution", sessions: [] },
-    { short: "70 to 89", long: "70 to 89% booked", tone: "primary", sessions: [] },
-    { short: "90 to 99", long: "90 to 99% booked", tone: "pdark", sessions: [] },
-    { short: "Full", long: "Full, every spot booked", tone: "full", sessions: [] },
+    { short: t("Under 40"), long: t("Under 40% booked"), tone: "high", sessions: [] },
+    { short: t("40 to 69"), long: t("40 to 69% booked"), tone: "caution", sessions: [] },
+    { short: t("70 to 89"), long: t("70 to 89% booked"), tone: "primary", sessions: [] },
+    { short: t("90 to 99"), long: t("90 to 99% booked"), tone: "pdark", sessions: [] },
+    { short: tx("Full", "class"), long: t("Full, every spot booked"), tone: "full", sessions: [] },
   ];
   for (const s of sessions) bands[bandOf(s)].sessions.push(s);
   for (const b of bands) b.sessions.sort((a, c) => a.pct - c.pct || a.date.localeCompare(c.date));
@@ -336,7 +344,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
   for (const s of sessions) dowSum[dayCol(s.date)] += s.booked;
   const dow = DAY_SHORT.map((label, i) => {
     const a = occurrences[i] ? dowSum[i] / occurrences[i] : 0;
-    return { label, n: dowSum[i], avg: a };
+    return { label: t(label), n: dowSum[i], avg: a };
   });
 
   // New vs returning and cancellations (B15 class_analytics): a booking is
@@ -356,7 +364,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
     const days = daysBetween(localDayOf(b.createdAt), d);
     buckets[days <= 0 ? 0 : days <= 2 ? 1 : days <= 7 ? 2 : 3] += 1;
   }
-  const lead = ["Same day", "1 to 2 days", "3 to 7 days", "Over a week"].map((label, i) => ({
+  const lead = [t("Same day"), t("1 to 2 days"), t("3 to 7 days"), t("Over a week")].map((label, i) => ({
     label,
     pct: bookingsN ? Math.round((buckets[i] / bookingsN) * 100) : 0,
   }));
@@ -365,13 +373,13 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
   // summed per title); the instructors' first names from the sessions.
   const byTitle = new Map<string, { sessions: number; n: number }>();
   for (const x of an ?? []) {
-    const t = byTitle.get(x.title) ?? { sessions: 0, n: 0 };
-    byTitle.set(x.title, { sessions: t.sessions + x.sessions, n: t.n + x.bookings });
+    const tt = byTitle.get(x.title) ?? { sessions: 0, n: 0 };
+    byTitle.set(x.title, { sessions: tt.sessions + x.sessions, n: tt.n + x.bookings });
   }
   const top = [...byTitle.entries()]
-    .map(([title, t]) => {
+    .map(([title, tt]) => {
       const who = [...new Set(sessions.filter((x) => x.title === title).map((x) => x.who).filter(Boolean))] as string[];
-      return { title, sub: [plural(t.sessions, "session", "sessions"), who.join(", ")].filter(Boolean).join(" · "), n: t.n };
+      return { title, sub: [tn(tt.sessions, "1 session", "{n} sessions"), who.join(t(", "))].filter(Boolean).join(" · "), n: tt.n };
     })
     .sort((a, b) => b.n - a.n || a.title.localeCompare(b.title))
     .slice(0, 3);
@@ -385,7 +393,7 @@ export function computeModel(raw: RawData, range: RangeIn): ClassesModel {
   const slots: Slot[] = [...slotMap.entries()].map(([key, xs]) => {
     const [c, st] = key.split("|");
     const col = Number(c);
-    return { key, col, start: st, label: `${DAY_SHORT[col]} ${slotLabel(st)}`, sessions: xs, pct: avg(xs) };
+    return { key, col, start: st, label: `${t(DAY_SHORT[col])} ${slotLabel(st)}`, sessions: xs, pct: avg(xs) };
   });
   const usedStarts = [...new Set(slots.map((s) => s.start))].sort();
   const rowStarts = usedStarts.length ? usedStarts : DEFAULT_ROWS;
@@ -444,32 +452,32 @@ export function sameSlotHistory(s: SessionIn, raw: RawData, perClass: (id: strin
   const xs = raw.sessions
     .filter((x) => x.id !== s.id && x.title === s.title && x.date >= from && x.date < s.date && dayCol(x.date) === dayCol(s.date) && hhmm(x.start) === hhmm(s.start))
     .sort((a, b) => a.date.localeCompare(b.date));
-  if (!xs.length) return "First session";
+  if (!xs.length) return t("First session");
   const fills = xs.map((x) => {
     const cap = Math.max(1, x.cap);
     const b = perClass(x.id);
     return { full: b >= cap, pct: Math.round((Math.min(b, cap) / cap) * 100) };
   });
-  if (fills.every((f) => f.full)) return `Full ${fills.length} of ${fills.length} weeks`;
-  return fills.map((f) => `${f.pct}%`).join(", ");
+  if (fills.every((f) => f.full)) return tn(fills.length, "Full {n} of {n} weeks", "Full {n} of {n} weeks");
+  return fills.map((f) => `${f.pct}%`).join(t(", "));
 }
 
 /** Session time span, 12-hour ("7:30 to 8:15 AM"). */
 export const span12 = (s: SessionIn) => range12(s.start, s.end);
 /** "Tuesday 6 PM" */
-export const slotLong = (sl: Slot) => `${DAY_LONG[sl.col]} ${slotLabel(sl.start)}`;
+export const slotLong = (sl: Slot) => `${t(DAY_LONG[sl.col])} ${slotLabel(sl.start)}`;
 
 /** Export CSV rows (AN3-001 S3): by type, by session, by instructor for the range. */
 export function exportRows(m: ClassesModel, range: RangeIn): (string | number)[][] {
-  const rows: (string | number)[][] = [["Classes", `${range.from} to ${range.to}`]];
+  const rows: (string | number)[][] = [[t("Classes"), t("{from} to {to}", { from: range.from, to: range.to })]];
   rows.push([]);
-  rows.push(["By type", "Sessions", "Booked", "Spots", "Fill %"]);
+  rows.push([t("By type"), t("Sessions"), t("Booked"), t("Spots"), t("Fill %")]);
   for (const r of m.byType) rows.push([r.label, r.sessions, r.booked, r.spots, r.pct]);
   rows.push([]);
-  rows.push(["By session", "Date", "Time", "Instructor", "Booked", "Spots", "Fill %"]);
+  rows.push([t("By session"), t("Date"), t("Time"), t("Instructor"), t("Booked"), t("Spots"), t("Fill %")]);
   for (const s of m.sessions) rows.push([s.title, s.date, span12(s), s.who ?? "", s.booked, s.cap, s.pct]);
   rows.push([]);
-  rows.push(["By instructor", "Sessions", "Booked", "Spots", "Fill %"]);
+  rows.push([t("By instructor"), t("Sessions"), t("Booked"), t("Spots"), t("Fill %")]);
   for (const r of m.byInstructor) rows.push([r.label, r.sessions, r.booked, r.spots, r.pct]);
   return rows;
 }

@@ -6,7 +6,7 @@ import { useBusiness } from "../../../components/business-more/useBusiness";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { DAY_LETTERS, DAY_LONG, DAY_SHORT } from "../../../utils/week";
-import { isRtl } from "../../../i18n/core";
+import { isRtl, t, tn, tx } from "../../../i18n/core";
 import { useAnalytics } from "../shell/AnalyticsContext";
 import { fetchClassesRaw } from "./classesData";
 import {
@@ -17,7 +17,7 @@ import {
   inPeriod,
   pctInk,
   pctTone,
-  periodWords,
+  overPeriod,
   previousLabel,
   sameSlotHistory,
   slotLabel,
@@ -32,7 +32,8 @@ import {
   type Slot,
 } from "./classesModel";
 import { Bar, Coll, ErrorBody, LabelRow, ListingRow, LoadingBody, SkeletonRow } from "./parts";
-import { INK, TONE, cap } from "./tones";
+import { INK, TONE } from "./tones";
+import { appLocale } from "../../../i18n/format";
 import "./classes.css";
 
 // v6 Analytics › Classes (AN3-001, -003, -006, -008, -062, -074, -082;
@@ -47,7 +48,8 @@ type CsKey = "dist" | "nvr" | "lead" | "top" | "ds";
 
 const EMPTY_RAW: RawData = { sessions: [], bookings: [], firstEver: null, names: {}, analytics: [] };
 const ease = (x: number) => 1 - Math.pow(1 - x, 3);
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+/** Weekday letter, Monday first (1 Jan 2024 was a Monday), in the app's language. */
+const dayLetter = (i: number) => new Date(2024, 0, 1 + i).toLocaleDateString(appLocale("en-US"), { weekday: "narrow" });
 const fmtAvg = (n: number) => (n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
 
 export default function ClassesSection() {
@@ -114,24 +116,24 @@ export default function ClassesSection() {
   }, [r.from, r.to]);
 
   // Fill bar count-up (AN3-001 S5): 0 → value over 850 ms, ease-out cubic.
-  const [t, setT] = useState<number | null>(null);
+  const [tm, setTm] = useState<number | null>(null);
   const target = m && m.state !== "empty" ? m.pct : null;
   useLayoutEffect(() => {
     if (target === null || reduced) {
-      setT(null);
+      setTm(null);
       return;
     }
     let raf = 0;
     const t0 = performance.now();
     const step = (now: number) => {
       const e = now - t0;
-      setT(Math.min(e, 850));
+      setTm(Math.min(e, 850));
       if (e < 850) raf = requestAnimationFrame(step);
     };
-    setT(0);
+    setTm(0);
     raf = requestAnimationFrame(step);
     // A hidden tab pauses animation frames: land on the value regardless.
-    const done = window.setTimeout(() => setT(850), 900);
+    const done = window.setTimeout(() => setTm(850), 900);
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(done);
@@ -165,10 +167,10 @@ export default function ClassesSection() {
             <CalendarX2 size={20} aria-hidden />
           </span>
           <p className="an3-empty-title" style={{ fontSize: 15, lineHeight: "20px" }}>
-            Classes aren't part of a store account
+            {t("Classes aren't part of a store account")}
           </p>
           <p className="an3-empty-body" style={{ maxWidth: 280 }}>
-            Fill rate, bookings and peak times appear for gym and studio businesses that schedule classes. Your listings and discounts are under Overview.
+            {t("Fill rate, bookings and peak times appear for gym and studio businesses that schedule classes. Your listings and discounts are under Overview.")}
           </p>
         </div>
       </div>
@@ -187,7 +189,7 @@ export default function ClassesSection() {
       {/* ---------------- Class fill rate ---------------- */}
       <span data-sec="fill" className="an3-anchor" />
       <div className="an3-block">
-        <LabelRow label="Class fill rate" caption="Booked spots ÷ spots offered" />
+        <LabelRow label={t("Class fill rate")} caption={t("Booked spots ÷ spots offered")} />
         <div className="an3-card">
           {loading ? (
             <LoadingBody />
@@ -199,22 +201,22 @@ export default function ClassesSection() {
                 <span />
               </div>
               <p className="an3-empty-title" style={{ marginTop: 6 }}>
-                No classes in this range
+                {t("No classes in this range")}
               </p>
               <p className="an3-empty-body">
                 {m.upcomingFirst
-                  ? `Your first class is on ${dayDate(m.upcomingFirst)}. Its fill rate shows here after it runs.`
-                  : "Schedule a class and its fill rate shows here against the 70% target."}
+                  ? t("Your first class is on {date}. Its fill rate shows here after it runs.", { date: dayDate(m.upcomingFirst) })
+                  : t("Schedule a class and its fill rate shows here against the 70% target.")}
               </p>
               {!m.firstEver && (
                 <button type="button" className="an3-create tap" onClick={goCreate}>
                   <Plus size={15} aria-hidden />
-                  Create your first class
+                  {t("Create your first class")}
                 </button>
               )}
             </div>
           ) : (
-            <FillBody m={m} r={r} t={t} frTab={frTab} setFrTab={setFrTab} sort={sort} setSort={setSort} all={all} setAll={setAll} openRow={openRow} setOpenRow={setOpenRow} raw={raw!} cs={cs} toggle={toggle} band={band} setBand={setBand} onOpenClass={(id) => navigate(`/app/business/classes/${id}`)} />
+            <FillBody m={m} r={r} tm={tm} frTab={frTab} setFrTab={setFrTab} sort={sort} setSort={setSort} all={all} setAll={setAll} openRow={openRow} setOpenRow={setOpenRow} raw={raw!} cs={cs} toggle={toggle} band={band} setBand={setBand} onOpenClass={(id) => navigate(`/app/business/classes/${id}`)} />
           )}
         </div>
       </div>
@@ -222,7 +224,7 @@ export default function ClassesSection() {
       {/* ---------------- Bookings ---------------- */}
       <span data-sec="bk" className="an3-anchor" />
       <div className="an3-block">
-        <LabelRow label="Bookings" caption="Spots booked, by class day" />
+        <LabelRow label={t("Bookings")} caption={t("Spots booked, by class day")} />
         <div className="an3-card">
           {loading ? (
             <div className="an3-empty">
@@ -232,8 +234,8 @@ export default function ClassesSection() {
             <ErrorBody onRetry={retry} disabled={!online} />
           ) : m.state === "empty" ? (
             <div className="an3-empty">
-              <p className="an3-empty-title">No bookings yet</p>
-              <p className="an3-empty-body">{`${cap(people)} book your classes from Explore once your listing is on.`}</p>
+              <p className="an3-empty-title">{t("No bookings yet")}</p>
+              <p className="an3-empty-body">{(people === "members" ? t("Members book your classes from Explore once your listing is on.") : t("Clients book your classes from Explore once your listing is on."))}</p>
               {listing && <div style={{ marginTop: 8, alignSelf: "stretch", display: "flex" }}>{listing}</div>}
             </div>
           ) : (
@@ -245,7 +247,7 @@ export default function ClassesSection() {
       {/* ---------------- Peak times ---------------- */}
       <span data-sec="peak" className="an3-anchor" />
       <div className="an3-block">
-        <LabelRow label="Peak times" caption="Booked ÷ capacity by slot" />
+        <LabelRow label={t("Peak times")} caption={t("Booked ÷ capacity by slot")} />
         <div className="an3-card">
           {loading ? (
             <div className="an3-empty">
@@ -268,7 +270,7 @@ export default function ClassesSection() {
 function FillBody(props: {
   m: ClassesModel;
   r: RangeIn;
-  t: number | null;
+  tm: number | null;
   frTab: "type" | "session" | "inst";
   setFrTab: (k: "type" | "session" | "inst") => void;
   sort: "low" | "high";
@@ -284,40 +286,41 @@ function FillBody(props: {
   setBand: (n: number) => void;
   onOpenClass: (id: string) => void;
 }) {
-  const { m, r, t, frTab, setFrTab } = props;
+  const { m, r, tm, frTab, setFrTab } = props;
   const early = m.state === "early";
-  const eK = t === null ? 1 : ease(Math.min(1, t / 850));
+  const eK = tm === null ? 1 : ease(Math.min(1, tm / 850));
   const cur = m.pct * eK;
-  const labTx = cur < 10 ? "0%" : cur > 90 ? "-100%" : "-50%";
+  // Right to left, the fill runs from the right: the number is placed from the right and shifted the other way.
+  const rtl = isRtl();
+  const labTx = cur < 10 ? "0%" : cur > 90 ? (rtl ? "100%" : "-100%") : rtl ? "50%" : "-50%";
 
   let dShort = "";
   let dCol = "var(--k-faint)";
   if (!early && m.deltaPts !== null) {
     if (m.deltaPts > 0) {
-      dShort = `↑ +${m.deltaPts} pts`;
+      dShort = `↑ ${t("{delta} pts", { delta: `+${m.deltaPts}` })}`;
       dCol = "var(--k-good)";
     } else if (m.deltaPts < 0) {
-      dShort = `↓ −${Math.abs(m.deltaPts)} pts`;
+      dShort = `↓ ${t("{delta} pts", { delta: `−${Math.abs(m.deltaPts)}` })}`;
       dCol = "var(--k-high)";
-    } else dShort = "No change";
+    } else dShort = t("No change");
   }
   const prevLine = early
     ? m.prevExists && r.compare
-      ? "No comparison yet"
-      : "No previous period yet"
+      ? t("No comparison yet")
+      : t("No previous period yet")
     : m.prevPct !== null
       ? `${previousLabel(r)}: ${m.prevPct}%`
       : r.compare
-        ? "No previous period yet"
+        ? t("No previous period yet")
         : "";
-  const sessionsWord = plural(m.sessions.length, "session", "sessions");
 
   return (
     <>
       <div className="an3-fr">
-        <p className="an3-sub">{`${m.booked} of ${m.offered} spots booked · ${sessionsWord}`}</p>
+        <p className="an3-sub">{`${t("{booked} of {offered} spots booked", { booked: m.booked, offered: m.offered })} · ${tn(m.sessions.length, "1 session", "{n} sessions")}`}</p>
         <div className="an3-hero">
-          <span className="an3-hero-num" style={{ left: `${cur.toFixed(1)}%`, transform: `translateX(${labTx})` }} aria-label={`${m.pct}% of spots booked`}>
+          <span className="an3-hero-num" style={{ [rtl ? "right" : "left"]: `${cur.toFixed(1)}%`, transform: `translateX(${labTx})` }} aria-label={t("{pct}% of spots booked", { pct: m.pct })}>
             <span aria-hidden>{Math.round(cur)}%</span>
             {dShort && (
               <span className="an3-delta" style={{ color: dCol }}>
@@ -333,9 +336,9 @@ function FillBody(props: {
           <div className="an3-track" aria-hidden>
             <div style={{ width: `${cur.toFixed(1)}%` }} />
           </div>
-          {m.prevPct !== null && <span className="an3-ghost" style={{ left: `${m.prevPct}%` }} aria-hidden />}
+          {m.prevPct !== null && <span className="an3-ghost" style={{ [rtl ? "right" : "left"]: `${m.prevPct}%` }} aria-hidden />}
           <span className="an3-target" aria-hidden />
-          <span className="an3-target-label">Target 70%</span>
+          <span className="an3-target-label">{t("Target 70%")}</span>
         </div>
         <div className="an3-legend">
           {prevLine && (
@@ -344,13 +347,11 @@ function FillBody(props: {
               <span>{prevLine}</span>
             </>
           )}
-          <span style={{ marginInlineStart: "auto" }}>Ticks every 10%</span>
+          <span style={{ marginInlineStart: "auto" }}>{t("Ticks every 10%")}</span>
         </div>
         {early && (
           <p className="an3-note" style={{ marginTop: 12 }}>
-            {m.sessions.length === 1
-              ? "Early data: one session so far. Comparisons and rankings appear after 2 weeks of classes."
-              : `Early data: ${m.sessions.length} sessions so far. Comparisons and rankings appear after 2 weeks of classes.`}
+            {tn(m.sessions.length, "Early data: one session so far. Comparisons and rankings appear after 2 weeks of classes.", "Early data: {n} sessions so far. Comparisons and rankings appear after 2 weeks of classes.")}
           </p>
         )}
       </div>
@@ -359,9 +360,9 @@ function FillBody(props: {
           size="compact"
           labelSize={12}
           items={[
-            { key: "type", label: "By type" },
-            { key: "session", label: "By session" },
-            { key: "inst", label: "By instructor" },
+            { key: "type", label: t("By type") },
+            { key: "session", label: t("By session") },
+            { key: "inst", label: t("By instructor") },
           ]}
           activeKey={frTab}
           onChange={(k) => setFrTab(k as "type" | "session" | "inst")}
@@ -369,7 +370,7 @@ function FillBody(props: {
       </div>
       {frTab === "type" && (
         <div className="an3-rows-wrap">
-          <p className="an3-small">Average fill per class type, highest first. Dashed line: 70%.</p>
+          <p className="an3-small">{t("Average fill per class type, highest first. Dashed line: 70%.")}</p>
           <div className="an3-rows">
             {m.byType.map((row) => (
               <RowCells key={row.key} label={row.label} sub={row.sub} pct={row.pct} />
@@ -379,7 +380,7 @@ function FillBody(props: {
       )}
       {frTab === "inst" && (
         <div className="an3-rows-wrap">
-          <p className="an3-small">Average fill of the sessions each instructor runs.</p>
+          <p className="an3-small">{t("Average fill of the sessions each instructor runs.")}</p>
           {m.byInstructor.length ? (
             <div className="an3-rows">
               {m.byInstructor.map((row) => (
@@ -388,7 +389,7 @@ function FillBody(props: {
             </div>
           ) : (
             <p className="an3-note" style={{ marginTop: 8 }}>
-              No sessions in this range have an instructor from your team.
+              {t("No sessions in this range have an instructor from your team.")}
             </p>
           )}
         </div>
@@ -438,7 +439,7 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
   return (
     <div className="an3-rows-wrap" style={{ paddingBottom: 4 }}>
       <div className="flex items-center justify-between" style={{ gap: 10, marginBottom: 6 }}>
-        <p className="an3-small">Each session in the range.</p>
+        <p className="an3-small">{t("Each session in the range.")}</p>
         <SegmentedTabs
           className="shrink-0"
           scroll
@@ -449,8 +450,8 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
           labelSize={11}
           trackStyle={{ borderRadius: 12, padding: 4, gap: 4 }}
           items={[
-            { key: "low", label: "Lowest" },
-            { key: "high", label: "Highest" },
+            { key: "low", label: t("Lowest") },
+            { key: "high", label: t("Highest") },
           ]}
           activeKey={sort}
           onChange={(k) => setSort(k as "low" | "high")}
@@ -474,7 +475,7 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
               </div>
               <div style={{ textAlign: "end" }}>
                 <p className="an3-val" style={{ color: INK[pctInk(s.pct)] }}>{`${s.booked}/${s.cap}`}</p>
-                <p className="an3-sess-time">{s.full ? "Full" : `${s.pct}%`}</p>
+                <p className="an3-sess-time">{s.full ? tx("Full", "class") : `${s.pct}%`}</p>
               </div>
               <span className="an3-chev" style={{ transform: op ? "rotate(180deg)" : "none" }} aria-hidden>
                 <ChevronDown size={14} />
@@ -483,23 +484,23 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
             {op && (
               <div className="an3-detail">
                 <div className="an3-detail-row">
-                  <span>Time</span>
+                  <span>{t("Time")}</span>
                   <span>{span12(s)}</span>
                 </div>
                 <div className="an3-detail-row">
-                  <span>Instructor</span>
+                  <span>{t("Instructor")}</span>
                   <span>{whoOf(s)}</span>
                 </div>
                 <div className="an3-detail-row">
-                  <span>Booked</span>
-                  <span>{`${s.booked} of ${s.cap} spots`}</span>
+                  <span>{t("Booked")}</span>
+                  <span>{t("{booked} of {capacity} spots", { booked: s.booked, capacity: s.cap })}</span>
                 </div>
                 <div className="an3-detail-row">
-                  <span>Same slot, last 4 weeks</span>
+                  <span>{t("Same slot, last 4 weeks")}</span>
                   <span>{sameSlotHistory(s, raw, per)}</span>
                 </div>
                 <button type="button" className="an3-link tap self-start" style={{ marginTop: 4, marginInlineStart: -4 }} onClick={() => onOpenClass(s.id)}>
-                  Open in Classes
+                  {t("Open in Classes")}
                   <ChevronRight size={13} aria-hidden />
                 </button>
               </div>
@@ -509,25 +510,25 @@ function SessionList({ m, sort, setSort, all, setAll, openRow, setOpenRow, raw, 
       })}
       {n > 5 ? (
         <button type="button" className="an3-seeall tap" onClick={() => setAll(!all)}>
-          {all ? "Show fewer" : `See all ${n} sessions`}
+          {all ? t("Show fewer") : t("See all {n} sessions", { n })}
           {all ? <ChevronUp size={13} aria-hidden /> : <ChevronRight size={13} aria-hidden />}
         </button>
       ) : (
         <p className="an3-seeall" style={{ color: "var(--k-faint)" }}>
-          {`${plural(n, "session", "sessions")} in this range`}
+          {tn(n, "1 session in this range", "{n} sessions in this range")}
         </p>
       )}
     </div>
   );
 }
 
-const whoOf = (s: Session) => s.who ?? (s.proId ? "Instructor" : "No instructor");
+const whoOf = (s: Session) => s.who ?? (s.proId ? t("Instructor") : t("No instructor"));
 
 function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof FillBody>[0]) {
   const n = m.sessions.length;
   const over90 = m.bands[3].sessions.length + m.bands[4].sessions.length;
   const under40 = m.bands[0].sessions.length;
-  const line = `${over90} of ${n} sessions were 90% booked or more. ${under40 === 0 ? "None fell under 40%." : under40 === 1 ? "Only 1 fell under 40%." : `Only ${under40} fell under 40%.`}`;
+  const line = `${tn(n, "{over} of 1 session was 90% booked or more.", "{over} of {n} sessions were 90% booked or more.", { over: over90 })} ${under40 === 0 ? t("None fell under 40%.") : tn(under40, "Only 1 fell under 40%.", "Only {n} fell under 40%.")}`;
   const sel = band >= 0 ? m.bands[band] : null;
   const chipLabel = (s: Session) => `${dayDate(s.date).replace(/ \w+$/, "")}, ${timeLabel(s.start)}`;
   const toSessions = () => setFrTab("session");
@@ -540,8 +541,8 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
   return (
     <>
       <span data-sec="dist" className="an3-anchor" />
-      <Coll id="dist" title="How sessions are filled" count={plural(n, "session", "sessions")} line={line} open={cs.dist} onToggle={() => toggle("dist")}>
-        <p className="an3-small" style={{ margin: "10px 0 0" }}>{`Your ${plural(n, "session", "sessions")}, by how full they were.`}</p>
+      <Coll id="dist" title={t("How sessions are filled")} count={tn(n, "1 session", "{n} sessions")} line={line} open={cs.dist} onToggle={() => toggle("dist")}>
+        <p className="an3-small" style={{ margin: "10px 0 0" }}>{tn(n, "Your 1 session, by how full it was.", "Your {n} sessions, by how full they were.")}</p>
         <div className="flex" style={{ height: 8, gap: 2, marginTop: 8 }} aria-hidden>
           {m.bands.map((b, i) =>
             b.sessions.length ? (
@@ -550,7 +551,7 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
                 style={{
                   flex: b.sessions.length,
                   background: TONE[b.tone],
-                  borderRadius: i === 0 ? "999px 0 0 999px" : i === 4 ? "0 999px 999px 0" : 0,
+                  ...(i === 0 ? { borderStartStartRadius: 999, borderEndStartRadius: 999 } : i === 4 ? { borderStartEndRadius: 999, borderEndEndRadius: 999 } : {}),
                   opacity: band >= 0 && band !== i ? 0.4 : 1,
                 }}
               />
@@ -579,11 +580,11 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
           <p>
             {sel ? (
               <>
-                <span style={{ fontWeight: 800, color: "var(--k-ink)" }}>{`${sel.long} · ${plural(sel.sessions.length, "session", "sessions")}. `}</span>
-                {`${Math.round((sel.sessions.length / Math.max(1, n)) * 100)}% of your sessions.`}
+                <span style={{ fontWeight: 800, color: "var(--k-ink)" }}>{`${sel.long} · ${tn(sel.sessions.length, "1 session", "{n} sessions")}. `}</span>
+                {t("{pct}% of your sessions.", { pct: Math.round((sel.sessions.length / Math.max(1, n)) * 100) })}
               </>
             ) : (
-              "Tap a band for its sessions."
+              t("Tap a band for its sessions.")
             )}
           </p>
           {sel && sel.sessions.length > 0 && (
@@ -591,12 +592,12 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
               {sel.sessions.slice(0, 3).map((s) => (
                 <button key={s.id} type="button" className="an3-chip tap" style={{ background: "var(--k-card)" }} onClick={toSessions}>
                   <span>{chipLabel(s)}</span>
-                  <span style={{ color: INK[pctInk(s.pct)] }}>{s.full ? "Full" : `${s.pct}%`}</span>
+                  <span style={{ color: INK[pctInk(s.pct)] }}>{s.full ? tx("Full", "class") : `${s.pct}%`}</span>
                 </button>
               ))}
               {sel.sessions.length > 3 && (
                 <button type="button" className="an3-chip tap" style={{ background: "var(--k-card)" }} onClick={toSessions}>
-                  <span>{`+${sel.sessions.length - 3} more`}</span>
+                  <span>{t("+{n} more", { n: sel.sessions.length - 3 })}</span>
                 </button>
               )}
             </div>
@@ -607,9 +608,9 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
             <HiRow
               color="var(--k-good)"
               n={full.length}
-              title="Full and in demand"
-              line={`${slotLong(fullSlots[0])} ${titlesOf(fullSlots[0].sessions)} was full ${plural(fullSlots[0].sessions.length, "time", "times")} in this range.`}
-              chips={fullSlots.slice(0, 2).map((sl) => ({ t: `${DAY_SHORT[sl.col]}, ${timeLabel(sl.start)}`, v: "Full" }))}
+              title={t("Full and in demand")}
+              line={tn(fullSlots[0].sessions.length, "{slot} {classes} was full 1 time in this range.", "{slot} {classes} was full {n} times in this range.", { slot: slotLong(fullSlots[0]), classes: titlesOf(fullSlots[0].sessions) })}
+              chips={fullSlots.slice(0, 2).map((sl) => ({ t: `${t(DAY_SHORT[sl.col])}, ${timeLabel(sl.start)}`, v: tx("Full", "class") }))}
               more={fullSlots.length > 2 ? fullSlots.length - 2 : 0}
               ink="var(--k-good)"
               onPick={toSessions}
@@ -619,9 +620,9 @@ function DistColl({ m, cs, toggle, band, setBand, setFrTab }: Parameters<typeof 
             <HiRow
               color="var(--k-caution)"
               n={under.length}
-              title="Underfilled"
-              line={`${slotLong(under[0])} ${titlesOf(under[0].sessions)} averaged ${under[0].pct}% across ${plural(under[0].sessions.length, "session", "sessions")}. Consider moving it, merging it, or rethinking the format.`}
-              chips={under.slice(0, 2).map((sl) => ({ t: `${DAY_SHORT[sl.col]}, ${timeLabel(sl.start)}`, v: `${sl.pct}%` }))}
+              title={t("Underfilled")}
+              line={tn(under[0].sessions.length, "{slot} {classes} averaged {pct}% across 1 session. Consider moving it, merging it, or rethinking the format.", "{slot} {classes} averaged {pct}% across {n} sessions. Consider moving it, merging it, or rethinking the format.", { slot: slotLong(under[0]), classes: titlesOf(under[0].sessions), pct: under[0].pct })}
+              chips={under.slice(0, 2).map((sl) => ({ t: `${t(DAY_SHORT[sl.col])}, ${timeLabel(sl.start)}`, v: `${sl.pct}%` }))}
               more={under.length > 2 ? under.length - 2 : 0}
               ink="var(--k-caution)"
               onPick={toSessions}
@@ -648,7 +649,7 @@ function groupSlots(xs: Session[]): Slot[] {
     })
     .sort((a, b) => b.sessions.length - a.sessions.length);
 }
-const titlesOf = (xs: Session[]) => [...new Set(xs.map((s) => s.title))].join(", ");
+const titlesOf = (xs: Session[]) => [...new Set(xs.map((s) => s.title))].join(t(", "));
 
 function HiRow({ color, n, title, line, chips, more, ink, onPick }: { color: string; n: number; title: string; line: string; chips: { t: string; v: string }[]; more: number; ink: string; onPick: () => void }) {
   return (
@@ -669,7 +670,7 @@ function HiRow({ color, n, title, line, chips, more, ink, onPick }: { color: str
           ))}
           {more > 0 && (
             <button type="button" className="an3-chip tap" style={{ background: "var(--k-soft)" }} onClick={onPick}>
-              <span>{`+${more} more`}</span>
+              <span>{t("+{n} more", { n: more })}</span>
             </button>
           )}
         </div>
@@ -703,7 +704,7 @@ function BookingsBody({
   const early = m.state === "early";
   let delta = "";
   let dCol = "var(--k-faint)";
-  if (early) delta = "No comparison yet";
+  if (early) delta = t("No comparison yet");
   else if (m.bookingsDeltaPct !== null) {
     if (m.bookingsDeltaPct > 0) {
       delta = `↑ +${m.bookingsDeltaPct}%`;
@@ -711,15 +712,15 @@ function BookingsBody({
     } else if (m.bookingsDeltaPct < 0) {
       delta = `↓ −${Math.abs(m.bookingsDeltaPct)}%`;
       dCol = "var(--k-high)";
-    } else delta = "No change";
+    } else delta = t("No change");
   }
   const sub = early
     ? m.firstEver
-      ? `Spots booked · first class on ${dayDate(m.firstEver)}`
-      : "Spots booked"
+      ? t("Spots booked · first class on {date}", { date: dayDate(m.firstEver) })
+      : t("Spots booked")
     : m.prevBookingsN !== null
-      ? `Spots booked ${inPeriod(r)} · ${m.prevBookingsN} ${theBefore(r)}`
-      : `Spots booked ${inPeriod(r)}`;
+      ? t("Spots booked {when} · {n} {before}", { when: inPeriod(r), n: m.prevBookingsN, before: theBefore(r) })
+      : t("Spots booked {when}", { when: inPeriod(r) });
 
   return (
     <>
@@ -740,8 +741,8 @@ function BookingsBody({
         <>
           <p className="an3-note" style={{ margin: "8px 20px 16px" }}>
             {m.bookingsN === 0 && m.totalSessionsEver === 1
-              ? "Early data: no bookings on your first class yet. Trends, popular days and booking habits appear after 2 weeks."
-              : `Early data: ${plural(m.bookingsN, "booking", "bookings")} so far. Trends, popular days and booking habits appear after 2 weeks.`}
+              ? t("Early data: no bookings on your first class yet. Trends, popular days and booking habits appear after 2 weeks.")
+              : tn(m.bookingsN, "Early data: 1 booking so far. Trends, popular days and booking habits appear after 2 weeks.", "Early data: {n} bookings so far. Trends, popular days and booking habits appear after 2 weeks.")}
           </p>
           {listing && <div style={{ margin: "-6px 20px 16px", display: "flex" }}>{listing}</div>}
         </>
@@ -762,8 +763,8 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
     .join(" ");
   const dowMax = Math.max(0, ...m.dow.map((d) => d.avg));
   const dowTop = dowMax > 0 ? m.dow.findIndex((d) => d.avg === dowMax) : -1;
-  const over = r.key === "week" ? "this week" : r.key === "custom" ? "in this range" : `over ${periodWords(r)}`;
-  const cap2 = bkView === "dow" ? `Average bookings per weekday ${over}.${dowTop >= 0 ? ` ${DAY_LONG[dowTop]} fills fastest.` : ""}` : hasGhost ? `Bookings per week. Dashed line: ${theBefore(r)}.` : "Bookings per week.";
+  const over = overPeriod(r);
+  const cap2 = bkView === "dow" ? `${t("Average bookings per weekday {when}.", { when: over })}${dowTop >= 0 ? ` ${t("{day} fills fastest.", { day: t(DAY_LONG[dowTop]) })}` : ""}` : hasGhost ? t("Bookings per week. Dashed line: {before}.", { before: theBefore(r) }) : t("Bookings per week.");
   const fA = bkView === "time" ? 1 : 0;
   const fB = bkView === "dow" ? 1 : 0;
   const gap = nW <= 6 ? 14 : 6;
@@ -773,18 +774,18 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
   const total = nNew + nRet;
   const retPct = total ? Math.round((nRet / total) * 100) : 0;
   const leadTop = m.lead.reduce((a, b, i) => (b.pct > m.lead[a].pct ? i : a), 0);
-  const LEAD_LINE = ["Most people book the same day.", "Most people book 1 to 2 days ahead.", "Most people book 3 to 7 days ahead.", "Most people book over a week ahead."];
+  const LEAD_LINE = [t("Most people book the same day."), t("Most people book 1 to 2 days ahead."), t("Most people book 3 to 7 days ahead."), t("Most people book over a week ahead.")];
 
   return (
     <>
       <div style={{ padding: "6px 20px 14px" }}>
-        <div role="tablist" aria-label="Bookings view" className="an3-pill">
+        <div role="tablist" aria-label={t("Bookings view")} className="an3-pill">
           <span className="an3-pill-track" aria-hidden />
           <span className="an3-pill-thumb" aria-hidden style={{ transform: `translateX(${bkView === "dow" ? (isRtl() ? -72 : 72) : 0}px)` }} />
           {(
             [
-              ["time", "Over time"],
-              ["dow", "By day"],
+              ["time", t("Over time")],
+              ["dow", t("By day")],
             ] as const
           ).map(([k, label], i) => (
             <button
@@ -857,7 +858,7 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
             <div className="an3-chart-axis" style={{ gridTemplateColumns: "repeat(7, minmax(0, 1fr))", gap: 6 }}>
               {DAY_SHORT.map((d) => (
                 <span key={d} style={{ fontSize: 9.5, textAlign: "center", color: "var(--k-faint)" }}>
-                  {d}
+                  {t(d)}
                 </span>
               ))}
             </div>
@@ -866,36 +867,36 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
       </div>
 
       <span data-sec="nvr" className="an3-anchor" />
-      <Coll id="nvr" title="New vs returning" line={total ? `${retPct}% of bookings come from returning ${people}.` : undefined} open={cs.nvr} onToggle={() => toggle("nvr")}>
+      <Coll id="nvr" title={t("New vs returning")} line={total ? (people === "members" ? t("{pct}% of bookings come from returning members.", { pct: retPct }) : t("{pct}% of bookings come from returning clients.", { pct: retPct })) : undefined} open={cs.nvr} onToggle={() => toggle("nvr")}>
         <p className="an3-small" style={{ margin: "10px 0 0" }}>
-          {`Bookings ${inPeriod(r)}, by whether the person had booked with you before.`}
+          {t("Bookings {when}, by whether the person had booked with you before.", { when: inPeriod(r) })}
         </p>
         <div className="flex" style={{ height: 8, gap: 2, marginTop: 8 }} aria-hidden>
-          {nNew > 0 && <span style={{ flex: nNew, background: "var(--k-primary)", borderRadius: nRet ? "999px 0 0 999px" : 999 }} />}
-          {nRet > 0 && <span style={{ flex: nRet, background: "var(--k-deep)", borderRadius: nNew ? "0 999px 999px 0" : 999 }} />}
+          {nNew > 0 && <span style={{ flex: nNew, background: "var(--k-primary)", ...(nRet ? { borderStartStartRadius: 999, borderEndStartRadius: 999 } : { borderRadius: 999 }) }} />}
+          {nRet > 0 && <span style={{ flex: nRet, background: "var(--k-deep)", ...(nNew ? { borderStartEndRadius: 999, borderEndEndRadius: 999 } : { borderRadius: 999 }) }} />}
         </div>
         <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: 4, marginTop: 8 }}>
           {(
             [
-              ["New", m.newCount ?? "–", "var(--k-primary)"],
-              ["Returning", m.returningCount ?? "–", "var(--k-deep)"],
+              [t("New"), m.newCount ?? "–", "var(--k-primary)"],
+              [t("Returning"), m.returningCount ?? "–", "var(--k-deep)"],
             ] as const
-          ).map(([t, n, c]) => (
-            <div key={t} className="an3-tile" style={{ background: "var(--k-soft)" }}>
+          ).map(([label, n, c]) => (
+            <div key={label} className="an3-tile" style={{ background: "var(--k-soft)" }}>
               <span className="flex items-center" style={{ gap: 4 }}>
                 <span style={{ width: 8, height: 3, borderRadius: 999, background: c }} aria-hidden />
                 <span className="an3-tile-n">{n}</span>
               </span>
-              <span className="an3-tile-t">{t}</span>
+              <span className="an3-tile-t">{label}</span>
             </div>
           ))}
         </div>
         <div style={{ height: 2 }} />
       </Coll>
 
-      <Coll id="lead" title="How far ahead people book" line={total ? LEAD_LINE[leadTop] : undefined} open={cs.lead} onToggle={() => toggle("lead")}>
+      <Coll id="lead" title={t("How far ahead people book")} line={total ? LEAD_LINE[leadTop] : undefined} open={cs.lead} onToggle={() => toggle("lead")}>
         <p className="an3-small" style={{ margin: "10px 0 10px" }}>
-          Time between booking and class start.
+          {t("Time between booking and class start.")}
         </p>
         <div className="an3-lead">
           {m.lead.map((l) => (
@@ -913,8 +914,8 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
 
       <Coll
         id="top"
-        title="Top classes by bookings"
-        line={m.top[0] ? `${m.top[0].title} leads with ${plural(m.top[0].n, "booking", "bookings")} ${inPeriod(r)}.` : undefined}
+        title={t("Top classes by bookings")}
+        line={m.top[0] ? tn(m.top[0].n, "{title} leads with 1 booking {when}.", "{title} leads with {n} bookings {when}.", { title: m.top[0].title, when: inPeriod(r) }) : undefined}
         open={cs.top}
         onToggle={() => toggle("top")}
         padding="14px 20px 6px"
@@ -940,10 +941,14 @@ function BookingsData({ m, r, people, bkView, setBkView, cs, toggle }: { m: Clas
         <Info size={13} aria-hidden className="shrink-0" />
         <span>
           {m.cancellations === null
-            ? "Cancelled bookings aren't counted here."
+            ? t("Cancelled bookings aren't counted here.")
             : m.cancellations === 0
-              ? `No bookings cancelled by ${people} ${inPeriod(r)}.`
-              : `${plural(m.cancellations, "booking", "bookings")} cancelled by ${people} ${inPeriod(r)}, not counted here.`}
+              ? people === "members"
+                ? t("No bookings cancelled by members {when}.", { when: inPeriod(r) })
+                : t("No bookings cancelled by clients {when}.", { when: inPeriod(r) })
+              : people === "members"
+                ? tn(m.cancellations, "1 booking cancelled by members {when}, not counted here.", "{n} bookings cancelled by members {when}, not counted here.", { when: inPeriod(r) })
+                : tn(m.cancellations, "1 booking cancelled by clients {when}, not counted here.", "{n} bookings cancelled by clients {when}, not counted here.", { when: inPeriod(r) })}
         </span>
       </div>
     </>
@@ -986,13 +991,13 @@ function PeakBody({
     <>
       <div style={{ padding: "12px 12px 10px" }}>
         <p className="an3-small" style={{ margin: "0 2px 8px" }}>
-          Weekday by start time. Tap a slot for its sessions.
+          {t("Weekday by start time. Tap a slot for its sessions.")}
         </p>
         <div className="an3-heat">
           <span />
-          {DAY_LETTERS.map((d, i) => (
+          {DAY_LETTERS.map((_, i) => (
             <span key={i} className="an3-heat-day" aria-hidden>
-              {d}
+              {dayLetter(i)}
             </span>
           ))}
           {rows.map((row) => (
@@ -1002,7 +1007,7 @@ function PeakBody({
         <div className="an3-heat-legend">
           <span className="flex items-center" style={{ gap: 4 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, border: "1px dashed var(--k-tert)", boxSizing: "border-box" }} aria-hidden />
-            None
+            {tx("None", "heatmap")}
           </span>
           <span className="flex items-center" style={{ gap: 4 }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: "var(--k-card)", border: "1.5px solid var(--k-primary)", boxSizing: "border-box" }} aria-hidden />
@@ -1010,10 +1015,10 @@ function PeakBody({
           </span>
           <span className="flex items-center" style={{ gap: 4 }}>
             <span style={{ width: 40, height: 6, borderRadius: 999, background: `linear-gradient(90deg,${shade(5)},${shade(100)})` }} aria-hidden />
-            Full
+            {tx("Full", "class")}
           </span>
           <button type="button" className="tap flex items-center" aria-expanded={fullDay} onClick={() => setFullDay(!fullDay)} style={{ marginInlineStart: "auto", gap: 2, minHeight: 32, fontWeight: 800, color: "var(--k-pdark)" }}>
-            {fullDay ? "Scheduled hours" : "Full day"}
+            {fullDay ? t("Scheduled hours") : t("Full day")}
             <span className="flex" style={{ transform: fullDay ? "rotate(180deg)" : "none" }} aria-hidden>
               <ChevronDown size={12} />
             </span>
@@ -1024,10 +1029,10 @@ function PeakBody({
       {!data && (
         <p className="an3-note" style={{ margin: "0 16px 16px" }}>
           {m.state === "empty"
-            ? `Fills in as ${people} book. Nothing to show yet.`
-            : m.slots.length === 1
-              ? "Early data: one slot so far. Strong and weak windows appear after 2 weeks."
-              : `Early data: ${m.slots.length} slots so far. Strong and weak windows appear after 2 weeks.`}
+            ? people === "members"
+              ? t("Fills in as members book. Nothing to show yet.")
+              : t("Fills in as clients book. Nothing to show yet.")
+            : tn(m.slots.length, "Early data: one slot so far. Strong and weak windows appear after 2 weeks.", "Early data: {n} slots so far. Strong and weak windows appear after 2 weeks.")}
         </p>
       )}
       {data && <PeakData m={m} busiest={busiest} setCell={setCell} selKey={selKey} cs={cs} toggle={toggle} />}
@@ -1048,7 +1053,7 @@ function HeatRowCells({ label, filler, cells, selKey, shade, onPick }: { label: 
             type="button"
             className="an3-cell tap"
             aria-pressed={selKey === c.key}
-            aria-label={`${DAY_LONG[col]} ${label}, ${c.pct}% booked`}
+            aria-label={t("{day} {time}, {pct}% booked", { day: t(DAY_LONG[col]), time: label, pct: c.pct })}
             onClick={() => onPick(c.key)}
             style={{
               background: c.pct === 0 ? "var(--k-card)" : shade(c.pct),
@@ -1069,20 +1074,20 @@ function CellDetail({ sl, m, people }: { sl: Slot; m: ClassesModel; people: stri
   const k = sl.sessions.length;
   const who = [...new Set(sl.sessions.map((s) => s.who).filter(Boolean))].join(", ");
   const spots = Math.max(...sl.sessions.map((s) => s.cap));
-  const sub = [k === 1 ? "1 session" : `${k} sessions in this range`, who, `${spots} spots`].filter(Boolean).join(" · ");
+  const sub = [k === 1 ? t("1 session") : tn(k, "1 session in this range", "{n} sessions in this range"), who, tn(spots, "1 spot", "{n} spots")].filter(Boolean).join(" · ");
   const ps = sl.sessions.map((s) => s.pct);
   let trend: string;
-  if (k === 1) trend = m.totalSessionsEver === 1 ? `Your first class. Bookings show here as ${people} book.` : "New slot. Too early to read a trend.";
-  else if (sl.sessions.every((s) => s.full)) trend = "Full every session in this range.";
-  else if (sl.pct >= 70) trend = "Steady: at or above the 70% target.";
-  else if (ps[ps.length - 1] > ps[0] + 5) trend = "Edging up, still under 70%.";
-  else if (ps[ps.length - 1] < ps[0] - 5) trend = "Slipping, and under the 70% target.";
-  else trend = "Steady, but under the 70% target.";
+  if (k === 1) trend = m.totalSessionsEver === 1 ? (people === "members" ? t("Your first class. Bookings show here as members book.") : t("Your first class. Bookings show here as clients book.")) : t("New slot. Too early to read a trend.");
+  else if (sl.sessions.every((s) => s.full)) trend = t("Full every session in this range.");
+  else if (sl.pct >= 70) trend = t("Steady: at or above the 70% target.");
+  else if (ps[ps.length - 1] > ps[0] + 5) trend = t("Edging up, still under 70%.");
+  else if (ps[ps.length - 1] < ps[0] - 5) trend = t("Slipping, and under the 70% target.");
+  else trend = t("Steady, but under the 70% target.");
   return (
     <div className="an3-cell-d" aria-live="polite">
       <div className="flex items-baseline justify-between" style={{ gap: 8 }}>
         <p style={{ fontSize: 13, fontWeight: 800 }}>{`${slotLong(sl)} · ${titlesOf(sl.sessions)}`}</p>
-        <p style={{ fontSize: 12, fontWeight: 800, color: INK[pctInk(sl.pct)], whiteSpace: "nowrap" }}>{`${sl.pct}% avg`}</p>
+        <p style={{ fontSize: 12, fontWeight: 800, color: INK[pctInk(sl.pct)], whiteSpace: "nowrap" }}>{t("{pct}% avg", { pct: sl.pct })}</p>
       </div>
       <p className="an3-small" style={{ marginTop: 2 }}>
         {sub}
@@ -1091,7 +1096,7 @@ function CellDetail({ sl, m, people }: { sl: Slot; m: ClassesModel; people: stri
         {sl.sessions.map((s, i) => (
           <div key={s.id} className="flex flex-col items-center justify-end" style={{ flex: 1, height: "100%", gap: 2 }}>
             <div style={{ width: "100%", height: Math.max(3, Math.round((s.pct / 100) * 28)), borderRadius: "5px 5px 2px 2px", background: s.pct === 0 ? "var(--k-track)" : TONE[pctTone(s.pct)] }} />
-            <span style={{ fontSize: 9, color: "var(--k-faint)" }}>{`W${i + 1}`}</span>
+            <span style={{ fontSize: 9, color: "var(--k-faint)" }}>{t("W{n}", { n: i + 1 })}</span>
           </div>
         ))}
       </div>
@@ -1106,32 +1111,32 @@ function PeakData({ m, busiest, setCell, selKey, cs, toggle }: { m: ClassesModel
   const n = busiest.length;
   const hi = busiest.slice(0, Math.min(3, Math.ceil(n / 2)));
   const lo = [...busiest].reverse().slice(0, Math.min(3, Math.floor(n / 2)));
-  const note = (sl: Slot) => `${titlesOf(sl.sessions)}, ${plural(sl.sessions.length, "session", "sessions")}`;
-  const label = (sl: Slot) => `${DAY_SHORT[sl.col]} ${timeLabel(sl.start)}`;
+  const note = (sl: Slot) => `${titlesOf(sl.sessions)}${t(", ")}${tn(sl.sessions.length, "1 session", "{n} sessions")}`;
+  const label = (sl: Slot) => `${t(DAY_SHORT[sl.col])} ${timeLabel(sl.start)}`;
 
   const high = m.slots.filter((s) => s.pct >= 90);
   const low = m.slots.filter((s) => s.pct < 60).sort((a, b) => a.pct - b.pct);
   const mid = m.slots.filter((s) => s.pct >= 60 && s.pct < 90);
   const groups = [
-    { n: high.length, col: "var(--k-full)", t: "High demand, few sessions", s: "Full or close to full in this range. A second session nearby could meet demand you're turning away.", slots: high },
-    { n: mid.length, col: "var(--k-primary)", t: "Balanced", s: "Average fill between 60% and 90%. Keep these as they are.", slots: [] as Slot[] },
-    { n: low.length, col: "var(--k-caution-bar)", t: "Many sessions, low fill", s: "Average fill under 60%. Fewer or later sessions could lift fill without losing bookings.", slots: low },
+    { n: high.length, col: "var(--k-full)", t: t("High demand, few sessions"), s: t("Full or close to full in this range. A second session nearby could meet demand you're turning away."), slots: high },
+    { n: mid.length, col: "var(--k-primary)", t: t("Balanced"), s: t("Average fill between 60% and 90%. Keep these as they are."), slots: [] as Slot[] },
+    { n: low.length, col: "var(--k-caution-bar)", t: t("Many sessions, low fill"), s: t("Average fill under 60%. Fewer or later sessions could lift fill without losing bookings."), slots: low },
   ];
   const highNames = high.slice(0, 2).map((s) => s.label);
   const dsLine = [
-    highNames.length ? `${highNames.join(" and ")} ${highNames.length === 1 ? "needs" : "need"} more sessions.` : "",
-    low.length ? `${plural(low.length, "slot runs", "slots run")} under 60%.` : "",
+    highNames.length === 1 ? t("{slot} needs more sessions.", { slot: highNames[0] }) : highNames.length ? t("{a} and {b} need more sessions.", { a: highNames[0], b: highNames[1] }) : "",
+    low.length ? tn(low.length, "1 slot runs under 60%.", "{n} slots run under 60%.") : "",
   ]
     .filter(Boolean)
-    .join(" ") || "Every slot runs between 60% and 90%.";
+    .join(" ") || t("Every slot runs between 60% and 90%.");
 
   return (
     <>
       <div className="an3-peaks">
         {(
           [
-            ["Busiest times", hi, "var(--k-good)"],
-            ["Quietest times", lo, "var(--k-caution)"],
+            [t("Busiest times"), hi, "var(--k-good)"],
+            [t("Quietest times"), lo, "var(--k-caution)"],
           ] as const
         ).map(([title, list, col]) => (
           <div key={title} className="min-w-0">
@@ -1158,18 +1163,18 @@ function PeakData({ m, busiest, setCell, selKey, cs, toggle }: { m: ClassesModel
           <Lock size={13} />
         </span>
         <p className="flex-1 min-w-0" style={{ fontSize: 11.5, lineHeight: "15px", fontWeight: 800, whiteSpace: "nowrap" }}>
-          Revenue per slot
+          {t("Revenue per slot")}
         </p>
-        <span className="an3-soon">Arrives with payments</span>
+        <span className="an3-soon">{t("Arrives with payments")}</span>
       </div>
       <span data-sec="ds" className="an3-anchor" />
-      <Coll id="ds" title="Demand vs supply" line={dsLine} open={cs.ds} onToggle={() => toggle("ds")}>
+      <Coll id="ds" title={t("Demand vs supply")} line={dsLine} open={cs.ds} onToggle={() => toggle("ds")}>
         <p className="an3-small" style={{ margin: "10px 0 12px" }}>
-          {`Your ${plural(m.slots.length, "weekly slot", "weekly slots")}, by how demand matches the sessions offered. Tap a slot to open it on the heatmap.`}
+          {tn(m.slots.length, "Your 1 weekly slot, by how demand matches the sessions offered. Tap a slot to open it on the heatmap.", "Your {n} weekly slots, by how demand matches the sessions offered. Tap a slot to open it on the heatmap.")}
         </p>
         <div className="flex" style={{ height: 12, gap: 2 }} aria-hidden>
           {groups.map((g, i) =>
-            g.n ? <span key={i} style={{ flex: g.n, background: g.col, borderRadius: i === 0 ? "999px 0 0 999px" : i === 2 ? "0 999px 999px 0" : 0 }} /> : null
+            g.n ? <span key={i} style={{ flex: g.n, background: g.col, ...(i === 0 ? { borderStartStartRadius: 999, borderEndStartRadius: 999 } : i === 2 ? { borderStartEndRadius: 999, borderEndEndRadius: 999 } : {}) }} /> : null
           )}
         </div>
         <div style={{ marginTop: 6 }}>
@@ -1195,7 +1200,7 @@ function PeakData({ m, busiest, setCell, selKey, cs, toggle }: { m: ClassesModel
                           onClick={() => setCell(sl.key)}
                           style={{ background: on ? "var(--k-pale)" : "var(--k-soft)", border: `1px solid ${on ? "var(--k-primary)" : "transparent"}` }}
                         >
-                          <span>{`${DAY_SHORT[sl.col]} ${slotLabel(sl.start)}`}</span>
+                          <span>{`${t(DAY_SHORT[sl.col])} ${slotLabel(sl.start)}`}</span>
                           <span style={{ color: INK[pctInk(sl.pct)] }}>{`${sl.pct}%`}</span>
                         </button>
                       );

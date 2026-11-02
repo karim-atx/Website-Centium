@@ -11,6 +11,8 @@
 // disagree, the markup wins (ring 3.5 s, face blend 600 ms, pill 200 ms,
 // auto-cycle 320 ms, no outgoing fade, reduced motion instant).
 
+import { t, tn, tx } from "../../../i18n/core";
+
 export interface ClockItem {
   /** Stable key (class id or event id); selection is by key, not title. */
   key: string;
@@ -214,7 +216,7 @@ const LEAF =
 /** "18:00" → "6:00 PM" (the source's f12). */
 export function f12(s: string): string {
   const p = s.split(":").map(Number);
-  return `${p[0] % 12 || 12}:${String(p[1]).padStart(2, "0")} ${p[0] >= 12 ? "PM" : "AM"}`;
+  return `${p[0] % 12 || 12}:${String(p[1]).padStart(2, "0")} ${p[0] >= 12 ? t("PM") : t("AM")}`;
 }
 
 export const hoursOf = (hhmm: string): number => {
@@ -223,7 +225,7 @@ export const hoursOf = (hhmm: string): number => {
 };
 
 /** "20 min", "1 h 52 min". */
-export const fmtMin = (mn: number): string => (mn >= 60 ? `${Math.floor(mn / 60)} h ${mn % 60} min` : `${mn} min`);
+export const fmtMin = (mn: number): string => (mn >= 60 ? t("{h} h {m} min", { h: Math.floor(mn / 60), m: mn % 60 }) : t("{n} min", { n: mn }));
 
 const hexA = (hx: string, a: number): string => {
   if (!hx.startsWith("#")) return hx.replace(/^rgb\(var\((--[\w-]+)\)\)$/, `rgb(var($1) / ${a})`);
@@ -313,14 +315,14 @@ export function buildClock(o: ClockInput): ClockModel {
   // ---- readout fit (AN1-110..120) ---------------------------------------------
   const TS = o.ts;
   type Rd = { t: string; sub: string };
-  const rdOf = (x: ClockItem): Rd => ({ t: x.t, sub: x.ev ? `Until ${T(x.es)}` : `${x.bk} / ${x.cap} booked` });
+  const rdOf = (x: ClockItem): Rd => ({ t: x.t, sub: x.ev ? t("Until {time}", { time: T(x.es) }) : t("{booked} / {capacity} booked", { booked: x.bk, capacity: x.cap }) });
   const baseRd: Rd = nLive
     ? rdOf(shown as ClockItem)
     : nextUp
-      ? { t: nextUp.t, sub: `Next · in ${fmtMin(Math.round((nextUp.s - NOW) * 60))}` }
+      ? { t: nextUp.t, sub: t("Next · in {time}", { time: fmtMin(Math.round((nextUp.s - NOW) * 60)) }) }
       : items.length
-        ? { t: "All finished", sub: `${items.length} today` }
-        : { t: "Nothing scheduled", sub: o.isEmpty ? "Create a class" : "" };
+        ? { t: t("All finished"), sub: t("{count} today", { count: items.length }) }
+        : { t: t("Nothing scheduled"), sub: o.isEmpty ? t("Create a class") : "" };
   const LAD = [14, 12.5, 11.5, 11].map((x) => +(x * TS).toFixed(1));
   if (TS > 1.01) LAD.push(+Math.max(11, 11 * TS * 0.9).toFixed(1));
   const indK = nLive > 1 ? (nLive <= 8 ? "arc" : "dots") : "";
@@ -532,7 +534,7 @@ export function buildClock(o: ClockInput): ClockModel {
       t: `+${grp.length}`,
       px: `${(p[0] / 3).toFixed(2)}%`,
       py: `${(p[1] / 3).toFixed(2)}%`,
-      name: `${grp.length} more at ${T(grp[0].ss)}${live ? ", live" : ""}`,
+      name: live ? t("{count} more at {time}, live", { count: grp.length, time: T(grp[0].ss) }) : t("{count} more at {time}", { count: grp.length, time: T(grp[0].ss) }),
       live,
       pickKey: grp[0].key,
     };
@@ -674,12 +676,12 @@ export function buildClock(o: ClockInput): ClockModel {
   // ---- panel rows ------------------------------------------------------------------------------
   const isLive = (x: ClockItem) => x.s <= NOW && x.e > NOW;
   const stP = (x: ClockItem): [string, string, string] =>
-    x.e <= NOW ? ["Done", c.soft, c.faint] : x.s <= NOW ? ["In progress", dark ? "#192A20" : "#E3F3E9", c.good] : [`In ${fmtMin(Math.round((x.s - NOW) * 60))}`, c.pale, c.pDark];
+    x.e <= NOW ? [tx("Done", "class status"), c.soft, c.faint] : x.s <= NOW ? [t("In progress"), dark ? "#192A20" : "#E3F3E9", c.good] : [t("In {time}", { time: fmtMin(Math.round((x.s - NOW) * 60)) }), c.pale, c.pDark];
   const selOrd = selList.slice().sort((a, b) => (isLive(b) ? 1 : 0) - (isLive(a) ? 1 : 0) || a.s - b.s || (a.ev ? 1 : 0) - (b.ev ? 1 : 0));
   const rows: PanelRow[] = selOrd.map((x) => {
     const [st, stBg, stInk] = stP(x);
     const col = x.ev ? EVC : CLS;
-    const who = x.ev ? (x.loc ? `Event · ${x.loc}` : "Event") : x.who ? `Class with ${x.who}` : "Class";
+    const who = x.ev ? (x.loc ? t("Event · {place}", { place: x.loc }) : t("Event")) : x.who ? t("Class with {name}", { name: x.who }) : t("Class");
     return {
       key: x.key,
       t: x.t,
@@ -689,10 +691,10 @@ export function buildClock(o: ClockInput): ClockModel {
       st,
       stBg,
       stInk,
-      when: `${T(x.ss)} to ${T(x.es)} · ${who}`,
+      when: `${t("{from} to {to}", { from: T(x.ss), to: T(x.es) })} · ${who}`,
       bar: !x.ev,
       pct: x.ev || x.cap <= 0 ? 0 : Math.round((x.bk / x.cap) * 100),
-      bk: x.ev ? "" : `${x.bk} of ${x.cap} booked`,
+      bk: x.ev ? "" : t("{booked} of {capacity} booked", { booked: x.bk, capacity: x.cap }),
       classId: x.classId,
     };
   });
@@ -700,10 +702,10 @@ export function buildClock(o: ClockInput): ClockModel {
   // ---- summary -------------------------------------------------------------------------------------
   const restC = items.filter((x) => !x.ev && x.s > NOW);
   const summary = o.isStore
-    ? ((n: number) => `${n}${n === 1 ? " event" : " events"} left today`)(items.filter((x) => x.e > NOW).length)
+    ? tn(items.filter((x) => x.e > NOW).length, "{n} event left today", "{n} events left today")
     : restC.length
-      ? `${restC.length}${restC.length === 1 ? " class" : " classes"} left today · ${restC.reduce((a, x) => a + x.bk, 0)} of ${restC.reduce((a, x) => a + x.cap, 0)} booked`
-      : o.emptyNext || (o.isEmpty ? "Create a class and it appears on the dial." : "");
+      ? `${tn(restC.length, "{n} class left today", "{n} classes left today")} · ${t("{booked} of {capacity} booked", { booked: restC.reduce((a, x) => a + x.bk, 0), capacity: restC.reduce((a, x) => a + x.cap, 0) })}`
+      : o.emptyNext || (o.isEmpty ? t("Create a class and it appears on the dial.") : "");
   const otherHalf = half ? items.filter((x) => (showPM ? x.s < 12 : x.e > 12)).length : 0;
 
   const glowStops = [
@@ -745,24 +747,34 @@ export function buildClock(o: ClockInput): ClockModel {
     maskStop: +Math.max(70, (Re / Rr) * 100 - 1).toFixed(1),
     logo: { size: lb.logo || 11, y: +lb.logoY.toFixed(1), on: !!lb.logo },
     indicator,
-    rdName: nLive > 1 ? `Live now, ${cyc + 1} of ${nLive}: ${shown ? shown.t : ""}. Swipe to change, tap for details` : "Open details",
+    rdName: nLive > 1 ? t("Live now, {i} of {count}: {title}. Swipe to change, tap for details", { i: cyc + 1, count: nLive, title: shown ? shown.t : "" }) : t("Open details"),
     tapKey: (shown ?? nextUp)?.key ?? null,
     rows,
-    panelHead: rows.length > 1 ? `${rows.length} at the same time` : null,
+    panelHead: rows.length > 1 ? t("{count} at the same time", { count: rows.length }) : null,
     summary,
-    halfNote: `${showPM === NOW >= 12 ? "Now · " : "Viewing · "}${!half ? "00:00 to 24:00" : o.is24 ? (showPM ? "12:00 to 24:00" : "00:00 to 12:00") : showPM ? "noon to midnight" : "midnight to noon"}`,
+    halfNote: ((span: string) => (showPM === NOW >= 12 ? t("Now · {span}", { span }) : t("Viewing · {span}", { span })))(
+      !half
+        ? t("{from} to {to}", { from: "00:00", to: "24:00" })
+        : o.is24
+          ? showPM
+            ? t("{from} to {to}", { from: "12:00", to: "24:00" })
+            : t("{from} to {to}", { from: "00:00", to: "12:00" })
+          : showPM
+            ? t("noon to midnight")
+            : t("midnight to noon"),
+    ),
     otherHalf,
-    amLabel: o.is24 ? "00–12" : "AM",
-    pmLabel: o.is24 ? "12–24" : "PM",
+    amLabel: o.is24 ? "00–12" : t("AM"),
+    pmLabel: o.is24 ? "12–24" : t("PM"),
     legend: o.isStore
       ? [
-          { col: EVC, op: 1, t: "Events" },
-          { col: EVC, op: 0.3, t: "Done" },
+          { col: EVC, op: 1, t: t("Events") },
+          { col: EVC, op: 0.3, t: tx("Done", "class status") },
         ]
       : [
-          { col: CLS, op: 1, t: "Classes" },
-          { col: EVC, op: 1, t: "Events" },
-          { col: CLS, op: 0.3, t: "Done" },
+          { col: CLS, op: 1, t: t("Classes") },
+          { col: EVC, op: 1, t: t("Events") },
+          { col: CLS, op: 0.3, t: tx("Done", "class status") },
         ],
   };
 }

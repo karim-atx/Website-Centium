@@ -13,11 +13,12 @@ import {
   type BizReview,
 } from "../../../services/reputation";
 import { ago } from "./reputationModel";
-import { INJURY_MESSAGE_NOTE, INJURY_REPLY_NOTE } from "./parts";
+import { INJURY_MESSAGE_NOTE, INJURY_REPLY_NOTE } from "./reputationModel";
 import { startReviewerThread } from "../../../services/reputation";
 import { sendMessage } from "../../../services/messaging";
 import { useApp } from "../../../context/AppContext";
 import { GuidelinesLink } from "../../../components/moderation/GuidelinesLink";
+import { t, tk } from "../../../i18n/core";
 
 // AN13 sheets (InsightFlowsV2): Reply to review (AN13-027), Post a reply on
 // a flagged review (AN13-022 / -023; the injury note verbatim when a flag
@@ -36,10 +37,10 @@ export const LIMIT = 500;
 export type ComposerMode = "reply" | "flag-reply" | "edit" | "message";
 
 const TITLE: Record<ComposerMode, string> = {
-  reply: "Reply to review",
-  "flag-reply": "Post a reply",
-  edit: "Edit reply",
-  message: "Message privately",
+  reply: tk("Reply to review"),
+  "flag-reply": tk("Post a reply"),
+  edit: tk("Edit reply"),
+  message: tk("Message privately"),
 };
 
 const ReviewContext: React.FC<{ review: BizReview; tag?: string | null }> = ({
@@ -56,7 +57,7 @@ const ReviewContext: React.FC<{ review: BizReview; tag?: string | null }> = ({
         <div className="min-w-0 flex-1">
           <p className="rp-ctx-who">{review.label}</p>
           <p className="rp-ctx-meta">
-            <span className="rp-ctx-stars" aria-label={`${r} of 5 stars`}>
+            <span className="rp-ctx-stars" aria-label={t("{n} of 5 stars", { n: r })}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <span
                   key={i}
@@ -117,7 +118,7 @@ export const ReviewComposer: React.FC<{
   const changed =
     mode === "edit" ? text.trim() !== replyBody : text.trim().length > 0;
   const canSend = text.trim().length > 0 && !over && online && changed;
-  const note = injury && mode === "flag-reply" ? INJURY_REPLY_NOTE : injury && mode === "message" ? INJURY_MESSAGE_NOTE : null;
+  const note = injury && mode === "flag-reply" ? t(INJURY_REPLY_NOTE) : injury && mode === "message" ? t(INJURY_MESSAGE_NOTE) : null;
 
   const close = () => {
     if (busy) return;
@@ -130,20 +131,20 @@ export const ReviewComposer: React.FC<{
     setBusy(true);
     setErr(null);
     if (mode === "message") {
-      const t = await startReviewerThread(review.id);
-      if (!t.ok) {
+      const th = await startReviewerThread(review.id);
+      if (!th.ok) {
         setBusy(false);
-        if (t.code === "ATX96") return onNotMember?.();
-        setErr(t.pending ? "This isn't available yet." : (reputationError(t.code) ?? "Couldn't send your message. Try again."));
+        if (th.code === "ATX96") return onNotMember?.();
+        setErr(th.pending ? t("This isn't available yet.") : (reputationError(th.code) ?? t("Couldn't send your message. Try again.")));
         return;
       }
-      const m = authUserId ? await sendMessage(t.value, authUserId, text) : { ok: false as const };
+      const m = authUserId ? await sendMessage(th.value, authUserId, text) : { ok: false as const };
       setBusy(false);
       if (!m.ok) {
-        setErr("Couldn't send your message. Try again.");
+        setErr(t("Couldn't send your message. Try again."));
         return;
       }
-      onMessaged?.(t.value);
+      onMessaged?.(th.value);
       return;
     }
     const r =
@@ -154,39 +155,39 @@ export const ReviewComposer: React.FC<{
     if (!r.ok) {
       setErr(
         r.pending
-          ? "This isn't available yet."
+          ? t("This isn't available yet.")
           : (reputationError(r.code) ??
               (mode === "edit"
-                ? "Couldn't save your reply. Try again."
-                : "Couldn't post your reply. Try again.")),
+                ? t("Couldn't save your reply. Try again.")
+                : t("Couldn't post your reply. Try again."))),
       );
       return;
     }
     onDone(
       mode === "edit"
-        ? "Reply saved."
-        : "Reply posted. Members see it under the review.",
+        ? t("Reply saved.")
+        : t("Reply posted. Members see it under the review."),
     );
   };
 
   const cta = busy
     ? mode === "edit"
-      ? "Saving…"
+      ? t("Saving…")
       : mode === "message"
-        ? "Sending…"
-        : "Posting…"
+        ? t("Sending…")
+        : t("Posting…")
     : mode === "edit"
-      ? "Save reply"
+      ? t("Save reply")
       : mode === "message"
-        ? "Send message"
-        : "Post reply";
+        ? t("Send message")
+        : t("Post reply");
 
   return (
     <>
       <BottomSheet
         open={open}
         onClose={close}
-        title={TITLE[mode]}
+        title={t(TITLE[mode])}
         tone="business"
         headerHeight={53}
         closeOnScrim={false}
@@ -196,7 +197,7 @@ export const ReviewComposer: React.FC<{
           <div className="rp an-scope">
             <div className="rp-foot">
               <button type="button" className="rp-cancel tap" onClick={close}>
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 type="button"
@@ -220,7 +221,7 @@ export const ReviewComposer: React.FC<{
           )}
           <ReviewContext review={review} tag={tag} />
           <label className="rp-field-l" htmlFor="rp-compose">
-            {mode === "message" ? "Private message to the member" : "Your public reply"}
+            {mode === "message" ? t("Private message to the member") : t("Your public reply")}
           </label>
           <textarea
             id="rp-compose"
@@ -228,7 +229,7 @@ export const ReviewComposer: React.FC<{
             className={"rp-area" + (over ? " is-error" : "")}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Write a short, friendly reply"
+            placeholder={t("Write a short, friendly reply")}
             rows={3}
             aria-describedby="rp-compose-hint"
             autoFocus
@@ -236,8 +237,8 @@ export const ReviewComposer: React.FC<{
           <p className="rp-hint" id="rp-compose-hint">
             <span>
               {mode === "message"
-                ? "Opens your Centium message thread with this member. Only they see it."
-                : "Members see your reply under the review."}
+                ? t("Opens your Centium message thread with this member. Only they see it.")
+                : t("Members see your reply under the review.")}
             </span>
             <span className={over ? "is-over" : undefined}>
               {text.length} / {LIMIT}
@@ -246,23 +247,23 @@ export const ReviewComposer: React.FC<{
           {over && (
             <p className="rp-field-err" role="alert">
               <CircleAlert size={13} aria-hidden />
-              Keep it under 500 characters.
+              {t("Keep it under 500 characters.")}
             </p>
           )}
           {text.trim() && mode !== "message" && (
             <>
-              <p className="rp-prev-l">How it appears publicly</p>
+              <p className="rp-prev-l">{t("How it appears publicly")}</p>
               <div className="rp-prev">
                 <p className="rp-prev-review">{review.body}</p>
                 <div className="rp-prev-reply">
-                  <p>{businessName} replied</p>
+                  <p>{t("{name} replied", { name: businessName })}</p>
                   <p>{text}</p>
                 </div>
               </div>
             </>
           )}
           {!online && (
-            <p className="rp-note">You're offline. Connect to send.</p>
+            <p className="rp-note">{t("You're offline. Connect to send.")}</p>
           )}
           {err && (
             <div className="rp-send-err" role="alert">
@@ -282,10 +283,10 @@ export const ReviewComposer: React.FC<{
       <ConfirmCard
         open={open && discard}
         tone="destructive"
-        title={mode === "message" ? "Discard this message?" : "Discard this reply?"}
-        subtitle="You'll lose what you've written."
-        confirmLabel="Discard"
-        cancelLabel="Keep editing"
+        title={mode === "message" ? t("Discard this message?") : t("Discard this reply?")}
+        subtitle={t("You'll lose what you've written.")}
+        confirmLabel={t("Discard")}
+        cancelLabel={t("Keep editing")}
         // AN13-028 row 5: Discard #C0392B with white in both modes.
         confirmStyle={{ background: "#C0392B", color: "#FFFFFF" }}
         onCancel={() => {
@@ -339,20 +340,20 @@ export const ReportSheet: React.FC<{
     if (!r.ok) {
       setErr(
         r.pending
-          ? "This isn't available yet."
+          ? t("This isn't available yet.")
           : (reputationError(r.code) ??
-              "Couldn't send. Check your connection and try again."),
+              t("Couldn't send. Check your connection and try again.")),
       );
       return;
     }
     // V6-37: no time promise until the admin team confirms one.
-    onDone("Report sent. Centium will look at it.");
+    onDone(t("Report sent. Centium will look at it."));
   };
   return (
     <BottomSheet
       open={open}
       onClose={() => !busy && onClose()}
-      title="Report this review"
+      title={t("Report this review")}
       tone="business"
       headerHeight={53}
       closeOnScrim={false}
@@ -367,7 +368,7 @@ export const ReportSheet: React.FC<{
               onClick={onClose}
               disabled={busy}
             >
-              Cancel
+              {t("Cancel")}
             </button>
             <button
               type="button"
@@ -376,7 +377,7 @@ export const ReportSheet: React.FC<{
               disabled={!reason || !online || busy}
               aria-busy={busy || undefined}
             >
-              {busy ? "Sending…" : "Send report"}
+              {busy ? t("Sending…") : t("Send report")}
             </button>
           </div>
         </div>
@@ -385,7 +386,7 @@ export const ReportSheet: React.FC<{
       <div className="rp an-scope">
         <ReviewContext review={review} tag={tag} />
         <p className="rp-field-l" id="rp-report-l">
-          Why are you reporting it?
+          {t("Why are you reporting it?")}
         </p>
         <div role="radiogroup" aria-labelledby="rp-report-l">
           {REPORT_REASONS.map((r) => (
@@ -397,7 +398,7 @@ export const ReportSheet: React.FC<{
               className="rp-opt tap"
               onClick={() => setReason(r.key)}
             >
-              <span className="rp-opt-t">{r.label}</span>
+              <span className="rp-opt-t">{t(r.label)}</span>
               {reason === r.key && (
                 <span className="rp-opt-check">
                   <Check size={15} strokeWidth={2.6} aria-hidden />
@@ -407,7 +408,7 @@ export const ReportSheet: React.FC<{
           ))}
         </div>
         <label className="rp-field-l" htmlFor="rp-report-note">
-          Anything we should know?
+          {t("Anything we should know?")}
         </label>
         <textarea
           id="rp-report-note"
@@ -415,9 +416,9 @@ export const ReportSheet: React.FC<{
           value={note}
           onChange={(e) => setNote(e.target.value.slice(0, REPORT_NOTE_MAX))}
           rows={3}
-          placeholder="Optional"
+          placeholder={t("Optional")}
         />
-        {!online && <p className="rp-note">You're offline. Connect to send.</p>}
+        {!online && <p className="rp-note">{t("You're offline. Connect to send.")}</p>}
         {err && (
           <div className="rp-send-err" role="alert">
             <CircleAlert

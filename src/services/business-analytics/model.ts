@@ -12,6 +12,8 @@
 //     the readers bucket, the app never re-buckets.
 //   - business_client_outcomes is all null below 5 sharers, on purpose.
 
+import { t } from "../../i18n/core";
+
 /** numeric columns arrive as JSON numbers, or as strings from some drivers. */
 export const num = (v: unknown): number | null => {
   if (v === null || v === undefined || v === "") return null;
@@ -158,7 +160,7 @@ export interface PlanFigure {
 /** Most members first, then most sold, then by name. */
 export function planFiguresOf(rows: { plan_id: string; plan_name: string | null; status: string | null; active_now: unknown; sold: unknown; sold_previous: unknown }[]): PlanFigure[] {
   return rows
-    .map((r) => ({ planId: r.plan_id, name: r.plan_name?.trim() || "Plan", status: r.status ?? "active", activeNow: num(r.active_now) ?? 0, sold: num(r.sold) ?? 0, soldPrevious: num(r.sold_previous) ?? 0 }))
+    .map((r) => ({ planId: r.plan_id, name: r.plan_name?.trim() || t("Plan"), status: r.status ?? "active", activeNow: num(r.active_now) ?? 0, sold: num(r.sold) ?? 0, soldPrevious: num(r.sold_previous) ?? 0 }))
     .sort((a, b) => b.activeNow - a.activeNow || b.sold - a.sold || a.name.localeCompare(b.name));
 }
 
@@ -201,7 +203,7 @@ export function dayOf(
     refId: r.ref_id,
     startsAt: r.starts_at,
     endsAt: r.ends_at ?? r.starts_at,
-    title: r.title?.trim() || (r.kind === "appointment" ? "Appointment" : "Class"),
+    title: r.title?.trim() || (r.kind === "appointment" ? t("Appointment") : t("Class")),
     booked: num(r.booked) ?? 0,
     capacity: num(r.capacity) ?? 0,
     staffFirstName: r.staff_first_name?.trim() || null,

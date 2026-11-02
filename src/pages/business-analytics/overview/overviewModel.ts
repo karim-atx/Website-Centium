@@ -11,6 +11,7 @@ import { f12, hoursOf } from "./clockModel";
 import { figuresFromRecords, isOwed, money, pctDelta, type PaymentRecord, type RevenueFigures } from "../../../services/business-revenue/model";
 import { pctChange, signed, type ClientOutcomes, type DayItem, type PeriodStat, type PeriodStats } from "../../../services/business-analytics/model";
 import { appLocale } from "../../../i18n/format";
+import { t, tk, tn, tx } from "../../../i18n/core";
 
 export type OverviewKind = "classes" | "gym" | "store";
 
@@ -102,15 +103,15 @@ export interface HeadCell {
   dir: "up" | "down" | "none";
 }
 
-export const NOTHING_TO_COMPARE = "Nothing to compare yet";
+export const NOTHING_TO_COMPARE = tk("Nothing to compare yet");
 
 /** A cell's delta: hidden with compare off; "Nothing to compare yet" while the metric is early (B15 `early`) or nothing came before. */
 function deltaOf(st: PeriodStat | undefined, compare: boolean, text: (now: number, before: number) => { t: string; d: number } | null): Pick<HeadCell, "delta" | "dir"> {
   if (!compare) return { delta: null, dir: "none" };
-  if (!st || st.early || st.value === null || st.previous === null) return { delta: NOTHING_TO_COMPARE, dir: "none" };
+  if (!st || st.early || st.value === null || st.previous === null) return { delta: t(NOTHING_TO_COMPARE), dir: "none" };
   const r = text(st.value, st.previous);
-  if (!r) return { delta: NOTHING_TO_COMPARE, dir: "none" };
-  return { delta: `${r.t} vs prev.`, dir: r.d > 0 ? "up" : r.d < 0 ? "down" : "none" };
+  if (!r) return { delta: t(NOTHING_TO_COMPARE), dir: "none" };
+  return { delta: t("{delta} vs prev.", { delta: r.t }), dir: r.d > 0 ? "up" : r.d < 0 ? "down" : "none" };
 }
 
 /**
@@ -123,26 +124,26 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell
   const cmp = range.compare;
   const dash = (label: string, sub: string): HeadCell => ({ label, value: "–", delta: sub, dir: "none" });
 
-  let active: HeadCell | null = dash("Active members", "No data yet");
-  let net: HeadCell | null = dash("Net members", "No data yet");
+  let active: HeadCell | null = dash(t("Active members"), t("No data yet"));
+  let net: HeadCell | null = dash(t("Net members"), t("No data yet"));
   if (s) {
     const n = s.members_net;
     // Active now against the end of the previous period is this period's net change.
-    active = !n ? null : raw.activeNow === null ? active : { label: "Active members", value: raw.activeNow.toLocaleString(appLocale("en-US")), ...deltaOf(n, cmp, (v) => ({ t: signed(v), d: v })) };
-    net = !n || n.value === null ? null : { label: "Net members", value: signed(n.value), delta: `${s.members_joined?.value ?? 0} joined, ${s.members_ended?.value ?? 0} ended`, dir: "none" };
+    active = !n ? null : raw.activeNow === null ? active : { label: t("Active members"), value: raw.activeNow.toLocaleString(appLocale("en-US")), ...deltaOf(n, cmp, (v) => ({ t: signed(v), d: v })) };
+    net = !n || n.value === null ? null : { label: t("Net members"), value: signed(n.value), delta: t("{joined} joined, {ended} ended", { joined: s.members_joined?.value ?? 0, ended: s.members_ended?.value ?? 0 }), dir: "none" };
   }
 
   if (kind === "store") {
     return [
       active,
       net,
-      { label: "Live listings", value: String(raw.productsCount), delta: "On Explore now", dir: "none" },
-      { label: "Live discounts", value: String(raw.discountsCount), delta: "On your listing", dir: "none" },
+      { label: t("Live listings"), value: String(raw.productsCount), delta: t("On Explore now"), dir: "none" },
+      { label: t("Live discounts"), value: String(raw.discountsCount), delta: t("On your listing"), dir: "none" },
     ].filter((c): c is HeadCell => !!c);
   }
 
-  let booked: HeadCell | null = dash("Booked spots", "No data yet");
-  let fill: HeadCell | null = dash("Class fill rate", "No classes yet");
+  let booked: HeadCell | null = dash(t("Booked spots"), t("No data yet"));
+  let fill: HeadCell | null = dash(t("Class fill rate"), t("No classes yet"));
   if (s && raw.anyClass) {
     const b = s.class_bookings;
     booked = !b
@@ -150,7 +151,7 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell
       : b.value === null
         ? booked
         : {
-            label: "Booked spots",
+            label: t("Booked spots"),
             value: b.value.toLocaleString(appLocale("en-US")),
             ...deltaOf(b, cmp, (v, p) => {
               const t = pctChange(v, p);
@@ -161,13 +162,13 @@ export function headline(kind: OverviewKind, raw: OvRaw, range: Range): HeadCell
     fill = !f
       ? null
       : f.value === null
-        ? dash("Class fill rate", "No classes in this range")
+        ? dash(t("Class fill rate"), t("No classes in this range"))
         : {
-            label: "Class fill rate",
+            label: t("Class fill rate"),
             value: `${Math.round(f.value)}%`,
             ...deltaOf(f, cmp, (v, p) => {
               const d = Math.round(v) - Math.round(p);
-              return { t: `${signed(d)} pts`, d };
+              return { t: t("{delta} pts", { delta: signed(d) }), d };
             }),
           };
   } else if (s && !s.class_bookings) {
@@ -187,8 +188,6 @@ export function headlineSize(value: string): number {
 // ---- today's dial items (AN1-034 #12, BU4-12 from raw rows) ----------------------
 
 const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)[0] : null);
-const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 /** "HH:MM" on this device's clock (the dial's own clock) for an instant. */
 const hhmmOf = (at: string) => {
@@ -234,7 +233,7 @@ export function emptyNextLine(raw: OvRaw, is24: boolean): string {
   const k = raw.nextClass;
   if (!k) return "";
   const d = dateOf(k.date);
-  return `Next: ${DOW[d.getDay()]}, ${MON[d.getMonth()]} ${d.getDate()} · ${k.title} ${is24 ? k.start : f12(k.start)}`;
+  return t("Next: {day} · {title} {time}", { day: d.toLocaleDateString(appLocale("en-US"), { weekday: "short", month: "short", day: "numeric" }), title: k.title, time: is24 ? k.start : f12(k.start) });
 }
 
 // ---- More insights (AN1-034 #19) -----------------------------------------------------
@@ -263,7 +262,7 @@ export interface RevenueIn {
 }
 
 export function revenueInsight(rev: RevenueIn | null): Insight {
-  const none: Insight = { key: "revenue", value: "–", delta: "", sub: "No transactions yet.", up: false };
+  const none: Insight = { key: "revenue", value: "–", delta: "", sub: t("No transactions yet."), up: false };
   if (!rev) return none;
   const { records, range, today } = rev;
   const f = rev.figures ?? (records ? figuresFromRecords(records, range, previousRange(range)) : null);
@@ -271,7 +270,7 @@ export function revenueInsight(rev: RevenueIn | null): Insight {
   if (!f || !f.anyPaid) return none;
   const early = !!f.first && daysBetween(f.first, today) < 28;
   const d = range.compare && !early ? pctDelta(f.tot, f.totP) : null;
-  const sub = f.undated.n > 0 ? `Collected this period. ${money(f.undated.amount)} not counted yet.` : "Collected this period";
+  const sub = f.undated.n > 0 ? t("Collected this period. {amount} not counted yet.", { amount: money(f.undated.amount) }) : t("Collected this period");
   return { key: "revenue", value: money(f.tot), delta: d ?? "", sub, up: !!d && d.startsWith("+") };
 }
 
@@ -283,17 +282,17 @@ export function insights(raw: OvRaw, rev: RevenueIn | null = null): Insight[] {
           key: "reputation",
           value: r.average.toFixed(1),
           delta: `★ ${r.total.toLocaleString(appLocale("en-US"))}`,
-          sub: r.inRange === null ? "Average rating" : `Average rating · ${r.inRange} new this period`,
+          sub: r.inRange === null ? t("Average rating") : t("Average rating · {count} new this period", { count: r.inRange }),
           up: false,
         }
-      : { key: "reputation", value: "–", delta: "", sub: "No reviews yet. Reviews arrive after members book.", up: false };
+      : { key: "reputation", value: "–", delta: "", sub: t("No reviews yet. Reviews arrive after members book."), up: false };
   return [rep, revenueInsight(rev)];
 }
 
 // ---- Client outcomes (OURS-AN1-client-outcomes) -----------------------------------------
 
 /** "Client #2C8E": clients are masked unless they shared their profile (B7). */
-export const maskedClient = (id: string) => `Client #${id.replace(/-/g, "").slice(0, 4).toUpperCase()}`;
+export const maskedClient = (id: string) => t("Client #{id}", { id: id.replace(/-/g, "").slice(0, 4).toUpperCase() });
 
 export interface OutcomesModel {
   /** Clients with a booking in the range. */
@@ -338,8 +337,8 @@ export function outcomes(raw: OvRaw, range: Range, today: string): OutcomesModel
     .map((id) => {
       const noBooking = enough && lapsed.includes(id);
       const pay = owed.has(id);
-      const detail = [noBooking ? "No booking in 21 days" : null, pay ? "Payment owed" : null].filter(Boolean).join(" · ");
-      return { id, label: maskedClient(id), detail, pill: pay ? { text: "Payment", tone: "warn" as const } : { text: "Check in", tone: "pale" as const } };
+      const detail = [noBooking ? t("No booking in 21 days") : null, pay ? t("Payment owed") : null].filter(Boolean).join(" · ");
+      return { id, label: maskedClient(id), detail, pill: pay ? { text: t("Payment"), tone: "warn" as const } : { text: tx("Check in", "client outcomes"), tone: "pale" as const } };
     })
     .sort((a, b) => (a.pill.tone === b.pill.tone ? a.label.localeCompare(b.label) : a.pill.tone === "warn" ? -1 : 1));
 
@@ -356,10 +355,10 @@ export function outcomes(raw: OvRaw, range: Range, today: string): OutcomesModel
 export function overviewCsv(cells: HeadCell[], ins: Insight[]): (string | number | null)[][] {
   const v = (s: string) => (s === "–" ? null : s);
   return [
-    ["Figure", "Value", "Note"],
+    [t("Figure"), t("Value"), t("Note")],
     ...cells.map((c) => [c.label, v(c.value), c.delta]),
-    ["Reputation", v(ins[0].value), ins[0].value === "–" ? null : ins[0].sub],
-    ["Revenue", v(ins[1].value), null],
+    [t("Reputation"), v(ins[0].value), ins[0].value === "–" ? null : ins[0].sub],
+    [t("Revenue"), v(ins[1].value), null],
   ];
 }
 
@@ -370,22 +369,22 @@ export function overviewCsv(cells: HeadCell[], ins: Insight[]): (string | number
  */
 export function sharedProgress(o: ClientOutcomes, kind: OverviewKind): { boxes: { value: string; label: string }[]; note: string } | null {
   if (!o.enough) return null;
-  const books = kind !== "store" && o.bookingsPerWeek !== null ? ` They book ${o.bookingsPerWeek.toFixed(1)} ${o.bookingsPerWeek === 1 ? "class" : "classes"} a week.` : "";
+  const books = kind !== "store" && o.bookingsPerWeek !== null ? ` ${o.bookingsPerWeek === 1 ? t("They book {n} class a week.", { n: o.bookingsPerWeek.toFixed(1) }) : t("They book {n} classes a week.", { n: o.bookingsPerWeek.toFixed(1) })}` : "";
   return {
     boxes: [
-      { value: o.workoutsPerWeek === null ? "–" : o.workoutsPerWeek.toFixed(1), label: "Workouts a week" },
-      { value: o.dailySteps === null ? "–" : Math.round(o.dailySteps).toLocaleString(appLocale("en-US")), label: "Daily steps" },
-      { value: o.restingBpm === null ? "–" : `${Math.round(o.restingBpm)} bpm`, label: "Resting heart rate" },
+      { value: o.workoutsPerWeek === null ? "–" : o.workoutsPerWeek.toFixed(1), label: t("Workouts a week") },
+      { value: o.dailySteps === null ? "–" : Math.round(o.dailySteps).toLocaleString(appLocale("en-US")), label: t("Daily steps") },
+      { value: o.restingBpm === null ? "–" : t("{n} bpm", { n: Math.round(o.restingBpm) }), label: t("Resting heart rate") },
     ],
-    note: `Averages of the ${o.sharing} clients who share their progress with you, over the last 28 days.${books}`,
+    note: `${tn(o.sharing, "Averages of the {n} client who shares their progress with you, over the last 28 days.", "Averages of the {n} clients who share their progress with you, over the last 28 days.")}${books}`,
   };
 }
 
 /** The Shared progress empty body: the DI-07 count when there is one (below 5 the outcomes reader shows nothing). */
 export function shareBody(n: number | null): string {
-  const need = "Outcomes appear once 5 or more clients choose to share their progress with you.";
+  const need = t("Outcomes appear once 5 or more clients choose to share their progress with you.");
   if (!n) return need;
   // 5 or more share but the outcomes reader (B15) is not on this database: only the B7 count is known.
-  if (n >= 5) return `${n} clients share their progress with you. Their group outcomes are coming soon.`;
-  return `${n} ${n === 1 ? "client shares" : "clients share"} their progress with you so far. ${need}`;
+  if (n >= 5) return tn(n, "{n} client shares their progress with you. Their group outcomes are coming soon.", "{n} clients share their progress with you. Their group outcomes are coming soon.");
+  return `${tn(n, "{n} client shares their progress with you so far.", "{n} clients share their progress with you so far.")} ${need}`;
 }
