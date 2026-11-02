@@ -1,4 +1,6 @@
 import React from "react";
+import { BADGE_PILL } from "./premiumDesigns";
+import { t } from "../../../i18n/core";
 import { MARK_C_PATH, MARK_LEAF_PATH } from "../../icons/CentiumMark";
 import { STREAK_LEAF_PATH } from "../../icons/StreakLeaf";
 import {
@@ -51,6 +53,15 @@ export interface ClientShareCardProps {
   /** Round G1 (G9): the member holds Premium with the switch on; the head reads "Centium Premium". */
   premium?: boolean;
 }
+
+/** The badge design's gold pill (painted from the DOM like every data-p box and text). */
+const PremiumPill: React.FC = () => (
+  <span data-p="box" style={{ marginInlineStart: "auto", display: "inline-flex", alignItems: "center", borderRadius: 999, background: BADGE_PILL.bg, padding: "3px 8px", flex: "none" }}>
+    <span data-p="t" style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: "0.08em", color: BADGE_PILL.ink, whiteSpace: "nowrap", lineHeight: 1.2 }}>
+      {t("Premium").toLocaleUpperCase()}
+    </span>
+  </span>
+);
 
 export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, format, background, width, flat, square, innerRef, className, premium }) => {
   const k = width / CARD_W;
@@ -152,6 +163,8 @@ export const ClientShareCard: React.FC<ClientShareCardProps> = ({ spec, stats, f
                 {spec.date}
               </div>
             </div>
+            {/* Round G4: the Premium badge design carries the member's badge (G9: own cards only, with Premium held). */}
+            {background === "BADGE" && premium && !stk && <PremiumPill />}
           </div>
           <div style={{ flex: stk ? "0" : "1", minHeight: stk ? 24 : 0 }} />
           <div>

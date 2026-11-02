@@ -43,11 +43,16 @@ import {
   PREMIUM_DB_THEMES,
   parseColorThemes,
   themeAccess,
+  PREMIUM_DESIGNS,
+  designAccess,
+  parseShareDesigns,
   type PlanItem,
 } from "./g4.ts";
 import { COLOR_THEMES, PREMIUM_COLOR_THEMES, isPremiumTheme, normalizeColorTheme } from "../../theme/colorThemes.ts";
 import { fromDbColorTheme, toDbColorTheme } from "../presentation/mapping.ts";
 import { isPremiumThemeRefusal } from "../presentation/save.ts";
+import { PREMIUM_BACKGROUND, isPremiumBackground, premiumColours } from "../../components/share/client/premiumDesigns.ts";
+import { cardColours } from "../../components/share/client/clientCardModel.ts";
 
 // ---- hidden while off ----
 
@@ -309,4 +314,34 @@ test("a Premium theme is hidden while the switch is off or unlisted, locked with
   assert.equal(isPremiumThemeRefusal({ code: "ATXQ1" }), true);
   assert.equal(isPremiumThemeRefusal({ code: "P0001", message: "ATXQ0: not yet" }), true);
   assert.equal(isPremiumThemeRefusal({ code: "42501" }), false);
+});
+
+// ---- share-card designs ----
+
+test("the three Premium share designs: hidden while off or unlisted, locked without Premium; today's backgrounds untouched", () => {
+  const rows = parseShareDesigns([
+    { key: "centium", name: "Centium", premium: false, locked: false },
+    { key: "clean", name: "Clean", premium: false, locked: false },
+    { key: "bold", name: "Bold", premium: true, locked: true },
+    { key: "gradient", name: "Gradient", premium: true, locked: false },
+    { key: "premium_badge", name: "Premium badge", premium: true, locked: true },
+  ]);
+  assert.deepEqual(rows.map((r) => r.key), ["centium", "clean", "bold", "gradient", "premium_badge"]);
+  assert.equal(designAccess("bold", { premiumOn: true, rows }), "locked");
+  assert.equal(designAccess("gradient", { premiumOn: true, rows }), "open");
+  assert.equal(designAccess("bold", { premiumOn: false, rows }), "hidden");
+  assert.equal(designAccess("bold", { premiumOn: true, rows: null }), "hidden");
+  assert.equal(designAccess("bold", { premiumOn: true, rows: rows.slice(0, 2) }), "hidden"); // the switch off for me: only the free ones are listed
+  assert.deepEqual(PREMIUM_DESIGNS.map((k) => PREMIUM_BACKGROUND[k]), ["BOLD", "GRAD", "BADGE"]);
+  for (const bg of ["BOLD", "GRAD", "BADGE"] as const) {
+    assert.equal(isPremiumBackground(bg), true);
+    assert.equal(cardColours("workout", "story", bg).ink, "#FFFFFF");
+    // Never on the sticker, which stays transparent with white stats.
+    assert.equal(cardColours("workout", "sticker", bg).bg, "transparent");
+  }
+  for (const bg of ["B", "I", "P", null]) assert.equal(isPremiumBackground(bg), false);
+  assert.equal(premiumColours("BOLD").acc, "#F6C445");
+  // Today's three are what they were.
+  assert.equal(cardColours("workout", "story", "B").bg, cardColours("workout", "story", "P").bg);
+  assert.notEqual(cardColours("workout", "story", "I").ink, "#FFFFFF");
 });

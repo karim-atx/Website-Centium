@@ -29,6 +29,7 @@ import {
 import { useShareLocks } from "./useShareLocks";
 import { usePremium } from "../../../services/premium/hooks";
 import { showPremiumBadge } from "../../../services/premium/model";
+import { PremiumDesignChips } from "./PremiumDesignChips";
 
 // Market + Share 3.0 · C-SH.2 the client share sheet, C-SH.5 "Your photo",
 // C-SH.6 the confirmations. Literal values from the Client Sharing screen
@@ -405,6 +406,8 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                       </button>
                     );
                   })}
+                  {/* Round G4: the Premium designs (nothing while the switch is off). */}
+                  <PremiumDesignChips background={background} onPick={setBackground} />
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onFile(e)} />
               </>
