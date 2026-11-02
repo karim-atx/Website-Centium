@@ -6,6 +6,7 @@ import type { ExistingTeamInvite } from "../../../../services/hiring/model";
 import { CentredDialog, SoonNote } from "../../../business-market/listingParts";
 import { DialogRows } from "./parts";
 import { expiredBody, expiredRows, inviteBody, inviteExpired, inviteRows, inviteTitle } from "./opportunitiesModel";
+import { t } from "../../../../i18n/core";
 
 // Market + Share 3.0 · W4 · P-MA.5.4 Existing-team invite (Professional
 // Marketplace Screens `dlg` for etInvite / etInviteExpired, lines 600–617 and
@@ -38,10 +39,10 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
         open
         width={330}
         tone="primary"
-        title="This invite has expired"
+        title={t("This invite has expired")}
         body={expiredBody(invite)}
-        cancel="Close"
-        action="Browse openings"
+        cancel={t("Close")}
+        action={t("Browse openings")}
         onCancel={onClose}
         onAction={() => {
           onClose();
@@ -55,7 +56,7 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
 
   const accept = async () => {
     if (busy) return;
-    if (!online) return setError("You're offline. Try again when you're connected.");
+    if (!online) return setError(t("You're offline. Try again when you're connected."));
     setBusy(true);
     setError(null);
     setSoon(false);
@@ -66,7 +67,7 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
     if (r.ok) return onDone(invite);
     if (r.pending) return setSoon(true);
     if (r.error === "invite_expired") return setExpired(true);
-    setError(r.message);
+    setError(t(r.message));
   };
 
   return (
@@ -76,15 +77,15 @@ export function ExistingTeamInviteDialog({ invite, onClose, onDone }: { invite: 
       tone="primary"
       title={inviteTitle(invite.businessName)}
       body={inviteBody(invite.businessName)}
-      cancel="Not now"
-      action="Accept"
+      cancel={t("Not now")}
+      action={t("Accept")}
       busy={busy}
       error={error}
       onCancel={onClose}
       onAction={() => void accept()}
     >
       <DialogRows rows={inviteRows(invite)} />
-      {soon ? <SoonNote style={{ marginTop: 12 }}>Hiring is coming soon.</SoonNote> : null}
+      {soon ? <SoonNote style={{ marginTop: 12 }}>{t("Hiring is coming soon.")}</SoonNote> : null}
     </CentredDialog>
   );
 }

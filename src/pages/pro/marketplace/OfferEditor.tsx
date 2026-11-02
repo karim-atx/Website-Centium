@@ -9,6 +9,7 @@ import { fetchProfileFacts, fetchServicePlans } from "../../../services/pro/prof
 import { money } from "../../../services/offers/manage";
 import { ownerInitials } from "../../../services/offers";
 import type { ProfessionalSubtype } from "../../../types";
+import { t, tk } from "../../../i18n/core";
 
 // Market + Share 3.0 · W3 · P-MA.3 Create offer → Preview and publish
 // (/app/pro/marketplace/offers/new) and the same editor for an existing offer
@@ -24,13 +25,13 @@ const HOME = "/app/pro/marketplace";
 
 /** The professional type as a card line ("Trainer"), when no specialty is set. */
 const TYPE_LINE: Record<ProfessionalSubtype, string> = {
-  trainer: "Trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-  doctor: "Doctor",
-  nutritionist: "Nutritionist",
-  coach_instructor: "Coach",
-  other: "Health professional",
+  trainer: tk("Trainer"),
+  physiotherapist: tk("Physiotherapist"),
+  dietitian: tk("Dietitian"),
+  doctor: tk("Doctor"),
+  nutritionist: tk("Nutritionist"),
+  coach_instructor: tk("Coach"),
+  other: tk("Health professional"),
 };
 
 export default function OfferEditorPage() {
@@ -53,7 +54,7 @@ export default function OfferEditorPage() {
         return;
       }
       setOptions([
-        ...types.data.map((t) => ({ id: t.id, label: `${t.name} · ${money(t.price)}` })),
+        ...types.data.map((st) => ({ id: st.id, label: `${st.name} · ${money(st.price)}` })),
         ...plans.data.filter((p) => p.active).map((p) => ({ id: p.id, label: `${p.name} · ${money(p.price)}` })),
       ]);
     });
@@ -62,8 +63,8 @@ export default function OfferEditorPage() {
     };
   }, [authUserId]);
 
-  const name = user.firstName?.trim() || "You";
-  const line = specialty ?? (user.professionalSubtype ? TYPE_LINE[user.professionalSubtype] : null);
+  const name = user.firstName?.trim() || t("You");
+  const line = specialty ?? (user.professionalSubtype ? t(TYPE_LINE[user.professionalSubtype]) : null);
   const previewOwner = useMemo(() => ({ name: line ? `${name} · ${line}` : name, initials: ownerInitials(name), logoUrl: user.avatarUrl ?? null }), [name, line, user.avatarUrl]);
   const isNew = !offerId || offerId === "new";
   const list = `${HOME}/offers`;
@@ -80,9 +81,9 @@ export default function OfferEditorPage() {
         failed,
         emptyHint: (
           <>
-            Add a session type or a package first, then offer a discount on it.{" "}
+            {t("Add a session type or a package first, then offer a discount on it.")}{" "}
             <Link to={`${HOME}/showcase`} className="market-focus" style={{ color: m.pdark, fontWeight: 700 }}>
-              Go to Showcase
+              {t("Go to Showcase")}
             </Link>
           </>
         ),

@@ -26,7 +26,6 @@ import {
   initials,
   ratingLine,
   serviceCards,
-  servicesHeader,
   setServiceVisible,
   setShelfItemVisible,
   weeklyHours,
@@ -50,6 +49,8 @@ import { stubColors } from "../../../components/market/marketColor";
 import { fetchOpenToGymWork, setOpenToGymWork } from "../../../services/team-hiring";
 import { fetchWorkHistory, sortWork, workRoleLine, workStub, type WorkEntry } from "../../../services/pro-profile";
 import { ServiceEditSheet } from "./ServiceEditSheet";
+import { t, tk, tn, tx } from "../../../i18n/core";
+import { weekdayShort } from "../../../components/pro/proDates";
 
 // Market + Share 3.0 · W3 · P-MA.2 Showcase (HANDOVER §4 "P-MA.2 Showcase";
 // Professional Marketplace Screens lines 112–226 and the `scSegs`, `sc`,
@@ -88,11 +89,16 @@ import { ServiceEditSheet } from "./ServiceEditSheet";
 
 type Section = "about" | "services" | "availability" | "work";
 
+/** aboutRows' last row title (services/pro-market), the one fixed English title it gives. */
+const CONTACT_ROW = tk("Phone, email and social links");
+// The other English services/pro-market and services/pro-profile give these rows, chips and stubs (shown through t() below).
+void [tk("Credential"), tk("Languages"), tk("Share them in Messages if you choose"), tk("Verified"), tk("In review"), tk("Not shown"), tk("Hidden"), tk("Hidden by Centium"), tk("Not offered"), tk("Role"), tk("Class slot"), tk("Ended")];
+
 const SECTIONS: { key: Section; label: string }[] = [
-  { key: "about", label: "About" },
-  { key: "services", label: "Services" },
-  { key: "availability", label: "Availability" },
-  { key: "work", label: "Work history" },
+  { key: "about", label: tk("About") },
+  { key: "services", label: tk("Services") },
+  { key: "availability", label: tk("Availability") },
+  { key: "work", label: tk("Work history") },
 ];
 
 export function ShowcaseTab() {
@@ -102,9 +108,9 @@ export function ShowcaseTab() {
     <div style={{ paddingBottom: 32, color: c.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <div style={{ borderRadius: 16, background: c.pale, padding: "12px 14px", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700, color: c.pdark }}>
-        This is your public Showcase. Phone, email and social links are never shown. Clients and gyms reach you in Messages.
+        {t("This is your public Showcase. Phone, email and social links are never shown. Clients and gyms reach you in Messages.")}
       </div>
-      <SegmentedTicketStrip items={SECTIONS} active={section} onChange={setSection} label="Showcase" idPrefix="pm-sc" style={{ marginTop: 12 }} />
+      <SegmentedTicketStrip items={SECTIONS.map((x) => ({ ...x, label: t(x.label) }))} active={section} onChange={setSection} label={t("Showcase")} idPrefix="pm-sc" style={{ marginTop: 12 }} />
       <div role="tabpanel" id={`pm-sc-panel-${section}`} aria-labelledby={`pm-sc-tab-${section}`}>
         {section === "about" && <AboutPanel />}
         {section === "services" && <ServicesPanel />}
@@ -159,28 +165,31 @@ function AboutPanel() {
   if (own === "error" || (cvError && !cv)) {
     return (
       <MarketError
-        thing="your profile"
+        thing={t("your profile")}
         onRetry={() => {
           setOwn(null);
-          setTick((t) => t + 1);
+          setTick((n) => n + 1);
           void reloadCv();
         }}
         style={{ marginTop: 14 }}
       />
     );
   }
-  if (!own || !cv) return <MarketSkeleton radius={24} rows={3} height={128} label="Loading your profile" style={{ marginTop: 14 }} />;
+  if (!own || !cv) return <MarketSkeleton radius={24} rows={3} height={128} label={t("Loading your profile")} style={{ marginTop: 14 }} />;
 
   const p = own.value;
   const shown = reviews.filter((r) => !r.redactedAt);
-  const rating = ratingLine(averageOf(reviews), shown.length, p?.location ?? null);
+  const avg = averageOf(reviews);
+  const rating = ratingLine(avg, shown.length, p?.location ?? null);
+  // ratingLine's text in the app's language: the average (from three reviews), the count, the area.
+  const ratingText = [rating.star && avg !== null ? avg.toFixed(1) : null, shown.length > 0 ? tn(shown.length, "{n} review", "{n} reviews") : t("No reviews yet"), p?.location?.trim() || null].filter(Boolean).join(" · ");
   const name = (user.firstName ?? "").trim();
   const subtitle = cv.profile.headline?.trim() || p?.specialty?.trim() || typeLabel(user.professionalSubtype);
   const nowMonth = new Date().toISOString().slice(0, 7);
   const rows = aboutRows(cv.licences, cv.reviews, cv.languages.map((l) => l.language), nowMonth);
   const specialties = facts?.specialties ?? [];
   const bio = p?.bio?.trim() || null;
-  const caps = (t: string) => <CapsLabel style={{ marginTop: 18 }}>{t}</CapsLabel>;
+  const caps = (text: string) => <CapsLabel style={{ marginTop: 18 }}>{text}</CapsLabel>;
 
   return (
     <>
@@ -193,7 +202,7 @@ function AboutPanel() {
             {user.avatarUrl ? <img src={user.avatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : initials(name)}
           </span>
           <div style={{ minWidth: 0 }}>
-            <h2 style={{ fontSize: px(18), fontWeight: 800, lineHeight: lh(24), margin: 0 }}>{name || "Your name"}</h2>
+            <h2 style={{ fontSize: px(18), fontWeight: 800, lineHeight: lh(24), margin: 0 }}>{name || t("Your name")}</h2>
             <div style={{ fontSize: px(12.5), color: c.ink2 }}>{subtitle}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: px(11.5), color: c.faint, marginTop: 2 }}>
               {rating.star ? (
@@ -201,16 +210,16 @@ function AboutPanel() {
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               ) : null}
-              <span>{rating.text}</span>
+              <span>{ratingText}</span>
             </div>
           </div>
         </div>
       </div>
-      {caps("About")}
-      <p style={{ marginTop: 6, fontSize: px(13), lineHeight: lh(19.5), color: bio ? c.ink2 : c.faint, marginBottom: 0 }}>{bio ?? "Add a short bio so clients and gyms know how you work."}</p>
+      {caps(t("About"))}
+      <p style={{ marginTop: 6, fontSize: px(13), lineHeight: lh(19.5), color: bio ? c.ink2 : c.faint, marginBottom: 0 }}>{bio ?? t("Add a short bio so clients and gyms know how you work.")}</p>
       {specialties.length ? (
         <>
-          {caps("Specialties")}
+          {caps(t("Specialties"))}
           <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
             {specialties.map((s) => (
               <span key={s} style={{ padding: "5px 10px", borderRadius: 999, background: c.pale, color: c.pdark, fontSize: px(11.5), fontWeight: 700 }}>
@@ -222,7 +231,7 @@ function AboutPanel() {
       ) : null}
       {playlist ? (
         <>
-          {caps("Music")}
+          {caps(t("Music"))}
           <PlaylistCard url={playlist} heading={providerHeading(name)} style={{ marginTop: 8 }} />
         </>
       ) : null}
@@ -230,14 +239,15 @@ function AboutPanel() {
         {rows.map((r, i) => (
           <div key={`${r.title}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i ? `0.5px solid ${c.div}` : 0 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: px(13.5), fontWeight: 700 }}>{r.title}</div>
-              <div style={{ fontSize: px(11.5), color: c.faint }}>{r.sub}</div>
+              {/* aboutRows (services/pro-market) gives English labels; a credential's name and the languages are the professional's own words. */}
+              <div style={{ fontSize: px(13.5), fontWeight: 700 }}>{r.title === CONTACT_ROW ? t(CONTACT_ROW) : r.title}</div>
+              <div style={{ fontSize: px(11.5), color: c.faint }}>{t(r.sub)}</div>
             </div>
-            {r.value ? <span style={{ fontSize: px(11.5), fontWeight: 700, color: r.tone === "good" ? c.good : c.faint, flexShrink: 0 }}>{r.value}</span> : null}
+            {r.value ? <span style={{ fontSize: px(11.5), fontWeight: 700, color: r.tone === "good" ? c.good : c.faint, flexShrink: 0 }}>{t(r.value)}</span> : null}
           </div>
         ))}
       </div>
-      <WideButton onClick={() => navigate("/app/more/edit-profile")}>Edit profile</WideButton>
+      <WideButton onClick={() => navigate("/app/more/edit-profile")}>{t("Edit profile")}</WideButton>
     </>
   );
 }
@@ -258,7 +268,7 @@ function ServicesPanel() {
   const [del, setDel] = useState<{ ref: ServiceRef; step: 1 | 2 } | null>(null);
   const [pending, setPending] = useState<ReadonlySet<string>>(new Set());
   const [strip, showStrip] = useStrip();
-  const reload = useCallback(() => setTick((t) => t + 1), []);
+  const reload = useCallback(() => setTick((n) => n + 1), []);
 
   useEffect(() => {
     if (!authUserId) return;
@@ -292,9 +302,9 @@ function ServicesPanel() {
       return n;
     });
     if (r.ok) {
-      showStrip("Service deleted");
+      showStrip(t("Service deleted"));
       reload();
-    } else showStrip(r.message, "error");
+    } else showStrip(t(r.message), "error");
   };
 
   const hide = async (ref: ServiceRef) => {
@@ -302,35 +312,35 @@ function ServicesPanel() {
       if (!authUserId || ref.item.hiddenByCentium) return;
       const show = !ref.item.visible;
       const r = await setShelfItemVisible(authUserId, ref.item.id, show);
-      if (!r.ok) return showStrip(r.message, "error");
-      showStrip(show ? "Service shown" : "Service hidden");
+      if (!r.ok) return showStrip(t(r.message), "error");
+      showStrip(show ? t("Service shown") : t("Service hidden"));
       return reload();
     }
     if (!authUserId) return;
     const show = !ref.item.visible;
     const r = await setServiceVisible(authUserId, ref.kind, ref.item.id, show);
-    if (!r.ok) return showStrip(r.message, "error");
-    showStrip(show ? "Service shown" : "Service hidden");
+    if (!r.ok) return showStrip(t(r.message), "error");
+    showStrip(show ? t("Service shown") : t("Service hidden"));
     reload();
   };
 
   let body: React.ReactNode;
   if (state.status === "loading") {
-    body = <MarketSkeleton radius={20} rows={3} count={3} height={91} label="Loading your services" style={{ marginTop: 14 }} />;
+    body = <MarketSkeleton radius={20} rows={3} count={3} height={91} label={t("Loading your services")} style={{ marginTop: 14 }} />;
   } else if (state.status === "error") {
-    body = <MarketError thing="your services" onRetry={reload} style={{ marginTop: 14 }} />;
+    body = <MarketError thing={t("your services")} onRetry={reload} style={{ marginTop: 14 }} />;
   } else {
     const cards = withoutPending(serviceCards(state.sessions, state.plans, state.shelf), pending);
     body = cards.length ? (
       <>
         <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-          <CapsLabel>{servicesHeader(cards.length)}</CapsLabel>
+          <CapsLabel>{tn(cards.length, "{n} service", "{n} services")}</CapsLabel>
           <OutlineButton onClick={() => setSheet({ target: null })} disabled={!online}>
             <Plus size={15} strokeWidth={2.4} aria-hidden style={{ transform: "none" }} />
-            Add service
+            {t("Add service")}
           </OutlineButton>
         </div>
-        <ul style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10, listStyle: "none", padding: 0, marginBottom: 0 }} aria-label="Services">
+        <ul style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10, listStyle: "none", padding: 0, marginBottom: 0 }} aria-label={t("Services")}>
           {cards.map((card) => (
             <ServiceCardRow
               key={card.key}
@@ -345,7 +355,7 @@ function ServicesPanel() {
         </ul>
       </>
     ) : (
-      <MarketplaceEmpty title="No services yet" body="Add the sessions and packages clients can book. They show on your public profile." cta="Add service" onCta={() => setSheet({ target: null })} ctaDisabled={!online} />
+      <MarketplaceEmpty title={t("No services yet")} body={t("Add the sessions and packages clients can book. They show on your public profile.")} cta={t("Add service")} onCta={() => setSheet({ target: null })} ctaDisabled={!online} />
     );
   }
 
@@ -376,10 +386,10 @@ function ServicesPanel() {
       <CentredDialog
         open={!!del}
         width={330}
-        title={del?.step === 2 ? "Confirm delete" : "Delete this service?"}
-        body={del?.step === 2 ? "This can't be undone." : "Clients who already booked it keep their sessions."}
-        cancel="Cancel"
-        action={del?.step === 2 ? "Delete service" : "Delete"}
+        title={del?.step === 2 ? t("Confirm delete") : t("Delete this service?")}
+        body={del?.step === 2 ? t("This can't be undone.") : t("Clients who already booked it keep their sessions.")}
+        cancel={t("Cancel")}
+        action={del?.step === 2 ? t("Delete service") : t("Delete")}
         onAction={() => (del?.step === 1 ? setDel({ ref: del.ref, step: 2 }) : del && void confirmDelete(del.ref))}
         onCancel={() => setDel(null)}
       />
@@ -403,7 +413,7 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
         <span style={{ fontSize: px(14), fontWeight: 800, opacity: op }}>{card.price}</span>
         <button
           type="button"
-          aria-label={`${card.name} options`}
+          aria-label={t("{name} options", { name: card.name })}
           aria-haspopup="menu"
           aria-expanded={menu}
           onClick={(e) => setAnchor(e.currentTarget)}
@@ -421,7 +431,7 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
       {card.description ? <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 6, opacity: op }}>{card.description}</div> : null}
       {card.chip ? (
         <div style={{ marginTop: 8 }}>
-          <span style={{ fontSize: px(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: c.soft, color: c.faint }}>{card.chip}</span>
+          <span style={{ fontSize: px(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: c.soft, color: c.faint }}>{t(card.chip)}</span>
         </div>
       ) : null}
       <PopupMenu
@@ -430,10 +440,10 @@ function ServiceCardRow({ card, editing, canEdit, onEdit, onHide, onDelete }: { 
         anchor={anchor}
         align="right"
         options={[
-          { value: "edit", label: "Edit", disabled: !canEdit },
+          { value: "edit", label: t("Edit"), disabled: !canEdit },
           // A hidden service reads "Show"; a shelf item Centium took down can't be shown again.
-          { value: "hide", label: hidden ? "Show" : "Hide", disabled: !canEdit || takenDown },
-          { value: "delete", label: "Delete", destructive: true, disabled: !canEdit },
+          { value: "hide", label: hidden ? t("Show") : t("Hide"), disabled: !canEdit || takenDown },
+          { value: "delete", label: t("Delete"), destructive: true, disabled: !canEdit },
         ]}
         onSelect={(v) => {
           setAnchor(null);
@@ -469,24 +479,24 @@ function AvailabilityPanel() {
   if (rows === "error") {
     hours = (
       <MarketError
-        thing="your hours"
+        thing={t("your hours")}
         onRetry={() => {
           setRows(null);
-          setTick((t) => t + 1);
+          setTick((n) => n + 1);
         }}
         style={{ marginTop: 8 }}
       />
     );
   } else if (!rows) {
-    hours = <MarketSkeleton radius={20} rows={4} height={300} label="Loading your hours" style={{ marginTop: 8 }} />;
+    hours = <MarketSkeleton radius={20} rows={4} height={300} label={t("Loading your hours")} style={{ marginTop: 8 }} />;
   } else {
     const week = weeklyHours(rows, (a, b) => range12(a, b, "–"));
     hours = (
       <div style={{ marginTop: 8, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
         {week.map((d, i) => (
           <div key={d.day} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i ? `0.5px solid ${c.div}` : 0 }}>
-            <span style={{ width: 44, fontSize: px(13), fontWeight: 800, flexShrink: 0 }}>{d.day}</span>
-            <span style={{ flex: 1, minWidth: 0, fontSize: px(13), color: d.off ? c.faint : c.ink, fontWeight: 600 }}>{d.hours}</span>
+            <span style={{ width: 44, fontSize: px(13), fontWeight: 800, flexShrink: 0 }}>{weekdayShort(i)}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: px(13), color: d.off ? c.faint : c.ink, fontWeight: 600 }}>{d.off ? tx("Off", "weekly hours") : d.hours}</span>
           </div>
         ))}
       </div>
@@ -495,10 +505,10 @@ function AvailabilityPanel() {
 
   return (
     <>
-      <CapsLabel style={{ marginTop: 14 }}>Weekly hours</CapsLabel>
+      <CapsLabel style={{ marginTop: 14 }}>{t("Weekly hours")}</CapsLabel>
       {hours}
       <GymWorkRow />
-      <WideButton onClick={() => navigate("/app/pro/calendar/availability")}>Edit hours</WideButton>
+      <WideButton onClick={() => navigate("/app/pro/calendar/availability")}>{t("Edit hours")}</WideButton>
     </>
   );
 }
@@ -555,7 +565,7 @@ function GymWorkRow() {
     if (r.ok) setOn(r.value);
     else {
       setOn(!v);
-      showStrip(r.message, "error");
+      showStrip(t(r.message), "error");
     }
   };
   return (
@@ -563,12 +573,12 @@ function GymWorkRow() {
       {strip}
       <div style={{ marginTop: 12, borderRadius: 16, border: `1px solid ${c.border}`, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: px(14), fontWeight: 700 }}>Open to gym work</div>
+          <div style={{ fontSize: px(14), fontWeight: 700 }}>{t("Open to gym work")}</div>
           <div id="pm-gymwork-sub" style={{ fontSize: px(11.5), lineHeight: lh(16), color: c.faint }}>
-            Gyms can find you in search and send you direct offers.
+            {t("Gyms can find you in search and send you direct offers.")}
           </div>
         </div>
-        <SheetSwitch on={!!on} onChange={(v) => void change(v)} label="Open to gym work" describedBy="pm-gymwork-sub" disabled={on === null || busy} />
+        <SheetSwitch on={!!on} onChange={(v) => void change(v)} label={t("Open to gym work")} describedBy="pm-gymwork-sub" disabled={on === null || busy} />
       </div>
     </>
   );
@@ -590,14 +600,14 @@ function WorkPanel() {
   }, [authUserId, tick]);
   const empty = (
     <MarketplaceEmpty
-      title="No Centium work yet"
-      body="Roles and class slots you're hired for through Opportunities show here with the gym's name. Reviews from class clients follow."
-      cta="Browse opportunities"
+      title={t("No Centium work yet")}
+      body={t("Roles and class slots you're hired for through Opportunities show here with the gym's name. Reviews from class clients follow.")}
+      cta={t("Browse opportunities")}
       onCta={() => navigate("/app/pro/marketplace/opportunities")}
     />
   );
-  if (load === null) return <MarketSkeleton radius={18} rows={4} height={100} count={2} label="Loading your work history" style={{ marginTop: 14 }} />;
-  if (!load.ok) return load.offline ? <MarketOffline loaded={false} force onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} /> : <MarketError thing="your work history" onRetry={() => setTick((t) => t + 1)} style={{ marginTop: 14 }} />;
+  if (load === null) return <MarketSkeleton radius={18} rows={4} height={100} count={2} label={t("Loading your work history")} style={{ marginTop: 14 }} />;
+  if (!load.ok) return load.offline ? <MarketOffline loaded={false} force onRetry={() => setTick((n) => n + 1)} style={{ marginTop: 14 }} /> : <MarketError thing={t("your work history")} onRetry={() => setTick((n) => n + 1)} style={{ marginTop: 14 }} />;
   return (
     <>
       {load.value.length ? <WorkList list={load.value} /> : empty}
@@ -626,7 +636,7 @@ function WorkList({ list }: { list: WorkEntry[] }) {
   return (
     <>
       <div style={{ marginTop: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-        <CapsLabel as="span">Hired via Centium</CapsLabel>
+        <CapsLabel as="span">{t("Hired via Centium")}</CapsLabel>
         <span style={{ fontSize: px(11.5), fontWeight: 700, color: c.tealink }}>{workCountLine(list)}</span>
       </div>
       <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 10 }}>
@@ -642,8 +652,8 @@ function WorkList({ list }: { list: WorkEntry[] }) {
               labelType={[9.5, "0.1em"]}
               minHeight={96}
               tone={tone(stub)}
-              stubLabel={stub}
-              ariaLabel={`${e.businessName}, ${role}, ${meta}, Hired via Centium`}
+              stubLabel={t(stub)}
+              ariaLabel={[e.businessName, role, meta, t("Hired via Centium")].join(t(", "))}
               bodyStyle={{ display: "flex", gap: 12, padding: "12px 14px" }}
             >
               <span aria-hidden style={{ width: 44, height: 44, borderRadius: 12, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", fontSize: px(12.5), fontWeight: 800, color: c.accent, flexShrink: 0 }}>
@@ -655,7 +665,7 @@ function WorkList({ list }: { list: WorkEntry[] }) {
                 <span style={{ display: "block", fontSize: px(11.5), color: c.faint, marginTop: 1 }}>{meta}</span>
                 <span style={{ marginTop: 5, display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(11), fontWeight: 700, color: c.tealink }}>
                   <TicketCheck size={12} />
-                  Hired via Centium
+                  {t("Hired via Centium")}
                 </span>
               </span>
             </TicketStub>
@@ -675,20 +685,20 @@ function LiveReviews() {
   const avg = averageOf(reviews);
   const LIMIT = 3;
   return error && !shown.length ? (
-    <MarketError thing="your reviews" onRetry={() => void reload()} style={{ marginTop: 18 }} />
+    <MarketError thing={t("your reviews")} onRetry={() => void reload()} style={{ marginTop: 18 }} />
   ) : loading && !shown.length ? (
-    <MarketSkeleton radius={20} rows={3} height={120} label="Loading your reviews" style={{ marginTop: 18 }} />
+    <MarketSkeleton radius={20} rows={3} height={120} label={t("Loading your reviews")} style={{ marginTop: 18 }} />
   ) : shown.length ? (
     <>
-      <CapsLabel style={{ marginTop: 18 }}>{`Reviews · ${shown.length}`}</CapsLabel>
+      <CapsLabel style={{ marginTop: 18 }}>{t("Reviews · {n}", { n: shown.length })}</CapsLabel>
       <div style={{ marginTop: 8, borderRadius: 20, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px" }}>
           <span style={{ fontSize: px(30), lineHeight: lh(34), fontWeight: 800 }}>{avg !== null ? avg.toFixed(1) : "–"}</span>
           <div>
-            <span role="img" aria-label={avg !== null ? `${avg.toFixed(1)} out of 5` : "No rating"}>
+            <span role="img" aria-label={avg !== null ? t("{rating} out of 5", { rating: avg.toFixed(1) }) : t("No rating")}>
               <Stars filled={avg !== null ? Math.round(avg) : 0} />
             </span>
-            <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>From your clients</div>
+            <div style={{ fontSize: px(11.5), color: c.faint, marginTop: 2 }}>{t("From your clients")}</div>
           </div>
         </div>
         {shown.slice(0, LIMIT).map((r) => (
@@ -697,14 +707,14 @@ function LiveReviews() {
               <span style={{ fontWeight: 800 }}>{reviewerLabel(r.reviewerName)}</span>
               <span style={{ color: c.faint, flexShrink: 0 }}>{formatShortDate(new Date(r.createdAt), { month: "short", day: "numeric", year: "numeric" })}</span>
             </div>
-            <span role="img" aria-label={`${r.rating} out of 5`} style={{ display: "inline-flex", marginTop: 2 }}>
+            <span role="img" aria-label={t("{rating} out of 5", { rating: r.rating })} style={{ display: "inline-flex", marginTop: 2 }}>
               <Stars filled={r.rating} />
             </span>
             {r.body ? <div style={{ fontSize: px(12.5), lineHeight: lh(18), color: c.ink2, marginTop: 4 }}>{r.body}</div> : null}
           </div>
         ))}
       </div>
-      {shown.length > LIMIT ? <WideButton onClick={() => navigate("/app/more/reviews")}>See all reviews</WideButton> : null}
+      {shown.length > LIMIT ? <WideButton onClick={() => navigate("/app/more/reviews")}>{t("See all reviews")}</WideButton> : null}
     </>
   ) : null;
 }

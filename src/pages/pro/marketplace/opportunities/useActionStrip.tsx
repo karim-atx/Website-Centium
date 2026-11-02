@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ConfirmationStrip, type StripTone } from "../../../../components/market/ConfirmationStrip";
 import { useReducedMotion } from "../../../../hooks/useReducedMotion";
+import { t } from "../../../../i18n/core";
 
 /**
  * The ConfirmationStrip overlaid on the header (W1 lead decision Q4, as
@@ -29,7 +30,7 @@ export function useActionStrip(): [React.ReactNode, (text: string, opts?: { tone
               key={s.n}
               text={s.text}
               tone={s.tone}
-              action={s.action ?? "Done"}
+              action={s.action ?? t("Done")}
               onAction={() => {
                 setS(null);
                 s.onAction?.();
