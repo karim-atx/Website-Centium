@@ -27,6 +27,15 @@ export const FILES: string[] = [
   "pages/professionals/web/WebParts.tsx",
   "pages/professionals/web/prWebStyles.ts",
   "pages/professionals/web/useDirectoryWeb.ts",
+  "pages/community/Community.web.tsx",
+  "pages/community/web/CommunityFrameWeb.tsx",
+  "pages/community/web/ForumWeb.tsx",
+  "pages/community/web/ForumComposeWeb.tsx",
+  "pages/community/web/ForumPostWeb.tsx",
+  "pages/community/web/NicknameWeb.tsx",
+  "pages/community/web/CoursesWeb.tsx",
+  "pages/community/web/CourseWeb.tsx",
+  "pages/community/web/MenuWeb.tsx",
 ];
 
 const webclienthome: Catalogue = {
@@ -57,6 +66,10 @@ const webclienthome: Catalogue = {
   "Nearest first · {place}": "الأقرب أولًا · {place}",
   "Share your location once, or pick an area.": "شارك موقعك مرة واحدة، أو اختر منطقة.",
   "Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it.": "يبقى موقعك على هذا الجهاز: لا يستخدم Centium إلا منطقة تقريبية (نحو 10 كم) لإيجاد من هم بالقرب منك، ولا يحفظها أبدًا.",
+  // == WC-CO Community (pages/community/Community.web, pages/community/web) ==
+  "Post as {name}": "النشر باسم {name}", // note: the New post sheet's two buttons (nickname or first name), as "Post as" and "Reply as {name}"
+  "PDF": "ملف PDF", // note: a course lesson's kind, before its length ("PDF"), as "{n} PDFs"
+  "Check-in": "متابعة", // note: a course lesson's kind; "check-in" is «متابعة» in courses, as "{n} check-ins"
 };
 
 export default webclienthome;
