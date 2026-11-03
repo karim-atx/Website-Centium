@@ -9,12 +9,12 @@
 //   has_class_booking) and the venues' names (gyms, public), plus the
 //   member's professional sessions (appointments with a staff_id and no
 //   business: request_professional_booking's rows, appointments_select
-//   client_id = auth.uid()), named from public_professional_directory.
+//   client_id = auth.uid()), named from directory_professionals.
 // No writes here. Ending a membership stays services/venues
 // endMyGymMembership (D-46).
 
 import type { PostgrestError } from "@supabase/supabase-js";
-import { professionalsByIds, type DirRead } from "../../services/directory/eg";
+import { professionalsByIds } from "../../services/directory/eg";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline } from "../../services/network-error";
 import { fetchMyGymMemberships, type GymMembership } from "../../services/venues";
@@ -50,11 +50,8 @@ async function professionalNames(ids: string[]): Promise<Map<string, { first: st
   const uniq = [...new Set(ids)];
   if (uniq.length === 0) return out;
   type Named = { profile_id: string; first_name: string | null; professional_subtype: ProfessionalSubtype | null };
-  // Round G2 (EG): the counting function.
-  const r = await professionalsByIds<Named>(uniq, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    db.from("public_professional_directory").select("profile_id, first_name, professional_subtype").in("profile_id", uniq) as unknown as PromiseLike<DirRead<Named[]>>
-  );
+  // Round G2 (EG): directory_professionals (professionalsByIds keeps the calls few).
+  const r = await professionalsByIds<Named>(uniq);
   if (r.error) return out;
   for (const p of (r.data ?? []) as { profile_id: string; first_name: string | null; professional_subtype: ProfessionalSubtype | null }[]) {
     out.set(p.profile_id, { first: p.first_name ?? "", type: p.professional_subtype ? typeLabel(p.professional_subtype) : null });

@@ -3,7 +3,7 @@
 // professionals can be named as class instructors; a class with none shows
 // "Instructor not listed", no photo, no link). Pure (no Supabase import).
 //
-// marketplace_classes carries the five card columns (Database #38,
+// directory_classes carries the five card columns (Database #38,
 // 20261213200000): instructor_is_team (false when nobody is named, false once
 // they leave), instructor_specialty, instructor_rating,
 // instructor_review_count and instructor_hire_count. instructor_is_team
@@ -23,7 +23,7 @@ export interface InstructorFacts {
   instructorId: string | null;
   instructorName: string | null;
   instructorAvatarUrl: string | null;
-  /** marketplace_classes.instructor_is_team: on the business's Team. */
+  /** directory_classes.instructor_is_team: on the business's Team. */
   instructorIsTeam: boolean;
   instructorSpecialty: string | null;
   instructorRating: number | null;
@@ -32,7 +32,7 @@ export interface InstructorFacts {
   instructorHireCount: number | null;
 }
 
-/** The instructor as clients may see it, from a marketplace_classes row (snake_case). */
+/** The instructor as clients may see it, from a directory_classes row (snake_case). */
 export function instructorFacts(r: Record<string, unknown>): InstructorFacts {
   const isTeam = bool(r.instructor_is_team);
   const id = str(r.instructor_id);

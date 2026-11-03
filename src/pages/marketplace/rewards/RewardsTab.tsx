@@ -67,7 +67,7 @@ const SORT_LABEL: Record<string, string> = { featured: tk("Featured"), lowest: t
 // Q3, Karim #40).
 //
 // D-21 (not drawn): under the offers, a "Businesses" section keeps the old
-// Businesses tab's rows (marketplace_venues kind "business") filtered by the
+// Businesses tab's rows (directory_venues kind "business") filtered by the
 // chip, so a business without offers stays findable: the row opens its
 // showcase (/app/marketplace/business?id=…&src=…) with the Featured chip and
 // the impression analytics as Discover had them. In the board's row style

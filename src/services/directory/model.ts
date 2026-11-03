@@ -1,4 +1,4 @@
-// The client-facing directory listing (public_professional_directory), as a
+// The client-facing directory listing (directory_professionals), as a
 // type only: no Supabase import, so pure models (services/nearby/model) and
 // their node:test files can use it. services/directory re-exports it.
 

@@ -80,7 +80,7 @@ import { t, tk, tx } from "../../i18n/core";
 // social handles are read only after the live connection check says yes.
 //
 // DATA. The live readers keep the page working while DB10 is pending:
-// identity, about and CV from public_professional_directory / the public CV
+// identity, about and CV from directory_professionals / the public CV
 // views (or the invite's own readers); Services from appointment_services
 // (Book), without the session types the professional hid from their Showcase
 // (DB3 `visible`: a hidden one stays bookable by its link, so only this list

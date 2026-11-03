@@ -3,8 +3,8 @@
 //
 // WHAT WENT. mockGyms, mockClasses and mockMarketplaceListings: invented
 // venues with invented star ratings and invented offers. Between them they
-// fed a browse screen (replaced by Explore, which reads marketplace_venues and
-// marketplace_classes), a set of "businesses hiring" job postings on the
+// fed a browse screen (replaced by Explore, which reads directory_venues and
+// directory_classes), a set of "businesses hiring" job postings on the
 // professional's Explore tab, and the name lookup for gym passes. All three
 // surfaces are gone; real venues and real classes come from the database.
 //

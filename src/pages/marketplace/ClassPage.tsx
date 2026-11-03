@@ -118,7 +118,7 @@ import { ClassPremiumLines } from "../../components/premium/PremiumBooking";
 // - the instructor (margin-top 12): the W1 InstructorCard. Release 2 (W5,
 //   HANDOVER §9): only a Team instructor is named; a class with none shows
 //   "Instructor not listed" (no photo, no link). The rule lives in
-//   services/marketplace/instructorRule.ts: marketplace_classes'
+//   services/marketplace/instructorRule.ts: directory_classes'
 //   instructor_is_team decides (Database #38), the card takes
 //   instructor_specialty / _rating / _review_count ("Instructor" when no
 //   specialty is set) and "Hired via Centium" shows for a Team instructor
@@ -151,7 +151,7 @@ import { ClassPremiumLines } from "../../components/premium/PremiumBooking";
 // (terms first: pending_policies / accept, ATXE4), cancel_class_booking (a late
 // one is accepted and reported back as not free), class_seats_left (counts
 // live waitlist offers), class_booking_rules, the waitlist functions,
-// marketplace_classes (venue, about, level, what to bring, instructor when
+// directory_classes (venue, about, level, what to bring, instructor when
 // listed publicly). A cancelled class leaves that view; its page then says so
 // (business_classes.cancelled_at, cancel_reason).
 
@@ -545,7 +545,7 @@ export function ClassPage({ classId }: { classId: string }) {
             // D-04 error / offline, with Retry.
             <MarketError thing={tk("this class")} onRetry={retry} />
           ) : live?.cancelledAt ? (
-            // B9 (CL-03): a cancelled class leaves marketplace_classes; its
+            // B9 (CL-03): a cancelled class leaves directory_classes; its
             // page says so, with the venue's reason when it gave one (verbatim).
             <div data-class-cancelled="">
               <MarketEmptyCard

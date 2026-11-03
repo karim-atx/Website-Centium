@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   askOutcome,
-  directoryFallback,
   directoryLimitText,
   edgeRefusalOf,
   exportErrorText,
@@ -56,16 +55,11 @@ const pro: MyPremium = { ...base, limits: null, mayPromptUpgrade: false }; // a 
 
 // ---- fail open ----
 
-test("a missing function (PGRST202, 42883, 404) is what falls back; nothing else does", () => {
+test("a missing function is PGRST202, 42883 or a 404; nothing else is", () => {
   assert.equal(isMissingFunction({ code: "PGRST202" }), true);
   assert.equal(isMissingFunction({ code: "42883" }), true);
   assert.equal(isMissingFunction({ status: 404 }), true);
   assert.equal(isMissingFunction(null), false);
-  assert.equal(directoryFallback({ code: "PGRST202" }), true);
-  assert.equal(directoryFallback({ code: "ATX02", message: "too many directory requests -- try again in 12 minutes" }), false);
-  assert.equal(directoryFallback({ code: "42501", message: "permission denied for function count_directory_read" }), true);
-  assert.equal(directoryFallback({ message: "Failed to fetch" }), true);
-  assert.equal(directoryFallback(null), false);
 });
 
 test("off, loading, Premium or a professional: no limit, no Premium label", () => {
