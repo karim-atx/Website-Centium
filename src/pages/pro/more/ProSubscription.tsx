@@ -35,8 +35,9 @@ import { BuyInApp } from "../../../components/premium/BuyInApp";
 // Round G5: while my_professional_plan_in_app() says plans_in_app, the plan
 // is bought in the Centium app: the "Buy in the Centium app" block replaces
 // the emailed request (no mailto, no "Ask to upgrade", no "confirmed by
-// email" line), and a store-bought plan says "Bought in the Centium app" with
-// its name and renewal. Off, loading or no G5: exactly today's page.
+// email" line). A store-bought plan says "Bought in the Centium app" with its
+// name and renewal whether the switch is on or off, as businesses' plans do.
+// Otherwise (off, loading or no G5): exactly today's page.
 
 const money2 = (v: number) => (Number.isInteger(v) ? formatPrice(v) : `$${v.toFixed(2)}`);
 const savePct = (t: SubscriptionTier) => (t.yearlyPrice && t.monthlyPrice > 0 ? Math.round((1 - t.yearlyPrice / (t.monthlyPrice * 12)) * 100) : 0);
