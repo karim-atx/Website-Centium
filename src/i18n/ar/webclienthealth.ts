@@ -13,6 +13,7 @@ import type { Catalogue } from "../core";
 export const FILES: string[] = [
   "pages/health/web/HealthWebKit.tsx",
   "pages/health/web/Health.web.tsx",
+  "components/health/metric/MetricKit.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {

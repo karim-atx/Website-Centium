@@ -116,6 +116,50 @@ export const WebCaps: React.FC<{ children: React.ReactNode; style?: React.CSSPro
   </Tag>
 );
 
+/**
+ * Segmented tabs (section 2, every level): track #F3F3FD, pad 5, r14, 40
+ * tall; equal segments spanning the row; the pill 30 tall r10; labels 15/24
+ * 600; selected #A79AD5 with white, idle #5B5349 (hover #ECEBFB).
+ * Arrow keys move between tabs.
+ */
+export const WebSegmented: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (key: string) => void; ariaLabel?: string }> = ({ items, active, onChange, ariaLabel }) => {
+  const refs = React.useRef<(HTMLButtonElement | null)[]>([]);
+  const move = (i: number) => {
+    const n = (i + items.length) % items.length;
+    onChange(items[n].key);
+    refs.current[n]?.focus();
+  };
+  return (
+    <div role="tablist" aria-label={ariaLabel} className="flex" style={{ height: 40, padding: 5, gap: 5, borderRadius: 14, background: "#F3F3FD", boxSizing: "border-box" }}>
+      {items.map((it, i) => {
+        const on = it.key === active;
+        return (
+          <button
+            key={it.key}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            tabIndex={on ? 0 : -1}
+            onClick={() => onChange(it.key)}
+            onKeyDown={(e) => {
+              const rtl = document.documentElement.dir === "rtl";
+              if (e.key === "ArrowRight") (e.preventDefault(), move(i + (rtl ? -1 : 1)));
+              if (e.key === "ArrowLeft") (e.preventDefault(), move(i + (rtl ? 1 : -1)));
+            }}
+            className={`flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7D6BB5] ${on ? "" : "hover:bg-[#ECEBFB]"}`}
+            style={{ height: 30, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5B5349" }}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 /** The page body: max 1280 wide, centred, padded 24 by the page margin. */
 export const HealthWebBody: React.FC<{ children: React.ReactNode; gap?: number; style?: React.CSSProperties; className?: string }> = ({ children, gap = 24, style, className }) => {
   const margin = useHealthMargin();
