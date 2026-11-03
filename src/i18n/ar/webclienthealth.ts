@@ -18,6 +18,8 @@ export const FILES: string[] = [
   "pages/health/web/Records.web.tsx",
   "pages/health/web/HealthSources.web.tsx",
   "components/health/records/RecordsTabs.web.tsx",
+  "components/health/records/MarkerChart.web.tsx",
+  "components/health/records/MarkerPage.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {
@@ -30,6 +32,9 @@ const webclienthealth: Catalogue = {
 
   // == Labs (components/health/records/RecordsTabs.web, WC-HE.9.1) ==
   "{n} in range": "{n} ضمن النطاق", // note: health wording (In range «ضمن النطاق», as "{n} out of range" «{n} خارج النطاق»)
+
+  // == Marker history (components/health/records/MarkerPage.web, MarkerChart.web, WC-HE.9.5) ==
+  "Reference: {range} {unit}": "النطاق المرجعي: {range} {unit}", // note: health wording (the chart's band label; Reference range «النطاق المرجعي»)
 };
 
 export default webclienthealth;

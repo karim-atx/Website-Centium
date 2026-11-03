@@ -21,6 +21,8 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { RecordsHeader } from "./RecordsHeader";
 import { ResultFormSheet } from "./ResultFormSheet";
 import { TrendGate } from "./premium/TrendGate";
+import { useIsWeb } from "../../web/useWebLayout";
+import { MarkerPageWeb } from "./MarkerPage.web";
 import { useTrendResults } from "./premium/useTrendResults";
 import {
   useHealthMode,
@@ -93,6 +95,7 @@ export const MarkerPage: React.FC<{
   const pregnancyFlags = usePregnancyFlags();
   const checkFlags = useCheckFlags();
   useBackCloses(true, onBack);
+  const web = useIsWeb();
   const [span, setSpan] = useState<Span>("All");
   const [selected, setSelected] = useState<number | null>(null);
   const [form, setForm] = useState<{ result: LabResult | null } | null>(null);
@@ -182,20 +185,90 @@ export const MarkerPage: React.FC<{
     </div>
   );
 
+  const menu = [
+    ...(onShare ? [{ key: "share", label: t("Share"), icon: <Share2 size={15} />, onSelect: onShare }] : []),
+    ...(onShareWithProfessional ? [{ key: "share-pro", label: t("Share with a professional"), icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }] : []),
+    { key: "delete", label: t("Delete marker"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => setDeleting("marker") },
+  ];
+  const overlays = (
+    <>
+        <ResultFormSheet
+          open={form !== null}
+          onClose={() => setForm(null)}
+          result={form?.result ?? null}
+          allResults={allResults}
+          fixed={form && !form.result ? { marker: entry, name: marker.name, unit: latest.unit } : null}
+          catalogue={catalogue}
+          onSaved={onToast}
+        />
+        <ConfirmPopup
+          open={deleting !== null}
+          geometry="ours"
+          busy={busy}
+          error={error}
+          title={deleting === "marker" ? t("Delete {name}?", { name: marker.name }) : t("Delete this result?")}
+          body={
+            deleting === "marker"
+              ? tn(results.length, "All {n} result for {marker} are removed from every report. This can't be undone.", "All {n} results for {marker} are removed from every report. This can't be undone.", { marker: marker.name })
+              : deleting
+                ? t("{value} {unit} from {date}. This can't be undone.", { value: deleting.value, unit: deleting.unit, date: fmtDate(deleting.date) })
+                : ""
+          }
+          confirmLabel={t("Delete")}
+          onCancel={() => {
+            setDeleting(null);
+            setError(null);
+          }}
+          onConfirm={() => void doDelete()}
+        />
+    </>
+  );
+
+  // Website viewport v1 (WC-HE.9.5): from 1024px wide the marker page as a web page (MarkerPage.web.tsx), with these data, sheets and popups.
+  if (web)
+    return (
+      <MarkerPageWeb
+        marker={marker}
+        results={results}
+        shown={shown}
+        latest={latest}
+        status={status}
+        isThreshold={isThreshold}
+        remark={remark}
+        flags={
+          <>
+            {flag && <CheckFlagNote flag={flag} />}
+            {pFlag && (
+              <FlagNote tone={pFlag.level} label={pFlag.label}>
+                <p className="mt-0.5 text-[13px] leading-[20px] text-charcoal-soft">{pFlag.text}</p>
+              </FlagNote>
+            )}
+          </>
+        }
+        stats={[
+          { value: avg ?? "–", label: t("Average"), color: statusColor(avg === null ? null : statOf(avg), dark) },
+          { value: highest?.value ?? "–", label: t("Highest"), color: statusColor(highest ? statOf(highest.value) : null, dark) },
+          { value: change === null ? "–" : change === 0 ? "0" : `${change < 0 ? "↓" : "↑"} ${Math.abs(change)}`, label: t("Change vs last"), color: "#241F1B" },
+        ]}
+        span={span}
+        spanDays={SPAN_DAYS[span]}
+        spans={(["6M", "1Y", "All"] as Span[]).map((s) => ({ key: s, label: t(SPAN_LABEL[s]) }))}
+        onSpan={(s) => {
+          setSpan(s);
+          setSelected(null);
+        }}
+        today={today}
+        menu={menu}
+        onAdd={() => setForm({ result: null })}
+        onEdit={(r) => setForm({ result: r })}
+        onDelete={(r) => setDeleting(r)}
+        overlays={overlays}
+      />
+    );
+
   return (
     <div style={{ paddingBottom: 176 }}>
-      <RecordsHeader
-        title={marker.name}
-        onBack={onBack}
-        menuWidth={onShareWithProfessional ? 220 : undefined}
-        menu={[
-          ...(onShare ? [{ key: "share", label: t("Share"), icon: <Share2 size={15} />, onSelect: onShare }] : []),
-          ...(onShareWithProfessional
-            ? [{ key: "share-pro", label: t("Share with a professional"), icon: <UserRoundCheck size={15} />, onSelect: onShareWithProfessional }]
-            : []),
-          { key: "delete", label: t("Delete marker"), icon: <Trash2 size={15} />, destructive: true, onSelect: () => setDeleting("marker") },
-        ]}
-      />
+      <RecordsHeader title={marker.name} onBack={onBack} menuWidth={onShareWithProfessional ? 220 : undefined} menu={menu} />
       {/* Hero */}
       <section style={{ borderRadius: 20, padding: "18px 16px 16px", background: dark ? "rgb(var(--c-primary) / 0.14)" : "rgb(var(--th-aea1dc) / 0.14)" }}>
         <div className="flex items-start justify-between" style={{ gap: 6 }}>
@@ -329,35 +402,7 @@ export const MarkerPage: React.FC<{
 
       <PinnedCta primary={{ label: t("Add result"), icon: <Plus size={16} />, onClick: () => setForm({ result: null }), style: PINNED_FILL }} />
 
-      <ResultFormSheet
-        open={form !== null}
-        onClose={() => setForm(null)}
-        result={form?.result ?? null}
-        allResults={allResults}
-        fixed={form && !form.result ? { marker: entry, name: marker.name, unit: latest.unit } : null}
-        catalogue={catalogue}
-        onSaved={onToast}
-      />
-      <ConfirmPopup
-        open={deleting !== null}
-        geometry="ours"
-        busy={busy}
-        error={error}
-        title={deleting === "marker" ? t("Delete {name}?", { name: marker.name }) : t("Delete this result?")}
-        body={
-          deleting === "marker"
-            ? tn(results.length, "All {n} result for {marker} are removed from every report. This can't be undone.", "All {n} results for {marker} are removed from every report. This can't be undone.", { marker: marker.name })
-            : deleting
-              ? t("{value} {unit} from {date}. This can't be undone.", { value: deleting.value, unit: deleting.unit, date: fmtDate(deleting.date) })
-              : ""
-        }
-        confirmLabel={t("Delete")}
-        onCancel={() => {
-          setDeleting(null);
-          setError(null);
-        }}
-        onConfirm={() => void doDelete()}
-      />
+      {overlays}
     </div>
   );
 };

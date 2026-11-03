@@ -94,10 +94,3 @@ export const RecordsWeb: React.FC<{
     </div>
   );
 };
-
-/** A page part with no web layout yet: its mobile screen in a centred 430 column, as the shell's MobileFrame draws it. */
-export const WebMobileColumn: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-  <div data-web-frame="mobile" className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
-    {children}
-  </div>
-);
