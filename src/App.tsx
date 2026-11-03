@@ -342,6 +342,22 @@ function ReturnedAuthErrorRoute() {
   return null;
 }
 
+// Parent paths with no page of their own (a typed or trimmed address, or a
+// back button with no history, which goes to the path minus its last
+// segment) used to fall through to the "/app/*" catch-all and land on the
+// marketing home. Each now goes to the page it means.
+function RedirectUp() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={{ pathname: pathname.replace(/\/[^/]+\/?$/, ""), search }} replace />;
+}
+
+function CoursesTabRedirect() {
+  const { search } = useLocation();
+  const q = new URLSearchParams(search);
+  q.set("tab", "courses");
+  return <Navigate to={{ pathname: "/app/forum", search: "?" + q.toString() }} replace />;
+}
+
 function AppRoutes() {
   return (
     <>
@@ -578,6 +594,13 @@ function AppRoutes() {
         <Route path="/app/forum/courses/certificates/:certificateId" element={<CertificatePage />} />
         <Route path="/app/forum/courses/:courseId" element={<CoursePage />} />
         <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
+        {/* Parents with no page of their own (see RedirectUp). */}
+        <Route path="/app/forum/courses" element={<CoursesTabRedirect />} />
+        <Route path="/app/forum/courses/:courseId/lessons" element={<RedirectUp />} />
+        <Route path="/app/forum/post" element={<Navigate to="/app/forum" replace />} />
+        <Route path="/app/business" element={<Navigate to="/app" replace />} />
+        <Route path="/app/calls" element={<Navigate to="/app/messages" replace />} />
+        <Route path="/app/settings/help" element={<Navigate to="/app/settings" replace />} />
         <Route path="/app/settings" element={<Settings />} />
         {/* MO1.8 sub-screens, pages since batch C (they were sheets). */}
         <Route path="/app/settings/devices" element={<Settings />} />
