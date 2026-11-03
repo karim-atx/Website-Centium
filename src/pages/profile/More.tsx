@@ -131,7 +131,7 @@ function PersonalMore() {
                 <span className="text-th-32544d dark:text-th-d5eae5" style={{ fontSize: textPx(38), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
                   {t("Mind")}
                 </span>
-                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5 rtl:-scale-x-100" />
+                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-th-32544d dark:text-th-d5eae5" />
               </span>
               <span className="block text-th-869595 dark:text-th-a5bdb9" style={{ marginTop: 12, maxWidth: 160, fontSize: textPx(17), fontWeight: 500, lineHeight: linePx(22) }}>
                 {t("Habits, journal & meditation")}
@@ -152,7 +152,7 @@ function PersonalMore() {
                 </span>
                 <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 10, gap: 2, fontSize: textPx(12.5), fontWeight: 700, lineHeight: linePx(16) }}>
                   {t(tile.label)}
-                  <ChevronRight size={12} strokeWidth={2.6} className="shrink-0 rtl:-scale-x-100" />
+                  <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
                 </span>
                 <span className="text-th-8a9796 dark:text-th-9cb0ad" style={{ marginTop: 2, fontSize: textPx(10), lineHeight: linePx(14) }}>
                   {t(tile.desc!)}
@@ -196,7 +196,7 @@ function PersonalMore() {
                   back for every account, the client's MO1 rows included
                   (decision 23 item 307's 18 tall primary pill). */}
               {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
-              <ChevronRight size={14} className="text-th-9a94b3 rtl:-scale-x-100" />
+              <ChevronRight size={14} className="text-th-9a94b3" />
             </span>
           </button>
         ))}
@@ -224,7 +224,7 @@ function PersonalMore() {
             <p className="text-[10px] text-white/60">{t("AI logging, deeper insights & rewards")}</p>
           </div>
         </div>
-        <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0 rtl:-scale-x-100" />
+        <ChevronRight size={14} style={{ color: "rgb(var(--thi-c8bfe9))" }} className="shrink-0" />
       </button>
       {/* Round G1: with the Premium switch on and no Premium yet, the card is
           followed by "Buy in the Centium app" (never in recovery-sensitive

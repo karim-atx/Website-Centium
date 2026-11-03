@@ -72,7 +72,7 @@ export default function CarePlan() {
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
         >
-          <ChevronLeft size={18} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: tc.chS }} aria-hidden />
+          <ChevronLeft size={18} strokeWidth={2} style={{ color: tc.chS }} aria-hidden />
         </button>
         <div className="min-w-0 flex-1" style={{ paddingTop: 2 }}>
           <h1 style={{ fontSize: textPx(19), lineHeight: linePx(28.5), fontWeight: 700, letterSpacing: "-0.03em", color: INK }}>{t("Your care plan")}</h1>

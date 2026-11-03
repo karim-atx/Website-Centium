@@ -400,7 +400,7 @@ export function OpeningCard({ o, justPosted, onOpen, menu }: { o: Opening; justP
       {menu ? <div style={{ position: "absolute", top: 8, insetInlineEnd: 8 }}>{menu}</div> : null}
       <div aria-hidden style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 16px", borderTop: `0.5px solid ${m.div}`, position: "relative", pointerEvents: "none" }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: textPx(12), fontWeight: 700, color: footInk }}>{foot.text}</span>
-        <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden style={isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE} />
+        <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden style={NO_ICON_SCALE} />
       </div>
     </div>
   );

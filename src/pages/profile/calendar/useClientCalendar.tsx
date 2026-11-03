@@ -854,12 +854,12 @@ export function useClientCalendar() {
   const headerCard = (label: string, onPrev: () => void, onNext: () => void, prevLabel: string, nextLabel: string) => (
     <div className="flex items-center gap-2 rounded-2xl h-10 px-3" style={{ background: dark ? "rgb(var(--th-2b2c3a))" : "rgb(var(--th-f6f4fe))" }}>
       <button onClick={onPrev} aria-label={prevLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
-        <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+        <ChevronLeft size={16} strokeWidth={2.2} />
       </button>
       <p className="flex-1 min-w-0 text-center text-[15px] leading-[22.5px] font-semibold text-charcoal truncate">{label}</p>
       {jump.show && <JumpToToday onClick={jump.jump} />}
       <button onClick={onNext} aria-label={nextLabel} className="tap w-[26px] h-[26px] flex items-center justify-center text-th-5b3fe4 dark:text-th-b7abde shrink-0">
-        <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+        <ChevronRight size={16} strokeWidth={2.2} />
       </button>
     </div>
   );

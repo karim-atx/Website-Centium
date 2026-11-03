@@ -329,7 +329,7 @@ export const SharingYourWinsRow: React.FC<{ me: string | null; connectedCount: n
           <span className="block text-[15px] font-semibold text-charcoal">{t("Sharing your wins")}</span>
           {setting && <span className="block text-[11.5px] leading-tight text-charcoal-faint">{t(WIN_SHARING_LABEL[setting])}</span>}
         </span>
-        <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+        <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
       </button>
       <SharingYourWinsSheet open={open} onClose={() => setOpen(false)} me={me} onSettingChange={setSetting} />
     </>

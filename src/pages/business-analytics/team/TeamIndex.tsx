@@ -265,7 +265,7 @@ export function TeamIndex({
                     : [roleLabel(cur.person?.role ?? "staff"), ...types, `${tn(stats?.sessions ?? 0, "{n} class", "{n} classes")} ${inRangePhrase(range)}`].join(" · ")}
                 </span>
               </span>
-              <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
+              <ChevronRight size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
             </button>
           ))}
         {team.requests > 0 && <RequestsRow n={team.requests} onClick={onRequests} />}
@@ -288,7 +288,7 @@ const RequestsRow: React.FC<{ n: number; onClick: () => void; standalone?: boole
     </span>
     <span className="flex items-center gap-[6px]">
       <span className="an5-pill">{n}</span>
-      <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
+      <ChevronRight size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
     </span>
   </button>
 );

@@ -331,7 +331,7 @@ export default function BusinessDashboard() {
               title: t("Venue console"),
               detail: t("Members, class rosters, opening hours, logo and cover"),
               onClick: () => go("/app/business/venue"),
-              trailing: <ChevronRight size={16} color={c.faint} aria-hidden className="rtl:-scale-x-100" />,
+              trailing: <ChevronRight size={16} color={c.faint} aria-hidden />,
             },
           ]}
         />

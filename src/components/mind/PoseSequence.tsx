@@ -232,7 +232,7 @@ export const PoseSequence: React.FC<{ poses: Pose[]; kind: "stretching" | "yoga"
               {nextRule}
               <span className={nextLabelClass}>{t("Next")}</span>
               <span className={nextNameClass}>{next ? next.name : tx("Finish", "button")}</span>
-              <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           </div>
         )}

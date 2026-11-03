@@ -8,7 +8,6 @@ import { FOLDER_FAMILIES, type FolderFamily } from "../../data/folderColors";
 import { pastProgrammesLine } from "../../services/routines/programmeLogic";
 import { textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
-import { useIsWeb } from "../../components/web/useWebLayout";
 import type { CoachProgrammes } from "./useCoachProgrammes";
 
 /**
@@ -37,8 +36,6 @@ export const CoachSection: React.FC<{
   onPast: () => void;
   renderRow: (r: Routine, family: FolderFamily, meta: string, today: boolean) => React.ReactNode;
 }> = ({ coach, dark, capsInk, shade, collapsed, onToggle, seen, onSeen, onMenu, onPast, renderRow }) => {
-  // Website viewport v1: index.css already mirrors the chevron in Arabic on web.
-  const web = useIsWeb();
   const { status, groups, past, coaches, provisional } = coach;
   // Nothing from a coach, now or before: the section does not exist.
   if (status === "ok" && groups.length === 0 && past.length === 0) return null;
@@ -186,7 +183,7 @@ export const CoachSection: React.FC<{
               {pastProgrammesLine(past.slice(0, 2))}
             </span>
           </span>
-          <ChevronRight size={15} strokeWidth={2} className={web ? "shrink-0" : "shrink-0 rtl:-scale-x-100"} style={{ color: coachColor("faint", dark) }} aria-hidden />
+          <ChevronRight size={15} strokeWidth={2} className="shrink-0" style={{ color: coachColor("faint", dark) }} aria-hidden />
         </button>
       )}
     </section>

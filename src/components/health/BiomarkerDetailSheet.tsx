@@ -227,7 +227,7 @@ export const BiomarkerDetailSheet: React.FC<{
             className="tap w-full flex items-center justify-center min-h-[44px]"
             style={{ marginTop: 4, gap: 3, fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}
           >
-            {t("View full history")} <ChevronRight size={15} className="rtl:-scale-x-100" aria-hidden />
+            {t("View full history")} <ChevronRight size={15} aria-hidden />
           </button>
         )}
         {/* Release 3 CU18 v2 (r28.js bio28: 11.5 #8C8378, centred). */}

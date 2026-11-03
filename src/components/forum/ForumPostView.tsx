@@ -271,7 +271,7 @@ export function ForumPostView({
     >
       <span className="flex items-center gap-2.5">
         <button type="button" onClick={back} aria-label={t("Back")} className="tap w-11 h-11 flex items-center justify-center">
-          <ArrowLeft size={19} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: fv("text") }} />
+          <ArrowLeft size={19} strokeWidth={2} style={{ color: fv("text") }} />
         </button>
         <span className="text-[17px] font-extrabold">{t("Post")}</span>
       </span>

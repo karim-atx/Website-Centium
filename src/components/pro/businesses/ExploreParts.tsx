@@ -55,7 +55,7 @@ export const AffiliationCard: React.FC<{ name: string; onOpen: () => void }> = (
             {name}
           </span>
         </span>
-        <ChevronRight size={16} strokeWidth={2} style={{ color: sub }} className="rtl:-scale-x-100" aria-hidden />
+        <ChevronRight size={16} strokeWidth={2} style={{ color: sub }} aria-hidden />
       </span>
       <span className="block" style={{ fontSize: textPx(12), color: sub, marginTop: 8, lineHeight: 1.45 }}>
         {t("You can still browse and reach out to other businesses below.")}

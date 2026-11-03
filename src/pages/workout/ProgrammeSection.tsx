@@ -365,7 +365,7 @@ export const ProgrammeSection: React.FC<{
                 style={{ marginTop: 10, minHeight: 40, fontSize: textPx(12.5), fontWeight: 700, color: dark ? "#C3B3FB" : "rgb(var(--thi-7d6bb5))" }}
               >
                 {t("Week by week")}
-                <ChevronRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+                <ChevronRight size={15} strokeWidth={2} aria-hidden />
               </button>
             </div>
           );

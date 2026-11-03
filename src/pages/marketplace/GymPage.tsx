@@ -989,7 +989,7 @@ function GymHero({ onBack, photos, m }: { onBack: () => void; photos: string[]; 
           cursor: "pointer",
         }}
       >
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden />
       </button>
     </div>
   );

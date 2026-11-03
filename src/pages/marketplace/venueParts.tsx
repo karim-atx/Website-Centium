@@ -194,7 +194,7 @@ export function CompactHeader({
           tabIndex={shown ? 0 : -1}
           className="tap relative w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-charcoal-soft before:content-[''] before:absolute before:-inset-1"
         >
-          <ChevronLeft size={20} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={20} strokeWidth={2} aria-hidden />
         </button>
         <p className="m-0 min-w-0 flex-1 truncate text-[17px] leading-[36px] font-bold tracking-[-0.3px] text-charcoal">{title}</p>
       </div>

@@ -76,11 +76,11 @@ export function RangeCalendar({
       <style>{FOCUS_CSS}</style>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <button type="button" aria-label={t("Previous month")} aria-disabled={atCurrent} onClick={() => !atCurrent && nav(-1)} className="tap market-focus" style={disc(atCurrent)}>
-          <ChevronLeft size={16} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={16} aria-hidden />
         </button>
         <p style={{ fontSize: px(15), fontWeight: 700, color: c.ink }} aria-live="polite">{monthTitle(month.y, month.m)}</p>
         <button type="button" aria-label={t("Next month")} onClick={() => nav(1)} className="tap market-focus" style={disc(false)}>
-          <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={16} aria-hidden />
         </button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, minmax(0,1fr))", gap: 4, marginBottom: 4 }} aria-hidden>

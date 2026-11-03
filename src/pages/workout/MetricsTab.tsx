@@ -380,7 +380,7 @@ export default function MetricsTab() {
               className="tap flex items-center"
               style={{ color: c("teal"), fontSize: textPx(12.5), fontWeight: 600, gap: 3 }}
             >
-              {t("All {n}", { n: lifts.length })} <ChevronRight size={13} className="rtl:-scale-x-100" />
+              {t("All {n}", { n: lifts.length })} <ChevronRight size={13} />
             </button>
           )
         }
@@ -461,7 +461,7 @@ export default function MetricsTab() {
                 className="tap flex items-center"
                 style={{ color: c("purple"), fontSize: textPx(12), fontWeight: 700, gap: 3 }}
               >
-                {t("Full breakdown")} <ChevronRight size={13} className="rtl:-scale-x-100" />
+                {t("Full breakdown")} <ChevronRight size={13} />
               </button>
             </div>
           </>

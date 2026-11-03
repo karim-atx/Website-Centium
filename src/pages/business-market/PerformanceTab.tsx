@@ -200,7 +200,7 @@ function HalfCard({ m, title, value, sub, onAll }: { m: MarketPalette; title: st
         style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 2, minHeight: 44, borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontFamily: "inherit", fontSize: px(12), fontWeight: 800, color: m.pdark, cursor: "pointer" }}
       >
         {t("See all")}
-        <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+        <ChevronRight size={14} aria-hidden />
       </button>
     </div>
   );

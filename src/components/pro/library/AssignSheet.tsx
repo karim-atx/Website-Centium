@@ -223,7 +223,7 @@ export const AssignSheet: React.FC<{
                     <p className="text-[12.5px] font-semibold text-charcoal">{d.name}</p>
                     <p className="text-[11px] text-charcoal-soft flex items-center gap-1.5 flex-wrap">
                       {d.current ? <span>{t("they have {value}", { value: d.current })}</span> : <span className="text-charcoal-faint">{t("not in their routine")}</span>}
-                      <ArrowRight size={11} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+                      <ArrowRight size={11} className="text-charcoal-faint shrink-0" />
                       {d.proposed ? <span>{t("template has {value}", { value: d.proposed })}</span> : <span className="text-charcoal-faint">{t("would be removed")}</span>}
                     </p>
                   </div>

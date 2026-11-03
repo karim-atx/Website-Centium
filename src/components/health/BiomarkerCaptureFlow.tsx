@@ -337,7 +337,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
           style={{ width: 36, height: 36 }}
         >
-          <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+          <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
         </button>
         <h1 style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5, color: INK }}>{title}</h1>
       </div>

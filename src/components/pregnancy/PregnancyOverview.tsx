@@ -116,7 +116,7 @@ export const PregnancyOverview: React.FC<{
             >
               <Icon size={15} style={{ color: PREGNANCY_COLOR }} className="shrink-0" />
               <span className="flex-1 text-[12.5px] font-semibold text-charcoal">{t(label)}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
             </button>
           ))}
           <p className="mt-1.5 text-[10px] font-semibold text-charcoal-faint">{t(G.PROVIDER_FIRST)}</p>

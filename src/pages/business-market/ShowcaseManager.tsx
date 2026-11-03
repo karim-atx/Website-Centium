@@ -523,7 +523,7 @@ function ItemList({
                 </span>
                 )}
                 {chip ? <span style={{ fontSize: px(web ? 11 : 10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, flexShrink: 0, lineHeight: web ? lh(16) : "normal" }}>{chipText}</span> : null}
-                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} style={{ flexShrink: 0 }} />
+                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
               </button>
             </div>
           );

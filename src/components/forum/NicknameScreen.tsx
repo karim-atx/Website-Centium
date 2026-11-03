@@ -89,7 +89,7 @@ export function NicknameScreen({
           aria-label={t("Back")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft"
         >
-          <ChevronLeft size={18} className="rtl:-scale-x-100" />
+          <ChevronLeft size={18} />
         </button>
         {/* Decision 23 (item 12): the frame's #F0EDF9 / #7D6BB5 (primary.tint
             / primary.deep, which follow the theme); dark takes the same

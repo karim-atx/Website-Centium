@@ -229,7 +229,7 @@ export const LibraryHome: React.FC<{
                 {rMatches.slice(0, 5).map((r, i) => (
                   <button key={r.id} type="button" onClick={() => onArea("recipes")} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < Math.min(5, rMatches.length) - 1 ? `1px solid ${INK.b06}` : "none" }}>
                     <span className="flex-1 min-w-0" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{r.title}</span>
-                    <ChevronRight size={14} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chF }} />
+                    <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
                   </button>
                 ))}
               </div>

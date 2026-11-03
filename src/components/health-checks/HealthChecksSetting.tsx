@@ -102,7 +102,7 @@ export function HealthChecksSetting() {
           className="tap mt-3 flex items-center gap-1 text-xs font-semibold text-primary-dark"
         >
           {COPY.planTitle}
-          <ChevronRight size={14} className="rtl:-scale-x-100" />
+          <ChevronRight size={14} />
         </button>
       )}
     </Card>

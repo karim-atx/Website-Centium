@@ -27,7 +27,7 @@ import { t } from "../../../i18n/core";
 export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => void }> = ({ title, sub, onBack }) => (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 20 }}>
     <button type="button" onClick={onBack} aria-label={t("Back")} className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginTop: 2 }}>
-      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} className="rtl:-scale-x-100" aria-hidden />
+      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
     </button>
     <div className="min-w-0">
       <h1 style={{ fontSize: textPx(27), fontWeight: 700, letterSpacing: "-0.022em", lineHeight: 1.5, color: INK.ch }}>{title}</h1>
@@ -40,7 +40,7 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
 export const EyebrowHead: React.FC<{ eyebrow: string; title: string; onBack: () => void }> = ({ eyebrow, title, onBack }) => (
   <div className="flex items-start" style={{ gap: 10, marginBottom: 13 }}>
     <button type="button" onClick={onBack} aria-label={t("Back")} className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} className="rtl:-scale-x-100" aria-hidden />
+      <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
     </button>
     <div className="min-w-0">
       <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{eyebrow}</p>
@@ -98,7 +98,7 @@ export const BizCard: React.FC<{
             </span>
             {facts && <span className="block" style={{ fontSize: textPx(12), color: INK.chF }}>{typeLine(facts)}</span>}
           </span>
-          <ChevronRight size={16} strokeWidth={2} style={{ color: INK.chF }} className="rtl:-scale-x-100" aria-hidden />
+          <ChevronRight size={16} strokeWidth={2} style={{ color: INK.chF }} aria-hidden />
         </span>
         {lines.length > 0 && (
           <span className="flex flex-col" style={{ gap: 4, marginTop: 10, fontSize: textPx(12), color: INK.chS, lineHeight: linePx(17) }}>
@@ -146,7 +146,7 @@ export const ConsoleLinks: React.FC<{ businessId: string; businessName: string; 
             {t(desc)}
           </span>
         </span>
-        <ChevronRight size={16} aria-hidden style={{ color: INK.chF }} className="shrink-0 rtl:-scale-x-100" />
+        <ChevronRight size={16} aria-hidden style={{ color: INK.chF }} className="shrink-0" />
       </button>
     </li>
   );
@@ -273,7 +273,7 @@ export const JoinById: React.FC<{ hint: string; onSent: () => void; onToast: (m:
           style={{ fontSize: textPx(14), color: INK.ch, letterSpacing: code ? "0.08em" : undefined, fontWeight: code ? 700 : 400 }}
         />
         <button type="button" onClick={() => void send()} disabled={sending || code.length === 0} aria-label={t("Send request")} className="tap flex items-center justify-center shrink-0 disabled:opacity-40" style={{ width: 36, height: 36 }}>
-          <ArrowRight size={16} strokeWidth={1.75} style={{ color: INK.chF }} className="rtl:-scale-x-100" aria-hidden />
+          <ArrowRight size={16} strokeWidth={1.75} style={{ color: INK.chF }} aria-hidden />
         </button>
       </div>
       {error ? (

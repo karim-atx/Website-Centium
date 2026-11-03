@@ -72,7 +72,7 @@ const HeaderRow: React.FC<{ title: string; onBack: () => void; menu?: React.Reac
         className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
         style={{ width: 36, height: 36 }}
       >
-        <ChevronLeft size={20} className="text-charcoal-soft rtl:-scale-x-100" aria-hidden />
+        <ChevronLeft size={20} className="text-charcoal-soft" aria-hidden />
       </button>
       <h1 className="flex-1 min-w-0 text-charcoal line-clamp-2" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5 }}>
         {title}
@@ -141,7 +141,7 @@ export function GeneralPlan() {
       <span className="text-charcoal" style={{ fontSize: textPx(13.5), lineHeight: "20.3px", fontWeight: 600 }}>
         {t("Set a personal reminder")}
       </span>
-      <ChevronRight size={17} className="absolute text-charcoal-faint rtl:-scale-x-100" style={{ insetInlineEnd: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
+      <ChevronRight size={17} className="absolute text-charcoal-faint" style={{ insetInlineEnd: 14.5, top: "50%", marginTop: -8.5 }} aria-hidden />
     </button>
   );
 

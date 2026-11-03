@@ -153,7 +153,7 @@ export const BrowseProgramsSheet: React.FC<{
             className="tap flex items-center gap-1 text-xs font-semibold"
             style={{ color: tone.deep }}
           >
-            <ChevronLeft size={14} className="rtl:-scale-x-100" /> {t("All programs")}
+            <ChevronLeft size={14} /> {t("All programs")}
           </button>
 
           {/* WO21: description and meta on a white card (exercise-row width and radius); the dark card in dark mode. */}

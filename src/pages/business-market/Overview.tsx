@@ -261,7 +261,7 @@ function GymRow({ title, sub, onOpen, badge }: { title: string; sub: string; onO
         {sub ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub}</span> : null}
       </span>
       {badge}
-      <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
+      <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
     </button>
   );
 }

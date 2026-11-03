@@ -155,7 +155,7 @@ function MonitoringPlan() {
           className="tap w-full flex items-center justify-between rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-3.5 mb-4 text-start"
         >
           <span className="text-[13px] font-semibold text-charcoal">{t("Mood check-in")}</span>
-          <ChevronRight size={16} className="text-charcoal-faint rtl:-scale-x-100" />
+          <ChevronRight size={16} className="text-charcoal-faint" />
         </button>
       )}
 
@@ -169,7 +169,7 @@ function MonitoringPlan() {
           <Bell size={16} className="text-primary-dark" />
           {t("Set a personal reminder")}
         </span>
-        <ChevronRight size={16} className="text-charcoal-faint rtl:-scale-x-100" />
+        <ChevronRight size={16} className="text-charcoal-faint" />
       </button>
 
       <CheckInSheet

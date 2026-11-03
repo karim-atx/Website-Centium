@@ -206,7 +206,7 @@ export default function HowToEarnPage() {
           style={{ width: "100%", minHeight: 44, display: "flex", alignItems: "center", gap: 12, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer", textAlign: "start" }}
         >
           <span style={{ flex: 1 }}>{t("All achievements")}</span>
-          <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" style={NO_ICON_SCALE} />
+          <ChevronRight size={15} aria-hidden style={NO_ICON_SCALE} />
         </button>
       </Section>
 

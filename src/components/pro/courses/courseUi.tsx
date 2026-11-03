@@ -41,7 +41,7 @@ export const PageHead: React.FC<{ title: string; sub?: string; onBack: () => voi
       className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']"
       style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}
     >
-      <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
+      <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
     </button>
     <div className="min-w-0" style={{ marginTop: 3 }}>
       <h1 style={{ fontSize: textPx(size), fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1.25, color: INK.ch }}>{title}</h1>

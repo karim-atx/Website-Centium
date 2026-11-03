@@ -355,7 +355,7 @@ export default function SessionPage() {
                   : t("Tap to choose who teaches it")}
             </span>
           </span>
-          <ChevronRight size={16} className="rtl:-scale-x-100" style={{ color: m.faint }} aria-hidden />
+          <ChevronRight size={16} style={{ color: m.faint }} aria-hidden />
         </button>
         {capacityLine && (
           <div style={{ padding: "12px 16px", borderTop: `0.5px solid ${m.div}` }}>

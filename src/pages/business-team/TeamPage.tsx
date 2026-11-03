@@ -262,7 +262,7 @@ export function TeamPage({ data }: { data: TeamData }) {
                     icon={<UserX size={16} strokeWidth={2.1} />}
                     title={p.name}
                     sub={[inviteWhen(p), roleLabel(p.role)].filter(Boolean).join(" · ")}
-                    trailing={<ChevronRight size={16} strokeWidth={2.1} aria-hidden className="rtl:-scale-x-100" />}
+                    trailing={<ChevronRight size={16} strokeWidth={2.1} aria-hidden />}
                   />
                 </button>
               ))}
@@ -409,7 +409,7 @@ function SeatPreview({ person, sessions, today, onProfile }: { person: TeamPerso
         ))}
         <button type="button" className="tm-link tm-hit tap" onClick={onProfile}>
           {t("View profile")}
-          <ChevronRight size={14} className="rtl:-scale-x-100" />
+          <ChevronRight size={14} />
         </button>
       </div>
       <button type="button" className="tm-iconbtn soft tap" aria-label={t("Message {name}", { name: person.name })} disabled={busy} onClick={() => void open()}>

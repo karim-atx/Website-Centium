@@ -47,7 +47,7 @@ export const OpsHeader: React.FC<{ kicker: string; title: string; sub?: string |
           className="tap flex items-center justify-center shrink-0 rounded-full text-charcoal-soft"
           style={{ width: 40, height: 40, marginInlineStart: -8 }}
         >
-          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={20} aria-hidden />
         </button>
       )}
       <div className="flex-1 min-w-0">

@@ -295,7 +295,7 @@ export function ReviewsSheet({
             {sorted.length > shown && (
               <button type="button" className="an5-more tap" style={{ marginTop: 0 }} onClick={() => setShown((n) => n + PAGE)}>
                 {t("Show more reviews")}
-                <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
+                <ChevronRight size={14} aria-hidden />
               </button>
             )}
           </div>

@@ -44,7 +44,7 @@ export function CentiumProgrammesEntry() {
               <span className="min-w-0" style={{ fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", overflowWrap: "anywhere" }}>
                 {p.title}
               </span>
-              <ChevronRight size={16} aria-hidden className="shrink-0 rtl:-scale-x-100" style={{ color: coachColor("faint", dark) }} />
+              <ChevronRight size={16} aria-hidden className="shrink-0" style={{ color: coachColor("faint", dark) }} />
             </span>
             <span className="block" style={{ marginTop: 4, fontSize: textPx(12), color: coachColor("faint", dark) }}>
               {programmeProgressText(p.done, p.sessions)}
@@ -71,7 +71,7 @@ export function CentiumProgrammesEntry() {
           style={{ borderRadius: 16, padding: "12px 14px", minHeight: 48, fontSize: textPx(13), fontWeight: 700, color: dark ? "#C3B3FB" : "rgb(var(--thi-7d6bb5))" }}
         >
           {mine.length ? t("See all Centium programmes") : t("Browse Centium programmes")}
-          <ChevronRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={15} strokeWidth={2} aria-hidden />
         </button>
       </div>
     </section>

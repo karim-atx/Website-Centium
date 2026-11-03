@@ -20,7 +20,7 @@ export const TeamScope = ({ children, detail }: { children: ReactNode; detail?: 
 export const BackRow = ({ label, onBack }: { label: string; onBack: () => void }) => (
   <div className="tm-backrow">
     <button type="button" className="tm-back tap" aria-label={t("Back")} onClick={onBack}>
-      <ChevronLeft size={22} strokeWidth={2.2} className="rtl:-scale-x-100" />
+      <ChevronLeft size={22} strokeWidth={2.2} />
     </button>
     <p>{label}</p>
   </div>

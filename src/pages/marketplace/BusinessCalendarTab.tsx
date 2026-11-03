@@ -238,13 +238,13 @@ export default function BusinessCalendarTab() {
         <>
           <div className="flex items-center justify-between mb-3">
             <button onClick={() => goMonth(-1)} aria-label={t("Previous month")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} className="rtl:-scale-x-100" />
+              <ChevronLeft size={16} />
             </button>
             <p className="font-display font-semibold text-charcoal">
               {monthNames[cursor.month]} {cursor.year}
             </p>
             <button onClick={() => goMonth(1)} aria-label={t("Next month")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} className="rtl:-scale-x-100" />
+              <ChevronRight size={16} />
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
@@ -293,11 +293,11 @@ export default function BusinessCalendarTab() {
             <>
               <div className="flex items-center justify-between mb-4">
                 <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))} aria-label={t("Previous week")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronLeft size={16} className="rtl:-scale-x-100" />
+                  <ChevronLeft size={16} />
                 </button>
                 <p className="font-display font-semibold text-charcoal">{rangeLabel}</p>
                 <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))} aria-label={t("Next week")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-                  <ChevronRight size={16} className="rtl:-scale-x-100" />
+                  <ChevronRight size={16} />
                 </button>
               </div>
               {/* V10 (QA 10.0): "have all the dates from sunday to saturday
@@ -366,11 +366,11 @@ export default function BusinessCalendarTab() {
         <>
           <div className="flex items-center justify-between mb-4">
             <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))} aria-label={t("Previous day")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} className="rtl:-scale-x-100" />
+              <ChevronLeft size={16} />
             </button>
             <p className="font-display font-semibold text-charcoal">{selectedDateLabel}</p>
             <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))} aria-label={t("Next day")} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} className="rtl:-scale-x-100" />
+              <ChevronRight size={16} />
             </button>
           </div>
           <div className="space-y-2.5">

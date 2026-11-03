@@ -69,7 +69,7 @@ function ReviewScreen() {
           onClick={() => setWeek(addDays(week, -7))}
           className="tap flex items-center gap-1 min-h-10 text-[12.5px] font-bold text-th-6b41ef dark:text-primary-dark"
         >
-          <ChevronLeft size={15} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={15} aria-hidden />
           {t("Week before")}
         </button>
         <button
@@ -79,7 +79,7 @@ function ReviewScreen() {
           className="tap flex items-center gap-1 min-h-10 text-[12.5px] font-bold text-th-6b41ef dark:text-primary-dark disabled:opacity-40"
         >
           {t("Week after")}
-          <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={15} aria-hidden />
         </button>
       </div>
       <G3Body

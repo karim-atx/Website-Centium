@@ -24,7 +24,7 @@ export function DashLabel({ c, label, link, onLink, mb }: { c: DashPalette; labe
           style={{ display: "flex", alignItems: "center", gap: 2, fontSize: textPx(11), fontWeight: 700, color: c.pDark, background: "none", border: 0, padding: 0, minHeight: 0, lineHeight: 1.5 }}
         >
           {link}
-          <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={13} aria-hidden />
         </button>
       )}
     </div>

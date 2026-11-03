@@ -33,7 +33,7 @@ export function MealPlannerEntry({ className = "" }: { className?: string }) {
         <span className="block text-[13.5px] font-bold text-charcoal">{t("Meal planner")}</span>
         <span className="block text-[11.5px] text-charcoal-faint">{t("Plan your week and get a grocery list")}</span>
       </span>
-      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
     </button>
   );
 }

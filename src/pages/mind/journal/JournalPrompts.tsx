@@ -56,7 +56,7 @@ export function JournalPrompts({ onWrite, className = "" }: { onWrite: (heading:
           {t("Journal prompts")}
           {!isPremium && <PremiumLabel />}
         </span>
-        <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
+        <ChevronRight size={15} aria-hidden />
       </button>
       {open && (
         <PromptLibrarySheet

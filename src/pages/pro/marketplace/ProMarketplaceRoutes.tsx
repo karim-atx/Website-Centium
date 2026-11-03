@@ -93,7 +93,7 @@ function ProMarketplacePage() {
           className="market-focus hit"
           style={{ width: 36, height: 36, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink2, background: "transparent", border: 0, padding: 0, cursor: "pointer", }}
         >
-          <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={18} strokeWidth={2} aria-hidden />
         </button>
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontSize: textPx(27), fontWeight: 800, letterSpacing: "-0.022em", lineHeight: linePx(34), margin: 0 }}>{t("Marketplace")}</h1>

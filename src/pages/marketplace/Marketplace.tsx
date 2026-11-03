@@ -57,7 +57,7 @@ export default function Marketplace() {
             aria-label={t("Back")}
             className="tap w-9 h-9 mt-0.5 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 -ms-[7px]"
           >
-            <ChevronLeft size={18} className="rtl:-scale-x-100" />
+            <ChevronLeft size={18} />
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="m-0" style={{ fontSize: textPx(27), lineHeight: linePx(40.5), fontWeight: 700, letterSpacing: "-0.6px" }}>

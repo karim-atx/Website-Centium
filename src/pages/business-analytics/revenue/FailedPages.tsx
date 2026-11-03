@@ -120,7 +120,7 @@ export const FailedHalf: React.FC = () => {
         }}
       >
         {failed.length ? t("See all {n}", { n: failed.length }) : t("All clear")}
-        {failed.length > 0 && <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />}
+        {failed.length > 0 && <ChevronRight size={14} aria-hidden />}
       </button>
     </div>
   );

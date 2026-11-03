@@ -226,7 +226,7 @@ export const DetailHead: React.FC<{ eyebrow?: string; title: string; onBack: () 
   <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
     <div className="flex items-start min-w-0" style={{ gap: 10 }}>
       <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -6, marginTop: 2 }}>
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
       </button>
       <div className="min-w-0">
         {eyebrow && <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{eyebrow}</p>}

@@ -83,7 +83,7 @@ function OperationsLanding() {
                 <p className="text-xs text-charcoal-faint">{item.desc}</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-charcoal-faint rtl:-scale-x-100" />
+            <ChevronRight size={16} className="text-charcoal-faint" />
           </Card>
         ))}
       </div>

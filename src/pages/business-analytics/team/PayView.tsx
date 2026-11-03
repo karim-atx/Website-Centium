@@ -168,13 +168,13 @@ export function PayView({ state, vocab, onBack, onCard }: { state: TeamState; vo
                 <span className="an5-amt" style={{ fontSize: 13 }}>
                   {money(r.pay)}
                 </span>
-                <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
+                <ChevronRight size={15} style={{ color: "var(--an-tert)" }} aria-hidden />
               </button>
             ))}
             {rows.length > 3 && !all && (
               <button type="button" className="an5-more tap" onClick={() => setAll(true)}>
                 {t("See all {n}", { n: rows.length })}
-                <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
+                <ChevronRight size={14} aria-hidden />
               </button>
             )}
           </>

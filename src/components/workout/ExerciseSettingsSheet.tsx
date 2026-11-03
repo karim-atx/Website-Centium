@@ -229,7 +229,7 @@ export const ExerciseSettingsSheet: React.FC<{
               className="tap flex-1 flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-start min-w-0"
             >
               <span className="font-display font-semibold text-charcoal truncate">{exercise.name}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
             </button>
             <button
               onClick={onClose}
@@ -539,7 +539,7 @@ export const ExerciseSettingsSheet: React.FC<{
                     <span className="block text-sm font-semibold text-charcoal">{t("Targets per client")}</span>
                     {pro.targets.summary && <span className="block text-[12px] text-charcoal-faint truncate">{pro.targets.summary}</span>}
                   </span>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+                  <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
                 </button>
               )}
             </div>

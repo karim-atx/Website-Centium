@@ -132,7 +132,7 @@ export const OneRepMaxesSheet: React.FC<{
                       </span>
                       <Change value={lift.change30} dark={dark} />
                     </span>
-                    <ChevronRight size={14} className="flex-none rtl:-scale-x-100" style={{ color: ormColor("faint", dark) }} />
+                    <ChevronRight size={14} className="flex-none" style={{ color: ormColor("faint", dark) }} />
                   </button>
                 </li>
               ))}

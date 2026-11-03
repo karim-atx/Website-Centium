@@ -249,7 +249,7 @@ export function FixSheet({
             <span className="an5-choice-t block">{t("Give {class} to someone else", { class: p.b.title })}</span>
             <span className="an5-choice-s block">{t("Pick a free instructor")}</span>
           </span>
-          <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
+          <ChevronRight size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
         </button>
         <button type="button" className="an5-choice tap" disabled={!online} onClick={() => setStep("time")}>
           <span className="an5-choice-tile">
@@ -259,7 +259,7 @@ export function FixSheet({
             <span className="an5-choice-t block">{t("Move {class}", { class: p.b.title })}</span>
             <span className="an5-choice-s block">{t("Change its start and end time")}</span>
           </span>
-          <ChevronRight className="rtl:-scale-x-100" size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
+          <ChevronRight size={15} style={{ color: "var(--an-faint)" }} aria-hidden />
         </button>
       </div>
       {!online && (
