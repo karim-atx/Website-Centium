@@ -20,7 +20,9 @@ export { default as BusinessSetupPage } from "./pages/onboarding/business/Busine
 export { default as Home } from "./pages/home/Home";
 export { default as Food } from "./pages/food/Food";
 export { default as NutrientSummaryPage } from "./pages/food/NutrientSummaryPage";
-export { default as Workout } from "./pages/workout/Workout";
+import WorkoutMobile from "./pages/workout/Workout";
+import WorkoutWeb from "./pages/workout/Workout.web";
+export const Workout = withWeb(WorkoutMobile, WorkoutWeb);
 export { default as Health } from "./pages/health/Health";
 export { default as HealthChecks } from "./pages/health/HealthChecks";
 export { default as HealthSources } from "./pages/health/HealthSources";

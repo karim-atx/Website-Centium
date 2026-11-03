@@ -182,7 +182,13 @@ export const WorkoutSessionSheet: React.FC<{
   blocks?: WorkoutBlock[];
   // V10 (QA 10.0): a read-only note from the hired professional.
   coachNote?: string;
-}> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote }) => {
+  /**
+   * Website viewport v1 (WC-WO.1.8, web only): the element the logger docks
+   * into, in place (the Routines right column) instead of covering the
+   * screen. Unset everywhere on mobile, where nothing below changes.
+   */
+  dock?: HTMLElement | null;
+}> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote, dock }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const {
@@ -997,7 +1003,10 @@ export const WorkoutSessionSheet: React.FC<{
     // GLOBAL: the on-screen keyboard covers the bottom of a fixed full-screen
     // view, so the logger ends above it (--kb-inset, published by Layout from
     // visualViewport) — the Finish footer and the list both stay in reach.
-    <div className="fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in" style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
+    <div className={dock ? "absolute inset-0 z-[5] bg-cream flex flex-col" : "fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in"} style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
+      {/* Docked (web): still an open logger to the active-workout bar, which
+          looks for a fixed full-screen layer. */}
+      {dock && <i aria-hidden className="fixed inset-0 hidden" />}
       <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
         {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
         <div
@@ -1510,7 +1519,7 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
       )}
     </div>,
-    document.body
+    dock ?? document.body
   );
 };
 
