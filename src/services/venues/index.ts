@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import { directoryCall, directoryErrorText, type DirRead } from "../directory/eg";
+import { directoryCall, directoryErrorText } from "../directory/eg";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
@@ -15,13 +15,13 @@ import { reviewRefusalLine } from "../safety/model";
 // (Database docs/HANDOVER_API.md, "4a · Venues" and "4b · Memberships,
 // checkout and the pass").
 //
-// VENUES ARE public.gyms. marketplace_venues (the Explore view) carries none
+// VENUES ARE public.gyms. directory_venues (the Explore read) carries none
 // of the 4a columns, so the gym page and the Gyms tab read the table itself.
-// B13: WHICH venues Explore lists is the view's decision, not the table's
+// B13: WHICH venues Explore lists is directory_venues' decision, not the table's
 // RLS: gyms_select_public also shows a member the venue they use (hidden from
 // Explore or not, listed or not) and gyms_select_hidden_insider shows an
 // insider their hidden venue. So fetchVenues() takes the ids (and is_featured)
-// from marketplace_venues and reads only those rows; fetchVenue() (the gym
+// from directory_venues and reads only those rows; fetchVenue() (the gym
 // page) stays on the table, so a member can still open their own venue.
 //
 // PLANS ARE BUSINESS-LEVEL (the doc's "Read this first"): a gym shows its
@@ -71,7 +71,7 @@ export interface Venue {
   amenities: string[];
   /** B13 MK-02: gyms.first_visit (≤300), or null. */
   firstVisit: string | null;
-  /** B13 MK-06: a live featured week (marketplace_venues.is_featured); false on the gym page's own read. */
+  /** B13 MK-06: a live featured week (directory_venues.is_featured); false on the gym page's own read. */
   isFeatured: boolean;
 }
 
@@ -241,21 +241,13 @@ const fail = <T>(error: PostgrestError, fallback: string): Result<T> => ({
 
 /**
  * Every venue Explore lists (MO1.4.2): featured first, then by name. The ids
- * and is_featured come from marketplace_venues (B13: no hidden venue, no
+ * and is_featured come from directory_venues (B13: no hidden venue, no
  * unlisted business's venue, whoever is asking); the rows from public.gyms.
  */
 export async function fetchVenues(): Promise<Result<Venue[]>> {
   type Listed = { venue_id: string; is_featured: boolean | null };
   // Round G2 (EG): the counting function, the gyms only.
-  const listed = await directoryCall<Listed[]>("directory_venues", { p_kind: "gym" }, () =>
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    (supabase as unknown as {
-      from: (v: "marketplace_venues") => { select: (c: string) => { eq: (k: string, v: string) => PromiseLike<DirRead<Listed[]>> } };
-    })
-      .from("marketplace_venues")
-      .select("venue_id, is_featured")
-      .eq("kind", "gym")
-  );
+  const listed = await directoryCall<Listed[]>("directory_venues", { p_kind: "gym" });
   if (listed.error) {
     console.error("[venues] Could not read the listed venues:", listed.error.message);
     const busy = directoryErrorText(listed.error);

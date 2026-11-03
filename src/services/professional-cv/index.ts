@@ -676,48 +676,38 @@ export const EMPTY_PUBLIC_CV: PublicCv = {
   links: [],
 };
 
-export async function fetchPublicCv(professionalId: string): Promise<{ ok: true; cv: PublicCv } | Fail> {
-  const q = <T extends string>(view: T) =>
-    supabase
-      .from(view as "public_professional_links")
-      .select("*")
-      .eq("professional_id", professionalId)
-      .order("position");
+// The rows directory_professional_cv returns, one JSON object per row with
+// the public CV's columns. Every column may be null; rows without the fields
+// a section cannot render without are dropped in fetchPublicCv.
+type S = string | null;
+type B = boolean | null;
+type PublicRow = { id: S; position: number | null };
+type PublicLicenceRow = PublicRow & { name: S; issuing_body: S; issued_month: S; expires_month: S; no_expiry: B; credential_url: S; verified: B; expired: B };
+type PublicExperienceRow = PublicRow & { title: S; organisation: S; location: S; start_month: S; end_month: S; description: S };
+type PublicEducationRow = PublicRow & { institution: S; degree: S; field: S; start_month: S; end_month: S; description: S };
+type PublicLanguageRow = PublicRow & { language: S; proficiency: Enums<"language_proficiency"> | null };
+type PublicAwardRow = PublicRow & { title: S; issuer: S; awarded_month: S; description: S };
+type PublicPublicationRow = PublicRow & { title: S; publisher: S; published_month: S; url: S; description: S };
+type PublicVolunteeringRow = PublicRow & { role: S; organisation: S; start_month: S; end_month: S; description: S };
+type PublicLinkRow = PublicRow & { label: S; url: S };
 
-  // Round G2 (EG): one counting call for the eight sections, each ordered by position.
-  const read = await directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId }, async () => {
-    // EG phase 1 fallback: remove after the Database revokes the views (phase 2)
-    const all = await Promise.all([
-      q("public_professional_licences"),
-      q("public_professional_experience"),
-      q("public_professional_education"),
-      q("public_professional_languages"),
-      q("public_professional_awards"),
-      q("public_professional_publications"),
-      q("public_professional_volunteering"),
-      q("public_professional_links"),
-    ]);
-    const bad = all.find((r) => r.error);
-    if (bad?.error) return { data: null, error: bad.error };
-    const [licences, experience, education, languages, awards, publications, volunteering, links] = all.map((r) => r.data ?? []);
-    return { data: { licences, experience, education, languages, awards, publications, volunteering, links }, error: null };
-  });
+export async function fetchPublicCv(professionalId: string): Promise<{ ok: true; cv: PublicCv } | Fail> {
+  // Round G2 (EG): one counted call for the eight sections, each ordered by position.
+  const read = await directoryCall<unknown>("directory_professional_cv", { p_profile_id: professionalId });
   if (read.error) {
     console.error("[professional-cv] Could not read a public CV:", read.error.message);
     return { ok: false, message: isOffline(read.error) ? OFFLINE_MESSAGE : (directoryErrorText(read.error) ?? tk("Couldn't load their CV.")) };
   }
   const cv = parseDirectoryCv(read.data);
 
-  // Every view column is nullable to the type generator; rows without the
-  // fields a section cannot render without are dropped below.
-  const L = cv.licences as Tables<"public_professional_licences">[];
-  const E = cv.experience as Tables<"public_professional_experience">[];
-  const Ed = cv.education as Tables<"public_professional_education">[];
-  const La = cv.languages as Tables<"public_professional_languages">[];
-  const A = cv.awards as Tables<"public_professional_awards">[];
-  const P = cv.publications as Tables<"public_professional_publications">[];
-  const V = cv.volunteering as Tables<"public_professional_volunteering">[];
-  const Li = cv.links as Tables<"public_professional_links">[];
+  const L = cv.licences as PublicLicenceRow[];
+  const E = cv.experience as PublicExperienceRow[];
+  const Ed = cv.education as PublicEducationRow[];
+  const La = cv.languages as PublicLanguageRow[];
+  const A = cv.awards as PublicAwardRow[];
+  const P = cv.publications as PublicPublicationRow[];
+  const V = cv.volunteering as PublicVolunteeringRow[];
+  const Li = cv.links as PublicLinkRow[];
 
   return {
     ok: true,

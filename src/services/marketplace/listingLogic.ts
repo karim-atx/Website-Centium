@@ -67,8 +67,8 @@ export function parseListingSource(value: string | null | undefined): ListingSou
 
 /**
  * Featured first, the rest in the order they came (a stable partition).
- * marketplace_classes already sorts this way; marketplace_venues does not
- * sort at all, and PostgREST does not promise a view's ORDER BY survives.
+ * directory_classes orders by date and time and directory_venues by name,
+ * so featured first is decided here.
  */
 export function featuredFirst<T>(rows: readonly T[], isFeatured: (r: T) => boolean): T[] {
   return [...rows.filter(isFeatured), ...rows.filter((r) => !isFeatured(r))];

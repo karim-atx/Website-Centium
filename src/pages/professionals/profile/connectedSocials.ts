@@ -8,7 +8,7 @@ import { str } from "../../../services/market/parse";
 // professional_social_handles(p_professional_id) → (website, instagram,
 // facebook, x), to connected clients only: ATX96 when the caller has no
 // ACTIVE professional_clients row with that professional, ATX97 when the
-// caller is under 18. public_professional_directory no longer carries these
+// caller is under 18. directory_professionals no longer carries these
 // columns for anyone. The page still asks only after the live connection
 // check (services/connected-professional `isActiveClientOf`) has answered
 // true; either refusal, or any other failure, shows nothing. Website is

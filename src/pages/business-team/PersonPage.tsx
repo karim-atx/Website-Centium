@@ -34,7 +34,7 @@ import type { TeamData } from "./useTeamData";
 // session; with more than one to come, a session picker first.
 //
 // Specialty and bio (OP1-132 C1, C5) come from what the professional lists
-// publicly (public_professional_directory); an unlisted professional (their
+// publicly (directory_professionals); an unlisted professional (their
 // own choice; since Database #38 joining a team no longer unlists anybody)
 // shows neither. Jobs (C2) come from business_staff_experience (W6L-3), the
 // business's own reader for its accepted staff, so they show either way.

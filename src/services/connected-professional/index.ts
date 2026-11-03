@@ -6,7 +6,7 @@ import { tk } from "../../i18n/core";
 // What a client may read about a professional they have actually hired.
 //
 // SEPARATE FROM services/directory, WHICH IS DISCOVERY. That one reads
-// `public_professional_directory` and answers "who could I hire", which only
+// `directory_professionals` and answers "who could I hire", which only
 // contains professionals with `listed_publicly = true`. This answers "who did
 // I hire", and connection is its own basis for access — a professional who
 // never advertises is still the one this client is sharing health data with.

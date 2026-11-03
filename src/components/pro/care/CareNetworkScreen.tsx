@@ -478,7 +478,7 @@ const DisputeSheet: React.FC<{ referral: Referral | null; onClose: () => void; o
   );
 };
 
-/** Add a colleague: listed professionals by name (public_professional_directory), then request_care_link. */
+/** Add a colleague: listed professionals by name (directory_professionals), then request_care_link. */
 const AddColleagueSheet: React.FC<{ open: boolean; onClose: () => void; known: Set<string>; onAsk: (id: string, name: string | null) => void; busy: string | null }> = ({ open, onClose, known, onAsk, busy }) => {
   const { authUserId } = useApp();
   const [q, setQ] = useState("");

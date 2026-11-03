@@ -5,7 +5,7 @@
 // gyms. Both tables are publicly readable for a listed business
 // (business_profiles_select_public: active; gyms_select_public: not hidden and
 // the business listed). The rest of the showcase reads the live services
-// (marketplace_venues), the business's DB2 offers (services/offers) and its
+// (directory_venues), the business's DB2 offers (services/offers) and its
 // public shelf (fetchPublicShelf below, DB3 public_showcase).
 
 import { supabase } from "../../../../lib/supabase/client";

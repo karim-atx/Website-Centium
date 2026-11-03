@@ -33,11 +33,11 @@ import { t, tk } from "../../i18n/core";
  *   business ID field (request_to_join_business). The legacy single
  *   affiliation (affiliated_business_id, leaveAffiliation) isn't read here any
  *   more (two-phase; the service functions stay).
- * - Businesses: the listed businesses and gyms (marketplace_venues), with
+ * - Businesses: the listed businesses and gyms (directory_venues), with
  *   Ask to join (request_to_join_business_by_id) on businesses I'm not on or
  *   asked already ("Request sent"), and Message on gyms (start_venue_thread).
- * - Classes: the listed classes (marketplace_classes), the shared ClassCard.
- * - Colleagues: listed professionals (public_professional_directory) with my
+ * - Classes: the listed classes (directory_classes), the shared ClassCard.
+ * - Colleagues: listed professionals (directory_professionals) with my
  *   care network links (care_network_links): "In network", "Requested", or
  *   Add (request_care_link); the network itself is in More › Care network.
  * - Job postings: none exist (no table; the old page removed its invented
