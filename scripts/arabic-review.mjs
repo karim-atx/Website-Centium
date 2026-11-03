@@ -78,6 +78,7 @@ const AREAS = [
   ["webcs", "Website viewport v1, area cs: Schedule, the Classes and Store dashboards, Orders, Products and Appointments on the web"],
   ["webclientworkout", "Website viewport v1: Client · Workout (Routines, Library, History, Metrics)"],
   ["webclientmore", "Website viewport v1: the client More destinations on web (My Profile, Premium, Referral, the More column)"],
+  ["webgym", "Website viewport v1: the Business Front desk, Analytics, Marketplace and See all activity web pages"],
 ];
 
 const rows = [];

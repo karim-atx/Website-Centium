@@ -29,6 +29,9 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/products\/?$/, // WB-ST-PR Products · Showcase, .3 category See all
   /^\/app\/business\/appointments\/?$/, // WB-ST-AP Appointments (list-detail)
   /^\/app\/business\/appointments\/(?!day\/?$)[^/]+\/?$/, // WB-ST-AP.1 Appointment detail
+  /^\/app\/business\/operations\/?$/, // WB-FD Front desk (gym; other types: their mobile tab in its own centred column)
+  /^\/app\/business\/marketplace\/?$/, // WB-MA Marketplace tabs (photos, preview, See all and the offer editor keep the centred column)
+  /^\/app\/business\/analytics(\/.*)?$/, // WB-AN Analytics (sections without a web design: their mobile view in a centred column)
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {
