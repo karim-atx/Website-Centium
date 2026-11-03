@@ -10,6 +10,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { linePx, textPx } from "../../theme/textSize";
+import { useMarketWebType } from "../../components/market/webType";
 import { marketPalette, type MarketPalette } from "../../theme/marketTokens";
 import { checklistOrder, strengthLine, type StrengthItem } from "./model";
 import { t, tn } from "../../i18n/core";
@@ -47,8 +48,9 @@ export function Card({ r = 24, style, children, ...rest }: { r?: number; style?:
 /** The board's caps label ("Gym", "Listing", "5 items · drag to reorder"): 10.5 / 700, 0.1em, uppercase, --faint. */
 export function CapsLabel({ children, style, as = "h2" }: { children: React.ReactNode; style?: React.CSSProperties; as?: "h2" | "span" | "p" }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   const Tag = as;
-  return <Tag style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: "normal", margin: 0, ...style }}>{children}</Tag>;
+  return <Tag style={{ fontSize: px(web ? 13 : 10.5), fontWeight: 700, letterSpacing: web ? "0.08em" : "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: web ? lh(20) : "normal", margin: 0, ...style }}>{children}</Tag>;
 }
 
 /** The board's outlined button ("Add item", "Add service", "Add plan"): 42 tall overall (the board's min-height 40 + its 1px --border; W3 lead decision), radius 12, 12.5 / 800 --pdark, padding 0 14, gap 6. Market screens only. */
@@ -93,13 +95,14 @@ export function OutlineButton({ children, onClick, disabled, style, ariaLabel }:
 /** A small text action on a card (Manage, Preview as client): 12 / 800 --pdark, 44 target. */
 export function TextLink({ children, onClick, ariaLabel, style }: { children: React.ReactNode; onClick: () => void; ariaLabel?: string; style?: React.CSSProperties }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
       className="tap market-focus"
-      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(12), fontWeight: 800, color: m.pdark, borderRadius: 8, padding: "2px 4px", background: "transparent", border: 0, cursor: "pointer", ...style }}
+      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: px(web ? 13 : 12), lineHeight: web ? lh(20) : undefined, fontWeight: 800, color: m.pdark, borderRadius: 8, padding: "2px 4px", background: "transparent", border: 0, cursor: "pointer", ...style }}
     >
       {children}
     </button>
@@ -448,7 +451,9 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
   const dark = useIsDark();
   const m = marketPalette(dark);
   const reduce = useReducedMotion();
-  const [open, setOpen] = useState(false);
+  const web = useMarketWebType();
+  // Web: the board draws Listing strength open.
+  const [open, setOpen] = useState(web);
   const [all, setAll] = useState(false);
   const done = items.filter((x) => x.done).length;
   const total = items.length;
@@ -466,15 +471,15 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
-            <p style={{ fontSize: px(14), fontWeight: 700, lineHeight: "normal" }}>{t("Listing strength")}</p>
-            <p style={{ fontSize: px(12), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: "normal" }}>{t("{done} of {total} done", { done, total })}</p>
+            <p style={{ fontSize: px(web ? 17 : 14), fontWeight: 700, lineHeight: web ? lh(24) : "normal" }}>{t("Listing strength")}</p>
+            <p style={{ fontSize: px(web ? 13 : 12), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums", lineHeight: web ? lh(20) : "normal" }}>{t("{done} of {total} done", { done, total })}</p>
           </div>
           <div aria-hidden style={{ display: "grid", gridTemplateColumns: `repeat(${total}, minmax(0,1fr))`, gap: 3, marginTop: 9 }}>
             {items.map((x) => (
               <span key={x.key} style={{ height: 6, borderRadius: 999, background: x.done ? m.fill : m.soft }} />
             ))}
           </div>
-          <p style={{ fontSize: px(11.5), lineHeight: lh(16), color: m.faint, marginTop: 8, textWrap: "pretty" } as React.CSSProperties}>{strengthLine(items, emptyLine)}</p>
+          <p style={{ fontSize: px(web ? 13 : 11.5), lineHeight: lh(web ? 20 : 16), color: m.faint, marginTop: 8, textWrap: "pretty" } as React.CSSProperties}>{strengthLine(items, emptyLine)}</p>
         </div>
         <span style={{ display: "flex", color: m.faint, transform: open ? "rotate(180deg)" : "none", transition: reduce ? undefined : "transform 200ms", flexShrink: 0 }}>
           <ChevronDown size={16} strokeWidth={2} aria-hidden />
@@ -493,8 +498,9 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
-                minHeight: 52,
-                padding: "8px 16px",
+                minHeight: web ? 56 : 52,
+                padding: web ? "6px 16px" : "8px 16px",
+                boxSizing: "border-box",
                 width: "100%",
                 borderTop: i ? `1px solid ${m.div}` : "none",
                 borderInlineStart: 0,
@@ -526,10 +532,10 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 {x.done && <Check size={12} strokeWidth={3} aria-hidden />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: x.done ? m.faint : m.ink, lineHeight: "normal" }}>{x.title}</span>
-                {x.sub && <span style={{ display: "block", fontSize: px(11.5), color: m.faint, lineHeight: "normal" }}>{x.sub}</span>}
+                <span style={{ display: "block", fontSize: px(web ? 15 : 13.5), fontWeight: 700, color: x.done ? m.faint : m.ink, lineHeight: web ? lh(22) : "normal" }}>{x.title}</span>
+                {x.sub && <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: m.faint, lineHeight: web ? lh(20) : "normal", ...(web ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } : {}) }}>{x.sub}</span>}
               </span>
-              {!x.done && <span style={{ fontSize: px(12), fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? t("Add") : t("Set up")}</span>}
+              {!x.done && <span style={{ fontSize: px(web ? 13 : 12), lineHeight: web ? lh(20) : undefined, fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? t("Add") : t("Set up")}</span>}
               <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
             </button>
           ))}
@@ -539,10 +545,10 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
               onClick={() => setAll((a) => !a)}
               aria-expanded={all}
               className="market-focus"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, width: "100%", borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontSize: px(12.5), fontWeight: 800, color: m.pdark, cursor: "pointer", fontFamily: "inherit" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, width: "100%", borderTop: `1px solid ${m.div}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "transparent", fontSize: px(web ? 15 : 12.5), lineHeight: web ? lh(24) : undefined, fontWeight: web ? 700 : 800, color: m.pdark, cursor: "pointer", fontFamily: "inherit" }}
             >
               {all ? t("Show less") : t("Show all {n}", { n: total })}
-              {all ? <ChevronUp size={14} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={14} strokeWidth={2.4} aria-hidden />}
+              {all ? <ChevronUp size={web ? 16 : 14} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={web ? 16 : 14} strokeWidth={2.4} aria-hidden />}
             </button>
           )}
         </div>
@@ -648,12 +654,13 @@ export function YourCard({
   emptyBio: string;
 }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   return (
     <Card style={{ overflow: "hidden" }} data-yourcard>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBlock: "12px 0", paddingInline: "16px 12px" }}>
         <CapsLabel as="p">{t("Your card")}</CapsLabel>
         <TextLink onClick={onPreview}>
-          <Eye size={14} strokeWidth={2.2} aria-hidden />
+          <Eye size={web ? 16 : 14} strokeWidth={2.2} aria-hidden />
           {t("Preview as client")}
         </TextLink>
       </div>
@@ -663,8 +670,8 @@ export function YourCard({
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px 14px", lineHeight: "normal" }}>
         <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: active ? m.good : m.high, boxShadow: `0 0 0 3px ${active ? m.goodbg : m.highbg}`, flexShrink: 0 }} />
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: active ? m.good : m.high }}>{active ? t("Listed on Explore") : t("Hidden from Explore")}</span>
-          <span style={{ display: "block", fontSize: px(11.5), color: m.faint, marginTop: 1 }}>{active ? (emptyBusiness ? listedEmptySub : listedSub) : hiddenSub}</span>
+          <span style={{ display: "block", fontSize: px(web ? 15 : 13.5), lineHeight: web ? lh(22) : undefined, fontWeight: 700, color: active ? m.good : m.high }}>{active ? t("Listed on Explore") : t("Hidden from Explore")}</span>
+          <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), lineHeight: web ? lh(20) : undefined, color: m.faint, marginTop: web ? 0 : 1 }}>{active ? (emptyBusiness ? listedEmptySub : listedSub) : hiddenSub}</span>
         </span>
       </div>
     </Card>
@@ -676,14 +683,15 @@ export function YourCard({
 
 export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: string; onOpen: () => void }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   const slots = [0, 1, 2, 3];
   return (
     <Card style={{ padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-        <p style={{ fontSize: px(14), fontWeight: 700, color: m.ink, lineHeight: "normal" }}>{t("Photos")}</p>
+        <p style={{ fontSize: px(web ? 17 : 14), fontWeight: 700, color: m.ink, lineHeight: web ? lh(24) : "normal" }}>{t("Photos")}</p>
         <TextLink onClick={onOpen} style={{ gap: 2, marginInlineEnd: -4 }}>
           {photos.length ? t("Manage") : t("Add photos")}
-          <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={web ? 16 : 14} aria-hidden className="rtl:-scale-x-100" />
         </TextLink>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
@@ -709,7 +717,7 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
           )
         )}
       </div>
-      <p style={{ fontSize: px(11.5), color: m.faint, marginTop: 8, lineHeight: "normal" }}>{line}</p>
+      <p style={{ fontSize: px(web ? 13 : 11.5), color: m.faint, marginTop: 8, lineHeight: web ? lh(20) : "normal" }}>{line}</p>
     </Card>
   );
 }
@@ -736,6 +744,7 @@ export function CategoriesCard({
   openSignal: number;
 }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string[]>(value);
   const [up, setUp] = useState(true);
@@ -778,8 +787,8 @@ export function CategoriesCard({
   return (
     <div ref={cardRef}>
       <Card style={{ padding: "14px 16px" }}>
-        <p style={{ fontSize: px(14), fontWeight: 700, color: m.ink, lineHeight: "normal" }}>{title}</p>
-        <p style={{ fontSize: px(11.5), color: m.faint, lineHeight: "normal" }}>{sub}</p>
+        <p style={{ fontSize: px(web ? 17 : 14), fontWeight: 700, color: m.ink, lineHeight: web ? lh(24) : "normal" }}>{title}</p>
+        <p style={{ fontSize: px(web ? 13 : 11.5), color: m.faint, lineHeight: web ? lh(20) : "normal" }}>{sub}</p>
         <div style={{ position: "relative" }}>
           <button
             ref={fieldRef}
@@ -810,7 +819,7 @@ export function CategoriesCard({
             }}
           >
             {(chips.length ? chips : [t("Choose")]).map((chip) => (
-              <span key={chip} style={{ fontSize: px(12), fontWeight: 700, background: m.pale, color: m.pdark, borderRadius: 8, padding: "3px 9px" }}>
+              <span key={chip} style={{ fontSize: px(web ? 13 : 12), lineHeight: web ? lh(20) : undefined, fontWeight: 700, background: m.pale, color: m.pdark, borderRadius: 8, padding: web ? "2px 9px" : "3px 9px" }}>
                 {chip}
               </span>
             ))}
@@ -900,6 +909,7 @@ export function CategoriesCard({
 
 export function RatingCard({ average, count, onOpen }: { average: number | null; count: number; onOpen: () => void }) {
   const m = useMarketColors();
+  const web = useMarketWebType();
   if (count === 0) return null;
   const few = count < 3 || average === null;
   return (
@@ -911,10 +921,10 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
       style={{ padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, width: "100%", borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, textAlign: "start", color: m.ink, cursor: "pointer", fontFamily: "inherit", lineHeight: "normal", boxSizing: "border-box" }}
     >
       {few ? (
-        <span style={{ flex: 1, fontSize: px(14), fontWeight: 700 }}>{t("No reviews yet")}</span>
+        <span style={{ flex: 1, fontSize: px(web ? 15 : 14), fontWeight: 700 }}>{t("No reviews yet")}</span>
       ) : (
         <>
-          <span style={{ fontSize: px(30), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: lh(32), fontVariantNumeric: "tabular-nums" }}>{average.toFixed(1)}</span>
+          <span style={{ fontSize: px(web ? 28 : 30), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: lh(web ? 36 : 32), fontVariantNumeric: "tabular-nums" }}>{average.toFixed(1)}</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "flex", gap: 2 }} aria-hidden>
               {[0, 1, 2, 3, 4].map((i) => (
@@ -926,7 +936,7 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
                 </span>
               ))}
             </span>
-            <span style={{ display: "block", fontSize: px(11.5), color: m.faint, marginTop: 2 }}>{tn(count, "{n} review", "{n} reviews")}</span>
+            <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), lineHeight: web ? lh(20) : undefined, color: m.faint, marginTop: 2 }}>{tn(count, "{n} review", "{n} reviews")}</span>
           </span>
         </>
       )}

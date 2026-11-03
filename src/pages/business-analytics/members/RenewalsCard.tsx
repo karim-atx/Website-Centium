@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
 import clsx from "clsx";
-import { fetchFrontDeskVenues, fetchRenewalsDue, fetchRenewalStats } from "../../../services/front-desk";
-import { renewalRateLabel, toChase, type RenewalStats } from "../../../services/front-desk/frontDeskLogic";
-import { useOnline } from "../../../hooks/useOnline";
+import { renewalRateLabel } from "../../../services/front-desk/frontDeskLogic";
+import { useRenewals } from "./membersReaders";
 import { AnCard } from "./anKit";
 import { t, tn } from "../../../i18n/core";
 
@@ -14,54 +12,8 @@ import { t, tn } from "../../../i18n/core";
 // missed). A NULL rate is "–" with "No renewals were due", never 0% or 100%.
 // Summed across the business's venues.
 
-interface Data {
-  ending: number;
-  toChase: number;
-  stats: RenewalStats;
-}
-
 export function RenewalsCard({ from, to }: { from: string; to: string }) {
-  const online = useOnline();
-  const [data, setData] = useState<Data | null>(null);
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const v = await fetchFrontDeskVenues();
-      if (!v.ok) {
-        if (!cancelled) setError(true);
-        return;
-      }
-      let ending = 0;
-      let chase = 0;
-      const sum: RenewalStats = { from, to, due: 0, renewed: 0, lapsed: 0, cancelled: 0, rate: null };
-      for (const venue of v.value) {
-        const [d, s] = await Promise.all([fetchRenewalsDue(venue.gymId, 7), fetchRenewalStats(venue.gymId, from, to)]);
-        if (!d.ok || !s.ok) {
-          if (!cancelled) setError(true);
-          return;
-        }
-        ending += d.value.length;
-        chase += toChase(d.value).length;
-        if (s.value) {
-          sum.due += s.value.due;
-          sum.renewed += s.value.renewed;
-          sum.lapsed += s.value.lapsed;
-          sum.cancelled += s.value.cancelled;
-        }
-      }
-      sum.rate = sum.due > 0 ? sum.renewed / sum.due : null;
-      if (!cancelled) {
-        setError(false);
-        setData({ ending, toChase: chase, stats: sum });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [from, to, online]);
-
+  const { data, error } = useRenewals(from, to);
   const rate = renewalRateLabel(data?.stats ?? null);
   const rows: { value: string | null; label: string; sub: string; tone: "caution" | "rate" | "high" | "soft" }[] = [
     { value: data ? String(data.toChase) : null, label: t("Due in 7 days"), sub: t("Not renewed yet and not ending."), tone: "caution" },
