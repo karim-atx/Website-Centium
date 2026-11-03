@@ -18,6 +18,7 @@ import {
   type HistoryItem,
   type MetricMenuItem,
 } from "../../../components/health/metric/MetricKit";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 import { HealthPopup } from "../../../components/health/metric/HealthPopup";
 import {
   dayLabel,
@@ -87,6 +88,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart
 export default function BloodPressurePage() {
   const { bloodPressure, reloadBloodPressure, profileReady } = useApp();
   const { dark } = useHealthMode();
+  const web = useIsWeb();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("week");
   const checkFlags = useCheckFlags();
   const pregnancyFlags = usePregnancyFlags();
@@ -282,7 +284,7 @@ export default function BloodPressurePage() {
         onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
         onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
         nextDisabled={current}
-        legend={bpLegend(range, dark, inPregnancy)}
+        legend={bpLegend(range, dark, inPregnancy, web)}
         foot={foot}
         loading={loading}
         summary={summary}

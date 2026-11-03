@@ -1,3 +1,4 @@
+import { createContext, useContext } from "react";
 import { hourLabel12 } from "../../../utils/time12";
 import { dayWord, monthShort } from "./periods";
 
@@ -30,3 +31,29 @@ export function axisLabel(mode: "week" | "month" | "year", key: string, i: numbe
 
 /** x label for hour `h` of a day: every 3rd hour ("12 AM", "3 AM" …). */
 export const hourAxisLabel = (h: number) => (h % 3 === 0 ? hourLabel12(h) : "");
+
+/** Ticks over [lo, hi] at a round step (1, 2 or 5 × 10^n), about `target` of them; the scale ends on ticks. */
+export function rangeTicks(lo: number, hi: number, target = 4): { min: number; max: number; ticks: number[] } {
+  if (!(hi > lo)) return rangeTicks(lo - 1, lo + 1, target);
+  const raw = (hi - lo) / target;
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 5, 10].map((m) => m * p).find((s) => s >= raw) ?? 10 * p;
+  const min = Math.floor(lo / step) * step;
+  const max = Math.ceil(hi / step) * step;
+  const n = Math.round((max - min) / step);
+  return { min, max, ticks: Array.from({ length: n + 1 }, (_, i) => +(min + i * step).toFixed(6)) };
+}
+
+/** The column geometry of a web plot: its measured width (0 until measured), the number of columns and the gap between them. */
+export interface PlotGeom {
+  width: number;
+  n: number;
+  gap: number;
+}
+export const PlotGeomContext = createContext<PlotGeom | null>(null);
+export const usePlotGeom = () => useContext(PlotGeomContext);
+
+/** Column width of a plot. */
+export const colWidth = (g: PlotGeom) => (g.width - g.gap * Math.max(0, g.n - 1)) / Math.max(1, g.n);
+/** x of column position `pos` (column i's centre at pos = i; fractions in between), from the start edge. */
+export const colX = (g: PlotGeom, pos: number) => colWidth(g) / 2 + pos * (colWidth(g) + g.gap);

@@ -278,7 +278,7 @@ export const StatCardWeb: React.FC<{ metric: MetricKey; stats: { icon: IconLike;
  * The page's chart, drawn by the mobile part at its own 326 wide geometry and
  * scaled to the card (at most 1.6×), centred.
  */
-export const ScaledChart: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ScaledChart: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(1.4);
   useEffect(() => {

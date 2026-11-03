@@ -6,7 +6,6 @@ import { isRtl } from "../../../i18n/core";
 import { useIsWeb } from "../../web/useWebLayout";
 import { AxisBarsWeb } from "./WebAxisChart";
 import { axisLabel, kLabel } from "./webAxis";
-import { ScaledChart } from "./MetricKit.web";
 
 // The rounded-bar range chart (HE1.2 week pattern), shared by Steps, Water,
 // Sleep (duration fallback) and Calories burned. Geometry measured from the
@@ -59,19 +58,13 @@ type GoalBarChartProps = {
 
 /**
  * Website viewport v1: from 1024px wide the axis-labelled web chart
- * (WebAxisChart.tsx); a chart with an `overlay` (Sleep year's bedtime line,
- * drawn in the 326 grid) keeps the mobile drawing, scaled to the card.
+ * (WebAxisChart.tsx); an `overlay` (Sleep year's bedtime line) is drawn in a
+ * strip above the bars on the same columns.
  */
 export const GoalBarChart: React.FC<GoalBarChartProps> & { webNative?: boolean } = (props) => {
   const web = useIsWeb();
   if (!web) return <GoalBarChartMobile {...props} />;
-  if (props.overlay)
-    return (
-      <ScaledChart>
-        <GoalBarChartMobile {...props} />
-      </ScaledChart>
-    );
-  const { metric, mode, bars, goal, goalLabel, onBarTap, barLabel, tickLabel } = props;
+  const { metric, mode, bars, goal, goalLabel, onBarTap, barLabel, tickLabel, overlay } = props;
   return (
     <AxisBarsWeb
       metric={metric}
@@ -79,6 +72,7 @@ export const GoalBarChart: React.FC<GoalBarChartProps> & { webNative?: boolean }
       goalLabel={goalLabel}
       tickLabel={tickLabel ?? kLabel}
       onBarTap={onBarTap}
+      band={overlay}
       bars={bars.map((b, i) => ({ key: b.key, value: b.value, ghost: b.ghost, current: b.current, label: axisLabel(mode, b.key, i), ariaLabel: barLabel?.(b) }))}
     />
   );
