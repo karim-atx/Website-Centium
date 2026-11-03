@@ -38,7 +38,8 @@ import { effectiveRules, policyFor, type BookingPolicy } from "../../services/bu
 import { returnsSummary } from "../../pages/business-more/storePolicyText";
 import { formatShortDate } from "../../utils/date";
 import { tk, tn } from "../../i18n/core";
-import type { SecondaryKind } from "./webNav";
+import { bizSettingsSection, type BizSettingsSection, type SecondaryKind } from "./webNav";
+import { PaneFillContext } from "./paneFill";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
@@ -53,7 +54,7 @@ const under = (pathname: string, base: string) => pathname === base || pathname.
 // pane designs follow later), centred in the pane. Items with their own
 // sidebar entry are not listed (decision 4).
 
-interface Item {
+export interface SecondaryItem {
   key: string;
   label: string;
   desc?: React.ReactNode;
@@ -66,14 +67,14 @@ interface Item {
   /** Opens a page of its own, outside this layout (↗). */
   ext?: boolean;
 }
-interface Group {
+export interface SecondaryGroup {
   label: string;
-  items: Item[];
+  items: SecondaryItem[];
 }
 
 const TILE = "#8E7FD0";
 
-const SecondaryRow: React.FC<{ item: Item; selected: boolean; rule: boolean; onSelect: () => void }> = ({ item, selected, rule, onSelect }) => {
+const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boolean; onSelect: () => void }> = ({ item, selected, rule, onSelect }) => {
   const { t } = useApp();
   const Icon = item.icon as React.FC<{ size?: number; strokeWidth?: number; style?: React.CSSProperties; "aria-hidden"?: boolean }>;
   const label = t(item.label);
@@ -127,7 +128,7 @@ const SecondaryRow: React.FC<{ item: Item; selected: boolean; rule: boolean; onS
 };
 
 /** The column's body: the groups, a caps label with the lavender rule over each card. */
-const SecondaryGroups: React.FC<{ title: string; groups: Group[]; selected: string | null; onSelect: (item: Item) => void; navPb: number }> = ({
+export const SecondaryGroups: React.FC<{ title: string; groups: SecondaryGroup[]; selected: string | null; onSelect: (item: SecondaryItem) => void; navPb: number }> = ({
   title,
   groups,
   selected,
@@ -142,7 +143,7 @@ const SecondaryGroups: React.FC<{ title: string; groups: Group[]; selected: stri
         .map((g) => (
           <section key={g.label} aria-label={t(g.label)} className="shrink-0 flex flex-col">
             <p
-              className="shrink-0 uppercase"
+              className="shrink-0 uppercase rtl:tracking-normal"
               style={{ margin: "0 4px 10px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".14em", color: "#8C8378" }}
             >
               {t(g.label)}
@@ -189,7 +190,7 @@ const PlanCard: React.FC<{ title: string; line: string; selected: boolean; onCli
 const fmtRenew = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
 /** The business More list and its live lines (as the mobile More index reads them). */
-function useBusinessMoreGroups(openReferral: () => void): { groups: Group[]; first: string; planLine: string; firstTo: string; kindKnown: boolean } {
+function useBusinessMoreGroups(openReferral: () => void): { groups: SecondaryGroup[]; first: string; planLine: string; firstTo: string; kindKnown: boolean } {
   const { t } = useApp();
   const { business, kind, kindKnown } = useBusiness();
   const { user, authUserId } = useApp();
@@ -230,7 +231,7 @@ function useBusinessMoreGroups(openReferral: () => void): { groups: Group[]; fir
   const store = kind === "store";
   const m = (p: string) => `/app/business/more/${p}`;
 
-  const groups: Group[] = [
+  const groups: SecondaryGroup[] = [
     { label: tk("Business"), items: [{ key: "referral", label: tk("Referral"), desc: t("Share your code, earn rewards"), icon: ReferralLeafIcon, onClick: openReferral }] },
   ];
   if (kindKnown) {
@@ -321,7 +322,7 @@ function useBusinessMoreGroups(openReferral: () => void): { groups: Group[]; fir
 }
 
 /** The item a path shows (path, plus ?section= for the policy editor and the store terms). */
-function selectedKey(groups: Group[], pathname: string, search: string): string | null {
+function selectedKey(groups: SecondaryGroup[], pathname: string, search: string): string | null {
   const here = new URLSearchParams(search);
   for (const g of groups)
     for (const it of g.items) {
@@ -336,7 +337,7 @@ function selectedKey(groups: Group[], pathname: string, search: string): string 
   return null;
 }
 
-const BIZ_SETTINGS: { key: string; label: string; icon: LucideIcon }[] = [
+const BIZ_SETTINGS: { key: BizSettingsSection; label: string; icon: LucideIcon }[] = [
   { key: "appearance", label: tk("Appearance"), icon: Sun },
   { key: "permissions", label: tk("Permissions"), icon: Camera },
   { key: "security", label: tk("Security"), icon: ShieldCheck },
@@ -355,17 +356,14 @@ function settingsSectionFor(pathname: string): string | null {
 /**
  * The pane: its own scroll, and the containing block of the fixed parts of the
  * screen inside it (pinned buttons, toasts), whose --app-gutter is the pane's
- * so they sit on the pane's centred column.
+ * so they sit on the pane's centred column. A page shows in a centred 430
+ * column (its mobile screen) unless it fills the pane (usePaneFill).
  */
-const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string; scrollToLabel: string | null }> = ({
-  banners,
-  children,
-  scrollKey,
-  scrollToLabel,
-}) => {
+const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string }> = ({ banners, children, scrollKey }) => {
   const wrap = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [gutter, setGutter] = useState(0);
+  const [fill, setFill] = useState(false);
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
@@ -378,30 +376,21 @@ const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scro
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [scrollKey]);
-  // Settings: the selected section's heading, scrolled to the top of the pane.
-  useEffect(() => {
-    if (!scrollToLabel) return;
-    const sc = scroller.current;
-    if (!sc) return;
-    const id = window.setTimeout(() => {
-      const heading = Array.from(sc.querySelectorAll("p, h2, h3")).find((n) => n.textContent?.trim() === scrollToLabel);
-      if (heading) sc.scrollTo({ top: Math.max(0, (heading as HTMLElement).getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 24) });
-    }, 0);
-    return () => window.clearTimeout(id);
-  }, [scrollToLabel, scrollKey]);
   return (
     <div ref={wrap} className="relative flex-1 min-w-0 h-full" style={{ contain: "layout", ["--app-gutter" as string]: `${gutter}px` }}>
-      <div ref={scroller} className="h-full overflow-y-auto" style={{ scrollbarWidth: "thin" }} data-web-pane>
-        <div className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
-          {banners}
-          {children}
+      <div ref={scroller} className="h-full overflow-y-auto" style={{ scrollbarWidth: "thin" }} data-web-pane={fill ? "fill" : ""}>
+        <div className={fill ? undefined : "max-w-[430px] mx-auto px-4 pt-6 pb-12"}>
+          <PaneFillContext.Provider value={setFill}>
+            {banners}
+            {children}
+          </PaneFillContext.Provider>
         </div>
       </div>
     </div>
   );
 };
 
-const Column: React.FC<{ title: string; secW: number; children: React.ReactNode; plan?: React.ReactNode }> = ({ title, secW, children, plan }) => (
+export const Column: React.FC<{ title: string; secW: number; children: React.ReactNode; plan?: React.ReactNode }> = ({ title, secW, children, plan }) => (
   <aside
     aria-label={title}
     className="shrink-0 h-full flex flex-col bg-white"
@@ -435,7 +424,7 @@ const BusinessMoreLayout: React.FC<{ secW: number; banners: React.ReactNode; chi
       >
         <SecondaryGroups title={t("More")} groups={groups} selected={selected} navPb={24} onSelect={(it) => (it.onClick ? it.onClick() : it.to && navigate(it.to))} />
       </Column>
-      <Pane banners={banners} scrollKey={pathname + search} scrollToLabel={null}>
+      <Pane banners={banners} scrollKey={pathname + search}>
         {atIndex ? null : children}
       </Pane>
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
@@ -445,13 +434,11 @@ const BusinessMoreLayout: React.FC<{ secW: number; banners: React.ReactNode; chi
 
 const BusinessSettingsLayout: React.FC<{ secW: number; banners: React.ReactNode; children: React.ReactNode }> = ({ secW, banners, children }) => {
   const { t } = useApp();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
-  const [picked, setPicked] = useState("appearance");
-  const sub = settingsSectionFor(pathname);
-  const selected = sub ?? picked;
-  const groups: Group[] = BIZ_SETTINGS.map((s) => ({ label: s.label, items: [{ key: s.key, label: s.label, icon: s.icon }] }));
-  const label = BIZ_SETTINGS.find((s) => s.key === selected)?.label;
+  // /app/settings shows one section's pane (?section=, Appearance by default); a sub-page lights its section.
+  const selected = settingsSectionFor(pathname) ?? bizSettingsSection(search);
+  const groups: SecondaryGroup[] = BIZ_SETTINGS.map((s) => ({ label: s.label, items: [{ key: s.key, label: s.label, icon: s.icon }] }));
   return (
     <>
       <Column title={t("Settings")} secW={secW}>
@@ -460,13 +447,10 @@ const BusinessSettingsLayout: React.FC<{ secW: number; banners: React.ReactNode;
           groups={groups}
           selected={selected}
           navPb={24}
-          onSelect={(it) => {
-            setPicked(it.key);
-            if (pathname !== "/app/settings") navigate("/app/settings");
-          }}
+          onSelect={(it) => navigate(it.key === BIZ_SETTINGS[0].key ? "/app/settings" : `/app/settings?section=${it.key}`)}
         />
       </Column>
-      <Pane banners={banners} scrollKey={pathname + ":" + picked} scrollToLabel={pathname === "/app/settings" && label && selected !== BIZ_SETTINGS[0].key ? t(label) : null}>
+      <Pane banners={banners} scrollKey={pathname + search}>
         {children}
       </Pane>
     </>

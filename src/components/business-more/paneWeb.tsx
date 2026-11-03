@@ -1,6 +1,7 @@
 import React from "react";
 import { Check } from "lucide-react";
 import { PaneScope, usePanePad } from "./paneWebScope";
+import { usePaneFill } from "../web/paneFill";
 
 // Website viewport v1 · ST Settings Web (the designed More / Settings panes,
 // WB-MO, WB-SE and the type variants). From 1024px wide a business page shown
@@ -19,19 +20,14 @@ export const PaneWebOn: React.FC<{ children: React.ReactNode }> = ({ children })
 export const PaneWebOff: React.FC<{ children: React.ReactNode }> = ({ children }) => <PaneScope.Provider value="off">{children}</PaneScope.Provider>;
 
 /**
- * The pane page's frame. The shell's pane centres its children in a 430
- * column (px 16, pt 24, pb 48) and publishes its own --app-gutter, the space
- * on each side of that column; the frame steps out of it to the pane's full
- * width, then lays the design's padding and 880 cap on top.
+ * The pane page's frame: it asks the shell's pane to drop its centred 430
+ * column (usePaneFill), then lays the design's padding and 880 cap.
  */
 export const PaneFrame: React.FC<{ children: React.ReactNode; label?: string }> = ({ children, label }) => {
   const pad = usePanePad();
+  usePaneFill();
   return (
-    <div
-      data-web-pane-page
-      aria-label={label}
-      style={{ marginInline: "calc(-16px - var(--app-gutter, 0px))", marginTop: -24, marginBottom: -48 }}
-    >
+    <div data-web-pane-page aria-label={label}>
       {/* Blocks 28 apart, as the design's column gap; a section label sits on
           its own rows (pages that draw the label and the rows as siblings). */}
       <PaneScope.Provider value="on">

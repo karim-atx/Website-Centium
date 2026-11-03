@@ -5,7 +5,6 @@ import {
   Armchair,
   BarChart3,
   Bike,
-  ChevronRight,
   Dumbbell,
   Flag,
   Flame,
@@ -24,6 +23,7 @@ import {
 import { useApp } from "../../context/AppContext";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { useWebLayout } from "../../components/web/useWebLayout";
+import { Column, SecondaryGroups, type SecondaryGroup } from "../../components/web/WebSecondaryLayout";
 import { BizButton, BizNote, BizRow, BizSection } from "../../components/business-more/kit";
 import { PaneHeader, PaneWebOn } from "../../components/business-more/paneWeb";
 import { usePanePad } from "../../components/business-more/paneWebScope";
@@ -53,10 +53,9 @@ import More from "./More";
 // same data and saves as the mobile Profile's sheets and cards. No plan card
 // (Premium is a sidebar entry). The selected item is ?item= (Goals first).
 //
-// The column repeats the shell's More column values (WebSecondaryLayout:
-// 360 / 300, padding 24, title 28/36, grouped cards #F7F7FC r18, rows 60 with
-// a 40 #8E7FD0 tile); the shell has no client secondary layout, so this page
-// draws its own.
+// The column is the shell's own (WebSecondaryLayout's Column and
+// SecondaryGroups: 360 / 300, padding 24, title 28/36, grouped cards #F7F7FC
+// r18, rows 60 with a 40 #8E7FD0 tile).
 
 // The goal and activity options, as GoalsEditSheet and ActivityLevelSheet list them.
 const GOALS: { value: Goal; label: string; icon: LucideIcon }[] = [
@@ -80,49 +79,6 @@ const LEVELS: { value: ActivityLevel; label: string; desc: string; icon: LucideI
 ];
 
 type Key = "goals" | "activity" | "recovery" | "pros";
-interface Item {
-  key: Key;
-  label: string;
-  desc: string;
-  icon: LucideIcon;
-  badge?: number;
-}
-
-const ColumnRow: React.FC<{ item: Item; selected: boolean; rule: boolean; onSelect: () => void }> = ({ item, selected, rule, onSelect }) => (
-  <button
-    type="button"
-    onClick={onSelect}
-    aria-current={selected ? "page" : undefined}
-    className="relative w-full flex items-center text-start shrink-0 transition-colors duration-150 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:-outline-offset-2"
-    style={{ minHeight: 60, gap: 14, paddingBlock: 8, paddingInlineStart: 14, paddingInlineEnd: 16, borderRadius: 14, background: selected ? "#F0EDF9" : undefined }}
-  >
-    {rule && <span aria-hidden className="absolute top-0" style={{ insetInlineStart: 68, insetInlineEnd: 16, height: 1, background: "#EBEAF6" }} />}
-    <span className="flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 10, background: "#8E7FD0" }}>
-      <item.icon size={22} strokeWidth={1.5} style={{ color: "#FFFFFF" }} aria-hidden />
-    </span>
-    <span className="flex-1 min-w-0">
-      <span title={item.label} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 15, lineHeight: "20px", fontWeight: 600, color: selected ? "#7D6BB5" : "#241F1B" }}>
-        {item.label}
-      </span>
-      {item.desc && (
-        <span title={item.desc} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#857F9E" }}>
-          {item.desc}
-        </span>
-      )}
-    </span>
-    <span className="flex items-center shrink-0" style={{ gap: 8 }}>
-      {item.badge != null && item.badge > 0 && (
-        <span
-          className="flex items-center justify-center tabular-nums"
-          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
-        >
-          {item.badge}
-        </span>
-      )}
-      <ChevronRight size={16} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: "#9A94B3" }} aria-hidden />
-    </span>
-  </button>
-);
 
 const GoalsPane: React.FC = () => {
   const { user, updateProfile } = useApp();
@@ -276,52 +232,36 @@ function ClientMoreWeb() {
     };
   }, [customer, authUserId]);
 
-  const groups: { label: string; items: Item[] }[] = [
+  const goals = goalLine(user.goals);
+  const level = levelLabel(user.activityLevel);
+  const groups: SecondaryGroup[] = [
     {
-      label: t("Training plan"),
+      label: tk("Training plan"),
       items: [
-        { key: "goals", label: t("Goals"), desc: goalLine(user.goals), icon: Flag },
-        { key: "activity", label: t("Activity Level"), desc: levelLabel(user.activityLevel), icon: Gauge },
+        { key: "goals", label: tk("Goals"), desc: goals, descTitle: goals, icon: Flag },
+        { key: "activity", label: tk("Activity Level"), desc: level, descTitle: level, icon: Gauge },
       ],
     },
-    { label: t("Safety & content"), items: [{ key: "recovery", label: t("Recovery-sensitive experience"), desc: t("Safety & content"), icon: Shield }] },
+    { label: tk("Safety & content"), items: [{ key: "recovery", label: tk("Recovery-sensitive experience"), desc: t("Safety & content"), descTitle: t("Safety & content"), icon: Shield }] },
     ...(customer
-      ? [{ label: t("Professionals"), items: [{ key: "pros" as Key, label: pros.length > 0 ? t("Connected professionals") : t("Professionals"), desc: t("Manage data sharing"), icon: Users, badge: pros.length }] }]
+      ? [
+          {
+            label: tk("Professionals"),
+            items: [{ key: "pros", label: pros.length > 0 ? tk("Connected professionals") : tk("Professionals"), desc: t("Manage data sharing"), descTitle: t("Manage data sharing"), icon: Users, badge: pros.length }],
+          },
+        ]
       : []),
   ];
-  const keys = groups.flatMap((g) => g.items.map((i) => i.key));
+  const keys = groups.flatMap((g) => g.items.map((i) => i.key as Key));
   const asked = (params.get("open") === "recovery" ? "recovery" : params.get("item")) as Key | null;
   const selected: Key = asked && keys.includes(asked) ? asked : "goals";
   const pick = (k: Key) => setParams(k === "goals" ? {} : { item: k }, { replace: true });
 
   return (
     <div className="flex overflow-hidden" style={{ height: "100dvh" }} data-web-frame="client-more">
-      <aside
-        aria-label={t("More")}
-        className="shrink-0 h-full flex flex-col bg-white"
-        style={{ width: rail ? 300 : 360, boxSizing: "border-box", borderInlineEnd: "1px solid rgba(36,31,27,0.08)" }}
-      >
-        <div className="shrink-0" style={{ padding: "24px 24px 4px" }}>
-          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("More")}</h1>
-        </div>
-        <nav aria-label={t("More")} className="flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ scrollbarWidth: "none", padding: "16px 24px 24px", gap: 20 }}>
-          {groups.map((g) => (
-            <section key={g.label} aria-label={g.label} className="shrink-0 flex flex-col">
-              <p
-                className="shrink-0 uppercase rtl:tracking-normal"
-                style={{ margin: "0 4px 10px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".14em", color: "#8C8378" }}
-              >
-                {g.label}
-              </p>
-              <div className="shrink-0 flex flex-col" style={{ borderRadius: 18, background: "#F7F7FC", padding: "4px 0" }}>
-                {g.items.map((it, i) => (
-                  <ColumnRow key={it.key} item={it} selected={selected === it.key} rule={i > 0 && selected !== it.key && selected !== g.items[i - 1].key} onSelect={() => pick(it.key)} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </nav>
-      </aside>
+      <Column title={t("More")} secW={rail ? 300 : 360}>
+        <SecondaryGroups title={t("More")} groups={groups} selected={selected} navPb={24} onSelect={(it) => pick(it.key as Key)} />
+      </Column>
       <div className="flex-1 min-w-0 h-full overflow-y-auto" style={{ scrollbarWidth: "thin" }} data-web-pane>
         <PaneWebOn>
           <div

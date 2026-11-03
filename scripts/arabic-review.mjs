@@ -77,6 +77,7 @@ const AREAS = [
   ["webclienthealth", "Website viewport v1: Client · Health at 1024px and wider (overview, metric pages, Records, health checks)"],
   ["webcs", "Website viewport v1, area cs: Schedule, the Classes and Store dashboards, Orders, Products and Appointments on the web"],
   ["webclientworkout", "Website viewport v1: Client · Workout (Routines, Library, History, Metrics)"],
+  ["webclientmore", "Website viewport v1: the client More destinations on web (My Profile, Premium, Referral, the More column)"],
 ];
 
 const rows = [];

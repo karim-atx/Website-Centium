@@ -66,3 +66,13 @@ export function secondaryLayoutFor(pathname: string, isBusiness: boolean): Secon
   return null;
 }
 
+
+/** The business Settings sections, one designed pane each (ST Settings Web). */
+export const BIZ_SETTINGS_SECTIONS = ["appearance", "permissions", "security", "data", "general"] as const;
+export type BizSettingsSection = (typeof BIZ_SETTINGS_SECTIONS)[number];
+
+/** The business Settings section /app/settings shows: ?section=, Appearance by default. */
+export function bizSettingsSection(search: string): BizSettingsSection {
+  const s = new URLSearchParams(search).get("section");
+  return (BIZ_SETTINGS_SECTIONS as readonly string[]).includes(s ?? "") ? (s as BizSettingsSection) : "appearance";
+}

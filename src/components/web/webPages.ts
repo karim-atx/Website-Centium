@@ -14,6 +14,8 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/health\/sources\/?$/, // WC-HE.G Sources and guidelines
   /^\/app\/more\/?$/, // the client More column (decision 4)
   /^\/app\/workout\/?$/, // WC-WO Workout (Routines, Library, History, Metrics)
+  /^\/app\/profile\/?$/, // WC-MO.1 My Profile
+  /^\/app\/subscription\/?$/, // WC-MO.6 Centium Premium
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)

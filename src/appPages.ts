@@ -30,6 +30,10 @@ import SchedulePageMobile from "./pages/business-ops/classes/SchedulePage";
 import SchedulePageWeb from "./pages/business-ops/classes/SchedulePage.web";
 import SessionPageMobile from "./pages/business-ops/classes/SessionPage";
 import SessionPageWeb from "./pages/business-ops/classes/SessionPage.web";
+import ProfileMobile from "./pages/profile/Profile";
+import ProfileWeb from "./pages/profile/Profile.web";
+import SubscriptionMobile from "./pages/subscription/Subscription";
+import SubscriptionWeb from "./pages/subscription/Subscription.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -103,9 +107,9 @@ export { default as StoreRoutes } from "./pages/store/StoreRoutes";
 export { default as AppointmentRoutes } from "./pages/appointments/AppointmentRoutes";
 export { default as BusinessVenueTab } from "./pages/marketplace/BusinessVenueTab";
 export { default as BusinessCalendarTab } from "./pages/marketplace/BusinessCalendarTab";
-export { default as Profile } from "./pages/profile/Profile";
+export const Profile = withWeb(ProfileMobile, ProfileWeb);
 export { default as MyCv } from "./pages/profile/MyCv";
-export { default as Subscription } from "./pages/subscription/Subscription";
+export const Subscription = withWeb(SubscriptionMobile, SubscriptionWeb);
 // Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
 export const More = withWeb(MoreMobile, MoreWeb);
 export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
