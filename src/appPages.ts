@@ -40,9 +40,11 @@ export const Home = withWeb(HomeMobile, HomeWeb);
 // Website viewport v1: the web layout from 1024px wide (WC-FO, WC-FO.4); the mobile page below.
 export const Food = withWeb(FoodMobile, FoodWeb);
 export const NutrientSummaryPage = withWeb(NutrientSummaryPageMobile, NutrientSummaryPageWeb);
-export { default as Workout } from "./pages/workout/Workout";
 // Website viewport v1: the web layout from 1024px wide (WC-HE); the mobile page below.
 export const Health = withWeb(HealthMobile, HealthWeb);
+import WorkoutMobile from "./pages/workout/Workout";
+import WorkoutWeb from "./pages/workout/Workout.web";
+export const Workout = withWeb(WorkoutMobile, WorkoutWeb);
 export { default as HealthChecks } from "./pages/health/HealthChecks";
 // Website viewport v1: the web layout from 1024px wide (WC-HE.G); the mobile page below.
 export const HealthSources = withWeb(HealthSourcesMobile, HealthSourcesWeb);
