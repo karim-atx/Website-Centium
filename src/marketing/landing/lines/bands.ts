@@ -20,7 +20,7 @@ const ss = (v: number) => {
 };
 const COL = { lav: ["109,80,198", "140,116,222", "174,161,220"], teal: ["66,146,134", "110,172,162", "162,200,194"] } as const;
 type Hue = keyof typeof COL;
-type Pt = [number, number];
+export type Pt = [number, number];
 const rng = (s: number) => () => {
   s = (s * 1664525 + 1013904223) >>> 0;
   return s / 4294967296;
@@ -128,10 +128,25 @@ class Base<O extends BandLineOptions, Ln extends BaseLine> {
 // ---------------------------------------------------------------------------
 // Band: n lines entering from the left, drawn left to right by scroll progress p.
 
+/** WK1 v2 / v6 (C17): what draws over a band (Tio, motion/tio.ts) hooks into
+ *  each frame, in canvas space (W x H, CSS px; the canvas is mirrored in
+ *  Arabic, so this maths stays left to right). */
+export interface BandHooks {
+  /** Before the lines (also when nothing is drawn yet, p <= .002). */
+  begin(W: number, H: number, p: number): void;
+  /** A new y for a line's point; ly is the line's rest height (0..1), lw its width. */
+  warp(x: number, y: number, ly: number, lw: number, W: number, H: number): number;
+  /** A line's points, once computed (it may shorten them). */
+  line(lw: number, pts: Pt[]): void;
+  /** After the lines. */
+  end(W: number, H: number, p: number): void;
+}
+
 export interface BandOptions extends BandLineOptions {
   n: number;
   /** Dominant colour: 74% of the lines take it, the rest the other. */
   dom?: Hue;
+  hooks?: BandHooks;
 }
 interface BandLine extends BaseLine {
   y: number;
@@ -179,7 +194,12 @@ export class Band extends Base<BandOptions, BandLine> {
     p = this.o.rm ? 1 : clamp(p);
     c.setTransform(this.k, 0, 0, this.k, 0, 0);
     c.clearRect(0, 0, W, H);
-    if (p <= 0.002) return;
+    const hk = this.o.hooks;
+    hk?.begin(W, H, p);
+    if (p <= 0.002) {
+      hk?.end(W, H, p);
+      return;
+    }
     c.lineJoin = "round";
     const maxW = Math.max(...this.L.map((q) => q.w)),
       amp = Math.min(maxW * (W < 640 ? 2 : 2.6), H * 0.16);
@@ -193,11 +213,14 @@ export class Band extends Base<BandOptions, BandLine> {
         const u = (i / N) * r,
           x = -0.1 * W + u * 1.2 * W,
           ph = (tt / LOOP) * TAU * l.sp;
-        const y = H * l.y + amp * (0.62 * Math.sin(u * TAU * l.k - ph + l.ph + dr) + 0.38 * Math.sin(u * TAU * l.k2 + ph * 0.6 + l.ph2 - dr * 0.7));
+        let y = H * l.y + amp * (0.62 * Math.sin(u * TAU * l.k - ph + l.ph + dr) + 0.38 * Math.sin(u * TAU * l.k2 + ph * 0.6 + l.ph2 - dr * 0.7));
+        if (hk) y = hk.warp(x, y, l.y, l.w, W, H);
         pts.push([x, y]);
       }
+      hk?.line(l.w, pts);
       this.line(l, pts, tt);
     }
+    hk?.end(W, H, p);
   }
 }
 
