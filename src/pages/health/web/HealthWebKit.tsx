@@ -49,7 +49,7 @@ export const HealthWebHeader: React.FC<{
           className={`shrink-0 grid place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] ${dark ? "hover:bg-[rgba(255,255,255,0.12)]" : "hover:bg-[#F5F5F6]"}`}
           style={{ width: 36, height: 36, marginInlineStart: -8 }}
         >
-          <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: ink2 }} aria-hidden />
+          <ChevronLeft size={20} style={{ color: ink2 }} aria-hidden />
         </button>
       )}
       <div className="flex-1 min-w-0">

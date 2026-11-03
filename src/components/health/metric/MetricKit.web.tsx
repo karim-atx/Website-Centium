@@ -335,7 +335,7 @@ export const ChartCardWeb: React.FC<{
         className="grid place-items-center rounded-full hover:bg-[#F5F5F6] disabled:opacity-35 disabled:hover:bg-transparent focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
         style={{ width: 32, height: 32 }}
       >
-        <Icon size={16} className="rtl:-scale-x-100" style={{ color: "#5B5349" }} aria-hidden />
+        <Icon size={16} style={{ color: "#5B5349" }} aria-hidden />
       </button>
     );
   };
