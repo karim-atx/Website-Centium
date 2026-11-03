@@ -13,6 +13,7 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/orders\/?$/, // WB-ST-OR Orders tabs (list-detail)
   /^\/app\/business\/orders\/returns\/[^/]+\/?$/, // WB-ST-OR.2 Return detail
   /^\/app\/business\/orders\/(?!list\/|returns\/)[^/]+\/?$/, // WB-ST-OR.1 Order detail
+  /^\/app\/business\/products\/?$/, // WB-ST-PR Products · Showcase, .3 category See all
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {

@@ -10,7 +10,8 @@ import ReturnDetailPage from "./ReturnDetailPage";
 import OrdersListPage from "./OrdersListPage";
 import OrdersPageWeb from "./OrdersPage.web";
 import { withWeb } from "../../../components/web/withWeb";
-import StoreProductsPage from "./products/StoreProductsPage";
+import StoreProductsPageMobile from "./products/StoreProductsPage";
+import StoreProductsPageWeb from "./products/StoreProductsPage.web";
 
 // v6 Batch 4 · Store routes (one App.tsx line each):
 //   /app/business/orders/*   the order detail, return detail and See all lists
@@ -29,6 +30,8 @@ import StoreProductsPage from "./products/StoreProductsPage";
 const OrdersIndex = withWeb(() => <Navigate to="/app/business/operations" replace />, OrdersPageWeb);
 const OrderRoute = withWeb(OrderDetailPage, OrdersPageWeb);
 const ReturnRoute = withWeb(ReturnDetailPage, OrdersPageWeb);
+// WB-ST-PR, .3: Products (Showcase and a category's See all) from 1024px wide.
+const StoreProductsPage = withWeb(StoreProductsPageMobile, StoreProductsPageWeb);
 
 export function BusinessOrdersRoutes() {
   return (
