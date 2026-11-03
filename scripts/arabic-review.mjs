@@ -71,6 +71,7 @@ const AREAS = [
   ["premium3", "Round G3: Premium content (programmes, meditations, journal prompts) and the Premium readers"],
   ["premium4", "Round G4: the meal planner and grocery list, progress photos, Premium themes and share designs, cycle insights"],
   ["premium5", "Round G5: class credits for class-slot hires and professional plans bought in the Centium app"],
+  ["web", "Website viewport v1: the web shell (sidebars, More and Settings columns) and the web pages"],
 ];
 
 const rows = [];

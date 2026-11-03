@@ -1,0 +1,11 @@
+// Website viewport v1: the routes that render a web layout of their own (a web
+// page component behind the 1024 breakpoint). Every other route shows its
+// mobile screen in the web shell's centred column (WebLayout › MobileFrame).
+// Grows as pages are adapted; see docs/web-viewport/PROGRESS.md.
+
+const CLIENT_PAGES: RegExp[] = [];
+const BUSINESS_PAGES: RegExp[] = [];
+
+export function webPageFor(pathname: string, isBusiness: boolean): boolean {
+  return (isBusiness ? BUSINESS_PAGES : CLIENT_PAGES).some((re) => re.test(pathname));
+}
