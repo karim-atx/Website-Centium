@@ -40,6 +40,12 @@ import AnalyticsShellMobile from "./pages/business-analytics/AnalyticsShell";
 import AnalyticsShellWeb from "./pages/business-analytics/AnalyticsShell.web";
 import MarketRoutesMobile from "./pages/business-market/MarketRoutes";
 import MarketRoutesWeb from "./pages/business-market/MarketplacePage.web";
+import ProfessionalsMobile from "./pages/professionals/Professionals";
+import ProfessionalDetailMobile from "./pages/professionals/ProfessionalDetail";
+import ProfessionalReviewsMobile from "./pages/professionals/ProfessionalReviews";
+import ProfessionalsWeb from "./pages/professionals/Professionals.web";
+import CommunityMobile, { CoursePage as CoursePageMobile, ForumNewPage as ForumNewPageMobile, ForumNicknamePage as ForumNicknamePageMobile, ForumPostPage as ForumPostPageMobile } from "./pages/community/Community";
+import CommunityWeb, { CoursePageWeb, ForumNewPageWeb, ForumNicknamePageWeb, ForumPostPageWeb } from "./pages/community/Community.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -71,9 +77,10 @@ export { default as Cycle } from "./pages/cycle/Cycle";
 export { default as Contraception } from "./pages/contraception/Contraception";
 // Website viewport v1: the Mind hub's web layout from 1024px wide (WC-MI); the sections and the mobile page below.
 export const Mind = withWeb(MindMobile, MindWeb);
-export { default as Professionals } from "./pages/professionals/Professionals";
-export { default as ProfessionalDetail } from "./pages/professionals/ProfessionalDetail";
-export { default as ProfessionalReviews } from "./pages/professionals/ProfessionalReviews";
+// Website viewport v1: Professionals' web layout from 1024px wide (WC-PR, WC-PR.1 to .3: one page for the list, the profile and the reviews); the mobile pages below.
+export const Professionals = withWeb(ProfessionalsMobile, ProfessionalsWeb);
+export const ProfessionalDetail = withWeb(ProfessionalDetailMobile, ProfessionalsWeb);
+export const ProfessionalReviews = withWeb(ProfessionalReviewsMobile, ProfessionalsWeb);
 export { default as ProVerification } from "./pages/professionals/ProVerification";
 export { default as Messages } from "./pages/messages/Messages";
 export { default as CallLink, LegacyCallLink } from "./components/calls/CallLink";
@@ -122,7 +129,13 @@ export const Subscription = withWeb(SubscriptionMobile, SubscriptionWeb);
 // Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
 export const More = withWeb(MoreMobile, MoreWeb);
 export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
-export { default as Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
+export { CertificatePage, CourseBuilderPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
+// Website viewport v1: the Community web layouts from 1024px wide (WC-CO); professionals and the mobile pages below.
+export const Community = withWeb(CommunityMobile, CommunityWeb);
+export const ForumNewPage = withWeb(ForumNewPageMobile, ForumNewPageWeb);
+export const ForumNicknamePage = withWeb(ForumNicknamePageMobile, ForumNicknamePageWeb);
+export const ForumPostPage = withWeb(ForumPostPageMobile, ForumPostPageWeb);
+export const CoursePage = withWeb(CoursePageMobile, CoursePageWeb);
 export { default as Settings } from "./pages/settings/Settings";
 export { default as NotificationsPage } from "./pages/settings/NotificationsPage";
 export { default as HealthCheckRemindersPage } from "./pages/settings/HealthCheckRemindersPage";
