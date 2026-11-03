@@ -23,9 +23,9 @@ import { t } from "../../i18n/core";
 // for (staff see the no-access card instead of an empty business); the gym
 // Front desk's Memberships tab needs 'members' on top of 'front_desk'.
 // Website viewport v1: from 1024px wide a Classes business's Schedule and a
-// store's Orders are web pages on their own routes (WB-CS-SC, WB-ST-OR); the
+// store's Orders and an Appointments business's day are web pages on their own routes (WB-CS-SC, WB-ST-OR); the
 // navbar slot's one route sends them there. Below 1024 nothing changes.
-const WEB_ROUTE: Partial<Record<string, string>> = { classes: "/app/business/classes", store: "/app/business/orders" };
+const WEB_ROUTE: Partial<Record<string, string>> = { classes: "/app/business/classes", store: "/app/business/orders", appointments: "/app/business/appointments" };
 
 export default function BusinessOperationsTab() {
   const kind = useBusinessNavKind();

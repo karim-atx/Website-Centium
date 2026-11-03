@@ -14,6 +14,8 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/orders\/returns\/[^/]+\/?$/, // WB-ST-OR.2 Return detail
   /^\/app\/business\/orders\/(?!list\/|returns\/)[^/]+\/?$/, // WB-ST-OR.1 Order detail
   /^\/app\/business\/products\/?$/, // WB-ST-PR Products · Showcase, .3 category See all
+  /^\/app\/business\/appointments\/?$/, // WB-ST-AP Appointments (list-detail)
+  /^\/app\/business\/appointments\/(?!day\/?$)[^/]+\/?$/, // WB-ST-AP.1 Appointment detail
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {

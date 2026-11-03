@@ -15,6 +15,7 @@ export const FILES: string[] = [
   "pages/business-ops/store/OrdersPage.web.tsx",
   "pages/business-ops/store/webKit.tsx",
   "pages/business-ops/store/products/StoreProductsPage.web.tsx",
+  "pages/business-ops/appointments/AppointmentsPage.web.tsx",
 ];
 
 const webcs: Catalogue = {
