@@ -9,7 +9,7 @@ import { EmptyState } from "../EmptyState";
 import { OfflineLine } from "../states";
 import { fetchClientBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
 import { classifyBloodPressure, splitByTimeOfDay, averageReading } from "../../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL } from "../../../services/blood-pressure/guidance";
+import { bpCategoryWord } from "../../../services/blood-pressure/guidance";
 import { NO_READINGS } from "../../../services/health-metrics/series";
 import { fetchActivityDays, fetchInsightTargets, fetchMetricRows, fetchSleepNights, fetchTrackedTypes, localDay, type MetricRow, type MetricType } from "../../../services/pro/insights";
 import { SleepView } from "./SleepCharts";
@@ -65,9 +65,8 @@ import { t, tk, tn, tx } from "../../../i18n/core";
  */
 
 type Sub = "bp" | "hr" | "weight" | "sleep" | "steps" | "water" | "calories";
-/** The blood pressure category word (BP_CATEGORY_LABEL's English), in the active language. */
-const bpWord = (c: keyof typeof BP_CATEGORY_LABEL): string =>
-  c === "normal" ? tx("Normal", "blood pressure") : c === "elevated" ? t("Elevated") : c === "stage1" ? t("Stage 1 high") : c === "stage2" ? t("Stage 2 high") : t("Very high");
+/** The blood pressure category word, in the active language. */
+const bpWord = bpCategoryWord;
 const fmt = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
 
 export const VitalsPanel: React.FC<PanelProps> = (p) => {

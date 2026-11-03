@@ -20,8 +20,8 @@ import {
 } from "../../services/blood-pressure";
 import { classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
 import {
-  BP_CATEGORY_LABEL,
-  BP_CATEGORY_RANGE,
+  bpCategoryWord,
+  bpCategoryRange,
   BP_HOW_TO_MEASURE_TITLE,
   BP_LOG_SHEET_DISCLAIMER,
   SEVERE_READING_MESSAGE,
@@ -340,8 +340,8 @@ export const BloodPressureSheet: React.FC<{
         {/* The live category (kept, not drawn): text, never colour alone. */}
         {category && !inPregnancy && (
           <p className="flex items-center justify-between gap-2 text-charcoal-soft" style={{ margin: "10px 0 0", fontSize: textPx(11.5), lineHeight: "17px" }}>
-            <span className="font-bold text-charcoal">{BP_CATEGORY_LABEL[category]}</span>
-            <span className="text-charcoal-faint">{BP_CATEGORY_RANGE[category]}</span>
+            <span className="font-bold text-charcoal">{bpCategoryWord(category)}</span>
+            <span className="text-charcoal-faint">{bpCategoryRange(category)}</span>
           </p>
         )}
 

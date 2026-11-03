@@ -5,7 +5,7 @@ import { SCREENING_COPY, bmiOf, screeningRows } from "../../../services/health-c
 import { usePregnancyFlags } from "../../../components/pregnancy/usePregnancyFlags";
 import { PregnancyHealthCard } from "../../../components/pregnancy/PregnancyGuidance";
 import { classifyBloodPressure, isSevere } from "../../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
+import { bpCategoryWord, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
 import { BP_DISCUSS_TEXT, COPY as CHECKS_COPY, FLAG_LABEL, FLAG_TEXT } from "../../../services/health-checks/guidance";
 import { HEALTH_DISCLAIMER } from "../../../services/legal/disclaimer";
 import { averageOf, formatMetric, withinDays, type MetricReadings } from "../../../services/health-metrics/series";
@@ -223,7 +223,7 @@ export default function HealthWeb() {
       ? { text: bpPregFlag.label, color: OUT_RANGE }
       : null
     : bpCategory
-      ? { text: BP_CATEGORY_LABEL[bpCategory], color: bpCategory === "normal" ? IN_RANGE : OUT_RANGE }
+      ? { text: bpCategoryWord(bpCategory), color: bpCategory === "normal" ? IN_RANGE : OUT_RANGE }
       : null;
 
   const weight = metricValues.weight;

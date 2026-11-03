@@ -44,7 +44,7 @@ export default function HealthSources() {
               id={`sources-${g.feature}`}
               className="mb-2 text-[11px] font-bold uppercase tracking-[.14em] text-charcoal-soft"
             >
-              {g.heading}
+              {t(g.heading)}
             </h2>
             <ul className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden">
               {g.sources.map((s, i) => (

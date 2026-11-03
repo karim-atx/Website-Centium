@@ -6,7 +6,7 @@ import { MetricHero, hairline, mc, metricIconInk, metricTextInk, useHealthMode }
 import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { isRtl, t, tk, tn } from "../../../i18n/core";
 import { BP_CATEGORIES, type BpCategory } from "../../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL, BP_CATEGORY_RANGE, BP_DETAIL_FOOTER, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
+import { bpCategoryWord, bpCategoryRange, BP_DETAIL_FOOTER, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
 import { PREGNANCY_FLAG_COPY, type PregnancyFlag } from "../../../services/pregnancy/checks";
 import { PREGNANCY_BP_LEVELS, REVIEWED } from "../../../services/health-metrics/clinicalCopy";
 import type { BloodPressureReading } from "../../../services/blood-pressure";
@@ -516,7 +516,7 @@ export const BpReferenceCard: React.FC<{
           </h2>
           <div style={{ marginTop: 10 }}>
             {showAdult
-              ? BP_CATEGORIES.map((c, i) => row(c, latest === c ? t("{category} · latest", { category: BP_CATEGORY_LABEL[c] }) : BP_CATEGORY_LABEL[c], BP_CATEGORY_RANGE[c], latest === c, counts ? counts[c] : null, i === 0))
+              ? BP_CATEGORIES.map((c, i) => row(c, latest === c ? t("{category} · latest", { category: bpCategoryWord(c) }) : bpCategoryWord(c), bpCategoryRange(c), latest === c, counts ? counts[c] : null, i === 0))
               : PREGNANCY_BP_LEVELS.rows.map((r, i) => row(r.label, r.label, r.range, false, null, i === 0))}
           </div>
         </>

@@ -55,7 +55,7 @@ import { useCheckFlags } from "../../../components/health-checks/useCheckFlags";
 import { usePregnancyFlags } from "../../../components/pregnancy/usePregnancyFlags";
 import { deleteBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
 import { averageReading, categoryCounts, classifyBloodPressure, isSevere, splitByTimeOfDay } from "../../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL, BP_NO_READINGS } from "../../../services/blood-pressure/guidance";
+import { bpCategoryWord, BP_NO_READINGS } from "../../../services/blood-pressure/guidance";
 import { t, tk, tn, tx } from "../../../i18n/core";
 
 // HE1.6 Blood pressure (opens on Week) with HE1.6.d / .m / .y and HE1.6.a.
@@ -73,7 +73,7 @@ import { t, tk, tn, tx } from "../../../i18n/core";
 // - K3: the advanced-monitoring check flag chip on each reading (adult only),
 //   never naming the mode.
 // - V6-04: category words in green #357A4D (Normal) or red #C2453F (all
-//   others), words from BP_CATEGORY_LABEL. V6-05: no category on Month / Year
+//   others), words from bpCategoryWord. V6-05: no category on Month / Year
 //   averages. BP_DETAIL_FOOTER always shows. V6-136: morning before 12:00.
 // - HE1.6.a: the log sheet (Health B, HE1.6.1) opens BpVeryHighPopup itself
 //   after a save that shouldOpenBpVeryHigh() matches (adult very high or
@@ -134,7 +134,7 @@ export default function BloodPressurePage() {
         pill = f ? { text: f.label, inRange: false } : null;
       } else {
         const c = classifyBloodPressure(r.systolic, r.diastolic);
-        pill = { text: BP_CATEGORY_LABEL[c], inRange: c === "normal" };
+        pill = { text: bpCategoryWord(c), inRange: c === "normal" };
       }
       return { systolic: r.systolic, diastolic: r.diastolic, facts, pill };
     }
@@ -215,7 +215,7 @@ export default function BloodPressurePage() {
       value: r.pulse != null ? t("{n} bpm", { n: r.pulse }) : "",
       sub: (
         <span className="inline-flex items-center justify-end flex-wrap" style={{ gap: 4 }}>
-          {inPregnancy ? (pFlag ? <FlagChip tone={pFlag.level} label={pFlag.label} /> : null) : <span style={{ color: rangeInk(c === "normal", dark) }} data-bp-word>{BP_CATEGORY_LABEL[c]}</span>}
+          {inPregnancy ? (pFlag ? <FlagChip tone={pFlag.level} label={pFlag.label} /> : null) : <span style={{ color: rangeInk(c === "normal", dark) }} data-bp-word>{bpCategoryWord(c)}</span>}
           {cFlag && <CheckFlagChip flag={cFlag} />}
         </span>
       ),
@@ -261,9 +261,9 @@ export default function BloodPressurePage() {
         }
         empty={
           readings.length === 0
-            ? { title: BP_NO_READINGS, hint: t("Tap to add one"), onTap: openLog }
+            ? { title: t(BP_NO_READINGS), hint: t("Tap to add one"), onTap: openLog }
             : {
-                title: BP_NO_READINGS,
+                title: t(BP_NO_READINGS),
                 hint:
                   range === "day"
                     ? t("Nothing logged this day")

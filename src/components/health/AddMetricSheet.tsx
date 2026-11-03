@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { getBloodPressureForDay, type BloodPressureReading } from "../../services/blood-pressure";
 import { classifyBloodPressure } from "../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL } from "../../services/blood-pressure/guidance";
+import { bpCategoryWord } from "../../services/blood-pressure/guidance";
 import { BloodPressureSheet } from "./BloodPressureSheet";
 import { LogWaterSheet } from "./log/LogWaterSheet";
 import { LogWeightSheet } from "./log/LogWeightSheet";
@@ -259,7 +259,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   };
   const rowTitle: React.CSSProperties = { display: "block", fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 600, color: INK };
   const rowCaption: React.CSSProperties = { display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 400, color: am("caption") };
-  const chevron = <ChevronRight size={12} strokeWidth={2.2} className="rtl:-scale-x-100" style={{ color: am("icon"), flex: "none" }} />;
+  const chevron = <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />;
 
   const weightLoading = !weightHidden && weight === undefined && !!authUserId;
   const weightValue = !weightHidden && weight ? weight : null;
@@ -445,7 +445,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     {t("Lab results, reports, etc.")}
                   </span>
                 </span>
-                <ChevronRight size={12} strokeWidth={2.2} className="rtl:-scale-x-100" style={{ color: am("icon"), flex: "none" }} />
+                <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />
               </button>
             </div>
           </div>
@@ -466,7 +466,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     <span style={{ fontSize: textPx(11), fontWeight: 500, color: am("caption") }}> {t("mmHg")}</span>
                   </span>
                   <span style={{ display: "block", fontSize: textPx(10.5), lineHeight: linePx(15.8), color: am("label") }}>
-                    {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
+                    {bpCategoryWord(classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic))}
                     {bpLatest.pulse != null && ` · ${t("{n} bpm", { n: bpLatest.pulse })}`}
                   </span>
                 </>

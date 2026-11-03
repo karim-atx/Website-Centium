@@ -43,7 +43,7 @@ export default function HealthSourcesWeb() {
             {state.groups.map((g) => (
               <section key={g.feature} style={{ breakInside: "avoid", marginBottom: 20 }} aria-labelledby={`sources-${g.feature}`}>
                 <h2 id={`sources-${g.feature}`} className="uppercase" style={{ margin: "0 0 8px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", color: "#5B5349" }}>
-                  {g.heading}
+                  {t(g.heading)}
                 </h2>
                 <ul className="overflow-hidden" style={{ margin: 0, padding: 0, listStyle: "none", borderRadius: 18, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}>
                   {g.sources.map((s, i) => (

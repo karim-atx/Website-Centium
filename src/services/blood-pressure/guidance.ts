@@ -1,4 +1,5 @@
 import type { BpCategory } from "./classify";
+import { t, tx } from "../../i18n/core";
 
 // EVERY MEDICAL SENTENCE THIS APP SAYS ABOUT BLOOD PRESSURE, in one file.
 //
@@ -37,6 +38,15 @@ export const BP_CATEGORY_RANGE: Record<BpCategory, string> = {
   stage2: "140 or above, or 90 or above",
   severe: "Above 180 and/or above 120",
 };
+
+/**
+ * The category word and its range in the active language: what every screen
+ * shows. The English is the two tables above; Arabic is the catalogue's
+ * (the category words are the ones the professional's Vitals panel uses;
+ * "Normal" has a context key, as the bare word is a workout level).
+ */
+export const bpCategoryWord = (c: BpCategory): string => (c === "normal" ? tx(BP_CATEGORY_LABEL.normal, "blood pressure") : t(BP_CATEGORY_LABEL[c]));
+export const bpCategoryRange = (c: BpCategory): string => t(BP_CATEGORY_RANGE[c]);
 
 /**
  * COLOUR IS NEVER THE ONLY SIGNAL. Every place these are used also prints
