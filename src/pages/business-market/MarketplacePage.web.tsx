@@ -1,4 +1,3 @@
-import React from "react";
 import { Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { MarketSkeleton } from "../../components/market/MarketStates";
@@ -12,7 +11,7 @@ import { HiddenBanner } from "./MarketplacePage";
 import { OverviewWeb } from "./Overview.web";
 import { ShowcaseManager } from "./ShowcaseManager";
 import { OffersTabWeb } from "./OffersWeb.web";
-import { PerformanceTab } from "./PerformanceTab";
+import { PerformanceTabWeb } from "./PerformanceWeb.web";
 import PhotosPage from "./PhotosPage";
 import PreviewPage from "./PreviewPage";
 import SeeAllPage from "./SeeAllPage";
@@ -26,13 +25,12 @@ import { t } from "../../i18n/core";
 // tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase
 // (WB-MA.2) its list-detail with the docked editor (ShowcaseManager reads
 // MarketWebType and draws ShowcaseWeb); Offers (WB-MA.3) its three columns
-// (OffersWeb); Performance (WB-MA.4) shows its mobile tab in a centred column
-// until its web layout lands. The other
+// (OffersWeb); Performance (WB-MA.4) its offer charts and Listing
+// (PerformanceWeb). The other
 // Marketplace routes (photos, preview, See all, the offer editor) keep their
 // mobile pages in the shell's centred column. The tab lives in ?tab= as on
 // mobile; the mobile Marketplace page is not touched.
 
-const Column: React.FC<{ children: React.ReactNode }> = ({ children }) => <div style={{ maxWidth: 430, margin: "0 auto" }}>{children}</div>;
 
 export default function MarketRoutesWeb() {
   return (
@@ -94,16 +92,11 @@ function Body() {
             <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} />
           ) : tab === "overview" ? (
             <OverviewWeb rail={rail} />
-          ) : tab === "showcase" || tab === "offers" ? (
+          ) : (
             <MarketWebType.Provider value={rail ? "rail" : "wide"}>
               <HiddenBanner />
-              {tab === "showcase" ? <ShowcaseManager /> : <OffersTabWeb />}
+              {tab === "showcase" ? <ShowcaseManager /> : tab === "offers" ? <OffersTabWeb /> : <PerformanceTabWeb />}
             </MarketWebType.Provider>
-          ) : (
-            <Column>
-              <HiddenBanner />
-              <PerformanceTab />
-            </Column>
           )}
         </div>
       </div>
