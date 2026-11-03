@@ -31,7 +31,7 @@ import { prCard } from "../../../components/share/client/clientCardModel";
 import { isNewPr, prFacts } from "../../../components/share/client/clientShareData";
 import { appLocale } from "../../../i18n/format";
 import { borderCard, cardTitle } from "./styles";
-import { getLanguage, t, tn, tx } from "../../../i18n/core";
+import { getLanguage, isRtl, t, tn, tx } from "../../../i18n/core";
 
 // Website viewport v1 · WC-WO.4 Metrics (WC-WO Workout Web v13). A 12-column
 // grid (8 beside the rail): the volume hero (8 columns, the chart with its
@@ -563,7 +563,12 @@ const VolumeChart: React.FC<{ points: { label: string; value: number }[]; select
   const peak = Math.max(0, ...points.map((p) => p.value));
   const ticks = volumeTicks(peak);
   const top = Math.max(ticks[2], peak) * 1.12 || 1;
-  const X = (i: number) => (n < 2 ? 50 : 3 + (i * 94) / (n - 1));
+  // Mirrored in Arabic as the app's charts are: time runs from the right, the axis on the right.
+  const rtl = isRtl();
+  const X = (i: number) => {
+    const x = n < 2 ? 50 : 3 + (i * 94) / (n - 1);
+    return rtl ? 100 - x : x;
+  };
   const Y = (v: number) => (1 - v / top) * 100;
   const dateIdx = n < 2 ? [0] : Array.from(new Set([0, Math.round((n - 1) / 3), Math.round((2 * (n - 1)) / 3), n - 1]));
   const sel = points[selected];
@@ -583,18 +588,17 @@ const VolumeChart: React.FC<{ points: { label: string; value: number }[]; select
         onKeyDown={(e) => {
           if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
             e.preventDefault();
-            const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
             const step = (e.key === "ArrowRight") !== rtl ? 1 : -1;
             onSelect(Math.min(n - 1, Math.max(0, selected + step)));
           }
         }}
         className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70"
         dir="ltr"
-        style={{ flex: 1, minHeight: 80, position: "relative", margin: "6px 0 0 40px" }}
+        style={{ flex: 1, minHeight: 80, position: "relative", margin: rtl ? "6px 40px 0 0" : "6px 0 0 40px" }}
       >
         {ticks.map((v) => (
           <div key={v} style={{ position: "absolute", left: 0, right: 0, top: `${Y(v)}%`, borderTop: "1px dashed rgba(255,255,255,0.25)" }}>
-            <span style={{ position: "absolute", left: -40, top: -9, width: 32, textAlign: "right", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>{kiloTick(v)}</span>
+            <span style={{ position: "absolute", ...(rtl ? { right: -40, textAlign: "left" as const } : { left: -40, textAlign: "right" as const }), top: -9, width: 32, fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>{kiloTick(v)}</span>
           </div>
         ))}
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden style={{ position: "absolute", inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
@@ -628,7 +632,7 @@ const VolumeChart: React.FC<{ points: { label: string; value: number }[]; select
           );
         })}
       </div>
-      <div dir="ltr" style={{ position: "relative", height: 20, margin: "8px 0 0 40px", flex: "none" }}>
+      <div dir="ltr" style={{ position: "relative", height: 20, margin: rtl ? "8px 40px 0 0" : "8px 0 0 40px", flex: "none" }}>
         {dateIdx.map((i) => (
           <span key={i} style={{ position: "absolute", left: `${X(i)}%`, transform: "translateX(-50%)", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>
             {points[i].label}
@@ -647,7 +651,8 @@ const Spark: React.FC<{ values: number[] | null; color: string }> = ({ values, c
   const mx = Math.max(...values);
   const last = values.length - 1;
   const y = (v: number) => 4 + (1 - (v - mn) / (mx - mn || 1)) * 16;
-  const pts = values.map((v, i) => [(i / last) * 100, y(v)] as const);
+  const rtl = isRtl();
+  const pts = values.map((v, i) => [rtl ? 100 - (i / last) * 100 : (i / last) * 100, y(v)] as const);
   const dot = (x: number, yy: number, d: number, filled: boolean) => (
     <span style={{ position: "absolute", left: `calc(${x}% - ${d / 2}px)`, top: yy - d / 2, width: d, height: d, boxSizing: "border-box", borderRadius: 999, background: filled ? color : "#F2F7F6", border: filled ? "none" : `1.5px solid ${color}` }} />
   );

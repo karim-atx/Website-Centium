@@ -220,11 +220,13 @@ export default function RoutinesWeb({ onCreateRoutine }: { onCreateRoutine: (fol
     if (!selected || logging) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable]")) return;
       if (document.querySelector(".fixed.inset-0:not(.pointer-events-none)")) return;
       setSelectedId(null);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Capture: runs before a popup's own Esc closes it, so that Esc only closes the popup.
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [selected, logging]);
 
   const pauseActive = () =>
