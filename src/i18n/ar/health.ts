@@ -185,7 +185,14 @@ const health: Catalogue = {
   "Heart rate, {n} beats per minute, latest reading": "معدل القلب، {n} نبضة في الدقيقة، آخر قراءة", // note: health wording
   mmHg: "ملم زئبق", // note: health wording; the blood-pressure unit
   "Tap to add one": "اضغط لإضافة قراءة",
-  "Blood pressure, {sys} over {dia}, {category}, at {time}": "ضغط الدم، {sys} على {dia}، {category}، الساعة {time}", // note: health wording; {category} is the guideline's category word (clinical copy, stays English)
+  "Blood pressure, {sys} over {dia}, {category}, at {time}": "ضغط الدم، {sys} على {dia}، {category}، الساعة {time}", // note: health wording; {category} is the guideline's category word, translated (provitals has the words)
+  // The blood pressure categories' ranges (guidance.ts BP_CATEGORY_RANGE), beside
+  // each category word; numbers as the English, systolic first.
+  "Under 120 and under 80": "أقل من 120 وأقل من 80", // note: health wording; the Normal range
+  "120–129 and under 80": "120–129 وأقل من 80", // note: health wording; the Elevated range
+  "130–139 or 80–89": "130–139 أو 80–89", // note: health wording; the Stage 1 range
+  "140 or above, or 90 or above": "140 فما فوق، أو 90 فما فوق", // note: health wording; the Stage 2 range
+  "Above 180 and/or above 120": "أعلى من 180 و/أو أعلى من 120", // note: health wording; the Very high range
   "Blood pressure, {sys} over {dia}, at {time}": "ضغط الدم، {sys} على {dia}، الساعة {time}", // note: health wording
   "Blood pressure, no readings yet": "ضغط الدم، لا قراءات بعد",
   "Weight trend": "اتجاه الوزن", // note: health wording (hidden in recovery-sensitive mode)
@@ -199,6 +206,9 @@ const health: Catalogue = {
   "Sources and guidelines": "المصادر والإرشادات", // note: the source titles and organisations stay as published (English)
   "Add metric": "إضافة قياس",
   "Couldn't load the sources. Please try again.": "تعذّر تحميل المصادر. يُرجى المحاولة مرة أخرى.",
+  // Sources group headings (services/sources/groups.ts); the others are shared keys.
+  "Health screening": "الفحوصات الدورية", // note: health wording; the screening checks' sources
+  "Other sources": "مصادر أخرى",
   "{n}kg": "{n} كغ",
 
   // Metric tiles (also on Home)

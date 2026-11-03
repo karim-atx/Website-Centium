@@ -68,7 +68,7 @@ export default function PublicBooking() {
   return (
     <PublicFrame label={t("Book a session with {name}", { name: pro.firstName })}>
       <Link to={`/p/${pro.handle}`} className="tap self-start inline-flex items-center gap-1 min-h-11 text-[13px] font-bold text-charcoal-soft">
-        <ChevronLeft size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" /> {t("Profile")}
+        <ChevronLeft size={16} strokeWidth={2} aria-hidden /> {t("Profile")}
       </Link>
       <ProHero name={pro.firstName} avatarUrl={pro.avatarUrl} subtype={pro.subtype} specialty={pro.specialty} headline={pro.headline} licenceVerified={pro.licenceVerified} />
       <PublicCard>

@@ -248,7 +248,7 @@ export const FileViewerScreen: React.FC<{
       <div className="relative w-full max-w-[430px] h-full flex flex-col" style={{ paddingTop: "calc(env(safe-area-inset-top) + 54px)" }}>
         <div className="flex items-start shrink-0" style={{ padding: "0 12px", gap: 6 }}>
           <button type="button" onClick={onClose} aria-label={t("Back")} className="tap grid place-items-center shrink-0 relative before:absolute before:-inset-[2px] before:content-['']" style={btn}>
-            <ChevronLeft size={20} color="#FFFFFF" className="rtl:-scale-x-100" aria-hidden />
+            <ChevronLeft size={20} color="#FFFFFF" aria-hidden />
           </button>
           <div className="flex-1 min-w-0" style={{ paddingTop: 0.5 }}>
             <p className="truncate" style={{ fontSize: textPx(15), lineHeight: linePx(22.5), fontWeight: 700, color: "#FFFFFF" }}>

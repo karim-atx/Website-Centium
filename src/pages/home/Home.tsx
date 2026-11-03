@@ -183,7 +183,7 @@ export default function Home() {
                 <p className="text-xs text-cream/60">{t("Business tools are an early preview")}</p>
               </div>
             </div>
-            <ChevronRight size={18} className="text-cream/60 rtl:-scale-x-100" />
+            <ChevronRight size={18} className="text-cream/60" />
           </div>
         </Card>
       )}
@@ -216,7 +216,7 @@ export default function Home() {
             <p className="text-[10px] font-medium text-team-rose-ink mt-0.5">{t("Dietitians, trainers, doctors & more")}</p>
           </div>
         </div>
-        <ArrowRight size={15} className="text-berry shrink-0 rtl:-scale-x-100" />
+        <ArrowRight size={15} className="text-berry shrink-0" />
       </button>
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />

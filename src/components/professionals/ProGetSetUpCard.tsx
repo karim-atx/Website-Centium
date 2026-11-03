@@ -205,7 +205,7 @@ export const ProGetSetUpCard: React.FC<{ onAddClient: () => void; onPlans: () =>
               </span>
               {!r.done && r.onClick && (
                 <span className="ob-chev" aria-hidden style={{ color: "var(--ob-desc)" }}>
-                  <ChevronRight size={14} className="rtl:-scale-x-100" />
+                  <ChevronRight size={14} />
                 </span>
               )}
             </>

@@ -50,7 +50,7 @@ function LibraryList() {
                     <span className="block text-[11.5px] text-charcoal-faint">{meta}</span>
                   </span>
                   {s.access === "free" && <span className="shrink-0 text-[10.5px] font-extrabold text-status-good">{t("Free")}</span>}
-                  <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />
+                  <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />
                 </button>
               );
             })}

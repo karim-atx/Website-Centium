@@ -63,7 +63,6 @@ export const CycleTitleRow: React.FC<{ title: string; onBack: () => void; sub?: 
       <ChevronLeft
         size={sub ? 22 : 20}
         aria-hidden
-        className="rtl:-scale-x-100"
         style={{ color: sub ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-soft))" }}
       />
     </button>
@@ -190,7 +189,7 @@ export const CycleRow: React.FC<{
     return (
       <button type="button" onClick={onClick} aria-label={ariaLabel} className={clsx("tap", cls)} style={style}>
         {body}
-        <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" style={{ marginInlineStart: -10 }} />
+        <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginInlineStart: -10 }} />
         {rule}
       </button>
     );

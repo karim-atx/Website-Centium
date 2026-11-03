@@ -347,10 +347,11 @@ function PhotosBody() {
     if (tg.kind === "cover") return [{ k: "replace", t: t("Replace"), I: RefreshCw }, { k: "delete", t: t("Delete"), I: Trash2 }];
     const i = gallery.findIndex((p) => p.id === tg.photo.id);
     // "left" is one place earlier; in Arabic the gallery runs right to left, so earlier is to the right.
+    // The arrow stays ArrowLeft for earlier: index.css mirrors it in Arabic, so it points right there.
     const rtl = isRtl();
     return [
-      ...(i > 0 ? [{ k: "left", t: rtl ? t("Move right") : t("Move left"), I: rtl ? ArrowRight : ArrowLeft }] : []),
-      ...(i >= 0 && i < gallery.length - 1 ? [{ k: "right", t: rtl ? t("Move left") : t("Move right"), I: rtl ? ArrowLeft : ArrowRight }] : []),
+      ...(i > 0 ? [{ k: "left", t: rtl ? t("Move right") : t("Move left"), I: ArrowLeft }] : []),
+      ...(i >= 0 && i < gallery.length - 1 ? [{ k: "right", t: rtl ? t("Move left") : t("Move right"), I: ArrowRight }] : []),
       { k: "replace", t: t("Replace"), I: RefreshCw },
       { k: "delete", t: t("Delete"), I: Trash2 },
     ];

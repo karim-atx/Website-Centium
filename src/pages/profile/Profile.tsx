@@ -511,7 +511,7 @@ function ClientProfile() {
                 <r.icon size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{r.label}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           ))}
         </div>
@@ -568,7 +568,7 @@ function ClientProfile() {
                     {/* Release 3 W7 (Karim answer 1): addition under the row's own line. */}
                     {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
                 </button>
               ))}
               {/* Release 3 W8 CU30: "Sharing your wins", after the professional rows. */}
@@ -590,7 +590,7 @@ function ClientProfile() {
                     <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
                   </span>
                   <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{t("Connect with a professional code")}</span>
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
                 </button>
               )}
             </div>
@@ -623,7 +623,7 @@ function ClientProfile() {
                   <s.icon size={14} strokeWidth={1.75} className="text-primary-dark" />
                 </span>
                 <span className="flex-1 min-w-0 text-[13px] font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={14} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+                <ChevronRight size={14} className="text-charcoal-faint shrink-0" aria-hidden />
               </button>
             ))}
           </div>
@@ -655,7 +655,7 @@ function ClientProfile() {
             {safetyOpen ? (
               <ChevronDown size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             ) : (
-              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1 rtl:-scale-x-100" />
+              <ChevronRight size={14} aria-hidden className="text-charcoal-faint shrink-0 me-1" />
             )}
           </button>
           {safetyOpen && (

@@ -30,7 +30,7 @@ export function DoctorSummaryEntry({ className = "" }: { className?: string }) {
         <span className="block text-[13.5px] font-bold text-charcoal">{t("Summary for your doctor")}</span>
         <span className="block text-[11.5px] text-charcoal-faint">{t("A printable summary of your records, made on your device")}</span>
       </span>
-      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
     </button>
   );
 }

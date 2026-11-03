@@ -257,7 +257,7 @@ export const FolderHeader: React.FC<{
               <span className="flex items-center gap-[7px]">
                 <span className="text-[15px] font-extrabold truncate" style={{ color: ink }}>{folder.name}</span>
                 {collapsed ? (
-                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0 rtl:-scale-x-100" style={{ color: ink }} />
+                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
                 ) : (
                   <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
                 )}

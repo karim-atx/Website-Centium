@@ -128,7 +128,7 @@ function HeartRateAlertsScreen() {
       <FixedHeader paddingBottom={14} fillClassName="bg-cream dark:bg-[#1C1F28]">
         <div className="flex items-center" style={{ gap: 4, height: 36, marginInlineStart: -8 }}>
           <button type="button" onClick={back} aria-label={t("Back")} className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36 }}>
-            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+            <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
           <h1 className="flex-1 min-w-0 line-clamp-2" style={{ fontSize: textPx(24), lineHeight: linePx(30), fontWeight: 700, letterSpacing: -0.5, color: "rgb(var(--c-charcoal))" }}>
             {HR_ALERT_COPY.settingsTitle}
@@ -173,7 +173,7 @@ function HeartRateAlertsScreen() {
         <span className="flex-1 text-start" style={{ fontSize: textPx(14), lineHeight: linePx(19), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
           {t("Notifications")}
         </span>
-        <ChevronRight size={17} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-faint))" }} aria-hidden />
+        <ChevronRight size={17} style={{ color: "rgb(var(--c-charcoal-faint))" }} aria-hidden />
       </button>
       <p style={{ marginTop: 6, fontSize: textPx(11), lineHeight: linePx(16.5), fontWeight: 400, color: "rgb(var(--c-charcoal-soft))" }}>{HR_ALERT_COPY.quietHours}</p>
 

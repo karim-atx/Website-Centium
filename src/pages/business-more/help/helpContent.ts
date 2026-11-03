@@ -1,7 +1,7 @@
 import type { BizKind } from "../../../components/business-more/kind";
 import { t } from "../../../i18n/core";
 import { BILLING_HELP_STEPS, BILLING_HELP_TITLE } from "../../../services/legal/billingHelp";
-import { REFUND_POLICY_LABEL, REFUND_POLICY_PATH } from "../../../marketing/legal/refund";
+import { REFUND_POLICY_HREF, REFUND_POLICY_LABEL } from "../../../marketing/legal/refund";
 
 // MO1B-050 to -070 · the business Help centre content. Source:
 // LEGAL_AND_HELP.md "Help centre" (the first article of each topic) and
@@ -162,7 +162,7 @@ export function helpTopics(kind: BizKind): HelpTopic[] {
       id: "billing",
       title: t("Billing"),
       icon: "wallet",
-      articles: [{ ...a("billing-and-refunds", t(BILLING_HELP_TITLE), BILLING_HELP_STEPS.map((s) => t(s))), link: { label: t(REFUND_POLICY_LABEL), href: REFUND_POLICY_PATH } }],
+      articles: [{ ...a("billing-and-refunds", t(BILLING_HELP_TITLE), BILLING_HELP_STEPS.map((s) => t(s))), link: { label: t(REFUND_POLICY_LABEL), href: REFUND_POLICY_HREF } }],
     },
     !store && {
       id: "team",

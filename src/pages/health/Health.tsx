@@ -6,7 +6,7 @@ import { usePregnancyFlags } from "../../components/pregnancy/usePregnancyFlags"
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { PregnancyHealthCard } from "../../components/pregnancy/PregnancyGuidance";
 import { classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
-import { BP_CATEGORY_LABEL, SEVERE_READING_MESSAGE } from "../../services/blood-pressure/guidance";
+import { bpCategoryWord, SEVERE_READING_MESSAGE } from "../../services/blood-pressure/guidance";
 import { BP_DISCUSS_TEXT, COPY as CHECKS_COPY, FLAG_LABEL, FLAG_TEXT } from "../../services/health-checks/guidance";
 import { averageOf, formatMetric, withinDays, type MetricReadings } from "../../services/health-metrics/series";
 import { useApp } from "../../context/AppContext";
@@ -234,7 +234,7 @@ export default function Health() {
       ? { text: bpPregFlag.label, color: OUT_RANGE }
       : null
     : bpCategory
-      ? { text: BP_CATEGORY_LABEL[bpCategory], color: bpCategory === "normal" ? IN_RANGE : OUT_RANGE }
+      ? { text: bpCategoryWord(bpCategory), color: bpCategory === "normal" ? IN_RANGE : OUT_RANGE }
       : null;
 
   // --- Weight trend (#65-#78): start = the first weigh-in on record (in the
@@ -600,7 +600,7 @@ function RecordRow({ icon, title, subtitle, onClick, radius = 18 }: { icon: Reac
           </span>
         )}
       </span>
-      <ChevronRight size={17} aria-hidden className="absolute rtl:-scale-x-100" style={{ insetInlineEnd: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
+      <ChevronRight size={17} aria-hidden className="absolute" style={{ insetInlineEnd: 13.5, top: "50%", marginTop: -8.5, color: "rgb(var(--c-charcoal-faint))" }} />
     </button>
   );
 }

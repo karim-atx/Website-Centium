@@ -38,7 +38,7 @@ export function CertificateView({ certificateId }: { certificateId: string }) {
           aria-label={t("Back")}
           className="tap relative w-9 h-9 -ms-[7px] rounded-full flex items-center justify-center shrink-0 before:content-[''] before:absolute before:-inset-1"
         >
-          <ChevronLeft size={18} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: fv("muted") }} aria-hidden="true" />
+          <ChevronLeft size={18} strokeWidth={2} style={{ color: fv("muted") }} aria-hidden="true" />
         </button>
         <div className="flex flex-col gap-1 min-w-0 mt-[3px]">
           <span className="text-[10.5px] font-bold uppercase leading-[14px] tracking-[0.12em] rtl:tracking-normal" style={{ color: fv("muted") }}>
@@ -72,7 +72,7 @@ export function CertificateView({ certificateId }: { certificateId: string }) {
               style={{ color: fv("link") }}
             >
               {t("Open the course")}
-              <ChevronRight size={14} strokeWidth={2} className="rtl:-scale-x-100" aria-hidden="true" />
+              <ChevronRight size={14} strokeWidth={2} aria-hidden="true" />
             </Link>
           )}
           <CertificateCard certificate={certificate} courseGone={certificate.courseId === null} />

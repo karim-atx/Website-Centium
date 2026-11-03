@@ -288,7 +288,7 @@ export default function Mind() {
           aria-label={t("Back")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
         >
-          <ChevronLeft size={18} className="rtl:-scale-x-100" />
+          <ChevronLeft size={18} />
         </button>
         <div>
           <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">{t("Mind")}</p>
@@ -403,7 +403,7 @@ export default function Mind() {
             onClick={() => navigate("/app/mind/habits")}
             className="tap flex items-center gap-0.5 text-[12px] font-bold text-primary-dark"
           >
-            {t("View all habits")} <ChevronRight size={13} className="rtl:-scale-x-100" />
+            {t("View all habits")} <ChevronRight size={13} />
           </button>
         </div>
         {/* New since the redesign: the frame's 1 px #AEA1DC outline (decision 22). */}
@@ -425,7 +425,7 @@ export default function Mind() {
                 </span>
                 <ChevronRight
                   size={15}
-                  className={clsx("ms-auto text-charcoal-faint transition-transform duration-200", autoOpen ? "rotate-90" : "rtl:-scale-x-100")}
+                  className={clsx("ms-auto text-charcoal-faint transition-transform duration-200", autoOpen && "rotate-90")}
                 />
               </button>
               {autoOpen &&
@@ -478,7 +478,7 @@ export default function Mind() {
                   </span>
                   <ChevronRight
                     size={15}
-                    className={clsx("ms-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded ? "rotate-90" : "rtl:-scale-x-100")}
+                    className={clsx("ms-auto shrink-0 text-charcoal-faint transition-transform duration-200", !folded && "rotate-90")}
                   />
                 </button>
                 {!folded && g.habits.map((h, i) => habitRow(h, i > 0))}

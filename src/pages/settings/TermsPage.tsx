@@ -63,7 +63,7 @@ export default function TermsPage() {
 
       <LegalFullLink href="/legal#terms">{t("Read the full Terms of Service")}</LegalFullLink>
       {/* Round F (DN, F3): the Refund and Cancellation Policy, part of the Terms. */}
-      <LegalFullLink href="/legal/refund-policy">{t("Refund and cancellation policy")}</LegalFullLink>
+      <LegalFullLink href="/legal#refund-policy">{t("Refund and cancellation policy")}</LegalFullLink>
       </SettingsBody>
     </div>
   );

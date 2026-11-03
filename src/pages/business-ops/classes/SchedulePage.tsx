@@ -337,7 +337,7 @@ export default function SchedulePage() {
           {/* The old Open spots week navigation (OURS placement: under the cards). */}
           <div className="flex items-center justify-between" style={{ marginTop: 12, marginInlineStart: -10, marginInlineEnd: -10 }}>
             <WeekArrow m={m} label={t("Previous week")} onClick={() => moveWeek(-1)}>
-              <ChevronLeft size={16} className="rtl:-scale-x-100" aria-hidden />
+              <ChevronLeft size={16} aria-hidden />
             </WeekArrow>
             <button
               type="button"
@@ -354,7 +354,7 @@ export default function SchedulePage() {
               {weekOf(week)}
             </button>
             <WeekArrow m={m} label={t("Next week")} onClick={() => moveWeek(1)}>
-              <ChevronRight size={16} className="rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={16} aria-hidden />
             </WeekArrow>
           </div>
 

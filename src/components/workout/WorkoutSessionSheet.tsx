@@ -1196,7 +1196,7 @@ export const WorkoutSessionSheet: React.FC<{
               <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                 {musicLine}
               </span>
-              <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-faint))" }} />
+              <ChevronRight size={16} aria-hidden style={{ color: "rgb(var(--c-charcoal-faint))" }} />
             </button>
             {groupIntoRuns(template.exercises, template.blocks).map((run) => {
               const indices = run.members.map((m) => template.exercises.indexOf(m));

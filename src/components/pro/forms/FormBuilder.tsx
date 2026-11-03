@@ -537,7 +537,7 @@ const Head: React.FC<{ title: string; onBack: () => void; onPreview: (() => void
   <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 12 }}>
     <div className="flex items-center min-w-0" style={{ gap: 6 }}>
       <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-3 before:content-['']" style={{ width: 24, height: 24, marginInlineStart: -4 }}>
-        <ChevronLeft size={18} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: INK.chS }} />
+        <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
       </button>
       <h1 className="truncate" style={{ fontSize: textPx(17), fontWeight: 800, color: INK.ch }}>
         {title}

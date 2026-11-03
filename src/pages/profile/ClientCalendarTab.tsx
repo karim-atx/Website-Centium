@@ -71,7 +71,7 @@ export default function ClientCalendarTab() {
               aria-label={t("Back")}
               className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ms-1.5 mt-0.5 transition-colors"
             >
-              <ChevronLeft size={18} className="rtl:-scale-x-100" />
+              <ChevronLeft size={18} />
             </button>
             <h1 className="text-[19px] leading-[28.5px] font-bold tracking-[-0.6px] text-charcoal mt-[5px]">{t("Calendar")}</h1>
           </div>

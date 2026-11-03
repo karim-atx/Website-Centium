@@ -361,7 +361,7 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
     ...extra,
   });
   const chevron = (
-    <ChevronRight size={16} aria-hidden className="absolute rtl:-scale-x-100" data-cycle-chevron="" style={{ insetInlineStart: 150.5, top: 49, color: ink.faint }} />
+    <ChevronRight size={16} aria-hidden className="absolute" data-cycle-chevron="" style={{ insetInlineStart: 150.5, top: 49, color: ink.faint }} />
   );
   let text: React.ReactNode = null;
   let showChevron = false;

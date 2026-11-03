@@ -258,7 +258,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
             className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
-            <ChevronLeft size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+            <ChevronLeft size={16} strokeWidth={2} aria-hidden />
           </button>
           <span className="tabular-nums whitespace-nowrap" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>
             {weekTitle}
@@ -274,7 +274,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
             className="tap w-11 h-11 -my-3 -mx-3 flex items-center justify-center rounded-full disabled:opacity-30"
             style={{ color: INK.prDeep }}
           >
-            <ChevronRight size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+            <ChevronRight size={16} strokeWidth={2} aria-hidden />
           </button>
         </span>
       )}

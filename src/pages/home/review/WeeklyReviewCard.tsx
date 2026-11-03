@@ -32,7 +32,7 @@ export function WeeklyReviewCard({ className = "" }: { className?: string }) {
         <span className="block text-[13.5px] font-bold text-charcoal">{t("Your week")}</span>
         <span className="block text-[11.5px] text-charcoal-faint">{t("Last week at a glance, with goal suggestions")}</span>
       </span>
-      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
     </button>
   );
 }

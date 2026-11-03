@@ -172,7 +172,7 @@ export function BackHeader({ eyebrow, title, onBack, backLabel, aside }: { eyebr
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBlock: "-4px 12px", marginInline: "-10px 0", color: m.ink }}>
       <button type="button" onClick={onBack} aria-label={backLabel} className="tap market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", color: m.ink, background: "transparent", border: 0, flexShrink: 0, cursor: "pointer" }}>
-        <ChevronLeft size={22} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" />
+        <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
       </button>
       <div style={{ minWidth: 0, flex: 1 }}>
         <p style={{ fontSize: px(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint, lineHeight: lh(15.75) }}>{eyebrow}</p>
@@ -536,7 +536,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 {x.sub && <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: m.faint, lineHeight: web ? lh(20) : "normal", ...(web ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } : {}) }}>{x.sub}</span>}
               </span>
               {!x.done && <span style={{ fontSize: px(web ? 13 : 12), lineHeight: web ? lh(20) : undefined, fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? t("Add") : t("Set up")}</span>}
-              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} style={{ flexShrink: 0 }} />
+              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden style={{ flexShrink: 0 }} />
             </button>
           ))}
           {total > 4 && (
@@ -691,7 +691,7 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
         <p style={{ fontSize: px(web ? 17 : 14), fontWeight: 700, color: m.ink, lineHeight: web ? lh(24) : "normal" }}>{t("Photos")}</p>
         <TextLink onClick={onOpen} style={{ gap: 2, marginInlineEnd: -4 }}>
           {photos.length ? t("Manage") : t("Add photos")}
-          <ChevronRight size={web ? 16 : 14} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} />
+          <ChevronRight size={web ? 16 : 14} aria-hidden />
         </TextLink>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
@@ -940,7 +940,7 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
           </span>
         </>
       )}
-      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} />
+      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden />
     </button>
   );
 }

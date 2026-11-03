@@ -37,7 +37,7 @@ import {
   typeText,
   type OpportunityExtras,
 } from "./opportunities/opportunitiesModel";
-import { t, tn, tx, isRtl } from "../../../i18n/core";
+import { t, tn, tx } from "../../../i18n/core";
 
 // Market + Share 3.0 · W4 · P-MA.5.1 Openings, the body of the P-MA
 // "Opportunities" tab (HANDOVER §4 "P-MA.5.1 Opportunities"; Professional
@@ -339,7 +339,7 @@ function InviteRow({ invite, onOpen }: { invite: ExistingTeamInvite; onOpen: () 
         <span style={{ display: "block", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700 }}>{invite.businessName ? t("Join {business}'s team?", { business: invite.businessName }) : t("Join a gym's team?")}</span>
         {by ? <span style={{ display: "block", fontSize: px(11.5), lineHeight: lh(16), fontWeight: 600 }}>{t("Accept by {date} · free", { date: longDate(by) })}</span> : null}
       </span>
-      <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ flexShrink: 0, ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }} />
+      <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ flexShrink: 0, ...NO_ICON_SCALE }} />
     </button>
   );
 }

@@ -97,7 +97,7 @@ export const ShareCourseSheet: React.FC<{ course: CourseCard; onClose: () => voi
           <CtaButton variant="secondary" label={t("Share")} icon={<Share size={15} strokeWidth={2} aria-hidden />} onClick={() => void share()} />
           <CtaButton
             label={tn(picked.length, "Send to {n} client", "Send to {n} clients")}
-            icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />}
+            icon={<Send size={15} strokeWidth={2} aria-hidden />}
             disabled={!picked.length}
             loading={busy}
             onClick={() => void send()}

@@ -501,7 +501,7 @@ export function CourseSheet({
         footer={toFooter(
           <>
             <CtaButton variant="secondary" label={published ? t("Back") : t("Cancel")} onClick={() => (published ? setView({ step: "overview" }) : close())} disabled={busy} />
-            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} onClick={() => void saveBasics("next")} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} loading={busy} onClick={() => void saveBasics("next")} />
           </>
         )}
       />
@@ -523,7 +523,7 @@ export function CourseSheet({
         footer={toFooter(
           <>
             <CtaButton variant="secondary" label={t("Back")} onClick={() => setView(published ? { step: "overview" } : { step: 0 })} disabled={busy} />
-            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} onClick={() => setView(published ? { step: "overview" } : { step: 3 })} disabled={busy} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} onClick={() => setView(published ? { step: "overview" } : { step: 3 })} disabled={busy} />
           </>
         )}
       />
@@ -540,7 +540,7 @@ export function CourseSheet({
             <CtaButton variant="secondary" label={t("Back")} onClick={() => setView({ step: 1 })} />
             <CtaButton
               label={t("Next")}
-              icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />}
+              icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />}
               disabled={!view.kind}
               onClick={() => view.kind && setView({ step: 2, sub: "edit", moduleId: view.moduleId, kind: view.kind, lessonId: null })}
             />
@@ -582,7 +582,7 @@ export function CourseSheet({
         footer={toFooter(
           <>
             <CtaButton variant="secondary" label={t("Back")} onClick={() => setView(published ? { step: "overview" } : { step: 1 })} disabled={busy} />
-            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} onClick={() => void saveAccess()} />
+            <CtaButton label={t("Next")} icon={<ArrowRight size={15} strokeWidth={2} aria-hidden />} loading={busy} onClick={() => void saveAccess()} />
           </>
         )}
       />
@@ -602,7 +602,7 @@ export function CourseSheet({
           editable ? (
             <>
               <CtaButton variant="secondary" label={t("Save as draft")} onClick={() => (onSavedDraft ? onSavedDraft() : onClose())} disabled={busy} />
-              <CtaButton label={t("Publish")} icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} disabled={data.lessons.length === 0} onClick={() => void submit()} />
+              <CtaButton label={t("Publish")} icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={data.lessons.length === 0} onClick={() => void submit()} />
             </>
           ) : null
         )}
@@ -742,7 +742,7 @@ function EditOverview({
           {t("Discard these changes")}
         </button>
       )}
-      {toFooter(<CtaButton label={t("Submit changes")} icon={<Send size={15} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />} loading={busy} disabled={!open || frozen} onClick={onSubmit} />)}
+      {toFooter(<CtaButton label={t("Submit changes")} icon={<Send size={15} strokeWidth={2} aria-hidden />} loading={busy} disabled={!open || frozen} onClick={onSubmit} />)}
     </div>
   );
 }

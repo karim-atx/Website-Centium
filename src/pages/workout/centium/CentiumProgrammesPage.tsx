@@ -46,7 +46,7 @@ function ProgrammesList() {
                   <span className="min-w-0" style={{ fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", overflowWrap: "anywhere" }}>
                     {p.title}
                   </span>
-                  <ChevronRight size={16} aria-hidden className="shrink-0 rtl:-scale-x-100" style={{ color: coachColor("faint", dark) }} />
+                  <ChevronRight size={16} aria-hidden className="shrink-0" style={{ color: coachColor("faint", dark) }} />
                 </span>
                 <span className="block" style={{ marginTop: 4, fontSize: textPx(12.5), lineHeight: 1.45, color: "rgb(var(--c-charcoal-soft))" }}>
                   {p.description}

@@ -200,12 +200,12 @@ export const ReferSheet: React.FC<{
   const steps = [t("Client"), t("Colleague"), t("Your note")];
   const footer =
     step === 0 ? (
-      <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} className="rtl:-scale-x-100" />} label={t("Next")} disabled={!client} onClick={() => goStep(1)} />
+      <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} />} label={t("Next")} disabled={!client} onClick={() => goStep(1)} />
     ) : (
       <div className="flex w-full" style={{ gap: 8 }}>
         <CtaButton className="flex-1" size="sheet" variant="secondary" label={t("Back")} onClick={() => goStep(step - 1)} />
         {step === 1 ? (
-          <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} className="rtl:-scale-x-100" />} label={t("Next")} disabled={!to} onClick={() => goStep(2)} />
+          <CtaButton className="flex-1" size="sheet" icon={<ArrowRight size={15} />} label={t("Next")} disabled={!to} onClick={() => goStep(2)} />
         ) : (
           <CtaButton className="flex-1" size="sheet" icon={<Send size={15} />} label={t("Send referral")} loading={busy} disabled={!note.trim()} onClick={() => void send()} />
         )}

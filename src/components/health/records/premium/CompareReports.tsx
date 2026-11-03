@@ -45,7 +45,7 @@ export function CompareReports({ panels, className = "" }: { panels: LabPanel[];
           <span className="block text-[13px] font-bold text-charcoal">{t("Compare two reports")}</span>
           <span className="block text-[11.5px] text-charcoal-faint">{t("Side by side, marker by marker")}</span>
         </span>
-        {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+        {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
       </button>
       {open && <CompareSheet panels={panels} onClose={() => setOpen(false)} />}
     </>

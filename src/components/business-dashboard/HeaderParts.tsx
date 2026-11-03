@@ -145,7 +145,7 @@ export function DashHeader({
           >
             <span style={{ width: 6, height: 6, borderRadius: 999, background: chip.dot }} />
             {chip.text}
-            <ChevronRight size={11} strokeWidth={2.6} aria-hidden className="rtl:-scale-x-100" />
+            <ChevronRight size={11} strokeWidth={2.6} aria-hidden />
           </button>
         )}
       </div>
@@ -322,7 +322,7 @@ export function AttentionPanel({
             </span>
           ) : null}
           <span style={{ display: "flex", color: c.faint }}>
-            <ChevronRight size={15} aria-hidden className="rtl:-scale-x-100" />
+            <ChevronRight size={15} aria-hidden />
           </span>
         </button>
         <p style={{ margin: "12px 4px 8px", fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint, lineHeight: 1.5 }}>{t("Needs your attention")}</p>

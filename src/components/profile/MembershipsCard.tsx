@@ -510,7 +510,7 @@ export const MembershipsCard: React.FC = () => {
                 <Plus size={16} strokeWidth={1.75} className="text-primary-dark" />
               </span>
               <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">{t("Join another gym or studio")}</span>
-              <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" aria-hidden />
             </button>
           )}
         </div>

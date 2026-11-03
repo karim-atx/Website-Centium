@@ -107,7 +107,7 @@ function PlannerScreen() {
           onClick={() => goTo(shiftWeek(week, -1))}
           className="tap w-9 h-9 rounded-xl flex items-center justify-center text-charcoal-soft disabled:opacity-30"
         >
-          <ChevronLeft size={18} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={18} aria-hidden />
         </button>
         <div className="min-w-0 text-center">
           <p className="text-[13.5px] font-bold text-charcoal">{t("Week of {day}", { day: shortDay(week) })}</p>
@@ -124,7 +124,7 @@ function PlannerScreen() {
           onClick={() => goTo(shiftWeek(week, 1))}
           className="tap w-9 h-9 rounded-xl flex items-center justify-center text-charcoal-soft disabled:opacity-30"
         >
-          <ChevronRight size={18} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={18} aria-hidden />
         </button>
       </div>
 
@@ -234,7 +234,7 @@ function PlanWeek({ plan, locked, onDeleted }: { plan: MealPlan; locked: boolean
           <span className="block text-[13.5px] font-bold text-charcoal">{t("Grocery list")}</span>
           <span className="block text-[11.5px] text-charcoal-faint">{t("Everything this week's plan needs")}</span>
         </span>
-        {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+        {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
       </button>
 
       <G3Body state={items.state} onRetry={items.reload}>

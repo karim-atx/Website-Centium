@@ -322,7 +322,7 @@ export async function fetchClientWeight(clientIds: string[]): Promise<ClientWeig
 
 export type ClientMedicalHistory = {
   comorbidities: string[];
-  surgeries: { id: string; name: string; date: string }[];
+  surgeries: { id: string; name: string; date: string; datePrecision: "day" | "month" | "year" }[];
   medications: {
     id: string;
     name: string;
@@ -372,7 +372,7 @@ export async function fetchClientMedicalHistory(
       .order("created_at", { ascending: true }),
     supabase
       .from("surgeries")
-      .select("id, user_id, name, surgery_date")
+      .select("id, user_id, name, surgery_date, date_precision" as "id, user_id, name, surgery_date")
       .in("user_id", clientIds)
       .order("surgery_date", { ascending: false }),
     supabase
@@ -414,7 +414,13 @@ export async function fetchClientMedicalHistory(
   for (const row of surg.data ?? []) {
     const entry = byClient[row.user_id];
     if (!entry) continue;
-    entry.surgeries.push({ id: row.id, name: row.name, date: row.surgery_date });
+    entry.surgeries.push({
+      id: row.id,
+      name: row.name,
+      date: row.surgery_date,
+      // A month or year precision date shows as "Jan 2019" / "2019", as the client sees it.
+      datePrecision: (row as { date_precision?: "day" | "month" | "year" }).date_precision ?? "day",
+    });
   }
 
   for (const row of meds.data ?? []) {

@@ -177,7 +177,7 @@ export const PayHeader: React.FC<{
       className="tap w-[44px] h-[44px] shrink-0 flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary-dark"
       style={{ color: v("ink") }}
     >
-      <ChevronLeft size={22} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" />
+      <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
     </button>
     <div className="min-w-0">
       <p
@@ -214,7 +214,7 @@ export const MoreRow: React.FC<{
     }}
   >
     {label}
-    {icon ?? <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />}
+    {icon ?? <ChevronRight size={14} aria-hidden />}
   </button>
 );
 

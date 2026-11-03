@@ -122,7 +122,7 @@ const MetricPageMobile: React.FC<MetricPageProps> = ({ metric, title, range, onR
             className="tap shrink-0 grid place-items-center rounded-full relative before:absolute before:-inset-1 before:content-['']"
             style={{ width: 36, height: 36 }}
           >
-            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+            <ChevronLeft size={20} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
           </button>
           <h1
             className="flex-1 min-w-0 line-clamp-2"
@@ -503,7 +503,7 @@ const ChartCardMobile: React.FC<{
         className="tap relative grid place-items-center rounded-full before:absolute before:-inset-[10px] before:content-[''] disabled:opacity-35"
         style={{ width: 24, height: 24 }}
       >
-        <Icon size={14} className="rtl:-scale-x-100" style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
+        <Icon size={14} style={{ color: "rgb(var(--c-charcoal-soft))" }} aria-hidden />
       </button>
     );
   };

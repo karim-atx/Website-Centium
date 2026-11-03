@@ -36,7 +36,7 @@ export function ProgressPhotosEntry({ className = "" }: { className?: string }) 
         <span className="block text-[13.5px] font-bold text-charcoal">{t("Progress photos")}</span>
         <span className="block text-[11.5px] text-charcoal-faint">{t("Private to you. Compare two side by side.")}</span>
       </span>
-      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint rtl:-scale-x-100" />}
+      {locked ? <PremiumLabel className="shrink-0" /> : <ChevronRight size={16} aria-hidden className="shrink-0 text-charcoal-faint" />}
     </button>
   );
 }

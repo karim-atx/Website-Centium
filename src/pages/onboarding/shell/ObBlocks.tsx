@@ -600,7 +600,7 @@ export const ObTerms: React.FC<{
                 {t(doc)}
               </a>
             ) : piece === "{refund}" ? (
-              <a key={i} href="/legal/refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+              <a key={i} href="/legal#refund-policy" target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                 {t("Refund and cancellation policy")}
               </a>
             ) : piece === "{privacy}" ? (

@@ -207,7 +207,7 @@ export function OverviewTab() {
             {sub?.badge ? (
               <span style={{ fontSize: px(10), fontWeight: 800, letterSpacing: "0.08em", borderRadius: 999, padding: "3px 8px", background: offeredBg, color: offeredInk, flexShrink: 0 }}>{t("OFFERED")}</span>
             ) : null}
-            <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
+            <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden style={{ flexShrink: 0 }} />
           </button>
           );
         })}

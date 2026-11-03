@@ -290,7 +290,7 @@ export function RecentActivityCard({
           style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "center", gap: 4, padding: "11px 0 13px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11.5), fontWeight: 700, color: c.pDark, cursor: "pointer", background: "none", borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, minHeight: 44 }}
         >
           {open ? t("See all activity") : t("Show {n} more and this week's totals", { n: Math.max(week.length - 3, 0) })}
-          <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={13} aria-hidden />
         </button>
       )}
     </section>
@@ -324,7 +324,7 @@ export function ActivityScreen({ c, events, now, today, onBack, newIds }: { c: D
     <div>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
         <button type="button" aria-label={t("Back")} onClick={onBack} style={{ display: "flex", width: 40, height: 40, marginInlineStart: -8, borderRadius: 999, alignItems: "center", justifyContent: "center", color: c.inkSoft, flexShrink: 0, background: "none", border: 0 }}>
-          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={20} aria-hidden />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: textPx(11), fontWeight: 700, color: c.faint, margin: 0, lineHeight: 1.5 }}>{t("Dashboard")}</p>

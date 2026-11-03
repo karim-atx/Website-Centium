@@ -6,13 +6,11 @@
 
 import { tk } from "../../i18n/core";
 
-/** The policy's former page. It redirects to Legal section 04 (public/_redirects
- *  at the edge, pages/RefundPolicy.tsx in the router); the web app's plan
- *  screens still link here (RefundPolicyLink), so the landing update leaves /app as it is. */
-export const REFUND_POLICY_PATH = "/legal/refund-policy";
-/** The policy's id on the Legal page (C14): section 04. */
+/** The policy's id on the Legal page (C14): section 04. Its former page,
+ *  /legal/refund-policy, redirects here (public/_redirects at the edge,
+ *  pages/RefundPolicy.tsx in the router) for old links. */
 export const REFUND_POLICY_ID = "refund-policy";
-/** Where the marketing site links the policy: Legal section 04. */
+/** Where the marketing site and the app link the policy: Legal section 04. */
 export const REFUND_POLICY_HREF = "/legal#" + REFUND_POLICY_ID;
 /** Shown as t(REFUND_POLICY_LABEL). */
 export const REFUND_POLICY_LABEL = tk("Refund and cancellation policy");

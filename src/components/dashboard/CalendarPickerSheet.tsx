@@ -207,7 +207,7 @@ export const CalendarPickerSheet: React.FC<{
                 style={{ width: 26, height: 26, color: cal("accent") }}
                 aria-label={t("Previous month")}
               >
-                <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+                <ChevronLeft size={16} strokeWidth={2.2} />
               </button>
               <span className="flex items-center" style={{ gap: 8 }}>
                 <p style={{ margin: 0, fontSize: textPx(15), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
@@ -220,7 +220,7 @@ export const CalendarPickerSheet: React.FC<{
                 style={{ width: 26, height: 26, color: cal("accent") }}
                 aria-label={t("Next month")}
               >
-                <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+                <ChevronRight size={16} strokeWidth={2.2} />
               </button>
             </div>
 
@@ -358,7 +358,7 @@ const PartBCalendar: React.FC<{
             style={{ width: 26, height: 26, color: accent }}
             aria-label={t("Previous month")}
           >
-            <ChevronLeft size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+            <ChevronLeft size={16} strokeWidth={2.2} />
           </button>
           <p style={{ margin: 0, fontSize: textPx(15), lineHeight: "22.5px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{monthLabel}</p>
           <button
@@ -368,7 +368,7 @@ const PartBCalendar: React.FC<{
             style={{ width: 26, height: 26, color: accent }}
             aria-label={t("Next month")}
           >
-            <ChevronRight size={16} strokeWidth={2.2} className="rtl:-scale-x-100" />
+            <ChevronRight size={16} strokeWidth={2.2} />
           </button>
         </div>
         <div className="grid grid-cols-7" style={{ gap: 2, marginTop: 6 }}>

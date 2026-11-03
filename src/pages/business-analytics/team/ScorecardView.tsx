@@ -237,7 +237,7 @@ export function ScorecardView({
               }}
             >
               {tn(myCount, "See all {n} review", "See all {n} reviews")}
-              <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
+              <ChevronRight size={14} aria-hidden />
             </button>
           )}
         </div>
@@ -262,7 +262,7 @@ export function ScorecardView({
               {st.upcoming.length > 3 && !allUp && (
                 <button type="button" className="an5-more tap" onClick={() => setAllUp(true)}>
                   {t("See all {n}", { n: st.upcoming.length })}
-                  <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
+                  <ChevronRight size={14} aria-hidden />
                 </button>
               )}
             </div>

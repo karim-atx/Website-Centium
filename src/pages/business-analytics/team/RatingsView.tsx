@@ -96,7 +96,7 @@ export function RatingsView({
                   ))}
                   <button type="button" className="an5-more an5-pp-more tap" onClick={() => setTeamSheet(true)}>
                     {t("See all {n}", { n: tf.count })}
-                    <ChevronRight className="rtl:-scale-x-100" size={14} aria-hidden />
+                    <ChevronRight size={14} aria-hidden />
                   </button>
                 </Accordion>
               ) : undefined

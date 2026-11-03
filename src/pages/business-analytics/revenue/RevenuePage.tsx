@@ -94,7 +94,7 @@ export default function RevenuePage() {
                     className="w-[34px] h-[34px] rounded-full flex items-center justify-center"
                     style={{ background: v("soft"), color: v("ink-soft") }}
                   >
-                    <ChevronLeft size={17} strokeWidth={2.4} aria-hidden className="rtl:-scale-x-100" />
+                    <ChevronLeft size={17} strokeWidth={2.4} aria-hidden />
                   </span>
                 </button>
                 <span

@@ -629,7 +629,7 @@ function RateSection({
             <StarIcon size={12} /> {initial.stars}
           </span>
         )}
-        <ChevronRight size={16} strokeWidth={1.75} className="rtl:-scale-x-100" style={{ color: fv("muted") }} aria-hidden />
+        <ChevronRight size={16} strokeWidth={1.75} style={{ color: fv("muted") }} aria-hidden />
       </button>
       <RatePopup key={opening} open={open} onClose={() => setOpen(false)} courseId={courseId} initial={initial} onSaved={onSaved} />
     </>

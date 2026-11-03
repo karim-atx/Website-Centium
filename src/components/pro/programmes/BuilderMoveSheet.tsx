@@ -42,7 +42,7 @@ export const BuilderMoveSheet: React.FC<{
                 {d.full ? fullLabel() : dayCount(d.count)}
               </span>
             </span>
-            <ChevronRight size={15} strokeWidth={2} aria-hidden style={{ color: INK.chT }} className="rtl:-scale-x-100" />
+            <ChevronRight size={15} strokeWidth={2} aria-hidden style={{ color: INK.chT }} />
           </button>
         ))}
       </div>

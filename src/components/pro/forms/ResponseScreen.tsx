@@ -313,7 +313,7 @@ const CheckInReview: React.FC<{ response: FormResponse; questions: PositionedQue
       {!response.reviewedAt ? (
         <PinnedCta primary={{ label: t("Mark as reviewed"), icon: <Check size={15} />, loading: busy, onClick: () => void mark() }} />
       ) : next && nextName ? (
-        <PinnedCta primary={{ label: t("Next check-in · {name}", { name: nextName }), icon: <ArrowRight size={15} className="rtl:-scale-x-100" />, onClick: () => navigate(`${FORMS_PATH}/responses/${next.id}`, { replace: true }) }} />
+        <PinnedCta primary={{ label: t("Next check-in · {name}", { name: nextName }), icon: <ArrowRight size={15} />, onClick: () => navigate(`${FORMS_PATH}/responses/${next.id}`, { replace: true }) }} />
       ) : null}
     </div>
   );

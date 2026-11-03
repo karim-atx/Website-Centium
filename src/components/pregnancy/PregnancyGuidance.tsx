@@ -310,7 +310,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
         className="tap mt-1.5 flex items-center gap-1 min-h-[44px] text-[11.5px] font-semibold text-primary-dark"
       >
         {PREGNANCY_CHECKS_COPY.heading}
-        <ChevronRight size={13} aria-hidden className="rtl:-scale-x-100" />
+        <ChevronRight size={13} aria-hidden />
       </button>
 
       {/* --- the urgent signs --- */}

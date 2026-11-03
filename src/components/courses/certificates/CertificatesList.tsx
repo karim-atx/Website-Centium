@@ -70,7 +70,7 @@ export function CertificatesList({ userId }: { userId: string }) {
                   .join(" · ")}
               </span>
             </span>
-            <ChevronRight size={15} className="shrink-0 rtl:-scale-x-100" style={{ color: fv("muted") }} aria-hidden="true" />
+            <ChevronRight size={15} className="shrink-0" style={{ color: fv("muted") }} aria-hidden="true" />
           </Link>
         </li>
       ))}

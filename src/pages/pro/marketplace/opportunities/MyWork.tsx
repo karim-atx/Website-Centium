@@ -13,7 +13,7 @@ import { InitialsTile, OpEmpty, PaleNote } from "./parts";
 import { fixedInk, fixedPair } from "./colours";
 import { useActionStrip } from "./useActionStrip";
 import { calendarLine, hiredWorkStrip, sinceLine, workClassRow, workPay } from "./opportunitiesModel";
-import { t, tk, isRtl } from "../../../../i18n/core";
+import { t, tk } from "../../../../i18n/core";
 
 // The work tags (my_work tag values), shown through t().
 void [tk("NEW"), tk("HIRED"), tk("SLOT")];
@@ -160,7 +160,7 @@ function WorkCard({ w, now, onCalendar }: { w: WorkItem; now: Date; onCalendar: 
           <path d="M16 2v4M8 2v4M3 10h18" />
         </svg>
         <span style={{ flex: 1 }}>{calendarLine(w)}</span>
-        <ChevronRight size={14} strokeWidth={2.2} aria-hidden style={isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE} />
+        <ChevronRight size={14} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
       </button>
       <div style={{ padding: "10px 16px 12px", borderTop: `0.5px solid ${m.div}`, display: "flex", justifyContent: "space-between", gap: 12, fontSize: px(12) }}>
         <span style={{ color: m.faint }}>{t("Pay, arranged with the gym")}</span>

@@ -277,7 +277,7 @@ export const ShareImagingSheet: React.FC<{
               {record.filePath ? t("Download the file to this device") : t("No file to export")}
             </span>
           </span>
-          <ChevronRight size={17} className="rtl:-scale-x-100" style={{ color: INK_FAINT }} aria-hidden />
+          <ChevronRight size={17} style={{ color: INK_FAINT }} aria-hidden />
         </button>
         <p className="flex items-center" style={{ marginTop: 16, gap: 6, fontSize: textPx(12), lineHeight: linePx(18), color: INK_SOFT }}>
           <Lock size={13} aria-hidden /> {t("Only the file you choose is shared.")}

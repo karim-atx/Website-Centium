@@ -223,7 +223,7 @@ export const PaymentsTab: React.FC = () => {
               (list ? (
                 <ChevronUp size={14} aria-hidden />
               ) : (
-                <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+                <ChevronRight size={14} aria-hidden />
               ))}
           </button>
         </div>
@@ -331,7 +331,7 @@ export const PaymentsTab: React.FC = () => {
               }}
             >
               {t("Sort and filter")}
-              <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+              <ChevronRight size={14} aria-hidden />
             </button>
           </RCard>
         </>
@@ -498,7 +498,7 @@ export const PaymentsTab: React.FC = () => {
                   }}
                 >
                   {t("See all {n}", { n: sel.rows.length })}
-                  <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+                  <ChevronRight size={14} aria-hidden />
                 </button>
               </div>
             )}
