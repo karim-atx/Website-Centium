@@ -19,6 +19,8 @@ import type { HabitItem, Streak } from "../../types";
 import MindMobile, { useCoachHabits } from "./Mind";
 import AchievementsWeb from "./web/AchievementsWeb";
 import HabitsWeb from "./web/HabitsWeb";
+import JournalWeb from "./web/JournalWeb";
+import MeditationWeb from "./web/MeditationWeb";
 import { t, tk, tn } from "../../i18n/core";
 
 const AUTO_LABEL: Record<NonNullable<Streak["category"]>, string> = {
@@ -90,13 +92,15 @@ const Ring: React.FC<{ done: number; total: number }> = ({ done, total }) => {
  * and View all habits, 56 rows with 36 tiles, the label 17/24 600 and the
  * 128 teal strip with the count and the check) beside the Day streak card
  * (#F0EDF9) and the Auto-tracked card (52 rows, always open on web). Same data
- * as the mobile hub; the sections (/app/mind/:section) keep their mobile
- * layout.
+ * as the mobile hub; each section (/app/mind/:section) has its own web page
+ * (web/HabitsWeb, JournalWeb, AchievementsWeb, MeditationWeb).
  */
 export default function MindWeb() {
   const { section } = useParams<{ section?: string }>();
   if (section === "achievements") return <MindSectionEffects section={section}><AchievementsWeb /></MindSectionEffects>;
   if (section === "habits") return <MindSectionEffects section={section}><HabitsWeb /></MindSectionEffects>;
+  if (section === "journal") return <MindSectionEffects section={section}><JournalWeb /></MindSectionEffects>;
+  if (section === "meditation") return <MindSectionEffects section={section}><MeditationWeb /></MindSectionEffects>;
   if (section) return <MindMobile />;
   return <MindHubWeb />;
 }

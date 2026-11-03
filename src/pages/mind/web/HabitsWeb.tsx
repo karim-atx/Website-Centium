@@ -29,6 +29,7 @@ import { appLocale } from "../../../i18n/format";
 import { t, tk, tn, tx } from "../../../i18n/core";
 import { MindSectionWeb } from "./MindSectionWeb";
 import { mindCaps, mindPrimary } from "./mindWebStyles";
+import { useEscCancel } from "./useEscCancel";
 
 const ARCHIVED = tk("Habit archived. Its history is kept.");
 const PANEL_RULE = (e: string) => e === DUPLICATE_HABIT || e === TOO_MANY_HABITS || e === limitReachedText("habits");
@@ -100,6 +101,7 @@ export default function HabitsWeb() {
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
+  useEscCancel(!!deleting, () => setDeleting(null));
   const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
   const [toast, setToast] = useState<{ id: number; message: string; undo?: string } | null>(null);
   const [retrying, setRetrying] = useState(false);

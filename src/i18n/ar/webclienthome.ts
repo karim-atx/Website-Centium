@@ -17,6 +17,9 @@ export const FILES: string[] = [
   "pages/mind/web/ChipStrip.tsx",
   "pages/mind/web/AchievementsWeb.tsx",
   "pages/mind/web/HabitsWeb.tsx",
+  "pages/mind/web/JournalWeb.tsx",
+  "pages/mind/web/MeditationWeb.tsx",
+  "components/mind/usePoseSequence.ts",
   "pages/professionals/Professionals.web.tsx",
   "pages/professionals/web/PrFrameWeb.tsx",
   "pages/professionals/web/DirectoryListWeb.tsx",
@@ -54,6 +57,10 @@ const webclienthome: Catalogue = {
   "best {n}": "الأفضل {n}", // note: a habit's longest streak in days, after its current one
   "Add a habit to start a streak.": "أضف عادة لتبدأ سلسلة.",
   "Auto streaks count from what you log across the app.": "تُحتسب السلاسل التلقائية مما تسجّله في التطبيق كله.",
+
+  // == WC-MI.2 Journal (pages/mind/web/JournalWeb) ==
+  Folders: "المجلدات", // note: the caps label over the journal folder list
+  "Click where {folder} should go": "انقر حيث تريد نقل {folder}", // note: web form of "Tap where {folder} should go" (moving a folder in the list)
 
   // == WC-PR Professionals (pages/professionals/Professionals.web, pages/professionals/web) ==
   "Trainers, dietitians, physiotherapists & doctors": "مدرّبون وأخصائيو تغذية علاجية وأخصائيو علاج طبيعي وأطباء", // note: the page header's line
