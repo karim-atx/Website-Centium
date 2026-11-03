@@ -536,7 +536,7 @@ export function StrengthCard({ items, emptyLine, highlight, onItem }: { items: S
                 {x.sub && <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: m.faint, lineHeight: web ? lh(20) : "normal", ...(web ? { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } : {}) }}>{x.sub}</span>}
               </span>
               {!x.done && <span style={{ fontSize: px(web ? 13 : 12), lineHeight: web ? lh(20) : undefined, fontWeight: 800, color: m.pdark, whiteSpace: "nowrap" }}>{x.key === "photos" ? t("Add") : t("Set up")}</span>}
-              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
+              <ChevronRight size={16} color={m.faint} strokeWidth={2} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} style={{ flexShrink: 0 }} />
             </button>
           ))}
           {total > 4 && (
@@ -940,7 +940,7 @@ export function RatingCard({ average, count, onOpen }: { average: number | null;
           </span>
         </>
       )}
-      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden className="rtl:-scale-x-100" />
+      <ChevronRight size={16} strokeWidth={2} color={m.faint} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} />
     </button>
   );
 }

@@ -5,6 +5,7 @@ import { CalendarPickerSheet } from "./CalendarPickerSheet";
 import { JumpToToday } from "../ui/JumpToToday";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -25,6 +26,9 @@ const dayLabel = (iso: string) => {
 export const DateSelector: React.FC<{ partB?: boolean; web?: boolean }> = ({ partB = false, web = false }) => {
   const { selectedDate, goToPrevDate, goToNextDate, goToToday, goToDate, today } = useApp();
   const isToday = selectedDate === today;
+  // Website viewport v1 (section 7.5): the global RTL rule already turns the
+  // day arrows; the extra class would turn them back on the web pages.
+  const onWeb = useIsWeb();
   const [pickerOpen, setPickerOpen] = useState(false);
   const pillRef = useRef<HTMLDivElement>(null);
   const [anchor, setAnchor] = useState<{ left: number; top: number } | undefined>(undefined);
@@ -49,7 +53,7 @@ export const DateSelector: React.FC<{ partB?: boolean; web?: boolean }> = ({ par
         className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
         aria-label={t("Previous day")}
       >
-        <ChevronLeft size={15} className="rtl:-scale-x-100" />
+        <ChevronLeft size={15} className={onWeb ? undefined : "rtl:-scale-x-100"} />
       </button>
       <span className="flex items-center gap-[7px] min-w-0">
         <button onClick={openPicker} className="tap flex items-center gap-[7px] min-w-0">
@@ -70,7 +74,7 @@ export const DateSelector: React.FC<{ partB?: boolean; web?: boolean }> = ({ par
         className={`tap relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle ${partB ? "before:absolute before:-inset-[10px] before:content-['']" : ""}`}
         aria-label={t("Next day")}
       >
-        <ChevronRight size={15} className="rtl:-scale-x-100" />
+        <ChevronRight size={15} className={onWeb ? undefined : "rtl:-scale-x-100"} />
       </button>
 
       <CalendarPickerSheet
