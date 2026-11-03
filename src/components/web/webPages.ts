@@ -28,6 +28,8 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/forum\/post\/[^/]+\/?$/, // WC-CO.1 Post
   /^\/app\/forum\/courses\/(?!(?:mine|certificates)\/?$)[^/]+\/?$/, // WC-CO.4 a course (not My courses; lessons and certificates stay mobile)
   /^\/app\/health\/checks\/?$/, // WC-HE.8 Your health checks (general plan; the other plans in a centred column)
+  /^\/app\/messages\/?$/, // WC-MO.4 Messages (list and chat)
+  /^\/app\/calendar\/?$/, // WC-MO.3 Calendar (month and day list)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY, · CS and · ST Dashboards
