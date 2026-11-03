@@ -10,6 +10,9 @@ import { BP_CATEGORY_LABEL, BP_CATEGORY_RANGE, BP_DETAIL_FOOTER, SEVERE_READING_
 import { PREGNANCY_FLAG_COPY, type PregnancyFlag } from "../../../services/pregnancy/checks";
 import { PREGNANCY_BP_LEVELS, REVIEWED } from "../../../services/health-metrics/clinicalCopy";
 import type { BloodPressureReading } from "../../../services/blood-pressure";
+import { useIsWeb } from "../../web/useWebLayout";
+import { BloodPressureChartWeb } from "./MetricCharts.web";
+import { BloodPressureHeroWeb } from "./MetricHeroes.web";
 
 // Blood pressure (HE1.6 family) hero, safety cards, charts, tiles and the
 // reference card. Literal values from health-handover.md HE1.6 / .a / .d / .m
@@ -126,6 +129,18 @@ export const BloodPressureHero: React.FC<{
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const ink = metricIconInk(K, dark);
+  const web = useIsWeb();
+  // Website viewport v1: the reference's wave hero (MetricHeroes.web.tsx).
+  if (web && data)
+    return (
+      <BloodPressureHeroWeb
+        data={data}
+        wave={PULSE_PATH}
+        pregnancyFlags={[PREGNANCY_FLAG_COPY.bpSameDayLabel, PREGNANCY_FLAG_COPY.bpUrgentLabel]}
+        loading={loading}
+        ariaLabel={ariaLabel}
+      />
+    );
   if (!data) {
     return (
       <MetricHero metric={K} pattern={4} padding="18px 16px" loading={loading} ariaLabel={ariaLabel} style={{ minHeight: 208 }}>
@@ -218,7 +233,11 @@ export interface BpChartProps {
 const HOUR0 = 5;
 const HOURS = 18;
 
-export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, readings, today, reference, average }) => {
+/** Website viewport v1: from 1024px wide the web line chart (MetricCharts.web.tsx). */
+export const BloodPressureChart: React.FC<BpChartProps> & { webNative?: boolean } = (props) => (useIsWeb() ? <BloodPressureChartWeb {...props} /> : <BloodPressureChartMobile {...props} />);
+BloodPressureChart.webNative = true;
+
+const BloodPressureChartMobile: React.FC<BpChartProps> = ({ range, period, readings, today, reference, average }) => {
   const { dark, hc } = useHealthMode();
   const sysFill = mc(K, "main");
   const diaFill = dark ? "#D08AB2" : mc(K, "accent");
@@ -367,7 +386,7 @@ export const BloodPressureChart: React.FC<BpChartProps> = ({ range, period, read
   );
 };
 
-export function bpLegend(range: MetricRange, dark: boolean, pregnancy: boolean): { label: string; swatch: React.ReactNode }[] {
+export function bpLegend(range: MetricRange, dark: boolean, pregnancy: boolean, web = false): { label: string; swatch: React.ReactNode }[] {
   const dot = (c: string) => <span style={{ width: 8, height: 8, borderRadius: 9999, background: c, display: "inline-block" }} />;
   const ghost = <span style={{ width: 10, height: 12, borderRadius: 3, border: `1px solid ${dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)"}`, display: "inline-block" }} />;
   const dash = <span style={{ width: 14, borderTop: `1.5px dashed ${dark ? "#D08AB2" : mc(K, "accent")}`, display: "inline-block" }} />;
@@ -376,6 +395,8 @@ export function bpLegend(range: MetricRange, dark: boolean, pregnancy: boolean):
     { label: t("Systolic"), swatch: dot(mc(K, "main")) },
     { label: t("Diastolic"), swatch: dot(dark ? "#D08AB2" : mc(K, "accent")) },
   ];
+  // Website viewport v1: the web line chart draws no ghosts and no average lines.
+  if (web) return [...items, { label: pregnancy ? t("Pregnancy 140 / 90") : t("Reference 120 / 80"), swatch: dash }];
   if (range === "week") items.push({ label: t("Days ahead"), swatch: ghost });
   if (range === "year") items.push({ label: t("Months ahead"), swatch: ghost });
   if (range === "month") items.push({ label: t("Averages"), swatch: line });

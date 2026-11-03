@@ -8,6 +8,8 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { signedUrlFor, type PrivateBucket } from "../../services/storage";
 import { FileWarning, Loader2 } from "lucide-react";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
+import { FileViewerWeb } from "./FileViewerSheet.web";
 
 // Opens a file out of a private bucket, for both the client's own records and
 // a consented professional's view of them.
@@ -165,7 +167,9 @@ export const FileViewerScreen: React.FC<{
   title: string;
   subtitle?: string;
   menu?: ViewerMenuItem[];
-}> = ({ open, onClose, path, bucket = "medical-imaging", local, title, subtitle, menu }) => {
+  /** Website viewport v1: the client's own Records opt in to the web viewer page from 1024px wide (other callers keep this screen). */
+  webPage?: boolean;
+}> = ({ open, onClose, path, bucket = "medical-imaging", local, title, subtitle, menu, webPage }) => {
   useBackCloses(open, onClose);
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +181,7 @@ export const FileViewerScreen: React.FC<{
   const menuRef = useRef<HTMLButtonElement | null>(null);
   const pinch = useRef<{ d: number; s: number } | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const web = useIsWeb() && !!webPage;
 
   useEffect(() => {
     if (!open) return;
@@ -213,6 +218,23 @@ export const FileViewerScreen: React.FC<{
 
   if (!open) return null;
   const kind: Kind = local ? local.kind : path ? kindFor(path) : "unsupported";
+  // Website viewport v1 (WC-HE.9.2 viewer): a page beside the sidebar with the zoom pill (FileViewerSheet.web.tsx).
+  if (web)
+    return createPortal(
+      <FileViewerWeb
+        onClose={onClose}
+        title={title}
+        subtitle={subtitle}
+        menu={menu}
+        loading={loading}
+        error={error}
+        stored={!local}
+        onRetry={() => setAttempt((n) => n + 1)}
+        url={url}
+        kind={kind}
+      />,
+      document.body
+    );
   const white66 = "rgba(255,255,255,0.66)";
   const btn: React.CSSProperties = { width: 40, height: 40, borderRadius: 9999, background: "rgba(255,255,255,0.14)" };
 

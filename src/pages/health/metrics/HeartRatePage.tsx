@@ -21,6 +21,7 @@ import {
   useMetricsLoad,
   useMetricSource,
 } from "../../../components/health/metric/MetricKit";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 import {
   avg,
   dayLabel,
@@ -76,6 +77,7 @@ export default function HeartRatePage() {
   const navigate = useNavigate();
   const { healthSeries, metricsError } = useApp();
   const { dark } = useHealthMode();
+  const web = useIsWeb();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("week");
   const [goToOpen, setGoToOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -392,7 +394,7 @@ export default function HeartRatePage() {
           onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
           onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
           nextDisabled={current}
-          legend={hrLegend(range, dark, range === "day" ? restingOn(anchor) !== null : resting)}
+          legend={hrLegend(range, dark, range === "day" ? restingOn(anchor) !== null : resting, web)}
           foot={chartFoot}
           loading={loading}
           summary={summary}

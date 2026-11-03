@@ -402,6 +402,7 @@ export default function HealthRecords() {
             : undefined
         }
         menu={viewerMenu}
+        webPage
       />
       <LabReportEditSheet report={editReport} onClose={() => setEditReport(null)} onSaved={setToast} />
       <RemoveReportPopup report={removeReport} onClose={() => setRemoveReport(null)} onRemoved={() => setToast(t("Lab report removed."))} />

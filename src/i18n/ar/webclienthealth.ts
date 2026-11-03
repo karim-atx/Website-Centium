@@ -21,6 +21,9 @@ export const FILES: string[] = [
   "components/health/records/MarkerChart.web.tsx",
   "components/health/records/MarkerPage.web.tsx",
   "components/health-checks/GeneralPlan.web.tsx",
+  "components/health/metric/MetricCharts.web.tsx",
+  "components/health/metric/MetricHeroes.web.tsx",
+  "components/health/FileViewerSheet.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {
@@ -36,6 +39,14 @@ const webclienthealth: Catalogue = {
 
   // == Marker history (components/health/records/MarkerPage.web, MarkerChart.web, WC-HE.9.5) ==
   "Reference: {range} {unit}": "النطاق المرجعي: {range} {unit}", // note: health wording (the chart's band label; Reference range «النطاق المرجعي»)
+
+  // == Metric charts (pages/health/metrics, the web legends of WC-HE.1 Water day / month) ==
+  "By hour": "حسب الساعة", // note: health wording (as "Hourly detail" «التفاصيل حسب الساعة»)
+  "Each day": "كل يوم", // note: health wording
+
+  // == Imaging viewer (components/health/FileViewerSheet.web, WC-HE.9.2 viewer) ==
+  "Zoom in": "تكبير", // note: health wording (as "Pinch to zoom" «… للتكبير»)
+  "Zoom out": "تصغير", // note: health wording (as the map's "zoom out" «تصغير»)
 };
 
 export default webclienthealth;
