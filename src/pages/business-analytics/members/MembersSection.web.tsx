@@ -13,7 +13,7 @@ import { AnEmbedded } from "./anEmbedded";
 import { AnStrip } from "./anKit";
 import { BookingPausesCard } from "./BookingPausesCard";
 import { MemberCodesPage } from "./MemberCodesPage";
-import { MembersPage } from "./MembersPage";
+import { MembersBlocksWeb } from "./MembersBlocks.web";
 import { VenueMembersPage } from "./VenueMembersPage";
 import { indexValue, isEarly, pageView, pagesOf, vocabOf, type Delta } from "./membersModel";
 import { liveCodes, useMembersData } from "./useMembersData";
@@ -28,8 +28,9 @@ import { useMembersFigures } from "./useMembersFigures";
 // 15/24, the range line 13/20; the figure 40/48 700 with its delta chip and
 // label) over the page itself, which scrolls in the card. The page body is
 // the mobile section page (MembersPage, Member codes, Venue members, Client
-// outcomes) without its back header, centred at most 560 wide (the web
-// block grid of the board is not built: the bodies are the mobile cards). The first page is shown by default;
+// outcomes) without its back header, centred at most 560 wide. The five
+// model pages (Growth … Plans; Engagement and At risk for Classes) draw the
+// board's block grid instead (MembersBlocks.web). The first page is shown by default;
 // the routes are the mobile ones (/analytics/members/<page>, /codes, /venue,
 // /analytics/outcomes). Reading and every action are the mobile section's.
 
@@ -144,7 +145,7 @@ export const MembersWeb: React.FC<{ rail: boolean; outcomes: boolean }> = ({ rai
   if (selected?.key === "codes") body = <MemberCodesPage data={data} vocab={vocab} />;
   else if (selected?.key === "venue") body = <VenueMembersPage vocab={vocab} />;
   else if (selected?.key === "outcomes") body = <ClientOutcomesPage />;
-  else if (page) body = <MembersPage page={page} pages={pages} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} early={known && early} />;
+  else if (page) body = <MembersBlocksWeb page={page} vocab={vocab} view={views.get(page.key)!} figures={fig.figures} data={data} empty={empty} early={known && early} rail={rail} />;
 
   return (
     <div data-an="members" style={{ flex: 1, minHeight: 0, marginTop: 24, display: "grid", gridTemplateColumns: rail ? "minmax(0,3fr) minmax(0,5fr)" : "minmax(0,4fr) minmax(0,8fr)", gridTemplateRows: "minmax(0,1fr)", gap: 24 }}>
@@ -216,11 +217,17 @@ export const MembersWeb: React.FC<{ rail: boolean; outcomes: boolean }> = ({ rai
             )}
           </header>
         )}
-        <div data-an="detail" style={{ flex: 1, minHeight: 0, overflow: "auto", scrollbarWidth: "thin", padding: rail ? "16px 20px" : "20px 24px", boxSizing: "border-box" }}>
-          {/* The mobile page body, at most 560 wide so its charts keep their proportions. */}
-          <div style={{ maxWidth: 560, marginInline: "auto" }}>
-            <AnEmbedded.Provider value={true}>{known ? body : <span className="block animate-skeleton-pulse" style={{ height: 240, borderRadius: 16, background: "#F5F5F7" }} />}</AnEmbedded.Provider>
-          </div>
+        <div data-an="detail" style={{ flex: 1, minHeight: 0, overflow: "auto", scrollbarWidth: "thin", padding: rail ? "16px 20px" : "20px 24px", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 12 }}>
+          {!known ? (
+            <span className="block animate-skeleton-pulse" style={{ height: 240, borderRadius: 16, background: "#F5F5F7" }} />
+          ) : page ? (
+            body
+          ) : (
+            /* Member codes, Venue members and Client outcomes keep the mobile page body, at most 560 wide. */
+            <div style={{ width: "100%", maxWidth: 560, marginInline: "auto" }}>
+              <AnEmbedded.Provider value={true}>{body}</AnEmbedded.Provider>
+            </div>
+          )}
         </div>
       </section>
       {toast}

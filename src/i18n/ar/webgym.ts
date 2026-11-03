@@ -20,6 +20,8 @@ export const FILES: string[] = [
   "pages/business-analytics/AnalyticsParts.web.tsx",
   "pages/business-analytics/overview/OverviewSection.web.tsx",
   "pages/business-analytics/members/MembersSection.web.tsx",
+  "pages/business-analytics/members/MembersBlocks.web.tsx",
+  "pages/business-analytics/members/membersReaders.ts",
   "pages/business-market/MarketplacePage.web.tsx",
   "pages/business-market/Overview.web.tsx",
 ];
@@ -44,6 +46,11 @@ const webgym: Catalogue = {
 
   // == Analytics (pages/business-analytics/AnalyticsShell.web, WB-AN) ==
   "Analytics sections": "أقسام التحليلات", // note: the accessible name of the section tabs
+
+  // == Analytics › Members blocks (pages/business-analytics/members/MembersBlocks.web, WB-AN.3) ==
+  "Active members by week": "الأعضاء النشطون حسب الأسبوع", // note: the Growth line chart title
+  "Active members by week: {list}": "الأعضاء النشطون حسب الأسبوع: {list}", // note: the chart's accessible name, {list} = "Oct 6 412, …"
+  "{n} on the most popular plan": "{n} على الخطة الأكثر شيوعًا", // note: beside the Membership plans title, {n} = members on the top plan
 };
 
 export default webgym;
