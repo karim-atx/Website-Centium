@@ -5,7 +5,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
 import { BILLING_HELP_STEPS, BILLING_HELP_TITLE } from "../../services/legal/billingHelp";
-import { REFUND_POLICY_LABEL, REFUND_POLICY_PATH } from "../../marketing/legal/refund";
+import { REFUND_POLICY_HREF, REFUND_POLICY_LABEL } from "../../marketing/legal/refund";
 import { t } from "../../i18n/core";
 
 // Round F (DN, F5, undrawn): Settings › Billing and refunds for clients and
@@ -28,7 +28,7 @@ export default function BillingHelpPage() {
         </ol>
       </SettingsBody>
       <SettingsSection label={t("Read more")}>
-        <SettingsRow icon={ScrollText} title={t(REFUND_POLICY_LABEL)} onClick={() => navigate(REFUND_POLICY_PATH)} />
+        <SettingsRow icon={ScrollText} title={t(REFUND_POLICY_LABEL)} onClick={() => navigate(REFUND_POLICY_HREF)} />
       </SettingsSection>
       <SettingsSection label={t("Still need help?")}>
         <SettingsRow icon={MessageSquare} title={t("Contact us")} onClick={() => setContactOpen(true)} />

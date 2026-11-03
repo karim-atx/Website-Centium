@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { REFUND_POLICY_LABEL, REFUND_POLICY_PATH } from "../../marketing/legal/refund";
+import { REFUND_POLICY_HREF, REFUND_POLICY_LABEL } from "../../marketing/legal/refund";
 import { t } from "../../i18n/core";
 
 /**
@@ -10,7 +10,7 @@ import { t } from "../../i18n/core";
 export function RefundPolicyLink({ style }: { style?: CSSProperties }) {
   return (
     <a
-      href={REFUND_POLICY_PATH}
+      href={REFUND_POLICY_HREF}
       target="_blank"
       rel="noopener noreferrer"
       data-refund-policy-link

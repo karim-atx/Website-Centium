@@ -39,7 +39,7 @@ import {
   CreditCard,
   ScrollText,
 } from "lucide-react";
-import { REFUND_POLICY_PATH, BILLING_HELP_PATH } from "../../marketing/legal/refund";
+import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
@@ -357,7 +357,7 @@ function SettingsHub() {
       <SettingsSection label={t("Legal")}>
         <SettingsRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
         <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
-        <SettingsRow icon={ScrollText} title={t("Refund and cancellation policy")} onClick={() => navigate(REFUND_POLICY_PATH)} />
+        <SettingsRow icon={ScrollText} title={t("Refund and cancellation policy")} onClick={() => navigate(REFUND_POLICY_HREF)} />
         <SettingsRow icon={Users} title={t("Community guidelines")} onClick={() => navigate("/legal/community-guidelines")} />
       </SettingsSection>
 
