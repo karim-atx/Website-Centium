@@ -15,6 +15,9 @@ import { syncState, useHealthSources, whenText } from "../../../services/health-
 import type { MetricKey } from "../MetricWidget";
 import { RANGE_TABS, type MetricRange } from "./periods";
 import { t, tk } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { useHeroRowInk } from "./heroSlot";
+import { CapsLabelWeb, ChartCardWeb, HeroPillWeb, HistoryCardWeb, MetricPageWeb, NoDeviceCardWeb, StatCardWeb, HeroWebChildren, type WebRole } from "./MetricKit.web";
 
 // The shared metric-page kit (health-handover.md "Shared rules (all metric
 // pages)" and the HE1.1-HE1.7 layout tables). Every value below is the
@@ -99,7 +102,9 @@ export interface MetricPageProps {
  * #F5F4FE ink #5B5349 (dark #303141 / #B8B3C7), active #A79AD5 white (dark
  * #A991FE / #0D0B1A). Content gets 176 bottom padding when a CTA is pinned.
  */
-export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, onRangeChange, menu, sourceTag, onSourceTag, cta, headerAction, children }) => {
+export const MetricPage: React.FC<MetricPageProps> = (props) => (useIsWeb() ? <MetricPageWeb {...props} /> : <MetricPageMobile {...props} />);
+
+const MetricPageMobile: React.FC<MetricPageProps> = ({ metric, title, range, onRangeChange, menu, sourceTag, onSourceTag, cta, headerAction, children }) => {
   const back = useBack();
   const { dark } = useHealthMode();
   const [menuBtn, setMenuBtn] = useState<HTMLButtonElement | null>(null);
@@ -197,7 +202,7 @@ export const MetricPage: React.FC<MetricPageProps> = ({ metric, title, range, on
  * number and text" area is UNSPECIFIED: a centred ellipse fades the layer
  * where the hero content sits.
  */
-export const MetricHero: React.FC<{
+type MetricHeroProps = {
   metric: MetricKey;
   pattern?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | null;
   padding: string;
@@ -208,10 +213,54 @@ export const MetricHero: React.FC<{
   loading?: boolean;
   children?: React.ReactNode;
   ariaLabel?: string;
-}> = ({ metric, pattern, padding, background, className, style, loading, children, ariaLabel }) => {
+};
+
+/**
+ * Website viewport v1: from 1024px wide the hero is padded 22 24, starts its
+ * column (no top margin), lays its contents out as the web hero row (visual,
+ * then the stats / pills / source column: HeroWebLayout) and fades the
+ * pattern with the reference's two side ellipses.
+ */
+export const MetricHero: React.FC<MetricHeroProps> & { webRole?: WebRole } = (props) =>
+  useIsWeb() ? (
+    <MetricHeroMobile {...props} padding="22px 24px" style={{ ...props.style, marginTop: 0, minHeight: undefined }} webMask>
+      <HeroWebChildren metric={props.metric} night={!!props.background}>
+        {props.children}
+      </HeroWebChildren>
+    </MetricHeroMobile>
+  ) : (
+    <MetricHeroMobile {...props} />
+  );
+MetricHero.webRole = "hero";
+
+const WEB_HERO_MASK = "radial-gradient(ellipse 30% 75% at 17% 50%, transparent 50%, #000 100%), radial-gradient(ellipse 22% 75% at 84% 50%, transparent 50%, #000 100%)";
+
+/**
+ * The reference draws each p<n>.svg at its mobile size (358 × 300, never
+ * stretched), anchored or repeated per metric: Steps top-left, Water /
+ * Calories / Weight repeated along the bottom, Blood pressure bottom-right,
+ * Heart rate repeated over the card. (The reference crops Heart rate to 150
+ * tiles and Weight to two 70 × 20 strips; the whole file is repeated here.)
+ */
+const webPatternPlacement = (pattern: number): React.CSSProperties => {
+  const [pos, rep] =
+    pattern === 1 ? ["0 0", "no-repeat"] : pattern === 4 ? ["100% 100%", "no-repeat"] : pattern === 3 ? ["0 0", "repeat"] : pattern === 6 ? ["0 0", "no-repeat"] : ["0 100%", "repeat-x"];
+  return {
+    WebkitMaskSize: "358px 300px, 100% 100%, 100% 100%",
+    maskSize: "358px 300px, 100% 100%, 100% 100%",
+    WebkitMaskPosition: `${pos}, 0 0, 0 0`,
+    maskPosition: `${pos}, 0 0, 0 0`,
+    WebkitMaskRepeat: `${rep}, no-repeat, no-repeat`,
+    maskRepeat: `${rep}, no-repeat, no-repeat`,
+    WebkitMaskComposite: "source-in, source-in",
+    maskComposite: "intersect",
+  };
+};
+
+const MetricHeroMobile: React.FC<MetricHeroProps & { webMask?: boolean }> = ({ metric, pattern, padding, background, className, style, loading, children, ariaLabel, webMask }) => {
   const { dark, hc } = useHealthMode();
   const url = pattern === null || pattern === undefined ? null : heroPatternGenericUrl(pattern);
-  const mask = url ? `url(${url}), radial-gradient(ellipse 42% 38% at 50% 45%, transparent 50%, #000 100%)` : undefined;
+  const mask = url ? (webMask ? `url(${url}), ${WEB_HERO_MASK}` : `url(${url}), radial-gradient(ellipse 42% 38% at 50% 45%, transparent 50%, #000 100%)`) : undefined;
   return (
     <section
       aria-label={ariaLabel}
@@ -233,6 +282,7 @@ export const MetricHero: React.FC<{
             maskRepeat: "no-repeat",
             WebkitMaskComposite: "source-in",
             maskComposite: "intersect",
+            ...(webMask && pattern != null ? webPatternPlacement(pattern) : null),
           }}
         />
       )}
@@ -251,7 +301,10 @@ export const MetricHero: React.FC<{
 };
 
 /** Hero pill: pad 3 9 r9999 10.5/15.8 700 metric ink on #FFFFFF@80% (dark #FFFFFF@8%*). */
-export const HeroPill: React.FC<{ metric: MetricKey; children: React.ReactNode; color?: string; icon?: React.ReactNode }> = ({ metric, children, color, icon }) => {
+type HeroPillProps = { metric: MetricKey; children: React.ReactNode; color?: string; icon?: React.ReactNode };
+export const HeroPill: React.FC<HeroPillProps> = (props) => (useIsWeb() ? <HeroPillWeb {...props} /> : <HeroPillMobile {...props} />);
+
+const HeroPillMobile: React.FC<HeroPillProps> = ({ metric, children, color, icon }) => {
   const { dark } = useHealthMode();
   return (
     <span
@@ -287,14 +340,19 @@ export interface Stat {
  * 13 icon left of the number (15/17.3 800 ls-0.4 tnum), label under (10/13
  * 600 metric ink), centred as a group. Width / margin per page (`style`).
  */
-export const StatCard: React.FC<{
+type StatCardProps = {
   metric: MetricKey;
   stats: Stat[];
   style?: React.CSSProperties;
   className?: string;
   /** Value type: 15 = 15/17.3 (HE1.2 #21, default), 17 = 17/19.6 (HE1.1 #35, HE1.3 #42, HE1.4 #46). */
   valueSize?: 15 | 17;
-}> = ({ metric, stats, style, className, valueSize = 15 }) => {
+};
+export const StatCard: React.FC<StatCardProps> & { webRole?: WebRole } = (props) => (useIsWeb() ? <StatCardWeb {...props} /> : <StatCardMobile {...props} />);
+// Website viewport v1: on a page with a hero, the web metric page draws these stats inside the hero.
+StatCard.webRole = "stats";
+
+const StatCardMobile: React.FC<StatCardProps> = ({ metric, stats, style, className, valueSize = 15 }) => {
   const { dark, hc } = useHealthMode();
   return (
     <div className={`flex items-stretch ${className ?? ""}`} style={{ borderRadius: 16, padding: "10px 2px", background: mc(metric, "tint"), ...style }}>
@@ -331,7 +389,24 @@ export const StatCard: React.FC<{
 // Freshness / offline / error lines
 
 /** Freshness line (synced metrics, native): 10.5/15.8 600 #5B5349 + RefreshCw 11, m-top 8. */
-export const FreshnessLine: React.FC<{ children: React.ReactNode; offline?: boolean }> = ({ children, offline }) => (
+export const FreshnessLine: React.FC<{ children: React.ReactNode; offline?: boolean }> & { webRole?: WebRole } = (props) =>
+  useIsWeb() ? <FreshnessLineWeb {...props} /> : <FreshnessLineMobile {...props} />;
+// Website viewport v1: on a page with a hero, the line sits in the hero's source row.
+FreshnessLine.webRole = "freshness";
+
+/** Website viewport v1: 13/20 600 #5B5349 with a 12 icon, m-top 12. */
+const FreshnessLineWeb: React.FC<{ children: React.ReactNode; offline?: boolean }> = ({ children, offline }) => {
+  // In the hero's source row: inline, in the row's ink (#5B5349; Sleep #C9DEDA).
+  const rowInk = useHeroRowInk();
+  return (
+    <p className="flex items-center" style={{ marginTop: rowInk ? 0 : 12, gap: 5, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: rowInk ?? "#5B5349" }}>
+      {offline ? <WifiOff size={12} aria-hidden /> : <RefreshCw size={12} aria-hidden />}
+      <span>{children}</span>
+    </p>
+  );
+};
+
+const FreshnessLineMobile: React.FC<{ children: React.ReactNode; offline?: boolean }> = ({ children, offline }) => (
   <p className="flex items-center" style={{ marginTop: 8, gap: 5, fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
     {offline ? <WifiOff size={11} aria-hidden /> : <RefreshCw size={11} aria-hidden />}
     <span>{children}</span>
@@ -393,7 +468,10 @@ export const SkeletonBar: React.FC<{ width: string | number; height: number; neu
  * period label 11/16.5 700 #5B5349; chart (caller, 146 tall); legend row
  * 10.5/15.8 600 #5B5349 gap 6 14; foot line 10.5/15.8 600 metric ink, m-top 8.
  */
-export const ChartCard: React.FC<{
+type ChartCardProps = React.ComponentProps<typeof ChartCardMobile>;
+export const ChartCard: React.FC<ChartCardProps> = (props) => (useIsWeb() ? <ChartCardWeb {...props} /> : <ChartCardMobile {...props} />);
+
+const ChartCardMobile: React.FC<{
   metric: MetricKey;
   title: string;
   periodLabel: string;
@@ -476,7 +554,12 @@ export const ChartCard: React.FC<{
 // History
 
 /** Caps section label (HE1.2 #40): 9.5/14.3 700 ls1.9 uppercase #9A94B3 (dark #8A8698), m 20 0 9 0. */
-export const CapsLabel: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => {
+type CapsLabelProps = { children: React.ReactNode; style?: React.CSSProperties };
+export const CapsLabel: React.FC<CapsLabelProps> & { webRole?: WebRole } = (props) => (useIsWeb() ? <CapsLabelWeb {...props} /> : <CapsLabelMobile {...props} />);
+// Website viewport v1: the web metric page moves the "History" label with its card.
+CapsLabel.webRole = "caps";
+
+const CapsLabelMobile: React.FC<CapsLabelProps> = ({ children, style }) => {
   const { dark, hc } = useHealthMode();
   return (
     <h2
@@ -521,13 +604,18 @@ export interface HistoryItem {
  * #FCEDEC, Trash2 #B4372C); keyboard path through SwipeActions' keyboardLabel
  * and a long press.
  */
-export const HistoryCard: React.FC<{
+type HistoryCardProps = {
   metric: MetricKey;
   items: HistoryItem[];
   icon: React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
   empty?: string;
   loading?: boolean;
-}> = ({ metric, items, icon, empty, loading }) => {
+};
+export const HistoryCard: React.FC<HistoryCardProps> & { webRole?: WebRole } = (props) => (useIsWeb() ? <HistoryCardWeb {...props} /> : <HistoryCardMobile {...props} />);
+// Website viewport v1: the web metric page puts History in its own column.
+HistoryCard.webRole = "history";
+
+const HistoryCardMobile: React.FC<HistoryCardProps> = ({ metric, items, icon, empty, loading }) => {
   const { dark, hc } = useHealthMode();
   const sep = hc ? "rgb(var(--c-charcoal) / 0.3)" : dark ? "rgba(245,243,250,0.05)" : "rgba(36,31,27,0.05)";
   const bg = dark ? "#1C1F28" : "#FFFFFF";
@@ -615,7 +703,7 @@ export const noDeviceBody = (what: string) =>
  * ls-0.3, body 12.5/18.8 400 #5B5349. Card geometry per HE1.2.e (r22 pad 20,
  * disc 48: read from the HE1.2.e table by the page that uses it).
  */
-export const NoDeviceCard: React.FC<{
+type NoDeviceCardProps = {
   metric: MetricKey;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number; style?: React.CSSProperties }>;
   title?: string;
@@ -627,7 +715,11 @@ export const NoDeviceCard: React.FC<{
    * disc, icon 22, body m-top 4) for existing callers.
    */
   literal?: boolean;
-}> = ({ metric, icon: Icon, title = t("No device connected"), body, style, literal }) => {
+};
+export const NoDeviceCard: React.FC<NoDeviceCardProps> = (props) =>
+  useIsWeb() ? <NoDeviceCardWeb {...props} title={props.title ?? t("No device connected")} /> : <NoDeviceCardMobile {...props} />;
+
+const NoDeviceCardMobile: React.FC<NoDeviceCardProps> = ({ metric, icon: Icon, title = t("No device connected"), body, style, literal }) => {
   const { dark } = useHealthMode();
   return (
     <section className="flex flex-col items-center text-center" style={{ borderRadius: 22, padding: literal ? "22px 18px" : 20, background: mc(metric, "tint"), ...style }}>

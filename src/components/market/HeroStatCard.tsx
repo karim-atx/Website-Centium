@@ -6,6 +6,7 @@ import { NO_ICON_SCALE } from "../pro/proInk";
 import { sparkline } from "./chartModel";
 import { deltaTone } from "./pointsModel";
 import { isRtl } from "../../i18n/core";
+import { useMarketWebType } from "./webType";
 
 // Market + Share 3.0 · HeroStatCard (HANDOVER §4 B-MA.1 items
 // 2–3, P-MA.1; Business Marketplace Screens lines 70–86, Professional
@@ -38,17 +39,18 @@ export interface HeroStatCardProps {
 export const HeroStatCard: React.FC<HeroStatCardProps> = ({ label, value, delta, sub, series, className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
+  const web = useMarketWebType();
   const sp = sparkline(series);
   const tone = deltaTone(delta);
   return (
     <div className={className} style={{ lineHeight: "normal", borderRadius: 24, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden", ...style }}>
-      <div style={{ padding: "16px 16px 0" }}>
-        <div style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>{label}</div>
+      <div style={{ padding: web ? "16px 20px 0" : "16px 16px 0" }}>
+        <div style={{ fontSize: textPx(web ? 13 : 10.5), lineHeight: web ? linePx(20) : undefined, fontWeight: 700, letterSpacing: web ? "0.08em" : "0.1em", textTransform: "uppercase", color: m.faint }}>{label}</div>
         <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
-          <span style={{ fontSize: textPx(36), lineHeight: linePx(42), fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: m.ink }}>{value}</span>
-          {delta ? <span style={{ fontSize: textPx(12), fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
+          <span style={{ fontSize: textPx(web ? 40 : 36), lineHeight: linePx(web ? 48 : 42), fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: m.ink }}>{value}</span>
+          {delta ? <span style={{ fontSize: textPx(web ? 13 : 12), lineHeight: web ? linePx(20) : undefined, fontWeight: 700, color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>{delta}</span> : null}
         </div>
-        {sub ? <div style={{ fontSize: textPx(11.5), color: m.faint }}>{sub}</div> : null}
+        {sub ? <div style={{ fontSize: textPx(web ? 13 : 11.5), lineHeight: web ? linePx(20) : undefined, color: m.faint }}>{sub}</div> : null}
       </div>
       {/* Round F (F10): in right to left, time runs from right to left: the sparkline (no text) is mirrored whole. */}
       <svg width="100%" height={64} viewBox="0 0 358 64" preserveAspectRatio="none" aria-hidden style={{ display: "block", marginTop: 8, ...(isRtl() ? { transform: "scaleX(-1)" } : NO_ICON_SCALE) }}>

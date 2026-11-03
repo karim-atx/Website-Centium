@@ -8,7 +8,11 @@ import StoreOrdersPage from "./StoreOrdersPage";
 import OrderDetailPage from "./OrderDetailPage";
 import ReturnDetailPage from "./ReturnDetailPage";
 import OrdersListPage from "./OrdersListPage";
-import StoreProductsPage from "./products/StoreProductsPage";
+import OrdersPageWeb from "./OrdersPage.web";
+import OrdersListPageWeb from "./OrdersListPage.web";
+import { withWeb } from "../../../components/web/withWeb";
+import StoreProductsPageMobile from "./products/StoreProductsPage";
+import StoreProductsPageWeb from "./products/StoreProductsPage.web";
 
 // v6 Batch 4 · Store routes (one App.tsx line each):
 //   /app/business/orders/*   the order detail, return detail and See all lists
@@ -20,13 +24,25 @@ import StoreProductsPage from "./products/StoreProductsPage";
 // one route, NAV-001 row 8): BusinessOperationsTab renders StoreOrdersPage
 // for a store.
 
+// Website viewport v1 (WB-ST-OR, .1, .2): from 1024px wide the Orders tabs,
+// an order and a return are one list-detail page at /app/business/orders
+// (BusinessOperationsTab sends a store there on web). Below 1024 every route
+// is the mobile one.
+const OrdersIndex = withWeb(() => <Navigate to="/app/business/operations" replace />, OrdersPageWeb);
+const OrderRoute = withWeb(OrderDetailPage, OrdersPageWeb);
+const ReturnRoute = withWeb(ReturnDetailPage, OrdersPageWeb);
+// WB-ST-OR.3: the See all lists.
+const OrdersListRoute = withWeb(OrdersListPage, OrdersListPageWeb);
+// WB-ST-PR, .3: Products (Showcase and a category's See all) from 1024px wide.
+const StoreProductsPage = withWeb(StoreProductsPageMobile, StoreProductsPageWeb);
+
 export function BusinessOrdersRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="/app/business/operations" replace />} />
-      <Route path="list/:which" element={<OrdersListPage />} />
-      <Route path="returns/:returnId" element={<ReturnDetailPage />} />
-      <Route path=":orderId" element={<OrderDetailPage />} />
+      <Route index element={<OrdersIndex />} />
+      <Route path="list/:which" element={<OrdersListRoute />} />
+      <Route path="returns/:returnId" element={<ReturnRoute />} />
+      <Route path=":orderId" element={<OrderRoute />} />
     </Routes>
   );
 }

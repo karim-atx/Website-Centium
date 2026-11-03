@@ -23,25 +23,29 @@ export const ReminderCard: React.FC<{
   group: ReminderGroup;
   proAvatarUrl?: string | null;
   onAction: (r: Reminder) => void;
-}> = ({ group, proAvatarUrl, onAction }) => {
+  /** Website viewport v1 (WC-HO.9, HO Reminders mode "web"): title 15/24, detail and caption 13/20, buttons 36 with 15 labels, no margin (the web grid spaces the cards). */
+  web?: boolean;
+}> = ({ group, proAvatarUrl, onAction, web = false }) => {
   const dark = useIsDark();
   const [open, setOpen] = useState(false);
+  // The web sizes (null on mobile: the mobile values below apply).
+  const W = web ? { title: { fontSize: 15, lineHeight: "24px" }, detail: { fontSize: 13, lineHeight: "20px" }, btn: 36, btnFs: 15, cap: { fontSize: 13, lineHeight: "20px" } } : null;
 
   if (group.items.length === 1) {
     const r = group.items[0];
     const tn = toneSet(r.tone, dark);
     return (
-      <div data-pro-reminder className="flex items-center animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, padding: "12px 14px", gap: 12, marginBottom: 13 }}>
+      <div data-pro-reminder className="flex items-center animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, padding: "12px 14px", gap: 12, marginBottom: W ? 0 : 13 }}>
         <ReminderIcon kind={r.kind} tone={tn} proName={group.proName} proAvatarUrl={proAvatarUrl} />
         <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: INK.ch }}>{r.title}</span>
-          <span className="block" style={{ fontSize: textPx(11), lineHeight: linePx(15), color: INK.chS, marginTop: 2 }}>{r.detail}</span>
+          <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: INK.ch, ...W?.title }}>{r.title}</span>
+          <span className="block" style={{ fontSize: textPx(11), lineHeight: linePx(15), color: INK.chS, marginTop: 2, ...W?.detail }}>{r.detail}</span>
         </span>
         <button
           type="button"
           onClick={() => onAction(r)}
           className={`tap inline-flex items-center shrink-0 ${hitArea}`}
-          style={{ height: 32, padding: "0 12px", borderRadius: 10, background: tn.ink, color: onTone(dark), fontSize: textPx(12), fontWeight: 700 }}
+          style={{ height: W ? W.btn : 32, padding: "0 12px", borderRadius: 10, background: tn.ink, color: onTone(dark), fontSize: W ? W.btnFs : textPx(12), fontWeight: 700 }}
         >
           {r.action}
         </button>
@@ -54,12 +58,12 @@ export const ReminderCard: React.FC<{
   const rule = dark ? "rgba(245,243,250,0.06)" : "rgba(255,255,255,0.8)";
 
   return (
-    <section data-pro-reminder aria-label={t("{n} from {name}", { n: group.items.length, name: group.proName })} className="overflow-hidden animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, marginBottom: 13 }}>
+    <section data-pro-reminder aria-label={t("{n} from {name}", { n: group.items.length, name: group.proName })} className="overflow-hidden animate-fade-slide-up" style={{ borderRadius: 16, background: tn.bg, marginBottom: W ? 0 : 13 }}>
       <div className="flex items-center" style={{ gap: 10, padding: "12px 14px 0" }}>
         <span className="flex">
           <Avatar name={group.proName} url={proAvatarUrl} size={22} tone="teal" />
         </span>
-        <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: tn.ink }}>
+        <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(11), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: tn.ink, ...W?.cap }}>
           {t("{n} from {name}", { n: group.items.length, name: group.proName })}
         </span>
         <button
@@ -67,7 +71,7 @@ export const ReminderCard: React.FC<{
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
           className={`tap inline-flex items-center ${hitArea}`}
-          style={{ gap: 2, fontSize: textPx(12), fontWeight: 700, color: tn.ink }}
+          style={{ gap: 2, fontSize: W ? W.btnFs : textPx(12), fontWeight: 700, color: tn.ink }}
         >
           {open ? t("Show less") : t("See all")}
           {open ? <ChevronUp size={13} strokeWidth={2.4} aria-hidden /> : <ChevronDown size={13} strokeWidth={2.4} aria-hidden />}
@@ -81,21 +85,21 @@ export const ReminderCard: React.FC<{
               {React.createElement(iconFor(r.kind), { size: 16, strokeWidth: 1.75, "aria-hidden": true, style: { color: tk.ink } })}
             </span>
             <span className="flex-1 min-w-0">
-              <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: INK.ch }}>{r.title}</span>
-              <span className="block" style={{ fontSize: textPx(11), color: INK.chS }}>{r.detail}</span>
+              <span className="block" style={{ fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: INK.ch, ...W?.title }}>{r.title}</span>
+              <span className="block" style={{ fontSize: textPx(11), color: INK.chS, ...W?.detail }}>{r.detail}</span>
             </span>
             <button
               type="button"
               onClick={() => onAction(r)}
               className={`tap inline-flex items-center shrink-0 ${hitArea}`}
               style={{
-                height: 30,
+                height: W ? W.btn : 30,
                 padding: "0 11px",
                 borderRadius: 10,
                 background: i ? "transparent" : tk.ink,
                 boxShadow: i ? `inset 0 0 0 1px ${tk.ink}` : undefined,
                 color: i ? tk.ink : onTone(dark),
-                fontSize: textPx(12),
+                fontSize: W ? W.btnFs : textPx(12),
                 fontWeight: 700,
               }}
             >
@@ -105,7 +109,7 @@ export const ReminderCard: React.FC<{
         );
       })}
       {open ? (
-        <p style={{ fontSize: textPx(11), color: INK.chF, padding: "0 14px 12px" }}>{t("Most urgent first. Anything you skip stays here.")}</p>
+        <p style={{ fontSize: textPx(11), color: INK.chF, padding: "0 14px 12px", ...W?.detail }}>{t("Most urgent first. Anything you skip stays here.")}</p>
       ) : (
         <div className="flex justify-center" aria-hidden style={{ gap: 5, padding: "0 0 10px" }}>
           {group.items.map((r, i) => (

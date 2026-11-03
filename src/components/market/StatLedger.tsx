@@ -4,6 +4,8 @@ import { textPx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { deltaTone } from "./pointsModel";
 import { PointsLeaf } from "./PointsFigure";
+import { useMarketWebRail, useMarketWebType } from "./webType";
+import { linePx } from "../../theme/textSize";
 
 // Market + Share 3.0 · StatLedger (HANDOVER §4 B-MA.1 item 3, P-MA.1;
 // Business Marketplace Screens lines 79–86, Professional Marketplace Screens
@@ -26,18 +28,20 @@ export interface StatLedgerRow {
 export const StatLedger: React.FC<{ rows: StatLedgerRow[]; className?: string; style?: React.CSSProperties }> = ({ rows, className, style }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
+  const web = useMarketWebType();
+  const wide = !useMarketWebRail();
   return (
     <div className={className} style={{ lineHeight: "normal", borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: "0 16px", ...style }}>
       {rows.map((r, i) => {
         const tone = deltaTone(r.delta);
         return (
-          <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "13px 0", borderTop: i ? `1.5px dashed ${m.border}` : 0 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 600, color: m.ink2 }}>{r.label}</span>
+          <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: web ? (wide ? "10px 0" : "8px 0") : "13px 0", borderTop: i ? `1.5px dashed ${m.border}` : 0 }}>
+            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), lineHeight: web ? linePx(20) : undefined, fontWeight: 600, color: m.ink2 }}>{r.label}</span>
             <span style={{ display: "inline-flex", alignItems: "baseline", gap: 3 }}>
-              <span style={{ fontSize: textPx(16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{r.value}</span>
+              <span style={{ fontSize: textPx(web ? 17 : 16), lineHeight: web ? linePx(24) : undefined, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{r.value}</span>
               {r.leaf ? <PointsLeaf height={12} /> : null}
             </span>
-            <span style={{ minWidth: 46, textAlign: "end", fontSize: textPx(11), fontWeight: 700, fontVariantNumeric: "tabular-nums", color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>
+            <span style={{ minWidth: web ? 48 : 46, textAlign: "end", fontSize: textPx(web ? 13 : 11), lineHeight: web ? linePx(20) : undefined, fontWeight: 700, fontVariantNumeric: "tabular-nums", color: tone === "high" ? m.high : tone === "faint" ? m.faint : m.good }}>
               {r.delta ?? "–"}
             </span>
           </div>

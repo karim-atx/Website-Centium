@@ -42,9 +42,11 @@ export interface BizShareButtonProps {
   label?: string;
   className?: string;
   style?: React.CSSProperties;
+  /** Website viewport v1 (1024px and wider only): the web page header's 40 button, a 40 disc and a 20 glyph. */
+  web?: boolean;
 }
 
-export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHint, label = t("Share"), className, style }) => {
+export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHint, label = t("Share"), className, style, web }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const share = useBizShareSheet();
@@ -82,10 +84,11 @@ export const BizShareButton: React.FC<BizShareButtonProps> = ({ getData, emptyHi
         aria-describedby={tip ? "biz-share-tip" : undefined}
         onClick={() => void press()}
         className={`tap shrink-0 flex items-center justify-center ${className ?? ""}`}
-        style={{ width: 44, height: 44, opacity: off ? 0.4 : 1, ...style }}
+        style={{ width: web ? 40 : 44, height: web ? 40 : 44, opacity: off ? 0.4 : 1, ...style }}
+        title={web ? label : undefined}
       >
-        <span className="flex items-center justify-center" style={{ width: 34, height: 34, borderRadius: 999, background: off ? m.soft : m.pale }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={off ? m.faint : m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
+        <span className="flex items-center justify-center" style={{ width: web ? 40 : 34, height: web ? 40 : 34, borderRadius: 999, background: off ? m.soft : m.pale }}>
+          <svg width={web ? 20 : 15} height={web ? 20 : 15} viewBox="0 0 24 24" fill="none" stroke={off ? m.faint : m.pdark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={NO_ICON_SCALE}>
             {SHARE_GLYPH}
           </svg>
         </span>

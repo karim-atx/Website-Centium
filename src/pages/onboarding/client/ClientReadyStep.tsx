@@ -5,9 +5,10 @@ import { MARK_LEAF_PATH } from "../../../components/icons/CentiumMark";
 import { HealthDisclaimer } from "../../../components/ui/HealthDisclaimer";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { LEGAL_VERSION } from "../../../services/legal/acceptances";
-import { ObFooter, ObHeader, ObPage } from "../shell/ObShell";
+import { ObFooter, ObHeader, ObPage, ObWebMid } from "../shell/ObShell";
 import { ObChipStatic, ObSectionLabel, ObStatus, ObTerms, ObTip } from "../shell/ObBlocks";
 import { OB } from "../shell/visuals";
+import { ReadyPanel } from "../web/ObWeb";
 import { goalAreas, startingPointSummary, trackingToSave } from "./clientModel";
 import { t, tk } from "../../../i18n/core";
 
@@ -65,74 +66,77 @@ export const ClientReadyStep: React.FC<{
   };
 
   return (
-    <ObPage>
+    // Website viewport v1 (WC-OB.11): from 1024px the form beside the art panel.
+    <ObPage web="ready" aside={<ReadyPanel k={k} v={a.v} />}>
       <div className={`ob-body ${reduced ? "ob-fade-in" : ""}`} style={reduced ? { animationDuration: "200ms" } : undefined}>
         <ObHeader margin="nobar" />
-        <ObStatus
-          vis={[]}
-          visNode={
-            k === 1 ? (
-              <>
-                <circle cx={50} cy={50} r={40} fill="none" stroke={OB.lav} strokeWidth={1.5} opacity={0.6} />
-                <path d={MARK_LEAF_PATH} fill={OB.leaf} transform="translate(50 82) scale(0.13) rotate(-45) translate(-566 -884)" />
-              </>
-            ) : (
-              <>
-                {[0, -45, -90].map((r, i) => (
-                  <g key={r} style={{ transform: `rotate(${r * a.v}deg)`, transformOrigin: "50px 80px", transition: trans }}>
-                    <path d={MARK_LEAF_PATH} fill={[OB.leaf, OB.lav, OB.brand][i]} transform="translate(50 80) scale(0.12) translate(-566 -884)" />
-                  </g>
-                ))}
-              </>
-            )
-          }
-          eyebrow={t("Welcome to Centium")}
-          eyebrowColor="var(--ob-good)"
-          title={t("You're all set, {name}", { name: draft.firstName.trim().split(/\s+/)[0] || t("friend") })}
-          body={t("We've built your Home around your goals. Let's take a look.")}
-          ringOpacity={a.ro}
-          ringScale={a.rs}
-          glowOpacity={a.gl}
-          glowSize={k === 3 ? 240 : 160}
-          textOpacity={a.to}
-        />
-        {k >= 3 && (
-          <div className={reduced ? undefined : "ob-fade-in"}>
-            {areas.length > 0 && (
-              <>
-                <ObSectionLabel title={t("Your starting point")} margin="4px 2px 12px" />
-                <div className="ob-chips" style={{ marginBottom: 16 }}>
-                  {areas.map((x) => (
-                    <ObChipStatic key={x.key} label={t(x.title)} />
+        <ObWebMid>
+          <ObStatus
+            vis={[]}
+            visNode={
+              k === 1 ? (
+                <>
+                  <circle cx={50} cy={50} r={40} fill="none" stroke={OB.lav} strokeWidth={1.5} opacity={0.6} />
+                  <path d={MARK_LEAF_PATH} fill={OB.leaf} transform="translate(50 82) scale(0.13) rotate(-45) translate(-566 -884)" />
+                </>
+              ) : (
+                <>
+                  {[0, -45, -90].map((r, i) => (
+                    <g key={r} style={{ transform: `rotate(${r * a.v}deg)`, transformOrigin: "50px 80px", transition: trans }}>
+                      <path d={MARK_LEAF_PATH} fill={[OB.leaf, OB.lav, OB.brand][i]} transform="translate(50 80) scale(0.12) translate(-566 -884)" />
+                    </g>
                   ))}
+                </>
+              )
+            }
+            eyebrow={t("Welcome to Centium")}
+            eyebrowColor="var(--ob-good)"
+            title={t("You're all set, {name}", { name: draft.firstName.trim().split(/\s+/)[0] || t("friend") })}
+            body={t("We've built your Home around your goals. Let's take a look.")}
+            ringOpacity={a.ro}
+            ringScale={a.rs}
+            glowOpacity={a.gl}
+            glowSize={k === 3 ? 240 : 160}
+            textOpacity={a.to}
+          />
+          {k >= 3 && (
+            <div className={reduced ? undefined : "ob-fade-in"}>
+              {areas.length > 0 && (
+                <>
+                  <ObSectionLabel title={t("Your starting point")} margin="4px 2px 12px" />
+                  <div className="ob-chips" style={{ marginBottom: 16 }}>
+                    {areas.map((x) => (
+                      <ObChipStatic key={x.key} label={t(x.title)} />
+                    ))}
+                  </div>
+                </>
+              )}
+              {summary && (
+                <ObTip icon={Check} margin="0">
+                  {summary}
+                </ObTip>
+              )}
+              {notice && (
+                <ObTip icon={Info} tone="warn" margin="12px 0 0" role="alert">
+                  {notice}
+                </ObTip>
+              )}
+              {askTerms && (
+                <div style={{ marginTop: 16 }}>
+                  <ObTerms
+                    on={!!draft.legalAcceptedAt}
+                    onChange={(on) => {
+                      setTermsError(null);
+                      setDraft((d) => ({ ...d, legalAcceptedAt: on ? new Date().toISOString() : null, legalVersion: on ? LEGAL_VERSION : null }));
+                    }}
+                    error={termsError && t(termsError)}
+                    tail="."
+                  />
                 </div>
-              </>
-            )}
-            {summary && (
-              <ObTip icon={Check} margin="0">
-                {summary}
-              </ObTip>
-            )}
-            {notice && (
-              <ObTip icon={Info} tone="warn" margin="12px 0 0" role="alert">
-                {notice}
-              </ObTip>
-            )}
-            {askTerms && (
-              <div style={{ marginTop: 16 }}>
-                <ObTerms
-                  on={!!draft.legalAcceptedAt}
-                  onChange={(on) => {
-                    setTermsError(null);
-                    setDraft((d) => ({ ...d, legalAcceptedAt: on ? new Date().toISOString() : null, legalVersion: on ? LEGAL_VERSION : null }));
-                  }}
-                  error={termsError && t(termsError)}
-                  tail="."
-                />
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </ObWebMid>
       </div>
       <ObFooter
         error={error}

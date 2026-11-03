@@ -2,6 +2,7 @@ import React from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../theme/textSize";
+import { useMarketWebType } from "./webType";
 import { marketPalette } from "../../theme/marketTokens";
 import { FOCUS_CSS } from "./usePress";
 import { t, tx } from "../../i18n/core";
@@ -37,6 +38,7 @@ export const ListingToggleTile: React.FC<ListingToggleTileProps> = ({ on, onChan
   const dark = useIsDark();
   const m = marketPalette(dark);
   const reduced = useReducedMotion();
+  const web = useMarketWebType();
   const track = on ? m.good : m.high;
   const label = variant === "pro" ? tx("Listing", "pro marketplace") : on ? t("Listing active") : t("Listing paused");
   const status = on ? t("Visible") : t("Hidden");
@@ -76,8 +78,8 @@ export const ListingToggleTile: React.FC<ListingToggleTileProps> = ({ on, onChan
         <span aria-hidden style={{ width: 46, height: 28, borderRadius: 999, background: track, position: "relative", flexShrink: 0 }}>
           <span style={{ position: "absolute", insetInlineStart: on ? 21 : 3, top: 3, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: reduced ? "none" : "inset-inline-start 140ms ease" }} />
         </span>
-        <span aria-hidden style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 600, color: m.ink }}>{label}</span>
-        <span aria-hidden style={{ fontSize: textPx(12), lineHeight: linePx(16), fontWeight: 600, color: track }}>{status}</span>
+        <span aria-hidden style={{ fontSize: textPx(web ? 15 : 14), lineHeight: linePx(web ? 24 : 18), fontWeight: 600, color: m.ink }}>{label}</span>
+        <span aria-hidden style={{ fontSize: textPx(web ? 13 : 12), lineHeight: linePx(web ? 20 : 16), fontWeight: 600, color: track }}>{status}</span>
       </button>
     </>
   );

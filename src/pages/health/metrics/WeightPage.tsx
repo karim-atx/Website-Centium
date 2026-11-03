@@ -23,6 +23,7 @@ import {
   useMetricsLoad,
   SAVE_FAILED,
 } from "../../../components/health/metric/MetricKit";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 import {
   avg,
   dayLabel,
@@ -91,6 +92,7 @@ export default function WeightPage() {
   const navigate = useNavigate();
   const { healthSeries, metricValues, nutritionGoal, user, pregnancy, lastEndedPregnancy, recoverySensitive, recoveryModePending, metricsError, deleteWeighIn, authUserId, reloadMetrics } = useApp();
   const { dark } = useHealthMode();
+  const web = useIsWeb();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("month");
   const [unit, setUnit] = useWeightUnit();
   const [logOpen, setLogOpen] = useState(false);
@@ -385,7 +387,7 @@ export default function WeightPage() {
             onPrev={() => setAnchor(stepAnchor(range, anchor, -1))}
             onNext={() => setAnchor(stepAnchor(range, anchor, 1))}
             nextDisabled={current}
-            legend={weightLegend(range, goalKg !== null, startDay && startDay.startsWith(period.start.slice(0, 4)) ? t("Start, {date}", { date: shortDate(startDay) }) : null, dark)}
+            legend={weightLegend(range, goalKg !== null, startDay && startDay.startsWith(period.start.slice(0, 4)) ? t("Start, {date}", { date: shortDate(startDay) }) : null, dark, web)}
             foot={foot}
             loading={loading}
             summary={summary}

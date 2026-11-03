@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { MailPlus, Plus, Users } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { useIsDark } from "../../../hooks/useIsDark";
-import { fetchBusyTimes } from "../../../services/front-desk";
 import { AnCard, AnEarlyHint, AnEmptyCard, AnHeaderRow, AnHint, AnLead, AnNumberBoxes, AnSection, AnSectionRows, type AnSectionRow } from "./anKit";
 import { EARLY_LINE, inRange, joinsByWeek, planBars, type Delta, type MembersFigures, type MembersPageDef, type MembersVocab, type PageView } from "./membersModel";
 import type { MembersData } from "./useMembersData";
 import { useAnalytics } from "../analyticsContext";
 import { isoOf, rangeWords } from "../analyticsRange";
 import { RenewalsCard } from "./RenewalsCard";
+import { dayName, fmtEntries, footOf, useEntriesByDay } from "./membersReaders";
 import { GrowthChart } from "./GrowthChart";
 import { t, tn, tx } from "../../../i18n/core";
-import { appLocale } from "../../../i18n/format";
 
 // A Members section page (AN4-005 rows 10-17: back 44, crumb, the picker
 // title (AN4-046 / -047: one navigation pattern, the picker), "{i} of {n}",
@@ -74,25 +73,6 @@ const TEAL: [string, string] = ["#14A08F", "#4FD1C0"];
 const PRIMARY: [string, string] = ["#AEA1DC", "#A991FE"];
 const TERT: [string, string] = ["#A79E93", "#9F9CAC"];
 const PDARK: [string, string] = ["#7D6BB5", "#C3B3FB"];
-
-/** The foot line under each page (AnMembersV6 `foot`; AN4-025 D3: "Names follow member privacy settings." is dropped). */
-function footOf(page: MembersPageDef, vocab: MembersVocab): string | null {
-  const classes = vocab.label === "Clients";
-  switch (page.key) {
-    case "growth":
-      return classes ? null : t("Members with a current membership.");
-    case "first90":
-      return classes ? null : t("Based on joins, ends and bookings in this period.");
-    case "engagement":
-      return t("Based on booked spots in this period.");
-    case "atrisk":
-      return classes ? t("Based on each client's bookings.") : t("Based on each member's bookings.");
-    case "plans":
-      return t("Based on current memberships and plans.");
-    default:
-      return null;
-  }
-}
 
 export function MembersPage({
   page,
@@ -314,10 +294,6 @@ function InviteToActive({ figures, data, dark }: { figures: MembersFigures; data
   );
 }
 
-/** Weekday d (0 = Monday) in the app's language; 1 Jan 2024 was a Monday. */
-const dayName = (d: number, weekday: "long" | "narrow" = "long") => new Date(2024, 0, 1 + d).toLocaleDateString(appLocale("en-US"), { weekday });
-const fmtEntries = (v: number) => (v >= 10 ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
-
 /**
  * OURS-AN4-gym-variant row 13 "Entries by day": venue_busy_times(gym, weeks)
  * (average entries per weekday-hour over the weeks asked) summed per weekday
@@ -325,29 +301,9 @@ const fmtEntries = (v: number) => (v >= 10 ? String(Math.round(v)) : String(Math
  * #AEA1DC · #A991FE, values 9.5/800, labels M T W T F S S 9.5 #A79E93.
  */
 function EntriesByDay({ data, dark }: { data: MembersData; dark: boolean }) {
-  const { range } = useAnalytics();
   const k = dark ? 1 : 0;
-  const gyms = useMemo(() => data.venues.filter((v) => v.kind === "gym" && v.businessId === data.businessId).map((v) => v.gymId), [data.venues, data.businessId]);
-  // The range in weeks (the reader takes 1 to 13).
-  const weeks = Math.min(13, Math.max(1, Math.round((Date.parse(range.to) - Date.parse(range.from)) / (7 * 86_400_000))));
-  const key = `${gyms.join(",")}|${weeks}`;
-  const [state, setState] = useState<{ key: string; days: number[] | null } | null>(null);
-  useEffect(() => {
-    if (gyms.length === 0) return;
-    let cancelled = false;
-    void Promise.all(gyms.map((g) => fetchBusyTimes(g, weeks))).then((rs) => {
-      if (cancelled) return;
-      if (rs.some((r) => !r.ok)) return setState({ key, days: null });
-      const days = Array<number>(7).fill(0);
-      for (const r of rs) if (r.ok) r.value.forEach((row, d) => (days[d] += row.reduce((a, v) => a + v, 0)));
-      setState({ key, days });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [gyms, weeks, key]);
-  const days = state?.key === key ? state.days : null;
-  if (gyms.length === 0 || !days) return null;
+  const { days, weeks, gyms } = useEntriesByDay(data);
+  if (gyms === 0 || !days) return null;
   const max = Math.max(...days);
   const top = days.indexOf(max);
   // NEW STRINGS (the line under the title; not drawn).

@@ -4,6 +4,7 @@ import { Check, Minus, Plus, SquareCheck } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 
 export interface PopupMenuOption<V extends string = string> {
   value: V;
@@ -249,6 +250,29 @@ export function PopupMenu<V extends string>({
     return () => window.removeEventListener("keydown", onKey, true);
   }, [open, anchor]);
 
+  // Website viewport v1 (section 3, keyboard): from 1024px the card takes
+  // focus on its first option when it opens, and Up / Down move between the
+  // options.
+  const web = useIsWeb();
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const placed = !!pos;
+  useEffect(() => {
+    const el = menuRef.current;
+    if (!open || !placed || !web || !el) return;
+    const items = () => Array.from(el.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([disabled])'));
+    if (!el.contains(document.activeElement)) items()[0]?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      const list = items();
+      if (!list.length) return;
+      e.preventDefault();
+      const i = list.indexOf(document.activeElement as HTMLElement);
+      list[e.key === "ArrowDown" ? (i + 1) % list.length : (i - 1 + list.length) % list.length].focus();
+    };
+    el.addEventListener("keydown", onKey);
+    return () => el.removeEventListener("keydown", onKey);
+  }, [open, placed, web]);
+
   if (!open || !pos) return null;
 
   const isOn = (v: V) => (Array.isArray(selected) ? selected.includes(v) : selected === v);
@@ -272,6 +296,7 @@ export function PopupMenu<V extends string>({
         style={dimmed ? { background: `rgba(36,31,27,${dim})`, animation: "fade-in .2s ease both" } : { background: "transparent" }}
       />
       <div
+        ref={menuRef}
         role="menu"
         className="absolute overflow-y-auto overscroll-contain"
         style={

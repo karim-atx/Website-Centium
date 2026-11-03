@@ -30,6 +30,7 @@ import {
   type Stat,
   useMetricsLoad,
 } from "../../../components/health/metric/MetricKit";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 import {
   avg,
   daysOf,
@@ -84,6 +85,7 @@ export default function WaterPage() {
   const { waterByDate, waterGoalMl, setWaterGoal, addWater, logWaterDrink, metricsError, authUserId, metricGoalOn } = useApp();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("day");
   const online = useOnline();
+  const web = useIsWeb();
   const [unit, setUnit] = useWaterUnit();
   const [customOpen, setCustomOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
@@ -278,11 +280,14 @@ export default function WaterPage() {
       anchor === today ? t("Today's water.") : t("{day}'s water.", { day: dayLabel(anchor) }),
       t("{n} of {goal} litres.", { n: (total / 1000).toFixed(1), goal: (goal / 1000).toFixed(1) }),
     ].join(" ");
-    legend = [
-      { label: t("Intake so far"), swatch: <IntakeSwatch /> },
-      ...(lastDrink ? [{ label: t("Drink, ml"), swatch: <LegendDot color={mc("water", "main")} /> }] : []),
-      { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
-    ];
+    // Website viewport v1: the web day chart is the reference's bars by hour.
+    legend = web
+      ? [{ label: t("By hour"), swatch: <LegendDot color={mc("water", "main")} /> }]
+      : [
+          { label: t("Intake so far"), swatch: <IntakeSwatch /> },
+          ...(lastDrink ? [{ label: t("Drink, ml"), swatch: <LegendDot color={mc("water", "main")} /> }] : []),
+          { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
+        ];
   } else if (range === "month") {
     const atGoal = rows.filter((r) => r.value >= goalOn(r.date)).length;
     const y = Number(p.start.slice(0, 4));
@@ -300,17 +305,23 @@ export default function WaterPage() {
             t("Best day {date}, {n} litres.", { date: longDate(best!.date), n: (best!.value / 1000).toFixed(1) }),
           ]
     ).join(" ");
-    legend = [
-      { label: t("At goal"), swatch: <LegendDot color={mc("water", "main")} /> },
-      {
-        label: t("Dot fills with % of goal"),
-        swatch: (
-          <span aria-hidden className="grid place-items-center rounded-full" style={{ width: 11, height: 11, border: `1px solid ${mc("water", "main")}` }}>
-            <span className="rounded-full" style={{ width: 7, height: 7, background: mc("water", "main"), opacity: 0.6 }} />
-          </span>
-        ),
-      },
-    ];
+    // Website viewport v1: the web month is the reference's bar a day with the goal rule.
+    legend = web
+      ? [
+          { label: t("Each day"), swatch: <LegendDot color={mc("water", "main")} /> },
+          { label: t("Goal"), swatch: <LegendDash color={inkSwatch} /> },
+        ]
+      : [
+          { label: t("At goal"), swatch: <LegendDot color={mc("water", "main")} /> },
+          {
+            label: t("Dot fills with % of goal"),
+            swatch: (
+              <span aria-hidden className="grid place-items-center rounded-full" style={{ width: 11, height: 11, border: `1px solid ${mc("water", "main")}` }}>
+                <span className="rounded-full" style={{ width: 7, height: 7, background: mc("water", "main"), opacity: 0.6 }} />
+              </span>
+            ),
+          },
+        ];
   } else if (range === "week") {
     foot = empty ? noWater : t("{n} of 7 days logged · average {avg} a day", { n: rows.length, avg: vt(mean ?? 0) });
     const ahead = daysOf(p).filter((d) => d > today).length;
@@ -475,6 +486,17 @@ export default function WaterPage() {
         >
           {range === "day" ? (
             <WaterDayChart totalMl={byDay[anchor] ?? 0} goalMl={goalOn(anchor)} isToday={anchor === today} label={vt(byDay[anchor] ?? 0)} goalLabel={t("Goal {n}", { n: vt(goalOn(anchor)) })} drinks={dayChartDrinks} />
+          ) : range === "month" && web ? (
+            <GoalBarChart
+              metric="water"
+              mode="month"
+              bars={buildGoalBars(p, byDay, today)}
+              goal={goal}
+              goalLabel={goalText}
+              onBarTap={openDay}
+              barLabel={(b) => (b.value === null ? t("{date}, nothing logged", { date: b.key }) : `${b.key}, ${vt(b.value)}`)}
+              tickLabel={(v) => (v === 0 ? "0" : vt(v, 0))}
+            />
           ) : range === "month" ? (
             <WaterMonthGrid
               period={p}
@@ -494,6 +516,7 @@ export default function WaterPage() {
               goal={goal}
               goalLabel={goalText}
               barLabel={(b) => (b.value === null ? t("{date}, nothing logged", { date: b.key }) : `${b.key}, ${vt(b.value)}`)}
+              tickLabel={(v) => (v === 0 ? "0" : vt(v, 0))}
             />
           )}
         </ChartCard>

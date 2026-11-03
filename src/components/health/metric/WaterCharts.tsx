@@ -5,6 +5,8 @@ import { mc, useHealthMode } from "./MetricKit";
 import { daysOf, weekLetter, type Period } from "./periods";
 import { weekdayColumn } from "../../../utils/week";
 import { isRtl } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { WaterDayChartWeb } from "./MetricCharts.web";
 
 // HE1.1 #27 day chart and HE1.1.m #27-#30 month grid.
 //
@@ -23,7 +25,7 @@ const BASE = 117;
 const GOAL_Y = 29.5;
 const AXIS = [6, 10, 14, 18, 22];
 
-export const WaterDayChart: React.FC<{
+type WaterDayChartProps = {
   totalMl: number;
   goalMl: number;
   isToday: boolean;
@@ -31,7 +33,13 @@ export const WaterDayChart: React.FC<{
   goalLabel: string;
   /** B1 water_intakes: each drink's hour (local, fractional) and amount, in time order. With them the chart draws the stepped intake line and a dot per drink (HE1.1 #27); without, the one day-total marker. */
   drinks?: { hour: number; ml: number }[];
-}> = ({ totalMl, goalMl, isToday, label, goalLabel, drinks }) => {
+};
+
+/** Website viewport v1: from 1024px wide the reference's bars by hour (MetricCharts.web.tsx). */
+export const WaterDayChart: React.FC<WaterDayChartProps> & { webNative?: boolean } = (props) => (useIsWeb() ? <WaterDayChartWeb {...props} /> : <WaterDayChartMobile {...props} />);
+WaterDayChart.webNative = true;
+
+const WaterDayChartMobile: React.FC<WaterDayChartProps> = ({ totalMl, goalMl, isToday, label, goalLabel, drinks }) => {
   const { dark, hc } = useHealthMode();
   const ink = dark ? "#B8B3C7" : mc("water", "ink");
   const domain = Math.max(goalMl, totalMl);

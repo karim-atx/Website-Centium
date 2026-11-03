@@ -7,17 +7,67 @@
 // app route renders synchronously exactly as it did when these were static
 // imports, so moving between app pages never suspends. A new app route adds
 // its page here and takes it from appPages in App.tsx.
+import { withWeb } from "./components/web/withWeb";
+import ServicesPageMobile from "./pages/business-ops/appointments/ServicesPage";
+import ServicesPageWeb from "./pages/business-ops/appointments/ServicesPage.web";
+import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
+import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
+import HomeMobile from "./pages/home/Home";
+import HomeWeb from "./pages/home/Home.web";
+import MindMobile from "./pages/mind/Mind";
+import MindWeb from "./pages/mind/Mind.web";
+import FoodMobile from "./pages/food/Food";
+import FoodWeb from "./pages/food/Food.web";
+import NutrientSummaryPageMobile from "./pages/food/NutrientSummaryPage";
+import NutrientSummaryPageWeb from "./pages/food/NutrientSummaryPage.web";
+import HealthMobile from "./pages/health/Health";
+import HealthWeb from "./pages/health/web/Health.web";
+import HealthSourcesMobile from "./pages/health/HealthSources";
+import HealthSourcesWeb from "./pages/health/web/HealthSources.web";
+import MoreMobile from "./pages/profile/More";
+import MoreWeb from "./pages/profile/More.web";
+import SchedulePageMobile from "./pages/business-ops/classes/SchedulePage";
+import SchedulePageWeb from "./pages/business-ops/classes/SchedulePage.web";
+import SessionPageMobile from "./pages/business-ops/classes/SessionPage";
+import SessionPageWeb from "./pages/business-ops/classes/SessionPage.web";
+import ProfileMobile from "./pages/profile/Profile";
+import ProfileWeb from "./pages/profile/Profile.web";
+import SubscriptionMobile from "./pages/subscription/Subscription";
+import SubscriptionWeb from "./pages/subscription/Subscription.web";
+import MessagesMobile from "./pages/messages/Messages";
+import MessagesWeb from "./pages/messages/Messages.web";
+import ClientCalendarTabMobile from "./pages/profile/ClientCalendarTab";
+import ClientCalendarWeb from "./pages/profile/ClientCalendar.web";
+import BusinessOperationsTabMobile from "./pages/marketplace/BusinessOperationsTab";
+import BusinessOperationsTabWeb from "./pages/marketplace/BusinessOperationsTab.web";
+import AnalyticsShellMobile from "./pages/business-analytics/AnalyticsShell";
+import AnalyticsShellWeb from "./pages/business-analytics/AnalyticsShell.web";
+import MarketRoutesMobile from "./pages/business-market/MarketRoutes";
+import MarketRoutesWeb from "./pages/business-market/MarketplacePage.web";
+import ProfessionalsMobile from "./pages/professionals/Professionals";
+import ProfessionalDetailMobile from "./pages/professionals/ProfessionalDetail";
+import ProfessionalReviewsMobile from "./pages/professionals/ProfessionalReviews";
+import ProfessionalsWeb from "./pages/professionals/Professionals.web";
+import CommunityMobile, { CoursePage as CoursePageMobile, ForumNewPage as ForumNewPageMobile, ForumNicknamePage as ForumNicknamePageMobile, ForumPostPage as ForumPostPageMobile } from "./pages/community/Community";
+import CommunityWeb, { CoursePageWeb, ForumNewPageWeb, ForumNicknamePageWeb, ForumPostPageWeb } from "./pages/community/Community.web";
+
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
 export { default as Onboarding } from "./pages/onboarding/Onboarding";
 export { default as BusinessSetupPage } from "./pages/onboarding/business/BusinessSetupPage";
-export { default as Home } from "./pages/home/Home";
-export { default as Food } from "./pages/food/Food";
-export { default as NutrientSummaryPage } from "./pages/food/NutrientSummaryPage";
-export { default as Workout } from "./pages/workout/Workout";
-export { default as Health } from "./pages/health/Health";
+// Website viewport v1: the client Home's web layout from 1024px wide (WC-HO); business accounts and the mobile page below.
+export const Home = withWeb(HomeMobile, HomeWeb);
+// Website viewport v1: the web layout from 1024px wide (WC-FO, WC-FO.4); the mobile page below.
+export const Food = withWeb(FoodMobile, FoodWeb);
+export const NutrientSummaryPage = withWeb(NutrientSummaryPageMobile, NutrientSummaryPageWeb);
+// Website viewport v1: the web layout from 1024px wide (WC-HE); the mobile page below.
+export const Health = withWeb(HealthMobile, HealthWeb);
+import WorkoutMobile from "./pages/workout/Workout";
+import WorkoutWeb from "./pages/workout/Workout.web";
+export const Workout = withWeb(WorkoutMobile, WorkoutWeb);
 export { default as HealthChecks } from "./pages/health/HealthChecks";
-export { default as HealthSources } from "./pages/health/HealthSources";
+// Website viewport v1: the web layout from 1024px wide (WC-HE.G); the mobile page below.
+export const HealthSources = withWeb(HealthSourcesMobile, HealthSourcesWeb);
 export { default as HealthRecords } from "./pages/health/HealthRecords";
 export { default as WaterPage } from "./pages/health/metrics/WaterPage";
 export { default as StepsPage } from "./pages/health/metrics/StepsPage";
@@ -29,12 +79,15 @@ export { default as BloodPressurePage } from "./pages/health/metrics/BloodPressu
 export { default as WeightPage } from "./pages/health/metrics/WeightPage";
 export { default as Cycle } from "./pages/cycle/Cycle";
 export { default as Contraception } from "./pages/contraception/Contraception";
-export { default as Mind } from "./pages/mind/Mind";
-export { default as Professionals } from "./pages/professionals/Professionals";
-export { default as ProfessionalDetail } from "./pages/professionals/ProfessionalDetail";
-export { default as ProfessionalReviews } from "./pages/professionals/ProfessionalReviews";
+// Website viewport v1: the Mind hub's web layout from 1024px wide (WC-MI); the sections and the mobile page below.
+export const Mind = withWeb(MindMobile, MindWeb);
+// Website viewport v1: Professionals' web layout from 1024px wide (WC-PR, WC-PR.1 to .3: one page for the list, the profile and the reviews); the mobile pages below.
+export const Professionals = withWeb(ProfessionalsMobile, ProfessionalsWeb);
+export const ProfessionalDetail = withWeb(ProfessionalDetailMobile, ProfessionalsWeb);
+export const ProfessionalReviews = withWeb(ProfessionalReviewsMobile, ProfessionalsWeb);
 export { default as ProVerification } from "./pages/professionals/ProVerification";
-export { default as Messages } from "./pages/messages/Messages";
+// Website viewport v1: the client Messages list-detail from 1024px wide (WC-MO.4); businesses and the mobile page below.
+export const Messages = withWeb(MessagesMobile, MessagesWeb);
 export { default as CallLink, LegacyCallLink } from "./components/calls/CallLink";
 export { default as ProRoutes, ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRoutes";
 export { default as ProMoreRoutes } from "./pages/pro/more/MoreRoutes";
@@ -48,32 +101,47 @@ export { default as OfferDetailPage } from "./pages/marketplace/rewards/OfferDet
 export { default as VoucherPage } from "./pages/marketplace/rewards/VoucherPage";
 export { ClientOnly } from "./pages/marketplace/ClientOnly";
 export { default as ClientNotificationsPage } from "./pages/notifications/ClientNotificationsPage";
-export { default as AnalyticsShell } from "./pages/business-analytics/AnalyticsShell";
-export { default as MarketRoutes } from "./pages/business-market/MarketRoutes";
+// Website viewport v1: the Analytics web layout from 1024px wide (WB-AN); the mobile shell below.
+export const AnalyticsShell = withWeb(AnalyticsShellMobile, AnalyticsShellWeb);
+// Website viewport v1: the Marketplace tabs web layout from 1024px wide (WB-MA); the mobile routes below.
+export const MarketRoutes = withWeb(MarketRoutesMobile, MarketRoutesWeb);
 export { default as RedeemVoucher } from "./pages/business-market/RedeemVoucher";
 export { default as HiringRoutes } from "./pages/business-market/hiring/HiringRoutes";
 export { default as BusinessNotificationsPage } from "./pages/notifications/BusinessNotificationsPage";
 export { default as BusinessProfilePage } from "./pages/business-more/profile/BusinessProfilePage";
 export { default as BusinessMoreRoutes } from "./pages/business-more/BusinessMoreRoutes";
 export { default as TeamRoutes } from "./pages/business-team/TeamRoutes";
-export { default as SchedulePage } from "./pages/business-ops/classes/SchedulePage";
-export { default as SessionPage } from "./pages/business-ops/classes/SessionPage";
-export { default as ClassRulesPage } from "./pages/business-ops/classes/ClassRulesPage";
-export { default as BusinessOperationsTab } from "./pages/marketplace/BusinessOperationsTab";
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC, .1); the mobile page below.
+export const SchedulePage = withWeb(SchedulePageMobile, SchedulePageWeb);
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC.3); the mobile page below.
+export const SessionPage = withWeb(SessionPageMobile, SessionPageWeb);
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC.8); the mobile page below.
+export const ClassRulesPage = withWeb(ClassRulesPageMobile, ClassRulesPageWeb);
+// Website viewport v1: a gym's Front desk web layout from 1024px wide (WB-FD); other types their mobile tab, centred; the mobile tab below.
+export const BusinessOperationsTab = withWeb(BusinessOperationsTabMobile, BusinessOperationsTabWeb);
 export { PlansRoutes } from "./pages/business-ops/plans";
 export { BusinessOrdersRoutes, StoreProductsRoute } from "./pages/business-ops/store/StoreOpsRoutes";
 export { default as BusinessAppointmentsRoutes } from "./pages/business-ops/appointments/AppointmentsRoutes";
-export { default as AppointmentServicesPage } from "./pages/business-ops/appointments/ServicesPage";
+// Website viewport v1: the web layout from 1024px wide (WB-ST-AP.3); the mobile page below.
+export const AppointmentServicesPage = withWeb(ServicesPageMobile, ServicesPageWeb);
 export { default as StoreRoutes } from "./pages/store/StoreRoutes";
 export { default as AppointmentRoutes } from "./pages/appointments/AppointmentRoutes";
 export { default as BusinessVenueTab } from "./pages/marketplace/BusinessVenueTab";
 export { default as BusinessCalendarTab } from "./pages/marketplace/BusinessCalendarTab";
-export { default as Profile } from "./pages/profile/Profile";
+export const Profile = withWeb(ProfileMobile, ProfileWeb);
 export { default as MyCv } from "./pages/profile/MyCv";
-export { default as Subscription } from "./pages/subscription/Subscription";
-export { default as More } from "./pages/profile/More";
-export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
-export { default as Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
+export const Subscription = withWeb(SubscriptionMobile, SubscriptionWeb);
+// Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
+export const More = withWeb(MoreMobile, MoreWeb);
+export { CertificatePage, CourseBuilderPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
+// Website viewport v1: the Community web layouts from 1024px wide (WC-CO); professionals and the mobile pages below.
+export const Community = withWeb(CommunityMobile, CommunityWeb);
+export const ForumNewPage = withWeb(ForumNewPageMobile, ForumNewPageWeb);
+export const ForumNicknamePage = withWeb(ForumNicknamePageMobile, ForumNicknamePageWeb);
+export const ForumPostPage = withWeb(ForumPostPageMobile, ForumPostPageWeb);
+export const CoursePage = withWeb(CoursePageMobile, CoursePageWeb);
+// Website viewport v1: the client Calendar month and day list from 1024px wide (WC-MO.3); the mobile page below.
+export const ClientCalendarTab = withWeb(ClientCalendarTabMobile, ClientCalendarWeb);
 export { default as Settings } from "./pages/settings/Settings";
 export { default as NotificationsPage } from "./pages/settings/NotificationsPage";
 export { default as HealthCheckRemindersPage } from "./pages/settings/HealthCheckRemindersPage";

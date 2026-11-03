@@ -6,6 +6,9 @@ import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, HeroPill, hairline, metricTextInk, useHealthMode } from "./MetricKit";
 import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { isRtl, t } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { WeightChartWeb } from "./MetricCharts.web";
+import { WeightHeroWeb } from "./MetricHeroes.web";
 
 // Weight trend (HE1.7 family): journey hero with the BMI row, the four range
 // charts and the Units sheet. Literal values from health-handover.md HE1.7 /
@@ -129,9 +132,33 @@ export const WeightHero: React.FC<{
   ariaLabel?: string;
   empty?: React.ReactNode;
   onSetGoal: () => void;
-}> = ({ data, loading, ariaLabel, empty, onSetGoal }) => {
+}> & { webRole?: "hero" } = ({ data, loading, ariaLabel, empty, onSetGoal }) => {
   const { dark, hc } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
+  const web = useIsWeb();
+  // Website viewport v1: the reference's journey track hero (MetricHeroes.web.tsx); the BMI as a pill in its band colour.
+  if (web && data)
+    return (
+      <WeightHeroWeb
+        data={data}
+        fmt={(kg) => fmtW(kg, data.unit)}
+        unitWord={unitWord(data.unit)}
+        bmi={
+          data.bmi ? (
+            data.bmi.kind === "value" ? (
+              <span style={{ color: data.bmi.bmi >= 18.5 && data.bmi.bmi < 25 ? "#357A4D" : "#C2453F" }} data-wt-bmi-value>
+                {t("BMI")} {data.bmi.bmi.toFixed(1)} · {bmiWord(data.bmi.bmi)}
+              </span>
+            ) : (
+              t(data.bmi.text)
+            )
+          ) : null
+        }
+        onSetGoal={onSetGoal}
+        loading={loading}
+        ariaLabel={ariaLabel}
+      />
+    );
   if (!data) {
     return (
       <MetricHero metric={K} pattern={5} padding="16px" loading={loading} ariaLabel={ariaLabel}>
@@ -307,7 +334,7 @@ const lbl: React.CSSProperties = { fontSize: textPx(10.5), lineHeight: linePx(15
  * today and the last weigh-in on a line y 52, dotted join, values above,
  * names below, three scale numbers at y 104.
  */
-export const WeightChart: React.FC<{
+type WeightChartProps = {
   range: MetricRange;
   period: Period;
   byDay: Record<string, number>;
@@ -318,7 +345,13 @@ export const WeightChart: React.FC<{
   compare?: { day: string; kg: number; label: string } | null;
   /** Year: the start day (first weigh-in). */
   startDay?: string | null;
-}> = ({ range, period, byDay, today, goalKg, unit, compare, startDay }) => {
+};
+
+/** Website viewport v1: from 1024px wide the web line chart (MetricCharts.web.tsx; no goal rule there, per the reference). */
+export const WeightChart: React.FC<WeightChartProps> & { webNative?: boolean } = (props) => (useIsWeb() ? <WeightChartWeb {...props} /> : <WeightChartMobile {...props} />);
+WeightChart.webNative = true;
+
+const WeightChartMobile: React.FC<WeightChartProps> = ({ range, period, byDay, today, goalKg, unit, compare, startDay }) => {
   const { dark, hc } = useHealthMode();
   const main = "rgb(var(--c-fill-pinned))";
   const ink = dark ? "rgb(var(--metric-weight-main))" : "rgb(var(--metric-weight-accent))";
@@ -488,7 +521,7 @@ const GoalLine: React.FC<{ y: number; ink: string; text: string }> = ({ y, ink, 
   </g>
 );
 
-export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: string | null, dark: boolean): { label: string; swatch: React.ReactNode }[] {
+export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: string | null, dark: boolean, web = false): { label: string; swatch: React.ReactNode }[] {
   const main = "rgb(var(--c-fill-pinned))";
   const ink = dark ? "rgb(var(--metric-weight-main))" : "rgb(var(--metric-weight-accent))";
   const ring = <span style={{ width: 9, height: 9, borderRadius: 9999, border: `2px solid ${main}`, display: "inline-block", boxSizing: "border-box" }} />;
@@ -497,6 +530,13 @@ export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: s
   const line = <span style={{ width: 14, height: 2, background: main, display: "inline-block" }} />;
   const dash = <span style={{ width: 14, borderTop: `1.5px dashed ${ink}`, display: "inline-block" }} />;
   const out: { label: string; swatch: React.ReactNode }[] = [];
+  // Website viewport v1: the web line chart (reference legend "Weigh-ins" / "Latest"; no goal rule, no ghosts).
+  if (web) {
+    const latest = <span style={{ width: 8, height: 8, borderRadius: 9999, background: "rgb(var(--metric-weight-accent))", display: "inline-block" }} />;
+    if (range === "week" || range === "day") return [{ label: t("Weigh-in"), swatch: ring }, { label: t("Latest"), swatch: latest }];
+    if (range === "month") return [{ label: t("Weigh-in"), swatch: ring }, { label: t("Smoothed trend"), swatch: line }];
+    return [{ label: t("Monthly average"), swatch: line }, ...(startLabel ? [{ label: startLabel, swatch: latest }] : [])];
+  }
   if (range === "month") out.push({ label: t("Weigh-in"), swatch: ring }, { label: t("Smoothed trend"), swatch: line });
   if (range === "week") out.push({ label: t("Weigh-in"), swatch: dot }, { label: t("Days ahead"), swatch: ghost });
   if (range === "year") {
@@ -506,3 +546,5 @@ export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: s
   if (range !== "day" && hasGoal) out.push({ label: t("Goal"), swatch: dash });
   return out;
 }
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+WeightHero.webRole = "hero";

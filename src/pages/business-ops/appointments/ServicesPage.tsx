@@ -164,7 +164,7 @@ export default function ServicesPage() {
   );
 }
 
-function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: boolean; service: Service | null; businessId: string; onClose: () => void; onSaved: (m: string) => void }) {
+export function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: boolean; service: Service | null; businessId: string; onClose: () => void; onSaved: (m: string) => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(60);
@@ -232,7 +232,7 @@ function ServiceSheet({ open, service, businessId, onClose, onSaved }: { open: b
   );
 }
 
-function HoursSheet({ open, businessId, people, onClose, onSaved }: { open: boolean; businessId: string; people: Person[]; onClose: () => void; onSaved: () => void }) {
+export function HoursSheet({ open, businessId, people, onClose, onSaved }: { open: boolean; businessId: string; people: Person[]; onClose: () => void; onSaved: () => void }) {
   const [staffId, setStaffId] = useState<string | null>(null);
   /** 1 = Monday … 7 = Sunday (instructor_availability). */
   const [weekday, setWeekday] = useState(1);

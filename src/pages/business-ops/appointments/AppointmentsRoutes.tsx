@@ -1,6 +1,16 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppointmentsDayPage } from "./AppointmentsPage";
 import AppointmentDetailPage from "./AppointmentDetailPage";
+import AppointmentsPageWeb, { AppointmentsDayPageWeb } from "./AppointmentsPage.web";
+import { withWeb } from "../../../components/web/withWeb";
+
+// Website viewport v1 (WB-ST-AP, .1): from 1024px wide the day and an
+// appointment are one list-detail page at /app/business/appointments
+// (BusinessOperationsTab sends an Appointments business there on web).
+const AppointmentsIndex = withWeb(() => <Navigate to="/app/business/operations" replace />, AppointmentsPageWeb);
+const AppointmentRoute = withWeb(AppointmentDetailPage, AppointmentsPageWeb);
+// WB-ST-AP.4: the Day list.
+const AppointmentsDayRoute = withWeb(AppointmentsDayPage, AppointmentsDayPageWeb);
 
 // v6 Batch 4 · /app/business/appointments/* (one App.tsx line). The
 // Appointments tab root is /app/business/operations for an appointments-only
@@ -10,9 +20,9 @@ import AppointmentDetailPage from "./AppointmentDetailPage";
 export default function BusinessAppointmentsRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="/app/business/operations" replace />} />
-      <Route path="day" element={<AppointmentsDayPage />} />
-      <Route path=":appointmentId" element={<AppointmentDetailPage />} />
+      <Route index element={<AppointmentsIndex />} />
+      <Route path="day" element={<AppointmentsDayRoute />} />
+      <Route path=":appointmentId" element={<AppointmentRoute />} />
     </Routes>
   );
 }

@@ -44,7 +44,7 @@ import { formatClock, isRoundBased, prescriptionLine } from "../../services/work
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { exerciseKey, kindFields, lastSessionPrefill, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
-import { DARK_SURFACE, liftTo, loggerShades, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
+import { DARK_SURFACE, liftTo, loggerShades, mixHex, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { PR_BAR, typeStyles } from "./setTypeStyle";
 import { BlockRunner } from "./BlockRunner";
@@ -182,7 +182,13 @@ export const WorkoutSessionSheet: React.FC<{
   blocks?: WorkoutBlock[];
   // V10 (QA 10.0): a read-only note from the hired professional.
   coachNote?: string;
-}> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote }) => {
+  /**
+   * Website viewport v1 (WC-WO.1.8, web only): the element the logger docks
+   * into, in place (the Routines right column) instead of covering the
+   * screen. Unset everywhere on mobile, where nothing below changes.
+   */
+  dock?: HTMLElement | null;
+}> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote, dock }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
   const {
@@ -828,12 +834,17 @@ export const WorkoutSessionSheet: React.FC<{
           <>
             <div
               className="flex items-center uppercase"
-              style={{ padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}
+              style={
+                dock
+                  ? // Web (WO Logger Column v13): 10 16 4, 13/20 600; Set 56, the actions 84.
+                    { padding: "10px 16px 4px", fontSize: textPx(13), lineHeight: linePx(20), fontWeight: 600, letterSpacing: "0.08em", color: dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93" }
+                  : { padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }
+              }
             >
-              <span style={{ width: 58 }}>{tx("Set", "workout")}</span>
-              <span className="flex-1">{t("Weight (kg)")}</span>
-              <span className="flex-1" style={{ marginInlineStart: 8 }}>{t("Reps")}</span>
-              <span style={{ width: 75 }} />
+              <span style={{ width: dock ? 56 : 58 }}>{tx("Set", "workout")}</span>
+              <span className={dock ? "flex-1 min-w-0 whitespace-nowrap" : "flex-1"}>{t("Weight (kg)")}</span>
+              <span className={dock ? "flex-1 min-w-0 whitespace-nowrap" : "flex-1"} style={{ marginInlineStart: 8 }}>{t("Reps")}</span>
+              <span style={{ width: dock ? 84 : 75 }} />
             </div>
             {ex.sets.map((s, setIdx) => {
               const ph = placeholdersFor(exIdx, setIdx);
@@ -877,11 +888,12 @@ export const WorkoutSessionSheet: React.FC<{
                     setTarget={setIdx < offered ? setTargetText(meta.setTargets?.[setIdx]) ?? undefined : undefined}
                     offColor={coachLoggerColor(hc ? "offHc" : "off", dark)}
                     targetColor={coachLoggerColor("target", dark)}
+                    web={!!dock}
                   />
                   {showRest && (
-                    <div className="flex items-center" style={{ gap: 10, padding: "0 15px", height: 19 }}>
+                    <div className="flex items-center" style={{ gap: 10, padding: dock ? "0 16px" : "0 15px", height: dock ? 22 : 19 }}>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
-                      <span className="tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 600, color: playInk(family, dark) }}>
+                      <span className="tabular-nums" style={{ fontSize: textPx(dock ? 13 : 10.5), lineHeight: dock ? linePx(20) : undefined, fontWeight: 600, color: playInk(family, dark) }}>
                         {formatClock(counting !== null && counting > 0 ? counting : restSec)}
                       </span>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
@@ -891,14 +903,19 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: "6px 15px 0", fontSize: textPx(10.5), color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("{n} asked for · the rest are yours if you want them.", { n: asked })}</p>
+              <p style={{ margin: dock ? "6px 16px 0" : "6px 15px 0", fontSize: textPx(dock ? 13 : 10.5), lineHeight: dock ? linePx(20) : undefined, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("{n} asked for · the rest are yours if you want them.", { n: asked })}</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
               className="tap flex items-center"
-              style={{ gap: 6, margin: "8px 15px 0", fontSize: textPx(12), fontWeight: 600, color: sessionColor("addSet", dark) }}
+              style={
+                dock
+                  ? // Web: 10 16 0, 15/24 600, plus 16.
+                    { gap: 6, margin: "10px 16px 0", fontSize: textPx(15), lineHeight: linePx(24), fontWeight: 600, color: sessionColor("addSet", dark) }
+                  : { gap: 6, margin: "8px 15px 0", fontSize: textPx(12), fontWeight: 600, color: sessionColor("addSet", dark) }
+              }
             >
-              <Plus size={12} /> {t("Add set")}
+              <Plus size={dock ? 16 : 12} /> {t("Add set")}
             </button>
           </>
         )}
@@ -984,6 +1001,8 @@ export const WorkoutSessionSheet: React.FC<{
   };
 
   const circle = "tap relative flex-none flex items-center justify-center rounded-full";
+  // Web only (docked): whether the header's controls need a line of their own.
+  const dockNarrow = !!dock && dock.clientWidth - 136 - (elapsed > 0 ? 278 : 174) < 112;
   // Round E: the routine's playlist. On a coach's copy it is the coach's (it
   // came with the template); on the member's own routine, the routine's own.
   const routinePlaylist = playlistServiceOf(routineRow?.playlistUrl) ? routineRow!.playlistUrl! : null;
@@ -997,9 +1016,90 @@ export const WorkoutSessionSheet: React.FC<{
     // GLOBAL: the on-screen keyboard covers the bottom of a fixed full-screen
     // view, so the logger ends above it (--kb-inset, published by Layout from
     // visualViewport) — the Finish footer and the list both stay in reach.
-    <div className="fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in" style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
-      <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
+    <div className={dock ? "absolute inset-0 z-[5] bg-cream flex flex-col" : "fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in"} style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
+      {/* Docked (web): still an open logger to the active-workout bar, which
+          looks for a fixed full-screen layer. */}
+      {dock && <i aria-hidden className="fixed inset-0 hidden" />}
+      <div className={dock ? "w-full flex flex-col flex-1 min-h-0" : "mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0"}>
         {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
+        {dock ? (
+          // Website viewport v1 · WC-WO.1.8 (WO Logger Column v13): the docked
+          // header. × and ⌄ (36), the name 20/28 700 over its status lines
+          // (13/20 #A79E93), the play controls beside them (Play · Pause +
+          // Stop · Resume + Stop, 40, in the folder's play colour; Stop asks
+          // before quitting, as × does), then the metronome and the note (36).
+          <div className="flex items-center flex-none" style={{ gap: 8, padding: "14px 16px", borderBottom: "1px solid rgb(var(--c-charcoal) / 0.05)" }}>
+            <button onClick={requestClose} aria-label={t("Close workout")} className={circle} style={{ width: 36, height: 36, background: "#F5F5F6", color: "#5B5349" }}>
+              <X size={16} />
+            </button>
+            <button onClick={minimise} aria-label={t("Minimise workout")} className={circle} style={{ width: 36, height: 36, background: "#F5F5F6", color: "#5B5349" }}>
+              <ChevronDown size={18} />
+            </button>
+            {/* A narrow column (the 1024 frame) puts the controls on a line of
+                their own: the name, status, the buttons (≈ 278 with the
+                metronome, 174 before a start) and the 136 of × ⌄ and padding. */}
+            <div className="flex-1 min-w-0 grid items-center" style={{ marginInlineStart: 4, gridTemplateColumns: dockNarrow ? "minmax(0,1fr)" : "minmax(0,1fr) auto", columnGap: 16 }}>
+              <p className="truncate" title={routineName} style={{ gridColumn: 1, gridRow: 1, margin: 0, fontSize: 20, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.3px", color: "rgb(var(--c-charcoal))" }}>
+                {routineName}
+              </p>
+              <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 2, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+                {started ? t("Started {time}", { time: clock12(startedAt) }) : elapsed > 0 ? t("Paused") : t("Not started")}
+              </p>
+              {elapsed > 0 && (
+                <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 3, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+                  {t("{elapsed} elapsed", { elapsed: formatDuration(elapsed) })}
+                </p>
+              )}
+              <div className="flex items-center" style={dockNarrow ? { gridColumn: 1, gridRow: 4, justifySelf: "end", marginTop: 10, gap: 8 } : { gridColumn: 2, gridRow: "1 / span 3", justifySelf: "end", gap: 8 }}>
+                {finished && savedSession && <ShareEntryButton label={t("Share your workout")} onPress={shareSaved} />}
+                {!finished && (
+                  <button
+                    onClick={toggleClock}
+                    aria-label={started ? t("Pause elapsed time") : t("Start elapsed time")}
+                    className="tap flex items-center whitespace-nowrap"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: family.play, color: "#FFFFFF" }}
+                  >
+                    {started ? <Pause size={16} fill="#FFFFFF" /> : <Play size={16} fill="#FFFFFF" />}
+                    {started ? t("Pause") : elapsed > 0 ? t("Resume") : t("Play")}
+                  </button>
+                )}
+                {!finished && elapsed > 0 && (
+                  <button
+                    onClick={requestClose}
+                    className="tap flex items-center whitespace-nowrap"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: "#FFFFFF", color: family.tile, border: `1.5px solid ${family.bar}` }}
+                  >
+                    <Square size={16} fill={family.tile} />
+                    {t("Stop")}
+                  </button>
+                )}
+                <Metronome />
+                <button
+                  onClick={() => {
+                    setCoachNoteOpen(true);
+                    if (noteUnread && routineRow) markCoachNoteRead(routineRow.id);
+                  }}
+                  aria-label={noteUnread ? t("Coach's note, unread") : t("Coach's note")}
+                  className={circle}
+                  style={{ width: 36, height: 36, background: "#F5F5F6", color: "#A79E93" }}
+                >
+                  <MessageSquareText size={16} />
+                </button>
+              </div>
+              {coachId && (
+                <p className="flex" style={{ gridColumn: 1, margin: "3px 0 0" }}>
+                  <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, fontWeight: 700, lineHeight: "20px", color: family.tile }}>
+                    <CoachAvatar name={coachWho} avatarUrl={coachAvatar} size={16} tone="teal" />
+                    {t("From {name}", { name: coachName ?? t("your coach") })}
+                  </span>
+                </p>
+              )}
+              <div className="flex empty:hidden" style={{ gridColumn: 1, marginTop: 3 }}>
+                <CyclePhaseChip />
+              </div>
+            </div>
+          </div>
+        ) : (
         <div
           className="grid items-center flex-none"
           style={{
@@ -1079,6 +1179,7 @@ export const WorkoutSessionSheet: React.FC<{
             </button>
           </div>
         </div>
+        )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
           <div className="flex flex-col" style={{ gap: 12 }}>
@@ -1171,37 +1272,52 @@ export const WorkoutSessionSheet: React.FC<{
 
         <div
           className="flex-none bg-cream"
-          style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.05)", padding: "14px 20px max(28px, calc(env(safe-area-inset-bottom) + 12px))" }}
+          style={
+            dock
+              ? // Web (WO Logger Column v13): 14 16 16, rows 12 apart.
+                { borderTop: "1px solid rgb(var(--c-charcoal) / 0.05)", padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 12 }
+              : { borderTop: "1px solid rgb(var(--c-charcoal) / 0.05)", padding: "14px 20px max(28px, calc(env(safe-area-inset-bottom) + 12px))" }
+          }
         >
-          <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-            <div>
-              <p className="uppercase" style={{ margin: 0, fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-faint))" }}>
+          <div className={dock ? "flex items-center" : "flex items-center justify-between"} style={dock ? { gap: 12 } : { marginBottom: 14 }}>
+            <div className={dock ? "flex-1 min-w-0" : undefined}>
+              <p
+                className="uppercase"
+                style={{ margin: 0, fontSize: textPx(dock ? 13 : 10), lineHeight: dock ? linePx(20) : undefined, fontWeight: 700, letterSpacing: "0.1em", color: dock && !dark ? "#A79E93" : "rgb(var(--c-charcoal-faint))" }}
+              >
                 {t("Total volume")}
               </p>
-              <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(24), fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: linePx(30) }}>
+              <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(dock ? 28 : 24), fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: linePx(dock ? 36 : 30) }}>
                 {`${totalVolume.toLocaleString(appLocale())} kg`}
               </p>
             </div>
-            <div className="flex items-center" style={{ gap: 8 }}>
+            <div className="flex items-center" style={{ gap: dock ? 12 : 8 }}>
               <button
                 onClick={() => setRpeOpen(true)}
                 className="tap flex items-center justify-center"
-                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), fontWeight: 600 }}
+                style={
+                  dock
+                    ? { gap: 6, height: 40, padding: "0 16px", borderRadius: 999, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 600 }
+                    : { gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), fontWeight: 600 }
+                }
               >
-                <Calculator size={13} /> {t("RPE")}
+                <Calculator size={dock ? 16 : 13} /> {t("RPE")}
               </button>
               <button
                 onClick={() => setPlateCalcOpen(true)}
                 aria-label={t("Plate calculator")}
                 className="tap flex items-center justify-center rounded-full"
-                style={{ width: 32, height: 32, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}
+                style={{ width: dock ? 40 : 32, height: dock ? 40 : 32, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}
               >
-                <PlateIcon size={15} />
+                <PlateIcon size={dock ? 16 : 15} />
               </button>
             </div>
           </div>
           {saveError && (
-            <p className="text-center" style={{ margin: "0 0 8px", fontSize: textPx(11.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
+            <p
+              className="text-center"
+              style={{ margin: dock ? 0 : "0 0 8px", fontSize: textPx(dock ? 13 : 11.5), lineHeight: dock ? linePx(20) : undefined, fontWeight: 600, color: sessionColor("danger", dark) }}
+            >
               {saveError}
             </p>
           )}
@@ -1209,7 +1325,12 @@ export const WorkoutSessionSheet: React.FC<{
             onClick={() => void finishWorkout()}
             disabled={finished || saving}
             className="tap w-full flex items-center justify-center disabled:opacity-70"
-            style={{ gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: textPx(15), fontWeight: 700 }}
+            style={
+              dock
+                ? // Web: 44, r12, 15/24 600.
+                  { gap: 8, height: 44, borderRadius: 12, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: textPx(15), lineHeight: linePx(24), fontWeight: 600 }
+                : { gap: 8, height: 52, borderRadius: 14, background: dark ? playText(family) : family.play, color: "#FFFFFF", fontSize: textPx(15), fontWeight: 700 }
+            }
           >
             {finished ? (
               t("Workout Saved ✓")
@@ -1510,7 +1631,7 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
       )}
     </div>,
-    document.body
+    dock ?? document.body
   );
 };
 
@@ -1564,7 +1685,13 @@ const SetRow: React.FC<{
   setTarget?: string;
   targetColor?: string;
   offColor?: string;
-}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
+  /** Website viewport v1 (WC-WO.1.8, docked): the WO Logger Column v13 row. */
+  web?: boolean;
+}> = (props) => (props.web ? <SetRowWeb {...props} /> : <SetRowMobile {...props} />);
+
+type SetRowProps = React.ComponentProps<typeof SetRow>;
+
+const SetRowMobile: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
   const dark = useIsDark();
   const kind = setKind(s);
   const ty = kind === "normal" ? null : typeStyles(dark)[kind];
@@ -1700,6 +1827,141 @@ const SetRow: React.FC<{
       )}
       {needsReps && (
         <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ marginBlock: "4px 0", marginInline: "58px 0", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
+          {t("Enter the reps you did to log this set.")}
+        </p>
+      )}
+    </div>
+  );
+};
+/**
+ * Website viewport v1 · WC-WO.1.8 (WO Logger Column v13), web only: the set
+ * row of the docked logger. 50 tall, padding 0 16; the set chip 34×30 r8
+ * 13/700 in a 56 cell (the type's colours, or the folder's banner and ink);
+ * weight and reps 38 r10 15/600 centred, 8 apart; the tick 34 r10 (filled
+ * with the folder colour when logged, a 2px outline otherwise) and the set's
+ * ⋮ in an 84 cell, 10 apart. A logged normal set's row takes a 7% tint of
+ * the folder colour (the reference's #F4F9F8 on teal). Same handlers, labels
+ * and lines under the row as the mobile row.
+ */
+const SetRowWeb: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
+  const dark = useIsDark();
+  const kind = setKind(s);
+  const ty = kind === "normal" ? null : typeStyles(dark)[kind];
+  // A normal set's fields are the reference's neutral #F5F5F6 (the folder tint stays in dark mode).
+  const field = ty?.field ?? (dark ? shades.field : "#F5F5F6");
+  const ink = ty?.ink ?? shades.ink;
+  const muted = !!s.optional && !s.completed && s.outcome == null;
+  const done = s.completed || s.outcome === "failed";
+  const label = s.setNumber;
+  const inputStyle: React.CSSProperties = {
+    height: 38,
+    minWidth: 0,
+    borderRadius: 10,
+    border: "1px solid transparent",
+    background: field,
+    color: ink,
+    padding: "0 10px",
+    textAlign: "center",
+    fontSize: textPx(15),
+    fontWeight: 600,
+    ["--ph" as string]: ink,
+    ...(dark ? { ["--ph-opacity" as string]: placeholderOpacity(ink, field) } : {}),
+  };
+  const rowBg = ty?.row ?? (done && !dark ? mixHex(family.play, "#FFFFFF", 0.93) : "transparent");
+  const under = { marginBlock: "0 6px", marginInline: "56px 0", fontSize: textPx(13), lineHeight: linePx(20) } as const;
+  return (
+    <div
+      ref={rowRef}
+      className={clsx("relative flex flex-wrap items-center", justTicked && "animate-set-row-settle")}
+      style={{
+        minHeight: 50,
+        padding: "0 16px",
+        background: rowBg,
+        borderTop: separator ? "1px solid rgb(var(--c-charcoal) / 0.05)" : undefined,
+        opacity: muted ? 0.62 : 1,
+        ["--settle-from" as string]: ty?.row && ty.row !== "transparent" ? ty.row : shades.banner,
+        ["--settle-to" as string]: rowBg,
+      }}
+    >
+      {kind === "pr" && <span aria-hidden className="absolute start-0" style={{ top: 6, bottom: 6, width: 3, borderStartEndRadius: 2, borderEndEndRadius: 2, background: PR_BAR }} />}
+      <span className="flex-none flex items-center" style={{ width: 56, height: 50 }}>
+        <button
+          onClick={(e) => onType(e.currentTarget)}
+          aria-label={t("Set {label} type: {type}", { label, type: t(HANDOVER_SET_TYPES.find((x) => x.value === kind)?.label ?? "") })}
+          className="tap inline-flex items-center justify-center tabular-nums"
+          style={{ minWidth: 34, height: 30, padding: "0 6px", borderRadius: 8, fontSize: textPx(13), fontWeight: 700, background: ty?.field ?? shades.banner, color: ty?.label ?? playInk(family, dark) }}
+        >
+          {ty ? tx(ty.short, "set badge") : number}
+        </button>
+      </span>
+      <div className="flex-1 flex min-w-0" style={{ gap: 8 }}>
+        <WeightField
+          value={s.weightKg}
+          onChange={(weightKg) => onChange({ weightKg })}
+          placeholder={weightPlaceholder}
+          ariaLabel={t("Set {label} weight", { label })}
+          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined }}
+        />
+        <input
+          value={s.reps || ""}
+          onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
+          placeholder={repsPlaceholder}
+          inputMode="numeric"
+          aria-label={t("Set {label} reps", { label })}
+          aria-invalid={needsReps || undefined}
+          aria-describedby={needsReps ? `need-reps-${label}` : undefined}
+          data-field="reps"
+          className="logger-field flex-1 focus:outline-none"
+          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined, ...(needsReps ? { borderColor: sessionColor("danger", dark) } : null) }}
+        />
+      </div>
+      <span className="flex-none flex items-center justify-end" style={{ width: 84, gap: 10 }}>
+        <span className="relative flex-none" style={{ width: 34, height: 34 }}>
+          {justTicked && (
+            <span key={tickKey} className="absolute inset-0 border-2 pointer-events-none animate-set-tick-ring" style={{ borderRadius: 10, borderColor: family.play }} />
+          )}
+          <button
+            key={justTicked ? `${tickKey}-btn` : "btn"}
+            onClick={onCheck}
+            aria-pressed={done}
+            aria-disabled={kind === "skipped"}
+            aria-label={t("Mark set {label} complete", { label })}
+            className={clsx("tap relative flex items-center justify-center", justTicked && "animate-set-tick")}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              boxSizing: "border-box",
+              background: done ? family.play : "rgb(var(--c-cream-card))",
+              border: done ? "none" : `2px solid ${dark ? "rgb(var(--c-charcoal-faint))" : "#C9C2B8"}`,
+              color: "#FFFFFF",
+            }}
+          >
+            {done && <Check key={justTicked ? tickKey : "check"} size={16} strokeWidth={3} className={justTicked ? "animate-set-tick-check" : undefined} />}
+          </button>
+        </span>
+        <button
+          onClick={onOptions}
+          aria-label={t("Set {label} options", { label })}
+          className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
+          style={{ width: 16, height: 28, color: s.notes || s.rpe ? playInk(family, dark) : dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93" }}
+        >
+          <EllipsisVertical size={16} />
+        </button>
+      </span>
+      {target && (
+        <p className="basis-full" style={{ ...under, fontWeight: target.off ? 700 : 500, color: target.off ? offColor : targetColor }}>
+          {target.text}
+          {target.off ? ` · ${t("logged {value}", { value: target.off })}` : ""}
+        </p>
+      )}
+      {setTarget && (
+        <p className="basis-full" style={{ ...under, fontWeight: 500, color: targetColor }}>
+          {setTarget}
+        </p>
+      )}
+      {needsReps && (
+        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ ...under, fontWeight: 600, color: sessionColor("danger", dark) }}>
           {t("Enter the reps you did to log this set.")}
         </p>
       )}

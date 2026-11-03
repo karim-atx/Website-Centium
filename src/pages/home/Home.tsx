@@ -15,7 +15,9 @@ import { PremiumBadge } from "../../components/premium/PremiumBadge";
 import { clientKinds, fetchUnreadNotificationCount, unreadBadge } from "../../services/notifications";
 import { useSwitches } from "../../services/premium/hooks";
 import { useNavigate } from "react-router-dom";
-import BusinessDashboard from "../marketplace/BusinessDashboard";
+import BusinessDashboardMobile from "../marketplace/BusinessDashboard";
+import BusinessDashboardWeb from "../marketplace/BusinessDashboard.web";
+import { withWeb } from "../../components/web/withWeb";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useInboxRealtime } from "../../hooks/useInboxRealtime";
@@ -23,6 +25,9 @@ import { ProReminders } from "../../components/client-forms/ProReminders";
 import { t, tk } from "../../i18n/core";
 import { StreakShieldsLine } from "../../components/premium/StreakShields";
 import { WeeklyReviewCard } from "./review/WeeklyReviewCard";
+
+// Website viewport v1 (WB-HO): the business Dashboard's web layout from 1024px wide; the mobile dashboard below it.
+const BusinessDashboard = withWeb(BusinessDashboardMobile, BusinessDashboardWeb);
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -235,7 +240,7 @@ export default function Home() {
  * an INSERT or UPDATE of one of the member's own client-kind rows re-reads
  * the count only (useInboxRealtime, coalesced), never the list.
  */
-function HomeBell() {
+export function HomeBell() {
   const navigate = useNavigate();
   const { authUserId } = useApp();
   const [unread, setUnread] = useState(0);

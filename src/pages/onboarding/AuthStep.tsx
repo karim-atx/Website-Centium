@@ -26,9 +26,10 @@ import { formatCountdown } from "../../services/auth/cooldown";
 import { t, tk } from "../../i18n/core";
 import { rich } from "./shell/rich";
 import { meetsPasswordRule, shouldWarnPasswordMismatch } from "../../utils/password";
-import { ObFooter, ObHeader, ObLockup, ObPage, ObProgress, ObTitle, ObToast, useObToast } from "./shell/ObShell";
+import { ObFooter, ObHeader, ObLockup, ObPage, ObProgress, ObTitle, ObToast, ObWebMid, useObToast } from "./shell/ObShell";
 import { ObField, ObStrength, ObTerms } from "./shell/ObBlocks";
 import { useOnline } from "./shell/flow";
+import { useIsWeb } from "../../components/web/useWebLayout";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
 
 interface Props {
@@ -67,6 +68,7 @@ const PASSWORD_FIELD_ERRORS = new Set<string>([tk("Email or password is incorrec
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode = "signIn" }) => {
   const { session, authReady, signOut, theme } = useApp();
   const online = useOnline();
+  const web = useIsWeb();
   // AG phase 1: a Turnstile challenge on every password call this screen
   // makes (sign-in, sign-up, reset, resend). Without a site key there is no
   // widget and no token, and nothing waits.
@@ -294,15 +296,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   // would flash it at a user who is already signed in.
   if (!authReady) {
     return (
-      <ObPage backdrop>
+      <ObPage backdrop web="intro">
         <div className="ob-body">
           <ObProgress count={3} index={1} variant="intro" />
           <div className="ob-head" data-m="intro" style={{ justifyContent: "center" }}>
             <ObLockup />
           </div>
-          <p role="status" style={{ textAlign: "center", fontSize: 13, lineHeight: "19.5px", fontWeight: 500, color: "var(--ob-faint)" }}>
-            {t("Checking your session…")}
-          </p>
+          <ObWebMid>
+            <p role="status" style={{ textAlign: "center", fontSize: 13, lineHeight: "19.5px", fontWeight: 500, color: "var(--ob-faint)" }}>
+              {t("Checking your session…")}
+            </p>
+          </ObWebMid>
         </div>
       </ObPage>
     );
@@ -312,15 +316,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   // Back from the next step. Offer the way forward explicitly.
   if (session) {
     return (
-      <ObPage backdrop>
+      <ObPage backdrop web="intro">
         <div className="ob-body ob-step-in">
           <ObProgress count={3} index={1} variant="intro" />
           <ObHeader margin="intro" />
-          <ObTitle variant="intro" eyebrow={t("Welcome back")} title={t("You're signed in")} subtitle={t("Continue setting up your Centium account.")} />
-          <div className="ob-info">
-            <MailCheck size={16} />
-            <span>{rich(t("Signed in as {email}"), { email: <b>{session.user?.email ?? email}</b> })}</span>
-          </div>
+          <ObWebMid>
+            <ObTitle variant="intro" eyebrow={t("Welcome back")} title={t("You're signed in")} subtitle={t("Continue setting up your Centium account.")} />
+            <div className="ob-info">
+              <MailCheck size={16} />
+              <span>{rich(t("Signed in as {email}"), { email: <b>{session.user?.email ?? email}</b> })}</span>
+            </div>
+          </ObWebMid>
         </div>
         <ObFooter
           primary={{ label: t("Continue"), onClick: onNext }}
@@ -343,51 +349,53 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
     const noPassword = !password;
     const resendDisabled = busy || noPassword || captchaPending || cooldown.active || !online;
     return (
-      <ObPage backdrop>
+      <ObPage backdrop web="intro">
         <div className="ob-body ob-step-in">
           <ObProgress count={3} index={1} variant="intro" />
           <ObHeader margin="intro" />
-          <ObTitle
-            variant="intro"
-            eyebrow={t("Verify your email")}
-            title={t("Check your email")}
-            subtitle={
-              fromSignUp ? (
-                // Enumeration-safe: Supabase answers a new address and one that
-                // already has an account identically.
-                t("If an account doesn't already exist for this address, you'll get a confirmation link. Already registered? Sign in instead.")
-              ) : (
-                <>
-                  {rich(t("Your account isn't confirmed yet. Open the confirmation link we sent to {email} to activate it."), {
-                    email: <b style={{ color: "var(--ob-ink)", fontWeight: 700 }}>{email}</b>,
-                  })}
-                </>
-              )
-            }
-          />
-          <div className="ob-mail">
-            <div className="ob-mail-ring">
-              <span />
-              <span />
-              <span>
-                <MailCheck size={30} strokeWidth={1.6} />
-              </span>
+          <ObWebMid>
+            <ObTitle
+              variant="intro"
+              eyebrow={t("Verify your email")}
+              title={t("Check your email")}
+              subtitle={
+                fromSignUp ? (
+                  // Enumeration-safe: Supabase answers a new address and one that
+                  // already has an account identically.
+                  t("If an account doesn't already exist for this address, you'll get a confirmation link. Already registered? Sign in instead.")
+                ) : (
+                  <>
+                    {rich(t("Your account isn't confirmed yet. Open the confirmation link we sent to {email} to activate it."), {
+                      email: <b style={{ color: "var(--ob-ink)", fontWeight: 700 }}>{email}</b>,
+                    })}
+                  </>
+                )
+              }
+            />
+            <div className="ob-mail">
+              <div className="ob-mail-ring">
+                <span />
+                <span />
+                <span>
+                  <MailCheck size={30} strokeWidth={1.6} />
+                </span>
+              </div>
+              <p className="ob-mail-email">{email}</p>
+              <p className="ob-mail-body">
+                {t("An account isn't active until that link is clicked. You can leave this page open. Onboarding picks up where you left off when you return.")}
+              </p>
             </div>
-            <p className="ob-mail-email">{email}</p>
-            <p className="ob-mail-body">
-              {t("An account isn't active until that link is clicked. You can leave this page open. Onboarding picks up where you left off when you return.")}
+            <p className="ob-hint">
+              {noPassword
+                ? t("To resend, go back to sign in and sign up again with the same email.")
+                : resent
+                  ? t("Sent again just now. It can take a minute.")
+                  : t("Nothing arrived? Check spam, then resend below.")}
             </p>
-          </div>
-          <p className="ob-hint">
-            {noPassword
-              ? t("To resend, go back to sign in and sign up again with the same email.")
-              : resent
-                ? t("Sent again just now. It can take a minute.")
-                : t("Nothing arrived? Check spam, then resend below.")}
-          </p>
-          <div style={{ marginTop: 12 }}>
-            <SecurityCheck status={captchaStatus} container={captchaContainer} />
-          </div>
+            <div style={{ marginTop: 12 }}>
+              <SecurityCheck status={captchaStatus} container={captchaContainer} />
+            </div>
+          </ObWebMid>
         </div>
         <ObFooter
           error={footerError(error)}
@@ -413,7 +421,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
             },
           }}
         />
-        <ObToast message={toast} bottom={fromSignUp ? 222 : 158} />
+        {/* Web (WC-OB.4): 200 / 136 above the form's foot, which is 24 above the page's. */}
+        <ObToast message={toast} bottom={web ? (fromSignUp ? 224 : 160) : fromSignUp ? 222 : 158} />
       </ObPage>
     );
   }
@@ -426,7 +435,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       setMode("signIn");
     };
     return (
-      <ObPage backdrop>
+      <ObPage backdrop web="intro">
         <form
           id="ob-forgot"
           noValidate
@@ -438,46 +447,48 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         >
           <ObProgress count={3} index={1} variant="intro" />
           <ObHeader margin="intro" onBack={back} />
-          {resetSent ? (
-            <>
-              <ObTitle
-                variant="intro"
-                eyebrow={t("Reset password")}
-                title={t("Check your email")}
-                subtitle={t("If an account exists for {email}, a reset link is on its way. It works in this browser only.", { email: forgotEmail })}
-              />
-              <div className="ob-mail">
-                <div className="ob-mail-ring">
-                  <span />
-                  <span />
-                  <span>
-                    <MailCheck size={30} strokeWidth={1.6} />
-                  </span>
+          <ObWebMid>
+            {resetSent ? (
+              <>
+                <ObTitle
+                  variant="intro"
+                  eyebrow={t("Reset password")}
+                  title={t("Check your email")}
+                  subtitle={t("If an account exists for {email}, a reset link is on its way. It works in this browser only.", { email: forgotEmail })}
+                />
+                <div className="ob-mail">
+                  <div className="ob-mail-ring">
+                    <span />
+                    <span />
+                    <span>
+                      <MailCheck size={30} strokeWidth={1.6} />
+                    </span>
+                  </div>
+                  <p className="ob-mail-email">{forgotEmail}</p>
+                  <p className="ob-mail-body">{t("Open the link to choose a new password. It expires in 1 hour.")}</p>
                 </div>
-                <p className="ob-mail-email">{forgotEmail}</p>
-                <p className="ob-mail-body">{t("Open the link to choose a new password. It expires in 1 hour.")}</p>
-              </div>
-              <p className="ob-hint">{t("Nothing arrived? Check spam, or send it again.")}</p>
-            </>
-          ) : (
-            <>
-              <ObTitle variant="intro" eyebrow={t("Reset password")} title={t("Forgot your password?")} subtitle={t("Enter the email on your account and we'll send a reset link.")} />
-              <ObField
-                variant="intro"
-                icon={Mail}
-                type="email"
-                autoComplete="email"
-                // i18n-ignore (an example address)
-                placeholder="you@email.com"
-                value={forgotEmail}
-                readOnly={busy}
-                onChange={(e) => setForgotEmail(e.target.value)}
-              />
-            </>
-          )}
-          <div style={{ marginTop: 12 }}>
-            <SecurityCheck status={captchaStatus} container={captchaContainer} />
-          </div>
+                <p className="ob-hint">{t("Nothing arrived? Check spam, or send it again.")}</p>
+              </>
+            ) : (
+              <>
+                <ObTitle variant="intro" eyebrow={t("Reset password")} title={t("Forgot your password?")} subtitle={t("Enter the email on your account and we'll send a reset link.")} />
+                <ObField
+                  variant="intro"
+                  icon={Mail}
+                  type="email"
+                  autoComplete="email"
+                  // i18n-ignore (an example address)
+                  placeholder="you@email.com"
+                  value={forgotEmail}
+                  readOnly={busy}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                />
+              </>
+            )}
+            <div style={{ marginTop: 12 }}>
+              <SecurityCheck status={captchaStatus} container={captchaContainer} />
+            </div>
+          </ObWebMid>
         </form>
         {resetSent ? (
           <ObFooter
@@ -514,7 +525,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
     setMode(signIn ? "signUp" : "signIn");
   };
   return (
-    <ObPage backdrop>
+    <ObPage backdrop web="intro">
       <form
         id="ob-auth"
         noValidate
@@ -527,116 +538,118 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       >
         <ObProgress count={3} index={1} variant="intro" />
         <ObHeader margin="intro" />
-        <ObTitle
-          variant="intro"
-          eyebrow={signIn ? t("Welcome back") : t("Get started")}
-          title={signIn ? t("Sign in to Centium") : t("Create your account")}
-          subtitle={signIn ? t("Pick up where you left off.") : t("One account for everything you do on Centium.")}
-        />
-        {suspended && (
-          <div className="ob-info" data-tone="high" role="alert" style={{ marginBottom: 14 }}>
-            <ShieldAlert size={16} />
-            <span>{t(SUSPENDED_MESSAGE)}</span>
-          </div>
-        )}
-        <ObField
-          variant="intro"
-          icon={Mail}
-          type="email"
-          autoComplete="email"
-          // i18n-ignore (an example address)
-          placeholder="you@email.com"
-          aria-label={t("Email")}
-          value={email}
-          readOnly={busy}
-          error={emailError}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            if (error && EMAIL_FIELD_ERRORS.has(error)) setError(null);
-          }}
-          onFocus={() => window.clearTimeout(burnerTimer.current)}
-          onBlur={checkBurnerSoon}
-        />
-        <ObField
-          variant="intro"
-          icon={Lock}
-          type={showPassword ? "text" : "password"}
-          autoComplete={signIn ? "current-password" : "new-password"}
-          placeholder={t("Password")}
-          aria-label={t("Password")}
-          value={password}
-          readOnly={busy}
-          error={passwordError}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            if (error && PASSWORD_FIELD_ERRORS.has(error)) setError(null);
-          }}
-          end={
-            <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? t("Hide password") : t("Show password")} style={{ display: "flex" }}>
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          }
-        />
-        {signIn && (
-          <div className="ob-remember">
-            {/* Unticked, the session cookie is written without Max-Age, so the
-                browser drops it on close (lib/supabase/rememberMe.ts). */}
-            <label onClick={() => setRememberMe((r) => !r)}>
-              <span
-                role="checkbox"
-                aria-checked={rememberMe}
-                aria-label={t("Remember me")}
-                tabIndex={0}
-                className="ob-check hit"
-                data-on={rememberMe}
-                onKeyDown={(e) => {
-                  if (e.key === " ") {
-                    e.preventDefault();
-                    setRememberMe((r) => !r);
-                  }
+        <ObWebMid>
+          <ObTitle
+            variant="intro"
+            eyebrow={signIn ? t("Welcome back") : t("Get started")}
+            title={signIn ? t("Sign in to Centium") : t("Create your account")}
+            subtitle={signIn ? t("Pick up where you left off.") : t("One account for everything you do on Centium.")}
+          />
+          {suspended && (
+            <div className="ob-info" data-tone="high" role="alert" style={{ marginBottom: 14 }}>
+              <ShieldAlert size={16} />
+              <span>{t(SUSPENDED_MESSAGE)}</span>
+            </div>
+          )}
+          <ObField
+            variant="intro"
+            icon={Mail}
+            type="email"
+            autoComplete="email"
+            // i18n-ignore (an example address)
+            placeholder="you@email.com"
+            aria-label={t("Email")}
+            value={email}
+            readOnly={busy}
+            error={emailError}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (error && EMAIL_FIELD_ERRORS.has(error)) setError(null);
+            }}
+            onFocus={() => window.clearTimeout(burnerTimer.current)}
+            onBlur={checkBurnerSoon}
+          />
+          <ObField
+            variant="intro"
+            icon={Lock}
+            type={showPassword ? "text" : "password"}
+            autoComplete={signIn ? "current-password" : "new-password"}
+            placeholder={t("Password")}
+            aria-label={t("Password")}
+            value={password}
+            readOnly={busy}
+            error={passwordError}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (error && PASSWORD_FIELD_ERRORS.has(error)) setError(null);
+            }}
+            end={
+              <button type="button" className="hit" onClick={passwordVisibility.toggle} aria-label={showPassword ? t("Hide password") : t("Show password")} style={{ display: "flex" }}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            }
+          />
+          {signIn && (
+            <div className="ob-remember">
+              {/* Unticked, the session cookie is written without Max-Age, so the
+                  browser drops it on close (lib/supabase/rememberMe.ts). */}
+              <label onClick={() => setRememberMe((r) => !r)}>
+                <span
+                  role="checkbox"
+                  aria-checked={rememberMe}
+                  aria-label={t("Remember me")}
+                  tabIndex={0}
+                  className="ob-check hit"
+                  data-on={rememberMe}
+                  onKeyDown={(e) => {
+                    if (e.key === " ") {
+                      e.preventDefault();
+                      setRememberMe((r) => !r);
+                    }
+                  }}
+                >
+                  {rememberMe && <Check size={12} strokeWidth={3} />}
+                </span>
+                {t("Remember me")}
+              </label>
+              <button
+                type="button"
+                className="ob-remember-link hit"
+                onClick={() => {
+                  setForgotEmail(email);
+                  setError(null);
+                  setMode("forgot");
                 }}
               >
-                {rememberMe && <Check size={12} strokeWidth={3} />}
-              </span>
-              {t("Remember me")}
-            </label>
-            <button
-              type="button"
-              className="ob-remember-link hit"
-              onClick={() => {
-                setForgotEmail(email);
-                setError(null);
-                setMode("forgot");
-              }}
-            >
-              {t("Forgot password?")}
-            </button>
-          </div>
-        )}
-        {!signIn && (
-          <>
-            <ObField
-              variant="intro"
-              icon={Lock}
-              type={showPassword ? "text" : "password"}
-              autoComplete="new-password"
-              placeholder={t("Confirm password")}
-              aria-label={t("Confirm password")}
-              value={confirmPassword}
-              readOnly={busy}
-              error={confirmMismatch ? t("Passwords don't match") : null}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              onBlur={() => setConfirmBlurred(true)}
-            />
-            {password && <ObStrength password={password} />}
-            <div style={{ marginTop: 14 }}>
-              <ObTerms on={termsOn} onChange={setTerms} error={termsError && t(termsError)} tail="." />
+                {t("Forgot password?")}
+              </button>
             </div>
-          </>
-        )}
-        <div style={{ marginTop: 12 }}>
-          <SecurityCheck status={captchaStatus} container={captchaContainer} />
-        </div>
+          )}
+          {!signIn && (
+            <>
+              <ObField
+                variant="intro"
+                icon={Lock}
+                type={showPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder={t("Confirm password")}
+                aria-label={t("Confirm password")}
+                value={confirmPassword}
+                readOnly={busy}
+                error={confirmMismatch ? t("Passwords don't match") : null}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setConfirmBlurred(true)}
+              />
+              {password && <ObStrength password={password} />}
+              <div style={{ marginTop: 14 }}>
+                <ObTerms on={termsOn} onChange={setTerms} error={termsError && t(termsError)} tail="." />
+              </div>
+            </>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <SecurityCheck status={captchaStatus} container={captchaContainer} />
+          </div>
+        </ObWebMid>
       </form>
       <ObFooter
         error={footerError(error)}

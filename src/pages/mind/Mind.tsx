@@ -62,7 +62,9 @@ const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
  * (connected_professional_summary), and who the client shares Habits with.
  * Every read fails to "none", which shows the Today card exactly as before.
  */
-function useCoachHabits(userId: string | null, habitCount: number) {
+// Exported for the web hub (website viewport v1, Mind.web.tsx).
+// oxlint-disable-next-line react/only-export-components
+export function useCoachHabits(userId: string | null, habitCount: number) {
   const [coachOf, setCoachOf] = useState<Record<string, string>>({});
   const [coaches, setCoaches] = useState<Record<string, { name: string; avatarUrl: string | null }>>({});
   const [shared, setShared] = useState<Set<string>>(new Set());

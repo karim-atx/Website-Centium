@@ -7,6 +7,7 @@ import { FlagChip } from "../../ui/FlagNote";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { BloodMarker } from "../../../types";
+import type { LabResult } from "../../../services/labs/results";
 import { resultKey } from "../../../services/labs/results";
 import {
   useHealthMode,
@@ -26,6 +27,8 @@ import {
   INK_FAINT,
 } from "./kit";
 import { t, tn, tx } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { BiomarkersWeb } from "./BiomarkersTab.web";
 
 // HE1.9 · Biomarkers tab: the lavender info box (latest date and marker
 // count, the lab-range note, the sharing line → Connected professionals), the
@@ -71,11 +74,17 @@ export const BiomarkersTab: React.FC<{
    * keeps the client's own Records exactly as before.
    */
   professional?: { emptyTitle: string; emptyBody: string };
-}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight, professional }) => {
+  /** Website viewport v1: a marker's results, oldest first, for the web side card's small history chart. */
+  historyOf?: (m: BloodMarker) => LabResult[];
+  /** Website viewport v1: the web side card's View history (the marker's page); omitted, it opens the marker as a row does. */
+  onHistory?: (m: BloodMarker) => void;
+}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight, professional, historyOf, onHistory }) => {
   const { dark, hc } = useHealthMode();
   const reduced = useReducedMotion();
   const pregnancyFlags = usePregnancyFlags();
   const checkFlags = useCheckFlags();
+  // Website viewport v1 (WC-HE.9): from 1024px wide the table and the side panel.
+  const web = useIsWeb();
   const q = query.trim();
   const rows = q ? markers.filter((m) => matches(m, q)) : markers;
 
@@ -119,6 +128,32 @@ export const BiomarkersTab: React.FC<{
     return tn(sharing.names.length, "Shared with {n} professional.", "Shared with {n} professionals.");
   })();
   const capsStyle: React.CSSProperties = { fontSize: textPx(9), lineHeight: linePx(13.5), fontWeight: 700, letterSpacing: 1.3, textTransform: "uppercase", color: INK_FAINT };
+
+  if (web) {
+    return (
+      <BiomarkersWeb
+        markers={markers}
+        rows={rows}
+        query={q}
+        latestDate={latestDate}
+        sharedLine={sharedLine}
+        onChangeSharing={onChangeSharing}
+        onOpen={onOpen}
+        isThreshold={isThreshold}
+        remarkFor={remarkFor}
+        flagFor={(m) => {
+          const pFlag = professional ? null : pregnancyFlags.lab(m);
+          const cFlag = pFlag || professional ? null : checkFlags.lab(m);
+          return pFlag ? <FlagChip tone={pFlag.level} label={pFlag.label} /> : cFlag ? <CheckFlagChip flag={cFlag} /> : null;
+        }}
+        lit={(m) => !reduced && highlight.has(resultKey(m))}
+        confirmation={confirmation ? <Confirmation {...confirmation} /> : null}
+        professional={!!professional}
+        historyOf={historyOf}
+        onHistory={onHistory}
+      />
+    );
+  }
 
   return (
     <div>

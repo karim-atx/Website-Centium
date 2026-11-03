@@ -16,6 +16,7 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 import { clock12 } from "../../utils/time12";
 import { supabase } from "../../../lib/supabase/client";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 import { appLocale } from "../../i18n/format";
 
 // HO1.1 "Add metric popup" (home-handover.md, HO1.1; checklist
@@ -145,6 +146,23 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const dark = useIsDark();
   const hc = !!accessibility.highContrast;
   const online = useOnline();
+  // Website viewport v1 (WC-HE.+, WC-HE Health Web v5 "addmetric"): from 1024px wide the card is 480 wide with a 52 title band.
+  const web = useIsWeb();
+  // Web: Esc closes, focus moves into the card and returns to what opened it.
+  useEffect(() => {
+    if (!web || !open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const id = window.setTimeout(() => document.querySelector<HTMLElement>('[aria-labelledby="add-metric-title"] button')?.focus(), 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+  }, [web, open, onClose]);
   const am = (key: AmKey): string => {
     // High contrast: the light greys (label, captions) become the ink.
     if (hc && !dark && (key === "label" || key === "caption")) return INK;
@@ -275,9 +293,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           // The line glyphs above (weight, cuff, water, check) read these.
           ["--am-icon" as string]: am("icon"),
           ["--am-strip-ink" as string]: am("stripInk"),
+          ...(web ? { maxWidth: 480 } : null),
         }}
       >
-        <div className="relative shrink-0 flex items-center justify-center" style={{ height: 42 }}>
+        <div className="relative shrink-0 flex items-center justify-center" style={{ height: web ? 52 : 42 }}>
           <p
             id="add-metric-title"
             style={{
@@ -297,7 +316,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             onClick={onClose}
             aria-label={t("Close")}
             className="tap absolute flex items-center justify-center"
-            style={{ insetInlineEnd: 3, top: -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
+            style={{ insetInlineEnd: 3, top: web ? 4 : -1, width: 44, height: 44, background: "none", border: "none", padding: 0 }}
           >
             <span
               className="flex items-center justify-center rounded-full box-border"

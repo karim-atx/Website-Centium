@@ -2,6 +2,8 @@ import React from "react";
 import { formatMinutes12, hourLabel12 } from "../../../utils/time12";
 import { mc, metricTextInk, useHealthMode } from "./MetricKit";
 import { isRtl, t } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { SleepBedChartWeb, YearBedtimeBandWeb } from "./MetricCharts.web";
 
 // HE1.3 #35 (Week) and HE1.3.m #37 (Month): floating bedtime-to-wake bars on
 // a clock axis with the usual-bedtime line (Database B1 sleep_details
@@ -56,14 +58,20 @@ const mirrorX = () => {
   return (x: number) => (rtl ? 326 - x : x);
 };
 
-export const SleepBedChart: React.FC<{
+type SleepBedChartProps = {
   mode: "week" | "month";
   nights: BedNight[];
   usualBed: number | null;
   usualWake: number | null;
   onBarTap?: (key: string) => void;
   barLabel?: (n: BedNight) => string;
-}> = ({ mode, nights, usualBed, usualWake, onBarTap, barLabel }) => {
+};
+
+/** Website viewport v1: from 1024px wide the web axis chart (MetricCharts.web.tsx). */
+export const SleepBedChart: React.FC<SleepBedChartProps> & { webNative?: boolean } = (props) => (useIsWeb() ? <SleepBedChartWeb {...props} /> : <SleepBedChartMobile {...props} />);
+SleepBedChart.webNative = true;
+
+const SleepBedChartMobile: React.FC<SleepBedChartProps> = ({ mode, nights, usualBed, usualWake, onBarTap, barLabel }) => {
   const { dark, hc } = useHealthMode();
   const H = mode === "week" ? 144 : 146;
   const times = nights.flatMap((n) => (n.bed !== null && n.wake !== null ? [n.bed, n.wake] : []));
@@ -168,7 +176,10 @@ export function bedtimeScale(values: (number | null)[]): { from: number; to: num
   return { from: Math.min(660, Math.floor(lo / 60) * 60), to: Math.max(720, Math.ceil(hi / 60) * 60) };
 }
 
-export const YearBedtimeLine: React.FC<{ months: (number | null)[] }> = ({ months }) => {
+/** Website viewport v1: from 1024px wide a strip above the web bars (GoalBarChart passes it as AxisBarsWeb's band). */
+export const YearBedtimeLine: React.FC<{ months: (number | null)[] }> = (props) => (useIsWeb() ? <YearBedtimeBandWeb {...props} /> : <YearBedtimeLineMobile {...props} />);
+
+const YearBedtimeLineMobile: React.FC<{ months: (number | null)[] }> = ({ months }) => {
   const { dark } = useHealthMode();
   const { from, to } = bedtimeScale(months);
   const yOf = (m: number) => 20 + ((m - from) / (to - from)) * 24;

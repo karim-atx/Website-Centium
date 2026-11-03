@@ -37,6 +37,8 @@ import { RefundPolicyLink } from "../../components/legal/RefundPolicyLink";
 import { BusinessPlanLevels } from "../../components/premium/BusinessPlanLevels";
 import { usePlanLevel } from "../../components/premium/usePlanLevel";
 import { paysInApp } from "../../services/premium";
+import { PaneCard } from "../../components/business-more/paneWeb";
+import { usePaneWeb } from "../../components/business-more/paneWebScope";
 
 // OURS-MO1B-payment-methods, -payouts, -invoices, -taxes, -subscription
 // (BizMoreV8 screen="payments" / "payouts" / "invoices" / "taxes" /
@@ -54,7 +56,11 @@ import { paysInApp } from "../../services/premium";
 const money = (n: number) => `$${n.toFixed(2)}`;
 const fmt = (iso: string) => formatShortDate(new Date(iso), { day: "numeric", month: "short" });
 
-const ComingCard = ({ icon: Icon, title, body }: { icon: typeof Landmark; title: string; body: string }) => (
+const ComingCard = ({ icon: Icon, title, body }: { icon: typeof Landmark; title: string; body: string }) =>
+  // Website viewport v1: the pane's card (ST Settings Web) from 1024 in the More pane.
+  usePaneWeb() ? (
+    <PaneCard icon={Icon} title={title} body={body} />
+  ) : (
   <div className={`${LIST_BG} flex flex-col items-center text-center`} style={{ borderRadius: 18, padding: "24px 16px", marginBottom: 13 }}>
     <span className="flex items-center justify-center rounded-full bg-primary-pale text-primary-dark" style={{ width: 48, height: 48 }}>
       <Icon size={22} strokeWidth={1.75} aria-hidden />
@@ -66,7 +72,7 @@ const ComingCard = ({ icon: Icon, title, body }: { icon: typeof Landmark; title:
       {body}
     </p>
   </div>
-);
+  );
 
 export function PaymentMethodsPage() {
   // B8 RV-05: the stored settings (business_payment_settings). Whish can't be

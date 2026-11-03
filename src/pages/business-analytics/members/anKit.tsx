@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, UserRound, WifiOff, type LucideIcon } from "lucide-react";
 import { t } from "../../../i18n/core";
+import { AnEmbedded } from "./anEmbedded";
 
 // AN4 (AnMembersV6) parts, literal values from AN4-001 / -005 / -025 / -043 /
 // -046 through the app tokens (page #FFFFFF · #121317, card #FFFFFF ·
@@ -68,7 +69,9 @@ export const AnHeaderRow: React.FC<{
   title: string;
   position?: string;
   picker?: { open: boolean; onToggle: (el: HTMLElement) => void };
-}> = ({ crumb, backLabel, onBack, title, position, picker }) => (
+}> = ({ crumb, backLabel, onBack, title, position, picker }) =>
+  // Website viewport v1: left out inside the web Members detail pane (its header shows the page); mobile unchanged.
+  React.useContext(AnEmbedded) ? null : (
   <div className="flex items-center gap-[6px] mb-[12px]">
     <button
       type="button"

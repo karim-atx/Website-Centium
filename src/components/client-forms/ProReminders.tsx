@@ -109,7 +109,12 @@ type Status = "loading" | "ready" | "error" | "offline";
 
 const POLL_MS = 60000;
 
-export const ProReminders: React.FC = () => {
+/**
+ * `web` (website viewport v1, WC-HO.9): the cards in a grid, 2 equal columns
+ * with a 16 gap at 1440 and one column on the rail, 24 above the board, at
+ * the web sizes. Absent on mobile, so the cards are unchanged there.
+ */
+export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => {
   const { authUserId, recoverySensitive, recoveryModePending, myTimezone } = useApp();
   const navigate = useNavigate();
   const [data, setData] = useState<Data | null>(null);
@@ -324,9 +329,17 @@ export const ProReminders: React.FC = () => {
         </div>
       )}
 
-      {groups.map((g) => (
-        <ReminderCard key={g.proId} group={g} proAvatarUrl={avatars.get(g.proId) ?? null} onAction={act} />
-      ))}
+      {web ? (
+        groups.length > 0 && (
+          <div data-web-reminders style={{ display: "grid", gridTemplateColumns: web.rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 16, alignItems: "start", marginBottom: 24 }}>
+            {groups.map((g) => (
+              <ReminderCard key={g.proId} group={g} proAvatarUrl={avatars.get(g.proId) ?? null} onAction={act} web />
+            ))}
+          </div>
+        )
+      ) : (
+        groups.map((g) => <ReminderCard key={g.proId} group={g} proAvatarUrl={avatars.get(g.proId) ?? null} onAction={act} />)
+      )}
 
       {popupProps && <ReminderPopup open {...popupProps} />}
       {queuedShare && queue && sharePopup(queuedShare, qi, queue.length, () => advance())}

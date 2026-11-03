@@ -8,6 +8,7 @@ import { formatPoints, offerProgress } from "./pointsModel";
 import { FOCUS_CSS, usePress } from "./usePress";
 import { tn } from "../../i18n/core";
 import { PremiumLabel } from "../premium/PremiumAskHost";
+import { useMarketWebType } from "./webType";
 
 // Market + Share 3.0 · OfferCard (HANDOVER §4 C-MO.4 "Rewards", B-MA.3, §5).
 //
@@ -84,6 +85,8 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const press = usePress();
+  // Website viewport (WB-MA.3): the board's web sizes inside the web Marketplace; elsewhere no provider.
+  const web = useMarketWebType();
   const pressable = !!props.onPress;
   const Tag = (pressable ? "button" : "div") as "button";
   const tagProps = pressable ? { type: "button" as const, onClick: props.onPress, ...press.handlers } : {};
@@ -109,13 +112,13 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
               />
             ) : null}
             <span style={{ display: "flex", alignItems: "flex-start", gap: 10, pointerEvents: "none" }}>
-              <span aria-hidden={pressable || undefined} style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(20) }}>{props.headline}</span>
-              <span aria-hidden={pressable || undefined} style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{offerStatusLabel(props.status)}</span>
+              <span aria-hidden={pressable || undefined} style={{ flex: 1, minWidth: 0, fontSize: textPx(web ? 17 : 14), fontWeight: 800, lineHeight: linePx(web ? 24 : 20) }}>{props.headline}</span>
+              <span aria-hidden={pressable || undefined} style={{ fontSize: textPx(web ? 11 : 10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap", ...(web ? { lineHeight: linePx(16) } : null) }}>{offerStatusLabel(props.status)}</span>
               <span style={{ position: "relative", pointerEvents: "auto", flexShrink: 0 }}>{props.trailing}</span>
             </span>
-            <span aria-hidden={pressable || undefined} style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(11.5), color: m.faint, pointerEvents: "none" }}>
+            <span aria-hidden={pressable || undefined} style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(web ? 13 : 11.5), color: m.faint, pointerEvents: "none", ...(web ? { alignItems: "center", lineHeight: linePx(20) } : null) }}>
               <span style={{ minWidth: 0 }}>{props.meta}</span>
-              <PointsFigure value={props.cost} mark="leaf" size={14} />
+              <PointsFigure value={props.cost} mark="leaf" size={web ? 15 : 14} lineHeight={web ? 24 : undefined} color={web ? m.ink : undefined} />
             </span>
           </div>
         </>
@@ -126,12 +129,12 @@ export const OfferCard: React.FC<OfferCardProps> = (props) => {
         {pressable ? <style>{FOCUS_CSS}</style> : null}
         <Tag {...tagProps} className={`${pressable ? "market-focus " : ""}${props.className ?? ""}`} style={{ display: "block", lineHeight: "normal", borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, padding: "14px 16px", color: m.ink, ...reset, ...props.style }}>
           <span style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 800, lineHeight: linePx(20) }}>{props.headline}</span>
-            <span style={{ fontSize: textPx(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap" }}>{offerStatusLabel(props.status)}</span>
+            <span style={{ flex: 1, minWidth: 0, fontSize: textPx(web ? 17 : 14), fontWeight: 800, lineHeight: linePx(web ? 24 : 20) }}>{props.headline}</span>
+            <span style={{ fontSize: textPx(web ? 11 : 10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, whiteSpace: "nowrap", ...(web ? { lineHeight: linePx(16) } : null) }}>{offerStatusLabel(props.status)}</span>
           </span>
-          <span style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(11.5), color: m.faint }}>
+          <span style={{ marginTop: 4, display: "flex", justifyContent: "space-between", gap: 10, fontSize: textPx(web ? 13 : 11.5), color: m.faint, ...(web ? { alignItems: "center", lineHeight: linePx(20) } : null) }}>
             <span style={{ minWidth: 0 }}>{props.meta}</span>
-            <PointsFigure value={props.cost} mark="leaf" size={14} />
+            <PointsFigure value={props.cost} mark="leaf" size={web ? 15 : 14} lineHeight={web ? 24 : undefined} color={web ? m.ink : undefined} />
           </span>
         </Tag>
       </>

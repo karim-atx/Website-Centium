@@ -16,6 +16,7 @@ import { weekLetters } from "./weekLetters";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
+import { useWebTileHeight } from "./tileHeight";
 
 // HO1.W11-S / HO1.W11-L (home-handover.md), the Home Cycle widget.
 //
@@ -180,6 +181,8 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const dark = theme === "dark";
   const hc = !!accessibility.highContrast;
   const large = size === "large";
+  // Website viewport v1: the web board's tile height; null on mobile.
+  const webH = useWebTileHeight();
   const [logOpen, setLogOpen] = useState(false);
 
   // C5 loading: settings unknown, or recovery mode unknown (nothing flashes).
@@ -592,8 +595,8 @@ export const CycleWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
       chevron={false}
       state={widgetState}
       style={{
-        height: large ? 150 : 114,
-        minHeight: large ? 150 : 114,
+        height: webH ?? (large ? 150 : 114),
+        minHeight: webH ?? (large ? 150 : 114),
         padding: large ? "13px 16px 14px" : "11px 28px 11px 12px",
         overflow: "hidden",
       }}

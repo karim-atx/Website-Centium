@@ -4,6 +4,8 @@ import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { ObPage } from "./shell/ObShell";
 import { Composed, MarkSvg, OB, WORDMARK_FULL, Wordmark, type Composition } from "./shell/visuals";
 import { t, tk } from "../../i18n/core";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { WelcomeWeb } from "./web/ObWeb";
 
 // v6 (OB-001…006 Welcome, OB-033…050 logo animation): SharedOnboardingV4
 // screen "welcome" and screen "anim". Replaces the old launch (rings, bloom,
@@ -40,7 +42,11 @@ export const WelcomeStep: React.FC<{
   onGetStarted: () => void;
   /** I already have an account: Sign in. */
   onSignIn: () => void;
-}> = ({ onGetStarted, onSignIn }) => {
+}> = (props) =>
+  // Website viewport v1 (WC-OB.1): from 1024px the three panels side by side.
+  useIsWeb() ? <WelcomeWeb panels={PANELS} {...props} /> : <WelcomeMobile {...props} />;
+
+const WelcomeMobile: React.FC<{ onGetStarted: () => void; onSignIn: () => void }> = ({ onGetStarted, onSignIn }) => {
   const reduced = useReducedMotion();
   const [panel, setPanel] = useState(0);
   /** -1 = idle; 0…5 = K1…K6 reached / being reached; 6 = moving into the header (K7). */

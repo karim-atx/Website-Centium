@@ -6,6 +6,9 @@ import { MetricHero, HeroPill, hairline, mc, metricIconInk, metricTextInk, useHe
 import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { HR_ALERT_COPY } from "../../../services/health-metrics/clinicalCopy";
 import { isRtl, t, tk } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { HeartRateChartWeb } from "./MetricCharts.web";
+import { HeartRateHeroWeb } from "./MetricHeroes.web";
 
 /** A translated template with its {n} drawn bold ("<b>54</b> low"). */
 const boldN = (template: string, n: number) => {
@@ -79,7 +82,7 @@ export interface HrHeroData {
  * only while on screen and in the foreground (useLoopWhileVisible), static
  * faint trace under Reduce motion.
  */
-export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolean; ariaLabel?: string; empty?: React.ReactNode }> = ({
+export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolean; ariaLabel?: string; empty?: React.ReactNode }> & { webRole?: "hero" } = ({
   data,
   loading,
   ariaLabel,
@@ -87,6 +90,9 @@ export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolea
 }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
+  const web = useIsWeb();
+  // Website viewport v1: the reference's range strip hero (MetricHeroes.web.tsx).
+  if (web && data) return <HeartRateHeroWeb data={data} loading={loading} ariaLabel={ariaLabel} />;
   if (!data) {
     return (
       <MetricHero metric={K} pattern={3} padding="16px" loading={loading} ariaLabel={ariaLabel}>
@@ -298,14 +304,20 @@ export function hrUnits(
  * stored reading as a dot on a dashed level line across 12am to 12am (the
  * reading's own time is not stored yet).
  */
-export const HeartRateChart: React.FC<{
+type HrChartProps = {
   range: MetricRange;
   units: HrChartUnit[];
   average: number | null;
   averageLabel: string;
   /** Day view: the stored value, and the fraction of the day elapsed (today) or 1. */
   day?: { value: number | null; elapsed: number };
-}> = ({ range, units, average, averageLabel, day }) => {
+};
+
+/** Website viewport v1: from 1024px wide the web axis chart (MetricCharts.web.tsx). */
+export const HeartRateChart: React.FC<HrChartProps> & { webNative?: boolean } = (props) => (useIsWeb() ? <HeartRateChartWeb {...props} /> : <HeartRateChartMobile {...props} />);
+HeartRateChart.webNative = true;
+
+const HeartRateChartMobile: React.FC<HrChartProps> = ({ range, units, average, averageLabel, day }) => {
   const { dark, hc } = useHealthMode();
   const axis = hairline(dark, hc, 0.08);
   const ghost = dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)";
@@ -403,7 +415,7 @@ export const HeartRateChart: React.FC<{
  * HA-08) switches to the handover labels: "Resting" dots and the
  * "Week avg resting" / "Avg resting" line; Day: "Resting level".
  */
-export function hrLegend(range: MetricRange, dark: boolean, resting = false): { label: string; swatch: React.ReactNode }[] {
+export function hrLegend(range: MetricRange, dark: boolean, resting = false, web = false): { label: string; swatch: React.ReactNode }[] {
   const capsule = <span style={{ width: 8, height: 14, borderRadius: 4, background: mc(K, "main"), display: "inline-block" }} />;
   const dot = <span style={{ width: 8, height: 8, borderRadius: 9999, background: dark ? mc(K, "main") : mc(K, "accent"), display: "inline-block" }} />;
   const ghost = (
@@ -411,6 +423,15 @@ export function hrLegend(range: MetricRange, dark: boolean, resting = false): { 
   );
   const dash = <span style={{ width: 14, borderTop: `1.5px dashed ${dark ? mc(K, "main") : mc(K, "accent")}`, display: "inline-block" }} />;
   const line = <span style={{ width: 14, height: 1.6, background: mc(K, "main"), display: "inline-block" }} />;
+  // Website viewport v1: the web chart's bars (a day's resting / latest value) and the reference's swatches (8 × 8 r4 main; ghost 10 × 12 r3).
+  if (web) {
+    const bar = <span style={{ width: 8, height: 8, borderRadius: 4, background: mc(K, "main"), display: "inline-block" }} />;
+    const ahead = <span style={{ width: 10, height: 12, borderRadius: 3, border: "1px solid rgba(36,31,27,0.18)", boxSizing: "border-box", display: "inline-block" }} />;
+    if (range === "day") return [{ label: resting ? t("Resting level") : t("Latest level"), swatch: dash }];
+    if (range === "week") return [{ label: resting ? t("Resting") : t("Latest"), swatch: bar }, { label: t("Days ahead"), swatch: ahead }, { label: resting ? t("Week avg resting") : t("Week average"), swatch: dash }];
+    if (range === "month") return [{ label: resting ? t("Resting") : t("Latest"), swatch: bar }, { label: resting ? t("Avg resting") : t("Average"), swatch: dash }];
+    return [{ label: resting ? t("Resting") : t("Month average"), swatch: bar }, { label: t("Months ahead"), swatch: ahead }, { label: resting ? t("Avg resting") : t("Year average"), swatch: dash }];
+  }
   if (range === "day")
     return [
       { label: t("Heart rate"), swatch: line },
@@ -493,3 +514,5 @@ export const HeartRateAlertCard: React.FC<{ event: HrAlertEvent; time: string; o
     </section>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+HeartRateHero.webRole = "hero";

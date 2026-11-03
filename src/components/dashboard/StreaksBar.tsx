@@ -35,7 +35,12 @@ const SPECIES_PREFIX: Record<PlantSpecies, string> = {
 // completed, journal written) are computed from the actual logs; growth
 // stage and species live in AppContext (see the comment there) so they
 // persist and can only move forward, never reset by a quiet week.
-export const StreaksBar: React.FC = () => {
+/**
+ * `web` (website viewport v1, HO Streaks with zoom and fill): the card fills
+ * its grid cell (260 tall on the web Home), padding 18 x zoom, its content
+ * zoomed and centred. Absent on mobile, so the card is unchanged there.
+ */
+export const StreaksBar: React.FC<{ web?: { zoom: number } }> = ({ web }) => {
   const {
     today,
     foodLog,
@@ -135,10 +140,14 @@ export const StreaksBar: React.FC = () => {
       onClick={() => navigate("/app/mind")}
       role="button"
       tabIndex={0}
-      className="tap w-full text-start rounded-[22px] p-[18px] mb-[13px] overflow-hidden animate-fade-slide-up cursor-pointer"
-      style={{ background: "var(--gradient-board)" }}
+      className={
+        web
+          ? "w-full h-full text-start rounded-[22px] overflow-hidden animate-fade-slide-up cursor-pointer flex flex-col justify-center box-border"
+          : "tap w-full text-start rounded-[22px] p-[18px] mb-[13px] overflow-hidden animate-fade-slide-up cursor-pointer"
+      }
+      style={web ? { background: "var(--gradient-board)", padding: Math.round(18 * web.zoom) } : { background: "var(--gradient-board)" }}
     >
-      <div className="relative flex items-center gap-4">
+      <div className="relative flex items-center gap-4" style={web ? { zoom: web.zoom } : undefined}>
         <button
           onClick={(e) => {
             e.stopPropagation();

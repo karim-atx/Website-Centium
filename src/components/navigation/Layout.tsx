@@ -17,6 +17,8 @@ import { PromotionUsedHost } from "../promotions/PromotionUsedHost";
 import { ActiveWorkoutBar } from "../workout/ActiveWorkoutBar";
 import { useApp } from "../../context/AppContext";
 import { PremiumAskHost } from "../premium/PremiumAskHost";
+import { useIsWeb } from "../web/useWebLayout";
+import { WebLayout } from "../web/WebLayout";
 
 /**
  * Handover 2026-09-29, 01 GLOBAL (f): the on-screen keyboard. Publishes the
@@ -100,6 +102,11 @@ export const Layout: React.FC = () => {
   // the same 430 column beside it.
   const { user } = useApp();
   const isClient = user.accountType !== "professional" && user.accountType !== "business";
+  // Website viewport v1: from 1024px wide, client and business accounts get
+  // the web shell (sidebar, web pages, More / Settings columns). Professionals
+  // keep the layout below. Nothing under 1024px changes.
+  const web = useIsWeb();
+  if (web && user.accountType !== "professional") return <WebLayout />;
 
   return (
     // Wrapping the shell rather than the app: this is the smallest scope that

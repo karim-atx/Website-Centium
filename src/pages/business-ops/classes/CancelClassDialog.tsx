@@ -8,6 +8,7 @@ import { FOCUS_CSS } from "../../../components/market/usePress";
 import { scrimOf, useMarketColours } from "./parts";
 import { cancelExtras, cancelText, notifiedText, type Session } from "./scheduleModel";
 import { t } from "../../../i18n/core";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 
 // B-MA.6 Cancel class (Business Marketplace Screens `classCancel`, markup
 // lines 450–464): the board draws its own dialog, not the CentredDialog: a
@@ -57,6 +58,10 @@ export function CancelClassDialog({
 }) {
   const m = useMarketColours();
   const dark = useIsDark();
+  // Website viewport v1 · WB-CS-SC.6 (WB-CS Schedule Web v2, overlay "cancel"):
+  // from 1024px wide the card is 400 wide, padding 28 28 22, text 15/24 and
+  // buttons 44 + 40. Below 1024 every value is the mobile one.
+  const web = useIsWeb();
   const titleId = useId();
   const bodyId = useId();
   const keepRef = useRef<HTMLButtonElement | null>(null);
@@ -110,21 +115,21 @@ export function CancelClassDialog({
         aria-labelledby={titleId}
         aria-describedby={bodyId}
         className="relative flex flex-col items-center text-center"
-        style={{ width: "100%", maxWidth: 342, background: m.card, borderRadius: 20, padding: "22px 20px 18px", color: m.ink, maxHeight: "calc(100dvh - 32px)", overflowY: "auto" }}
+        style={{ width: "100%", maxWidth: web ? 400 : 342, background: m.card, borderRadius: 20, padding: web ? "28px 28px 22px" : "22px 20px 18px", color: m.ink, maxHeight: "calc(100dvh - 32px)", overflowY: "auto" }}
       >
         <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 48, height: 48, borderRadius: 999, background: m.highbg, color: m.high }}>
           <CalendarX size={20} strokeWidth={2.2} />
         </span>
-        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(17), fontWeight: 800, color: m.ink }}>{t("Cancel {class}?", { class: session.title })}</h2>
-        <p id={bodyId} style={{ margin: "4px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), color: m.ink2 }}>
+        <h2 id={titleId} style={{ margin: "12px 0 0", fontSize: textPx(17), lineHeight: web ? "24px" : undefined, fontWeight: 800, color: m.ink }}>{t("Cancel {class}?", { class: session.title })}</h2>
+        <p id={bodyId} style={{ margin: "4px 0 0", fontSize: web ? 15 : textPx(12.5), lineHeight: web ? "24px" : linePx(18), color: m.ink2 }}>
           {cancelText(session.date, session.startTime, session.booked)}
           {extras ? ` ${extras}` : ""}
         </p>
         {session.booked > 0 && (
-          <p style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: linePx(18), fontWeight: 600, color: m.ink2 }}>{notifiedText(people)}</p>
+          <p style={{ margin: "10px 0 0", fontSize: web ? 15 : textPx(12.5), lineHeight: web ? "24px" : linePx(18), fontWeight: 600, color: m.ink2 }}>{notifiedText(people)}</p>
         )}
-        <div className="w-full text-start" style={{ marginTop: 12 }}>
-          <label htmlFor={`${titleId}-reason`} className="block" style={{ fontSize: textPx(12), fontWeight: 600, lineHeight: linePx(16), color: m.ink2, marginBottom: 6 }}>
+        <div className="w-full text-start" style={{ marginTop: web ? 16 : 12 }}>
+          <label htmlFor={`${titleId}-reason`} className="block" style={{ fontSize: web ? 13 : textPx(12), fontWeight: 600, lineHeight: web ? "20px" : linePx(16), color: m.ink2, marginBottom: 6 }}>
             {t("Reason (optional)")}
           </label>
           <input
@@ -135,7 +140,7 @@ export function CancelClassDialog({
             onChange={(e) => onReason(e.target.value)}
             placeholder={t("Only your team sees this")}
             className="market-focus w-full"
-            style={{ height: 44, borderRadius: 12, background: m.soft, border: `1px solid ${m.border}`, padding: "0 12px", fontSize: textPx(14), color: m.ink, outline: "none" }}
+            style={{ height: 44, borderRadius: 12, background: m.soft, border: `1px solid ${m.border}`, padding: "0 12px", fontSize: web ? 15 : textPx(14), color: m.ink, outline: "none" }}
           />
         </div>
         {(error || offline) && (
@@ -149,7 +154,7 @@ export function CancelClassDialog({
           disabled={offline || busy}
           aria-busy={busy || undefined}
           className="market-focus w-full flex items-center justify-center disabled:opacity-40"
-          style={{ marginTop: 14, height: 48, borderRadius: 14, background: m.highbg, color: m.high, fontSize: textPx(14), fontWeight: 800, border: 0 }}
+          style={{ marginTop: web ? 20 : 14, height: web ? 44 : 48, borderRadius: 14, background: m.highbg, color: m.high, fontSize: web ? 15 : textPx(14), lineHeight: web ? "24px" : undefined, fontWeight: web ? 600 : 800, border: 0 }}
         >
           {busy ? t("Cancelling…") : error ? t("Try again") : t("Cancel class")}
         </button>
@@ -159,7 +164,7 @@ export function CancelClassDialog({
           onClick={onKeep}
           disabled={busy}
           className="market-focus w-full flex items-center justify-center"
-          style={{ height: 44, fontSize: textPx(14), fontWeight: 700, color: m.ink2, background: "transparent", border: 0, borderRadius: 14 }}
+          style={{ height: web ? 40 : 44, fontSize: web ? 15 : textPx(14), lineHeight: web ? "24px" : undefined, fontWeight: web ? 600 : 700, color: m.ink2, background: "transparent", border: 0, borderRadius: 14 }}
         >
           {t("Keep class")}
         </button>
