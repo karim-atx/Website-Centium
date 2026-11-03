@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Award, CircleAlert, CircleCheck, Clock, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
+import { useIsWeb } from "../web/useWebLayout";
 import { useApp } from "../../context/AppContext";
 import {
   getReferralSummary,
@@ -242,6 +243,9 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
   // take #9A8CD6 (th-9a8cd6, follows the theme) in light; dark keeps
   // primary-fill.
   const filled = "bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill";
+  // Website viewport v1 · WC-MO.5 (WC-MO More Web v7): from 1024px the popup
+  // is 480 wide with padding 22 22 20 (mobile unchanged below).
+  const web = useIsWeb();
 
   return (
     // MO1.10 anatomy rows 3–5: title 19/800, Gift 23/1.75. Row 3 "padding 0
@@ -253,7 +257,8 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
       onClose={onClose}
       title={colleague ? t("Refer a colleague") : t("Invite friends")}
       titleSize={19}
-      className="!px-[18px] !pt-[22px] !pb-[18px]"
+      maxWidth={web ? 480 : undefined}
+      className={web ? "!px-[22px] !pt-[22px] !pb-[20px]" : "!px-[18px] !pt-[22px] !pb-[18px]"}
       icon={<Gift size={23} strokeWidth={1.75} />}
     >
       <div className="text-start">
