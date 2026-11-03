@@ -7,13 +7,15 @@ import type { ImagingRecord } from "../../../types";
 import { useHealthMode, fmtDate, tileFill, ListCard, RowTile, RowText, Skel, RetryCard, EmptyCard, ErrorLine, rowRule, INK_FAINT } from "./kit";
 import { t, tx } from "../../../i18n/core";
 import { imagingTypeLabel } from "../imagingTypes";
+import { useIsWeb } from "../../web/useWebLayout";
+import { ImagingTabWeb } from "./RecordsTabs.web";
 
 // HE1.9.b · Imaging tab: one list card, rows 66 (ScanLine tile, type,
 // "{date} · {note}" on one line, "Scan" when a file is attached or "Typed",
 // a ⋮ 32 r9999 with the dropdown View file · Share · Edit · Delete), swipe
 // Edit / Delete, tap = the file (HE1.9.b.1) or, with no file, Edit (HE1.9.b.3).
 
-export const ImagingTab: React.FC<{
+type ImagingTabProps = {
   records: ImagingRecord[];
   loading: boolean;
   error: string | null;
@@ -30,7 +32,12 @@ export const ImagingTab: React.FC<{
    * the client's Imaging tab exactly as it was.
    */
   readOnly?: { emptyTitle: string; emptyBody: string };
-}> = ({ records, loading, error, writeError, onRetry, onView, onShare, onEdit, onDelete, readOnly }) => {
+};
+
+/** Website viewport v1: from 1024px wide the client's imaging as dark-thumbnail cards on a grid (WC-HE.9.2); a professional's read-only view keeps the list. */
+export const ImagingTab: React.FC<ImagingTabProps> = (props) => (useIsWeb() && !props.readOnly ? <ImagingTabWeb {...props} /> : <ImagingTabMobile {...props} />);
+
+const ImagingTabMobile: React.FC<ImagingTabProps> = ({ records, loading, error, writeError, onRetry, onView, onShare, onEdit, onDelete, readOnly }) => {
   const { dark, hc } = useHealthMode();
   const [menuFor, setMenuFor] = useState<ImagingRecord | null>(null);
   const anchors = useRef(new Map<string, HTMLButtonElement | null>());

@@ -17,6 +17,7 @@ export const FILES: string[] = [
   "components/health/records/BiomarkersTab.web.tsx",
   "pages/health/web/Records.web.tsx",
   "pages/health/web/HealthSources.web.tsx",
+  "components/health/records/RecordsTabs.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {
@@ -26,6 +27,9 @@ const webclienthealth: Catalogue = {
 
   // == Biomarkers (components/health/records/BiomarkersTab.web, WC-HE.9) ==
   "View history": "عرض السجل", // note: health wording (View «عرض» + History «السجل», as the marker history is named)
+
+  // == Labs (components/health/records/RecordsTabs.web, WC-HE.9.1) ==
+  "{n} in range": "{n} ضمن النطاق", // note: health wording (In range «ضمن النطاق», as "{n} out of range" «{n} خارج النطاق»)
 };
 
 export default webclienthealth;

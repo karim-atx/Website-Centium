@@ -1,6 +1,8 @@
 import { partBSheetTone } from "../log/LogSheetParts";
 import React, { useEffect, useState } from "react";
-import { CalendarDays, Check, Pencil, Pill, Plus, Trash2, X } from "lucide-react";
+import { CalendarDays, Check, MoreVertical, Pencil, Pill, Plus, Scissors, Stethoscope, Trash2, X } from "lucide-react";
+import { PopupMenu } from "../../ui/PopupMenu";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
 import { SwipeActions } from "../../ui/SwipeActions";
 import { Toggle } from "../../ui/Toggle";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -86,7 +88,9 @@ export const HistoryTab: React.FC<{
 }> = ({ loading, error, onRetry, onAddCondition, onEditSurgery, onEditMedication, onEditInjury, records }) => {
   const app = useApp();
   const { dark, hc } = useHealthMode();
+  const web = useIsWeb();
   if (records) return <ReadOnlyHistory records={records} loading={loading} error={error} onRetry={onRetry} dark={dark} hc={hc} />;
+  if (web) return <OwnHistoryWeb app={app} loading={loading} error={error} onRetry={onRetry} onEditSurgery={onEditSurgery} onEditMedication={onEditMedication} onEditInjury={onEditInjury} />;
   return <OwnHistory app={app} dark={dark} hc={hc} loading={loading} error={error} onRetry={onRetry} onAddCondition={onAddCondition} onEditSurgery={onEditSurgery} onEditMedication={onEditMedication} onEditInjury={onEditInjury} />;
 };
 
@@ -303,6 +307,152 @@ const OwnHistory: React.FC<{
       {errFor("medications")}
 
       {onEditInjury && <InjuriesSection onEdit={onEditInjury} />}
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Website viewport v1 · WC-HE.9.3 History (WC-HE Records Web v3, "history"):
+// from 1024px wide Conditions, Past surgeries and Medications side by side (3
+// columns, gap 24; one column at the rail). Each column: its caps label 13/20
+// 700 ls 1.9 #9A94B3 (m-bottom 10) over a card (r18, 0.5px #241F1B@10%) of
+// rows min 72, pad 10 16, gap 12: a 40 r12 #F0EDF9 tile with the 20 icon
+// (sw 1.5) in #7D6BB5, the title 15/22 600 and its line 13/20 #8C8378, the
+// medication's reminder switch, and ⋮ (18, #8C8378) with the row's actions
+// (the mobile swipe's Edit / Delete; a condition is removed). An empty column
+// says so on #FAFAFB (pad 24, 15/24 #8C8378). Conditions are added from the
+// header's Add to history menu; Injuries follow under the columns.
+
+type WebRow = { key: string; title: string; meta?: string; toggle?: React.ReactNode; actions: { value: string; label: string; icon: React.ReactNode; destructive?: boolean; run: () => void }[] };
+
+const OwnHistoryWeb: React.FC<{
+  app: ReturnType<typeof useApp>;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onEditSurgery: (s: Surgery) => void;
+  onEditMedication: (m: Medication) => void;
+  onEditInjury?: (i: Injury) => void;
+}> = ({ app, loading, error, onRetry, onEditSurgery, onEditMedication, onEditInjury }) => {
+  const { comorbidities, setComorbidities, surgeries, removeSurgery, medications, updateMedication, removeMedication } = app;
+  const { rail } = useWebLayout();
+  const hideNumbers = useHideNumbers();
+  const [recordError, setRecordError] = useState<{ section: string; message: string } | null>(null);
+  const [menu, setMenu] = useState<{ row: WebRow; el: HTMLElement } | null>(null);
+  const run = async (section: string, action: () => Promise<{ ok: boolean; message?: string }>) => {
+    setRecordError(null);
+    const r = await action();
+    if (!r.ok) setRecordError({ section, message: navigator.onLine === false ? t("You're offline. Try again when you're connected.") : t("Couldn't save. Try again.") });
+  };
+  if (error && !comorbidities.length && !surgeries.length && !medications.length) return <RetryCard message={t("Couldn't load your history.")} onRetry={onRetry} />;
+
+  const del = (run_: () => void) => ({ value: "delete", label: t("Delete"), icon: <Trash2 size={16} />, destructive: true, run: run_ });
+  const edit = (run_: () => void) => ({ value: "edit", label: t("Edit"), icon: <Pencil size={16} />, run: run_ });
+  const columns: { section: string; heading: string; icon: typeof Pill; rows: WebRow[]; empty: string; busy: boolean }[] = [
+    {
+      section: "conditions",
+      heading: t("Conditions"),
+      icon: Stethoscope,
+      busy: loading && !comorbidities.length,
+      empty: t("No conditions recorded."),
+      rows: comorbidities.map((c) => ({ key: c, title: conditionLabel(c), actions: [del(() => void run("conditions", () => setComorbidities(comorbidities.filter((x) => x !== c))))] })),
+    },
+    {
+      section: "surgeries",
+      heading: t("Past surgeries"),
+      icon: Scissors,
+      busy: loading && !surgeries.length,
+      empty: t("No surgeries added."),
+      rows: surgeries.map((s) => ({ key: s.id, title: s.name, meta: surgeryDate(s), actions: [edit(() => onEditSurgery(s)), del(() => void run("surgeries", () => removeSurgery(s.id)))] })),
+    },
+    {
+      section: "medications",
+      heading: t("Medications"),
+      icon: Pill,
+      busy: loading && !medications.length,
+      empty: t("No medications added."),
+      rows: medications.map((m) => ({
+        key: m.id,
+        title: m.name,
+        meta: [m.dose, routeLabel(m.route), m.times.map(time12).join(", ")].filter(Boolean).join(" · "),
+        toggle: <Toggle checked={m.notifyEnabled} onChange={(v) => void run("medications", () => updateMedication(m.id, { notifyEnabled: v }))} label={t("Reminder for {name}", { name: m.name })} />,
+        actions: [edit(() => onEditMedication(m)), del(() => void run("medications", () => removeMedication(m.id)))],
+      })),
+    },
+  ];
+  const line = "0.5px solid rgba(36,31,27,0.06)";
+  return (
+    <div data-web-history>
+      <ProfileProposals responseId={null} hideNumbers={hideNumbers} />
+      <div className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 1 : 3}, minmax(0, 1fr))`, gap: 24 }}>
+        {columns.map((col) => (
+          <section key={col.section} className="min-w-0 flex flex-col" data-web-history-col={col.section}>
+            <h2 className="uppercase" style={{ margin: "0 0 10px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "1.9px", color: "#9A94B3" }}>
+              {col.heading}
+            </h2>
+            <div className="overflow-hidden flex flex-col" style={{ borderRadius: 18, border: "0.5px solid rgba(36,31,27,0.1)" }}>
+              {col.busy ? (
+                <div className="flex items-center" style={{ minHeight: 72, padding: "10px 16px", gap: 12 }}>
+                  <Skel w={40} h={40} r={12} />
+                  <Skel w="50%" h={12} />
+                </div>
+              ) : col.rows.length === 0 ? (
+                <div className="grid place-items-center" style={{ padding: 24, background: "#FAFAFB" }}>
+                  <p className="text-center" style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+                    {col.empty}
+                  </p>
+                </div>
+              ) : (
+                col.rows.map((r, i) => (
+                  <div key={r.key} className="flex items-center" style={{ minHeight: 72, padding: "10px 16px", gap: 12, borderTop: i ? line : undefined }}>
+                    <span aria-hidden className="grid place-items-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: "#F0EDF9" }}>
+                      <col.icon size={20} strokeWidth={1.5} style={{ color: "#7D6BB5" }} />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
+                        {r.title}
+                      </span>
+                      {r.meta && (
+                        <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                          {r.meta}
+                        </span>
+                      )}
+                    </span>
+                    {r.toggle}
+                    <button
+                      type="button"
+                      onClick={(e) => setMenu({ row: r, el: e.currentTarget })}
+                      aria-label={t("More options")}
+                      aria-haspopup="menu"
+                      aria-expanded={menu?.row.key === r.key}
+                      className="shrink-0 grid place-items-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                      style={{ width: 32, height: 32, marginInlineEnd: -6 }}
+                    >
+                      <MoreVertical size={18} style={{ color: "#8C8378" }} aria-hidden />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            {recordError?.section === col.section && <ErrorLine style={{ marginTop: 8 }}>{recordError.message}</ErrorLine>}
+          </section>
+        ))}
+      </div>
+      {onEditInjury && <InjuriesSection onEdit={onEditInjury} />}
+      <PopupMenu
+        open={menu !== null}
+        onClose={() => setMenu(null)}
+        anchor={menu?.el ?? null}
+        options={(menu?.row.actions ?? []).map((a) => ({ value: a.value, label: a.label, icon: a.icon, destructive: a.destructive }))}
+        onSelect={(v) => {
+          const a = menu?.row.actions.find((x) => x.value === v);
+          setMenu(null);
+          a?.run();
+        }}
+        width={160}
+        align="right"
+        variant="health"
+      />
     </div>
   );
 };

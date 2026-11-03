@@ -14,6 +14,8 @@ import { browserOffline } from "../../../services/health-log/offlineQueue";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { LabReport } from "../../../types";
 import { UploadChoiceSheet } from "./UploadChoiceSheet";
+import { useIsWeb } from "../../web/useWebLayout";
+import { LabsTabWeb } from "./RecordsTabs.web";
 import {
   useHealthMode,
   hairline,
@@ -45,7 +47,7 @@ import { t, tn } from "../../../i18n/core";
 // inside the popup: K1). The name is blood_panels.name (B2, 1-60 in the
 // app; an unnamed report reads the default "Blood panel").
 
-export const LabsTab: React.FC<{
+type LabsTabProps = {
   reports: LabReport[];
   results: LabResult[];
   loading: boolean;
@@ -60,7 +62,12 @@ export const LabsTab: React.FC<{
    * client. Omitted (the default) keeps the client's Labs tab as it was.
    */
   readOnly?: { emptyTitle: string; emptyBody: string };
-}> = ({ reports, results, loading, error, onRetry, onView, onEdit, onDelete, readOnly }) => {
+};
+
+/** Website viewport v1: from 1024px wide the client's reports as cards on a grid (WC-HE.9.1); a professional's read-only view keeps the list. */
+export const LabsTab: React.FC<LabsTabProps> = (props) => (useIsWeb() && !props.readOnly ? <LabsTabWeb {...props} /> : <LabsTabMobile {...props} />);
+
+const LabsTabMobile: React.FC<LabsTabProps> = ({ reports, results, loading, error, onRetry, onView, onEdit, onDelete, readOnly }) => {
   const { dark, hc } = useHealthMode();
   if (loading && reports.length === 0) {
     return (
