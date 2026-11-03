@@ -16,6 +16,7 @@ import { fetchJoinRequests, fetchSeatCapacity, fetchTeam, type JoinRequest, type
 import { ROLE_LABEL, inviteState, inviteWhen, isWithdrawn, lowerFirst, roleAndProfession, shortDay, withdrawnPeople } from "../business-team/teamLogic";
 import { formatShortDate } from "../../utils/date";
 import { t, tn, tx } from "../../i18n/core";
+import { initialsOf } from "../../components/business-more/paneWebScope";
 
 // OURS-MO1B-employees, -roles, -join-requests, -seats, -business-id
 // (BizMoreV8 screen="employees" / "roles" / "joins" / "seats" / "bizid").
@@ -90,11 +91,12 @@ export function RolesPage() {
       {!rows && !error && <RowsSkeleton rows={3} />}
       {rows && (
         <BizSection label={t("People")} footer={rows.length > 0 ? t("Tap a person to change their role, what they can do and their pay.") : undefined}>
-          <BizRow title={user.firstName || t("You")} desc={t("Owner · everything")} value={t("Owner")} />
+          <BizRow title={user.firstName || t("You")} initials={initialsOf(user.firstName || t("You"))} desc={t("Owner · everything")} value={t("Owner")} />
           {rows.map((r) => (
             <BizRow
               key={r.professionalId}
               title={r.name}
+              initials={initialsOf(r.name)}
               desc={isWithdrawn(r) ? inviteWhen(r) ?? t("Withdrawn") : (r.acceptedAt ? roleAndProfession(r) : t("Invited, hasn't accepted yet") + (inviteWhen(r) ? ` · ${inviteWhen(r)}` : "")) + (personUsesSeat(r) ? ` · ${t("uses a seat")}` : "")}
               value={t(ROLE_LABEL[r.role])}
               dim={!r.acceptedAt}
@@ -182,7 +184,7 @@ export function SeatsPage() {
             return (
               <BizSection key={b} label={b === 0 && included > 0 ? t("Included seats") : t("Block {n}", { n: b + (included > 0 ? 0 : 1) })}>
                 {members.map((m) => (
-                  <BizRow key={m.professionalId} icon={User} title={m.name} desc={roleAndProfession(m)} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                  <BizRow key={m.professionalId} icon={User} initials={initialsOf(m.name)} title={m.name} desc={roleAndProfession(m)} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
                 ))}
                 {Array.from({ length: Math.max(0, per - members.length) }, (_, i) => (
                   <BizRow key={`free-${i}`} icon={Plus} title={t("Free seat")} desc={t("Invite a professional")} onClick={() => navigate("/app/business/employees")} />
@@ -193,14 +195,14 @@ export function SeatsPage() {
           {invited.length > 0 && (
             <BizSection label={tx("Invited", "section")} footer={t("An invitation uses a seat only once it's accepted.")}>
               {invited.map((m) => (
-                <BizRow key={m.professionalId} icon={UserPlus} title={m.name} desc={t("Invited {date}", { date: shortDay(m.invitedAt) }) + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? t("Expired") : t("Pending")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={UserPlus} initials={initialsOf(m.name)} title={m.name} desc={t("Invited {date}", { date: shortDay(m.invitedAt) }) + (inviteWhen(m) ? ` · ${inviteWhen(m)}` : "")} value={inviteState(m) === "expired" ? t("Expired") : t("Pending")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}
           {noSeat.length > 0 && (
             <BizSection label={t("No seat needed")} footer={t("Front desk, managers, staff and shop assistants don't use a seat.")}>
               {noSeat.map((m) => (
-                <BizRow key={m.professionalId} icon={User} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited` + (inviteWhen(m) ? ` · ${lowerFirst(inviteWhen(m)!)}` : "")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
+                <BizRow key={m.professionalId} icon={User} initials={initialsOf(m.name)} title={m.name} desc={m.acceptedAt ? ROLE_LABEL[m.role] : `${ROLE_LABEL[m.role]} · invited` + (inviteWhen(m) ? ` · ${lowerFirst(inviteWhen(m)!)}` : "")} onClick={() => navigate(`/app/business/employees/${m.professionalId}`)} />
               ))}
             </BizSection>
           )}

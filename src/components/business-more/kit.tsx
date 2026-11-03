@@ -10,6 +10,9 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 import { useOnline } from "../../hooks/useOnline";
 import { linePx, textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
+import { useLocation } from "react-router-dom";
+import { PaneFrame, PaneHeader, PaneRadio, PaneSwitch, PaneWebOff } from "./paneWeb";
+import { usePaneEligible, usePaneWeb } from "./paneWebScope";
 
 // v6 Batch 3 · the BizMoreV8 kit (business More, Business Profile, Settings,
 // Help and legal; MO1B). Every value is the source's own
@@ -42,6 +45,33 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
   onBack,
 }) => {
   const back = useBack();
+  const paneWeb = usePaneWeb();
+  const { pathname } = useLocation();
+  if (paneWeb) {
+    // In the pane the column is the navigation: a back button only on a page
+    // below a column item (a help topic, a policy's sub-view, a Settings sub-page).
+    const deep = /^\/app\/business\/more\/(help\/.+|[^/]+\/[^/]+\/.+)$/.test(pathname) || /^\/app\/settings\/.+/.test(pathname);
+    return (
+      <PaneHeader
+        title={title}
+        sub={sub}
+        back={
+          deep ? (
+            <button
+              type="button"
+              onClick={onBack ?? back}
+              aria-label={t("Back")}
+              title={t("Back")}
+              className="shrink-0 flex items-center justify-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+              style={{ width: 36, height: 36, marginInlineStart: -8 }}
+            >
+              <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" style={{ color: "#5B5349" }} />
+            </button>
+          ) : undefined
+        }
+      />
+    );
+  }
   return (
     <div className="flex items-start animate-fade-slide-up" style={{ gap: 10, marginBottom: 16 }}>
       <button
@@ -86,19 +116,39 @@ export const BizPage: React.FC<{ title: string; sub?: string; kicker?: string; o
   onBack,
   children,
   offline = true,
-}) => (
-  <div>
-    <SubHeader title={title} sub={sub} kicker={kicker} onBack={onBack} />
-    {offline && <OfflineLine />}
-    {children}
-  </div>
-);
+}) => {
+  const paneWeb = usePaneEligible();
+  if (paneWeb)
+    return (
+      <PaneFrame>
+        <SubHeader title={title} sub={sub} kicker={kicker} onBack={onBack} />
+        {offline && <OfflineLine />}
+        {children}
+      </PaneFrame>
+    );
+  return (
+    <div>
+      <SubHeader title={title} sub={sub} kicker={kicker} onBack={onBack} />
+      {offline && <OfflineLine />}
+      {children}
+    </div>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // Sections
 
 /** Section label: 11/600 0.14em uppercase line 14 faint, 7.5 then a 1.5 primary rule; margin 6 2 10. */
-export const BizLabel: React.FC<{ children: React.ReactNode; right?: React.ReactNode; id?: string }> = ({ children, right, id }) => (
+export const BizLabel: React.FC<{ children: React.ReactNode; right?: React.ReactNode; id?: string }> = ({ children, right, id }) =>
+  usePaneWeb() ? (
+    // ST Settings Web: h3 13/20 700 0.14em caps #7D67D9, 8 above a 1.5 #AEA1DC rule.
+    <div data-pane-label className="flex items-end justify-between gap-2" style={{ paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC" }}>
+      <h3 id={id} className="uppercase rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", color: "#7D67D9" }}>
+        {children}
+      </h3>
+      {right}
+    </div>
+  ) : (
   <div
     className="flex items-end justify-between gap-2 border-b-[1.5px] border-primary"
     style={{ paddingBottom: 7.5, margin: "6px 2px 10px" }}
@@ -108,13 +158,19 @@ export const BizLabel: React.FC<{ children: React.ReactNode; right?: React.React
     </h2>
     {right}
   </div>
-);
+  );
 
-export const BizCard: React.FC<{ children: React.ReactNode; className?: string; ariaLabel?: string }> = ({ children, className, ariaLabel }) => (
+export const BizCard: React.FC<{ children: React.ReactNode; className?: string; ariaLabel?: string }> = ({ children, className, ariaLabel }) =>
+  usePaneWeb() ? (
+    // The pane draws its rows straight under the section label (no card).
+    <div role={ariaLabel ? "group" : undefined} aria-label={ariaLabel} className={clsx("flex flex-col", className)}>
+      {children}
+    </div>
+  ) : (
   <div role={ariaLabel ? "group" : undefined} aria-label={ariaLabel} className={clsx(LIST_BG, className)} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
     {children}
   </div>
-);
+  );
 
 /** A label (optional), the list card, and the 11/16 footer line (margin -6 4 14). */
 export const BizSection: React.FC<{ label?: React.ReactNode; right?: React.ReactNode; footer?: React.ReactNode; children: React.ReactNode; id?: string }> = ({
@@ -124,18 +180,24 @@ export const BizSection: React.FC<{ label?: React.ReactNode; right?: React.React
   children,
   id,
 }) => (
-  <section id={id}>
+  <section id={id} className={usePaneWeb() ? "flex flex-col" : undefined}>
     {label && <BizLabel right={right}>{label}</BizLabel>}
     <BizCard>{children}</BizCard>
     {footer && <BizNote>{footer}</BizNote>}
   </section>
 );
 
-export const BizNote: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
+export const BizNote: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) =>
+  usePaneWeb() ? (
+    // 13/20 #8C8378; 8 under a section's rows, at most 72ch on its own.
+    <p className={className} style={{ margin: "8px 0 0", maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>
+      {children}
+    </p>
+  ) : (
   <p className={clsx("text-[11px] leading-[16px] text-charcoal-faint", className)} style={{ margin: "-6px 4px 14px", textWrap: "pretty" } as React.CSSProperties}>
     {children}
   </p>
-);
+  );
 
 // ---------------------------------------------------------------------------
 // The row
@@ -177,6 +239,8 @@ export interface BizRowProps {
   id?: string;
   className?: string;
   rowRef?: React.Ref<HTMLElement>;
+  /** Website viewport v1: the person's initials, drawn as the pane's 36 avatar in place of the icon (ignored on mobile). */
+  initials?: string;
 }
 
 const VALUE_TONE = {
@@ -186,7 +250,161 @@ const VALUE_TONE = {
   faint: "text-charcoal-faint",
 } as const;
 
-export const BizRow: React.FC<BizRowProps> = ({
+const PANE_VALUE_INK = { primary: "#8C8378", good: "#3F9165", high: "#C0392B", faint: "#A79E93" } as const;
+
+/**
+ * ST Settings Web row: min 48 (56 with a line), padding 8 0, gap 14; the rule
+ * from 50 to the end, rgba(174,161,220,0.18); tile 36 r11 #F0EDF9 with an 18
+ * glyph #7D67D9 (red #FBE7E4 / #C2453F); title 15/24 600; line 13/20 #8C8378;
+ * value 13/20 #8C8378; chevron 16 / 1.75 #8C8378; the 44 × 26 switch and the
+ * 22 radio at the end; buttons 36 (decline outlined, accept #9A8CD6); dim 0.45.
+ */
+const PaneRow: React.FC<BizRowProps> = ({
+  title,
+  desc,
+  icon: Icon,
+  value,
+  valueTone = "primary",
+  value2,
+  valueAction,
+  badge,
+  trailing,
+  drop,
+  toggle,
+  radio,
+  checked,
+  danger,
+  dim,
+  onClick,
+  disabled,
+  chevron,
+  ariaLabel,
+  extra,
+  id,
+  className,
+  rowRef,
+  initials,
+}) => {
+  // The pane keeps the chevron after a value ("Change ›", a role ›).
+  const showChevron = chevron ?? (!!onClick && !toggle && !radio && !value2 && !checked);
+  const rowCls = clsx(
+    "biz-row relative w-full flex items-center text-start",
+    "[&:first-child>.biz-rule]:hidden",
+    onClick && "hover:bg-[#FAF8FE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:-outline-offset-2",
+    className
+  );
+  const style: React.CSSProperties = { minHeight: desc || initials ? 56 : 48, boxSizing: "border-box", padding: "8px 0", gap: 14, opacity: dim ? 0.45 : undefined };
+  const red = !!danger;
+  const btn = (primary: boolean): React.CSSProperties => ({
+    height: 36,
+    padding: "0 14px",
+    boxSizing: "border-box",
+    borderRadius: 10,
+    fontSize: 15,
+    lineHeight: "24px",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    background: primary ? "#9A8CD6" : "#FFFFFF",
+    color: primary ? "#FFFFFF" : "#5B5349",
+    border: primary ? "none" : "1px solid rgba(36,31,27,0.12)",
+  });
+  const body = (
+    <>
+      <span aria-hidden className="biz-rule absolute top-0 pointer-events-none" style={{ insetInlineStart: 50, insetInlineEnd: 0, height: 1, background: "rgba(174,161,220,0.18)" }} />
+      {initials ? (
+        <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 999, background: "#F0EDF9", color: "#5F5093", fontSize: 13, lineHeight: "20px", fontWeight: 800 }}>
+          {initials}
+        </span>
+      ) : Icon && (
+        <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: red ? "#FBE7E4" : "#F0EDF9", color: red ? "#C2453F" : "#7D67D9" }}>
+          <Icon size={18} strokeWidth={1.75} />
+        </span>
+      )}
+      <span className="flex-1 min-w-0">
+        <span className="block break-words" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: red ? "#C2453F" : "#241F1B" }}>
+          {title}
+        </span>
+        {desc && (
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>
+            {desc}
+          </span>
+        )}
+        {extra}
+      </span>
+      {badge !== undefined && badge !== null && (
+        <span
+          className="inline-flex items-center justify-center shrink-0 tabular-nums"
+          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
+        >
+          {badge}
+        </span>
+      )}
+      {trailing}
+      {value !== undefined && value !== null && !valueAction && (
+        <span className="shrink-0 whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: PANE_VALUE_INK[valueTone] }}>
+          {value}
+        </span>
+      )}
+      {(value2 || valueAction) && (
+        <span className="relative z-[1] shrink-0 flex" style={{ gap: 8 }}>
+          {value2 && (
+            <button type="button" onClick={value2.onClick} disabled={value2.disabled} className="disabled:opacity-40 hover:bg-[#F5F5F6]" style={btn(false)}>
+              {value2.label}
+            </button>
+          )}
+          {value !== undefined && valueAction && (
+            <button type="button" onClick={valueAction} className="hover:opacity-90" style={btn(true)}>
+              {value}
+            </button>
+          )}
+        </span>
+      )}
+      {toggle && (
+        <span className="relative z-[1] shrink-0 flex">
+          <PaneSwitch checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={toggle.label ?? (typeof title === "string" ? title : undefined)} />
+        </span>
+      )}
+      {radio && <PaneRadio selected={radio.selected} />}
+      {checked && <Check size={16} strokeWidth={2.6} aria-hidden className="shrink-0" style={{ color: "#7D67D9" }} />}
+      {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} />)}
+    </>
+  );
+  if (toggle || valueAction || value2) {
+    return (
+      <div id={id} ref={rowRef as React.Ref<HTMLDivElement>} role={toggle ? "group" : undefined} aria-label={ariaLabel} className={rowCls} style={style}>
+        {onClick && <button type="button" onClick={onClick} aria-label={typeof title === "string" ? title : ariaLabel} className="absolute inset-0 w-full" />}
+        {body}
+      </div>
+    );
+  }
+  if (onClick || radio) {
+    return (
+      <button
+        id={id}
+        ref={rowRef as React.Ref<HTMLButtonElement>}
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        role={radio ? "radio" : undefined}
+        aria-checked={radio ? radio.selected : undefined}
+        aria-label={ariaLabel}
+        className={clsx(rowCls, disabled && "cursor-not-allowed")}
+        style={style}
+      >
+        {body}
+      </button>
+    );
+  }
+  return (
+    <div id={id} ref={rowRef as React.Ref<HTMLDivElement>} aria-label={ariaLabel} className={rowCls} style={style}>
+      {body}
+    </div>
+  );
+};
+
+export const BizRow: React.FC<BizRowProps> = (props) => (usePaneWeb() ? <PaneRow {...props} /> : <MobileBizRow {...props} />);
+
+const MobileBizRow: React.FC<BizRowProps> = ({
   title,
   desc,
   icon: Icon,
@@ -352,7 +570,34 @@ export const BizHero: React.FC<{
   value: React.ReactNode;
   sub?: React.ReactNode;
   actions?: { label: string; icon: LucideIcon; onClick: () => void; primary?: boolean; disabled?: boolean }[];
-}> = ({ label, value, sub, actions }) => (
+}> = ({ label, value, sub, actions }) =>
+  usePaneWeb() ? (
+    // ST Settings Web stat: r16 #F7F7FC, padding 16 20; label 13/20 #8C8378, value 22/28 700; actions 40 r12.
+    <div style={{ borderRadius: 16, background: "#F7F7FC", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{label}</p>
+        <p className="tabular-nums break-words" style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, color: "#241F1B" }}>{value}</p>
+        {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</p>}
+      </div>
+      {actions && actions.length > 0 && (
+        <div className="flex flex-wrap" style={{ gap: 8 }}>
+          {actions.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              onClick={a.onClick}
+              disabled={a.disabled}
+              className="flex items-center disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2"
+              style={{ height: 40, padding: "0 16px", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: a.primary ? "#9A8CD6" : "#FFFFFF", color: a.primary ? "#FFFFFF" : "#241F1B", border: a.primary ? "none" : "1px solid rgba(36,31,27,0.12)" }}
+            >
+              <a.icon size={18} strokeWidth={2} aria-hidden />
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : (
   <div className={clsx(LIST_BG, "text-center")} style={{ borderRadius: 18, padding: 16, marginBottom: 16 }}>
     <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-charcoal-faint">{label}</p>
     <p className={clsx("text-[28px] font-extrabold tracking-[0.08em] leading-[36px] tabular-nums break-words", DEEP)} style={{ marginTop: 6 }}>
@@ -380,7 +625,7 @@ export const BizHero: React.FC<{
       </div>
     )}
   </div>
-);
+  );
 
 // ---------------------------------------------------------------------------
 // Buttons
@@ -394,7 +639,20 @@ export const BizButton: React.FC<{ label: string; onClick?: () => void; disabled
   tone = "primary",
   className,
   type = "button",
-}) => (
+}) =>
+  usePaneWeb() ? (
+    // ST Settings Web CTA: 44, padding 0 20, r14, 15/24 600, #9A8CD6 (danger #C2453F), at the start.
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || busy}
+      aria-busy={busy || undefined}
+      className={clsx("self-start inline-flex items-center justify-center disabled:opacity-40 hover:scale-[0.98] active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2", className)}
+      style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", color: "#FFFFFF", background: tone === "danger" ? "#C2453F" : "#9A8CD6" }}
+    >
+      {label}
+    </button>
+  ) : (
   <button
     type={type}
     onClick={onClick}
@@ -409,10 +667,22 @@ export const BizButton: React.FC<{ label: string; onClick?: () => void; disabled
   >
     {label}
   </button>
-);
+  );
 
 /** 48 tall r16 soft 14/700 (sh.b2). */
-export const BizButtonSoft: React.FC<{ label: string; onClick: () => void; tone?: "ink" | "high"; disabled?: boolean; className?: string }> = ({ label, onClick, tone = "ink", disabled, className }) => (
+export const BizButtonSoft: React.FC<{ label: string; onClick: () => void; tone?: "ink" | "high"; disabled?: boolean; className?: string }> = ({ label, onClick, tone = "ink", disabled, className }) =>
+  usePaneWeb() ? (
+    // The pane's secondary button: 40, r12, 15/24 600 on #F5F5F6.
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={clsx("self-start inline-flex items-center justify-center disabled:opacity-40 hover:bg-[#EDEDEF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2", className)}
+      style={{ height: 40, padding: "0 16px", boxSizing: "border-box", borderRadius: 12, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#F5F5F6", color: tone === "high" ? "#C0392B" : "#241F1B" }}
+    >
+      {label}
+    </button>
+  ) : (
   <button
     type="button"
     onClick={onClick}
@@ -422,7 +692,7 @@ export const BizButtonSoft: React.FC<{ label: string; onClick: () => void; tone?
   >
     {label}
   </button>
-);
+  );
 
 // ---------------------------------------------------------------------------
 // Sheet and its fields (MO1B-014)
@@ -436,12 +706,14 @@ export const BizSheet: React.FC<{ open: boolean; onClose: () => void; title: str
   children,
 }) => (
   <BottomSheet open={open} onClose={onClose} title={title} chrome="market" tone="business" headerHeight={58}>
+    <PaneWebOff>
     {lead && (
       <p className={clsx("text-[12.5px] leading-[18px]", leadTone === "high" ? "font-bold text-status-high" : "text-charcoal-soft")} style={{ marginBottom: 12, textWrap: "pretty" } as React.CSSProperties}>
         {lead}
       </p>
     )}
     {children}
+    </PaneWebOff>
   </BottomSheet>
 );
 
@@ -609,7 +881,7 @@ export const BizPopup: React.FC<{ open: boolean; onClose: () => void; title: str
             {lead}
           </p>
         )}
-        {children}
+        <PaneWebOff>{children}</PaneWebOff>
       </div>
     </div>,
     document.body
