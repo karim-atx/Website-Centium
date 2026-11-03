@@ -13,6 +13,9 @@ export const FILES: string[] = [
   "components/dashboard/web/WidgetBoardWeb.tsx",
   "components/dashboard/web/QuickActionsStack.tsx",
   "pages/mind/Mind.web.tsx",
+  "pages/mind/web/MindSectionWeb.tsx",
+  "pages/mind/web/ChipStrip.tsx",
+  "pages/mind/web/AchievementsWeb.tsx",
 ];
 
 const webclienthome: Catalogue = {
@@ -22,6 +25,9 @@ const webclienthome: Catalogue = {
   // == WC-MI Mind hub (pages/mind/Mind.web) ==
   "Habits done today": "العادات المُنجزة اليوم",
   "Day streak": "الأيام المتتالية", // note: the caps label over the lead habit's streak card
+
+  // == WC-MI.3 Achievements (pages/mind/web/AchievementsWeb) ==
+  "Nothing unlocked yet. Log a meal or a workout to earn your first badge.": "لم يُفتح شيء بعد. سجّل وجبة أو تمرينًا لتنال أول شارة.",
 };
 
 export default webclienthome;
