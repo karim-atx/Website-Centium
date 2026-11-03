@@ -141,24 +141,12 @@ export const OverviewWeb: React.FC<{ rail: boolean }> = ({ rail }) => {
   const updated = mins === null ? "" : mins < 1 ? t("Updated just now") : tn(mins, "Updated {n} min ago", "Updated {n} min ago");
   const can = (key: string) => (pushed ?? []).includes(key);
 
-  // Live now: the mobile card at the web type size (×1.3 to its 13 / 10.5 type) where the column is wide enough.
-  const liveRef = useRef<HTMLDivElement | null>(null);
-  const [liveW, setLiveW] = useState(0);
-  useEffect(() => {
-    const el = liveRef.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
-    const ro = new ResizeObserver(([e]) => setLiveW(e.contentRect.width));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const zoom = rail || liveW === 0 ? 1 : Math.max(1, Math.min(1.3, liveW / 350));
-
   const insight = (key: string, Icon: LucideIcon, col: string, title: string, data: { value: string; delta: string; sub: string; up: boolean } | null, open?: () => void) => (
     <InsightCard key={key} rail={rail} Icon={Icon} col={col} title={title} data={data} onOpen={open} />
   );
 
   return (
-    <div data-an-overview style={{ marginTop: 24, display: "grid", gridTemplateColumns: rail ? "minmax(0,1fr) 300px" : "minmax(0,7fr) minmax(0,5fr)", gap: 24, alignItems: "start" }}>
+    <div data-an-overview style={{ marginTop: 24, display: "grid", gridTemplateColumns: rail ? "minmax(0,1fr) 300px" : "minmax(0,7fr) minmax(0,5fr)", gap: 24, alignItems: "stretch" }}>
       <div style={{ minWidth: 0, display: "flex", flexDirection: "column" }}>
         {error && (
           <div style={{ marginBottom: 12 }}>
@@ -208,9 +196,9 @@ export const OverviewWeb: React.FC<{ rail: boolean }> = ({ rail }) => {
         </div>
       </div>
 
-      <div ref={liveRef} data-an="live" style={{ minWidth: 0 }}>
-        <div style={{ zoom } as React.CSSProperties}>
+      <div data-an="live" style={{ minWidth: 0, minHeight: 0 }}>
           <LiveNowCard
+            web={{ rail }}
             c={c}
             items={items}
             now={now}
@@ -225,7 +213,6 @@ export const OverviewWeb: React.FC<{ rail: boolean }> = ({ rail }) => {
             reducedMotion={rm}
             textScale={1}
           />
-        </div>
       </div>
 
       {raw?.business && (
@@ -254,7 +241,7 @@ function InsightCard({ rail, Icon, col, title, data, onOpen }: { rail: boolean; 
         <span aria-hidden style={{ width: rail ? 24 : 32, height: rail ? 24 : 32, borderRadius: 10, background: tint(col, 0.14), color: col, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
           <Icon size={rail ? 16 : 18} strokeWidth={2.2} />
         </span>
-        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378", flex: "none" }} />}
+        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden style={{ color: "#8C8378", flex: "none" }} />}
       </div>
       <span style={{ marginTop: rail ? 6 : 8, fontSize: rail ? 15 : 17, lineHeight: rail ? "20px" : "24px", fontWeight: 700, whiteSpace: "nowrap", color: "#241F1B", textAlign: "start" }}>{title}</span>
       {data ? (

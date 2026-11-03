@@ -65,10 +65,49 @@ export interface LiveNowProps {
   onListing: () => void;
   reducedMotion: boolean;
   textScale: number;
+  /**
+   * Website viewport (WB-AN.1, WB-AN Analytics Web v5 "Live now"): the card
+   * fills its column, the board's web type (17/24 title, 13/20 lines and
+   * legend, 15/22 panel rows) and the dial sized to its space:
+   * min(height, width − 32), at most 400 (268 on the rail). Mobile never sets it.
+   */
+  web?: { rail: boolean };
+}
+
+/** The web dial: the 268 DayClock scaled to the space it has (the board's fit()), never below 268 · 0.82. */
+function WebDial({ rail, children }: { rail: boolean; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState(rail ? 220 : 300);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const fit = () => {
+      const s = Math.floor(Math.min(el.clientHeight, el.clientWidth - 32));
+      if (s > 0) setSize(s);
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const s = Math.max(220, Math.min(size, rail ? 268 : 400));
+  return (
+    <div ref={ref} data-an="dial" style={{ flex: 1, minHeight: 220, position: "relative", margin: "16px 0", width: "100%" }}>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div data-dial-size={s} style={{ width: s, height: s, flex: "none", position: "relative" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, width: 268, height: 268, transform: `scale(${s / 268})`, transformOrigin: "0 0", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function LiveNowCard(p: LiveNowProps) {
   const { c, reducedMotion: rm } = p;
+  const web = p.web;
+  /** A web size (literal px) or the mobile one (follows Larger text). */
+  const fz = (mobile: number, w: number) => (web ? `${w}px` : textPx(mobile));
+  const lz = (mobile: number, w: number) => (web ? `${w}px` : linePx(mobile));
   const hours = p.now.getHours() + p.now.getMinutes() / 60 + p.now.getSeconds() / 3600;
 
   const [is24, setIs24] = useState(read24);
@@ -280,12 +319,12 @@ export function LiveNowCard(p: LiveNowProps) {
     <div key={it.key} data-panel-row style={{ display: "flex", flexDirection: "column", gap: 5, padding: "9px 0", borderTop: first ? "none" : `1px solid ${c.divider}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: 999, background: it.col, flexShrink: 0, ["--dg" as string]: it.dg, animation: it.live && !rm ? "an1-dotGlow 2.4s ease-in-out infinite" : "none" }} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: c.ink }}>{it.t}</span>
-        <span data-status style={{ fontSize: textPx(9.5), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 999, background: it.stBg, color: it.stInk, whiteSpace: "nowrap", lineHeight: 1.5 }}>
+        <span style={{ flex: 1, minWidth: 0, fontSize: fz(13, 15), fontWeight: 800, lineHeight: lz(17, 22), whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: c.ink }}>{it.t}</span>
+        <span data-status style={{ fontSize: fz(9.5, 11), fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 999, background: it.stBg, color: it.stInk, whiteSpace: "nowrap", lineHeight: 1.5 }}>
           {it.st}
         </span>
       </div>
-      <p style={{ fontSize: textPx(11.5), lineHeight: linePx(15), color: c.inkSoft, fontVariantNumeric: "tabular-nums", paddingInlineStart: 16, margin: 0 }}>{it.when}</p>
+      <p style={{ fontSize: fz(11.5, 13), lineHeight: lz(15, 20), color: c.inkSoft, fontVariantNumeric: "tabular-nums", paddingInlineStart: 16, margin: 0 }}>{it.when}</p>
       {it.bar && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, paddingInlineStart: 16 }}>
           <div style={{ flex: 1, height: 5, borderRadius: 999, background: c.track, overflow: "hidden" }}>
@@ -301,16 +340,16 @@ export function LiveNowCard(p: LiveNowProps) {
     <section
       data-live-card
       aria-label={tx("Live now", "live classes")}
-      style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.cardBorder}`, overflow: "hidden", marginBottom: 24, boxShadow: c.entryShadow }}
+      style={{ background: c.card, borderRadius: 24, border: `1px solid ${c.cardBorder}`, overflow: "hidden", marginBottom: web ? 0 : 24, boxShadow: c.entryShadow, ...(web ? { height: "100%", boxSizing: "border-box" as const, display: "flex", flexDirection: "column" as const } : null) }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 16px 12px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: web ? "14px 16px 8px" : "14px 16px 12px", flex: web ? "none" : undefined }}>
         <span aria-hidden style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
           <span data-pulse style={{ position: "absolute", inset: 0, borderRadius: 999, background: pulseCol, opacity: 0.35, animation: p.offline || rm ? "none" : "an1-livePulse 1.8s ease-out infinite" }} />
           <span style={{ position: "absolute", inset: 2, borderRadius: 999, background: pulseCol }} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: textPx(13), fontWeight: 800, lineHeight: linePx(17), whiteSpace: "nowrap", color: c.ink, margin: 0 }}>{tx("Live now", "live classes")}</h2>
-          <p data-updated style={{ fontSize: textPx(10.5), lineHeight: linePx(14), color: c.faint, margin: 0 }}>
+          <h2 style={{ fontSize: fz(13, 17), fontWeight: 800, lineHeight: lz(17, 24), whiteSpace: "nowrap", color: c.ink, margin: 0 }}>{tx("Live now", "live classes")}</h2>
+          <p data-updated style={{ fontSize: fz(10.5, 13), lineHeight: lz(14, 20), color: c.faint, margin: 0 }}>
             {p.offline ? (p.updated ? `${t("Offline")} · ${p.updated}` : t("Offline")) : p.updated}
           </p>
         </div>
@@ -344,9 +383,9 @@ export function LiveNowCard(p: LiveNowProps) {
         </button>
       </div>
 
-      <div style={{ padding: "2px 16px 14px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div data-half-row style={{ width: 268, maxWidth: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: "0 0 8px", minHeight: 14 }}>
-          <span data-half-note style={{ minWidth: 0, fontSize: textPx(10.5), fontWeight: 700, lineHeight: linePx(14), color: c.faint, whiteSpace: "nowrap" }}>
+      <div style={{ padding: web ? "0 16px 12px" : "2px 16px 14px", display: "flex", flexDirection: "column", alignItems: "center", ...(web ? { flex: 1, minHeight: 0 } : null) }}>
+        <div data-half-row style={{ width: web ? "100%" : 268, maxWidth: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: web ? 0 : "0 0 8px", minHeight: 14 }}>
+          <span data-half-note style={{ minWidth: 0, fontSize: fz(10.5, 13), fontWeight: 700, lineHeight: web ? "16px" : linePx(14), color: c.faint, whiteSpace: "nowrap" }}>
             {m.halfNote}
           </span>
           {half && (
@@ -364,9 +403,9 @@ export function LiveNowCard(p: LiveNowProps) {
                     onClick={() => flipTo(pm)}
                     style={{
                       position: "relative",
-                      height: 22,
+                      height: web ? 26 : 22,
                       minWidth: 34,
-                      padding: "0 7px",
+                      padding: web ? "0 10px" : "0 7px",
                       borderRadius: 7,
                       display: "flex",
                       alignItems: "center",
@@ -374,7 +413,7 @@ export function LiveNowCard(p: LiveNowProps) {
                       gap: 4,
                       background: on ? c.half : "transparent",
                       color: on ? c.halfInk : c.faint,
-                      fontSize: textPx(10.5),
+                      fontSize: fz(10.5, 13),
                       fontWeight: 800,
                       letterSpacing: "0.04em",
                       whiteSpace: "nowrap",
@@ -397,10 +436,16 @@ export function LiveNowCard(p: LiveNowProps) {
           )}
         </div>
 
-        <DayClock m={m} c={c} reducedMotion={rm} minuteDeg={minuteDeg} loading={p.loading} anim={anim} h={handlers} />
+        {web ? (
+          <WebDial rail={web.rail}>
+            <DayClock m={m} c={c} reducedMotion={rm} minuteDeg={minuteDeg} loading={p.loading} anim={anim} h={handlers} />
+          </WebDial>
+        ) : (
+          <DayClock m={m} c={c} reducedMotion={rm} minuteDeg={minuteDeg} loading={p.loading} anim={anim} h={handlers} />
+        )}
 
-        <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 6 }}>
-          <div data-legend style={{ display: "flex", alignItems: "center", gap: 12, fontSize: textPx(10), fontWeight: 600, color: c.faint, flexWrap: "wrap", minWidth: 0 }}>
+        <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: web ? 0 : 6 }}>
+          <div data-legend style={{ display: "flex", alignItems: "center", gap: 12, fontSize: fz(10, 13), fontWeight: 600, color: c.faint, flexWrap: "wrap", minWidth: 0 }}>
             {m.legend.map((lg) => (
               <span key={lg.t} style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
                 <span style={{ width: 12, height: 4, borderRadius: 2, background: lg.col, opacity: lg.op }} />
@@ -530,7 +575,7 @@ export function LiveNowCard(p: LiveNowProps) {
       )}
 
       {!p.loading && m.summary && (
-        <p data-summary style={{ padding: "10px 16px 12px", borderTop: `1px solid ${c.divider}`, fontSize: textPx(11), lineHeight: linePx(15), color: c.faint, textAlign: "center", margin: 0 }}>
+        <p data-summary style={{ padding: "10px 16px 12px", borderTop: `1px solid ${c.divider}`, fontSize: fz(11, 13), lineHeight: lz(15, 20), color: c.faint, textAlign: "center", margin: 0, flex: web ? "none" : undefined }}>
           {m.summary}
         </p>
       )}

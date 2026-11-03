@@ -42,6 +42,7 @@ import {
 import { PromotionSheet, type PromoEdit } from "./PromotionSheet";
 import { FeatureSheet, PaySheet, ResultsSheet, type FeatureRetry } from "./FeatureSheets";
 import { usePromotions } from "./usePromotions";
+import { useMarketWebType } from "../../components/market/webType";
 import { isRtl, t, tk } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): the live promotions, the perk and the
@@ -86,8 +87,28 @@ interface OfferRow {
 
 const TYPE_ICON: Record<IconKey, LucideIcon> = { percent: Percent, gift: Gift, megaphone: Megaphone, award: Award };
 
-export function PromotionsTab() {
+/**
+ * Website viewport (WB-MA.3): the blocks a web layout places in its columns.
+ * The sheets, menus, dialogs and the strip stay this component's own.
+ */
+export interface PromoBlocks {
+  /** The promotion cards (or their loading / error / empty state). */
+  promos: ReactNode;
+  createPromotion: { onClick: () => void; disabled: boolean };
+  /** The offers on the listing (or the empty / no-profile state). */
+  listing: ReactNode;
+  /** "Add an offer" (dashed, full width). */
+  addOffer: ReactNode;
+  /** Caps "Worth promoting" and its card, or null. */
+  worth: ReactNode;
+  /** Caps "Featured on Explore" and its card, or null. */
+  featured: ReactNode;
+}
+
+export function PromotionsTab({ layout }: { layout?: (blocks: PromoBlocks) => ReactNode } = {}) {
   const m = useMarket();
+  // Website viewport: the board's web sizes (MarketWebType); mobile has no provider.
+  const web = useMarketWebType();
   const { v, kind, business } = m;
   const c = useMarketColors();
   const online = useOnline();
@@ -256,9 +277,13 @@ export function PromotionsTab() {
     ) : data.error ? (
       <MarketError thing="your promotions" onRetry={data.reload} />
     ) : rows.length === 0 && placementCards.length === 0 ? (
-      <MarketEmptyCard title={t("No promotions yet")} body={v.promosEmpty} />
+      web ? (
+        <WebEmpty title={t("No promotions yet")} body={t(v.promosEmpty)} />
+      ) : (
+        <MarketEmptyCard title={t("No promotions yet")} body={v.promosEmpty} />
+      )
     ) : (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: web ? 12 : 10 }}>
         {placementCards.map(({ p, card }) =>
           card ? (
             <PromoCard
@@ -312,18 +337,14 @@ export function PromotionsTab() {
 
   const addDisabled = !online || !canMarket || !business;
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10, color: c.ink, lineHeight: "normal" }}>
-      <style>{FOCUS_CSS}</style>
-      <CapsLabel>{t("Your promotions")}</CapsLabel>
-      {promoBlock}
+  const createBtn = (
       <OutlineButton onClick={() => setCreate({ what: null })} disabled={!canWrite} style={{ width: "100%", minHeight: 44 }}>
         <Plus size={15} strokeWidth={2.4} aria-hidden />
         {t("Create promotion")}
       </OutlineButton>
-
-      <CapsLabel style={{ marginTop: 6 }}>{t("Offers on your listing")}</CapsLabel>
-      {noRow ? (
+  );
+  const listingBlock =
+      noRow ? (
         // No business_profiles row: offers attach to it (main's discounts gate, NOTHING_LOST LOST 3).
         <>
           <MarketEmptyCard title={t("No offers yet")} body={t("Save your business profile first to start adding offers.")} />
@@ -332,7 +353,11 @@ export function PromotionsTab() {
           </OutlineButton>
         </>
       ) : offers.length === 0 && running.length === 0 ? (
-        <MarketEmptyCard title={t("No offers yet")} body={v.offersEmpty} />
+        web ? (
+          <WebEmpty title={t("No offers yet")} body={t(v.offersEmpty)} />
+        ) : (
+          <MarketEmptyCard title={t("No offers yet")} body={v.offersEmpty} />
+        )
       ) : (
         <>
           {offers.map((o) => (
@@ -365,7 +390,8 @@ export function PromotionsTab() {
             />
           ))}
         </>
-      )}
+      );
+  const addOfferBtn = (
       <button
         type="button"
         // The perk is the listing's one free-text offer; any further offer is a promotion (B13).
@@ -374,7 +400,7 @@ export function PromotionsTab() {
         className="tap market-focus"
         style={{
           width: "100%",
-          minHeight: 52,
+          minHeight: web ? 44 : 52,
           borderRadius: 20,
           border: `1.5px dashed ${c.border}`,
           background: "transparent",
@@ -383,56 +409,60 @@ export function PromotionsTab() {
           justifyContent: "center",
           gap: 6,
           fontFamily: "inherit",
-          fontSize: px(13),
-          fontWeight: 800,
+          fontSize: px(web ? 15 : 13),
+          ...(web ? { lineHeight: lh(24) } : {}),
+          fontWeight: web ? 600 : 800,
           color: c.pdark,
           cursor: addDisabled ? "default" : "pointer",
           opacity: addDisabled ? 0.4 : 1,
         }}
       >
-        <Plus size={15} strokeWidth={2.4} aria-hidden />
+        <Plus size={web ? 20 : 15} strokeWidth={2.4} aria-hidden />
         {t("Add an offer")}
       </button>
+  );
 
-      {sugg.length > 0 && (
+  const worthBlock =
+      sugg.length > 0 && (
         <>
           <CapsLabel style={{ marginTop: 6 }}>{t("Worth promoting")}</CapsLabel>
           <Card r={20} style={{ overflow: "hidden" }}>
             {sugg.map((s, i) => (
               <div key={s.x.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderTop: i ? `1px solid ${c.div}` : "none" }}>
                 <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700, color: c.ink, lineHeight: lh(19) }}>{`${s.x.title} · ${dowTime(s.x.date, s.x.startTime)}`}</span>
-                  <span style={{ display: "block", fontSize: px(11.5), color: c.caution, fontWeight: 700, lineHeight: lh(16) }}>{`${t("{booked} of {max} booked", { booked: s.b, max: s.x.maxCapacity })} · ${whenFromNow(s.start, now, today, s.x.date)}`}</span>
+                  <span style={{ display: "block", fontSize: px(web ? 15 : 13.5), fontWeight: 700, color: c.ink, lineHeight: lh(web ? 24 : 19) }}>{`${s.x.title} · ${dowTime(s.x.date, s.x.startTime)}`}</span>
+                  <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: c.caution, fontWeight: 700, lineHeight: lh(web ? 20 : 16) }}>{`${t("{booked} of {max} booked", { booked: s.b, max: s.x.maxCapacity })} · ${whenFromNow(s.start, now, today, s.x.date)}`}</span>
                 </span>
                 <button
                   type="button"
                   onClick={() => setCreate({ what: s.x.id })}
                   disabled={!canWrite}
                   className="tap market-focus"
-                  style={{ height: 34, padding: "0 12px", borderRadius: 10, background: "transparent", color: c.pdark, border: `1px solid ${c.fill}`, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontSize: px(12), fontWeight: 800, whiteSpace: "nowrap", cursor: canWrite ? "pointer" : "default", opacity: canWrite ? 1 : 0.4 }}
+                  style={{ height: web ? 36 : 34, boxSizing: "border-box", padding: "0 12px", borderRadius: 10, background: "transparent", color: c.pdark, border: `1px solid ${c.fill}`, display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", fontSize: px(web ? 15 : 12), ...(web ? { lineHeight: lh(24) } : {}), fontWeight: web ? 600 : 800, whiteSpace: "nowrap", cursor: canWrite ? "pointer" : "default", opacity: canWrite ? 1 : 0.4 }}
                 >
-                  <Megaphone size={13} strokeWidth={2.4} aria-hidden />
+                  <Megaphone size={web ? 16 : 13} strokeWidth={2.4} aria-hidden />
                   {t("Promote")}
                 </button>
               </div>
             ))}
           </Card>
         </>
-      )}
+      );
 
-      {hasSomething && (
+  const featuredBlock =
+      hasSomething && (
         <>
           <CapsLabel style={{ marginTop: 6 }}>{t("Featured on Explore")}</CapsLabel>
           <Card r={20} style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ width: 36, height: 36, borderRadius: 11, background: c.cautionbg, color: c.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Award size={17} strokeWidth={2} aria-hidden />
+              <span style={{ width: web ? 40 : 36, height: web ? 40 : 36, borderRadius: 11, background: c.cautionbg, color: c.gold, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Award size={web ? 20 : 17} strokeWidth={2} aria-hidden />
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: c.ink, lineHeight: lh(20) }}>{v.featureTitle}</span>
-                <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>{t("Shown first in your area for 7 days")}</span>
+                <span style={{ display: "block", fontSize: px(web ? 17 : 14), fontWeight: 800, color: c.ink, lineHeight: lh(web ? 24 : 20) }}>{v.featureTitle}</span>
+                <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: c.faint, lineHeight: lh(web ? 20 : 16) }}>{t("Shown first in your area for 7 days")}</span>
               </span>
-              {price && <span style={{ fontSize: px(14), fontWeight: 800, color: c.ink }}>{price}</span>}
+              {price && <span style={{ fontSize: px(web ? 17 : 14), fontWeight: 800, color: c.ink }}>{price}</span>}
             </div>
             {featLine ? (
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, minHeight: 44, padding: "0 12px", borderRadius: 12, background: c.pale, color: c.pdark, fontSize: px(12.5), fontWeight: 800 }}>
@@ -442,7 +472,7 @@ export function PromotionsTab() {
               </div>
             ) : (
               <>
-                <OutlineButton onClick={() => setFeature({ item: null })} disabled={!online || !m.isOwner} style={{ width: "100%", marginTop: 10, minHeight: 44 }}>
+                <OutlineButton onClick={() => setFeature({ item: null })} disabled={!online || !m.isOwner} style={web ? { width: "100%", marginTop: 10, minHeight: 40, fontSize: px(15), lineHeight: lh(24), fontWeight: 600 } : { width: "100%", marginTop: 10, minHeight: 44 }}>
                   {t("Feature for a week")}
                 </OutlineButton>
                 {!m.isOwner && business && <p style={{ fontSize: px(11.5), color: c.faint, lineHeight: lh(16), marginTop: 8, textAlign: "center" }}>{t(OWNER_ONLY)}</p>}
@@ -450,8 +480,10 @@ export function PromotionsTab() {
             )}
           </Card>
         </>
-      )}
+      );
 
+  const overlays = (
+    <>
       {create && (
         <PromotionSheet
           open
@@ -629,6 +661,45 @@ export function PromotionsTab() {
         onCancel={() => setConfirm(null)}
       />
       {strip}
+    </>
+  );
+
+  if (layout) {
+    return (
+      <div style={{ color: c.ink, lineHeight: "normal" }}>
+        <style>{FOCUS_CSS}</style>
+        {layout({ promos: promoBlock, createPromotion: { onClick: () => setCreate({ what: null }), disabled: !canWrite }, listing: listingBlock, addOffer: addOfferBtn, worth: worthBlock || null, featured: featuredBlock || null })}
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10, color: c.ink, lineHeight: "normal" }}>
+      <style>{FOCUS_CSS}</style>
+      <CapsLabel>{t("Your promotions")}</CapsLabel>
+      {promoBlock}
+      {createBtn}
+
+      <CapsLabel style={{ marginTop: 6 }}>{t("Offers on your listing")}</CapsLabel>
+      {listingBlock}
+      {addOfferBtn}
+
+      {worthBlock}
+
+      {featuredBlock}
+
+      {overlays}
+    </div>
+  );
+}
+
+/** Website viewport (WB-MA.3): an empty column, dashed #AEA1DC 1.5 r20, padding 16, centred; 17/24 800 title, 15/24 #5B5349 body (max 44ch). */
+function WebEmpty({ title, body }: { title: string; body: string }) {
+  return (
+    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", borderRadius: 20, background: "#FFFFFF", border: "1.5px dashed #AEA1DC", padding: 16 }}>
+      <div style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{title}</div>
+      <div style={{ fontSize: 15, lineHeight: "24px", color: "#5B5349", marginTop: 4, maxWidth: "44ch" }}>{body}</div>
     </div>
   );
 }
@@ -689,31 +760,32 @@ function PromoCard({
   actions: CardAction[];
 }) {
   const [bg, ink] = chipTone(chip, c);
+  const web = useMarketWebType();
   return (
-    <div data-promo-card style={{ borderRadius: 20, background: c.card, border: `1px solid ${borderColor ?? c.border}`, padding: "14px 16px", boxShadow: glow ? `0 0 0 3px ${c.pale}` : "none", transition: "box-shadow 0.3s ease" }}>
+    <div data-promo-card style={{ borderRadius: 20, background: c.card, border: `1px solid ${borderColor ?? c.border}`, padding: web ? "12px 16px" : "14px 16px", boxShadow: glow ? `0 0 0 3px ${c.pale}` : "none", transition: "box-shadow 0.3s ease" }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-        <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icon size={17} strokeWidth={2} aria-hidden />
+        <span style={{ width: web ? 40 : 36, height: web ? 40 : 36, borderRadius: 11, background: c.pale, color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={web ? 20 : 17} strokeWidth={2} aria-hidden />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: px(14), fontWeight: 800, lineHeight: lh(20), color: c.ink }}>{title}</span>
-          <span style={{ display: "block", fontSize: px(11.5), color: c.faint, marginTop: 2, lineHeight: lh(16) }}>{dates}</span>
+          <span style={{ display: "block", fontSize: px(web ? 17 : 14), fontWeight: 800, lineHeight: lh(web ? 24 : 20), color: c.ink }}>{title}</span>
+          <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: c.faint, marginTop: 2, lineHeight: lh(web ? 20 : 16) }}>{dates}</span>
         </span>
-        <span style={{ fontSize: px(10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: bg, color: ink, whiteSpace: "nowrap" }}>{chipLabel(chip)}</span>
+        <span style={{ fontSize: px(web ? 11 : 10.5), fontWeight: 800, padding: "2px 8px", borderRadius: 999, background: bg, color: ink, whiteSpace: "nowrap", ...(web ? { lineHeight: lh(16) } : {}) }}>{chipLabel(chip)}</span>
       </div>
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginTop: web ? 10 : 12 }}>
           {stats.map((s) => (
             <div key={s.label} style={{ borderRadius: 12, background: c.soft, padding: "8px 10px" }}>
-              <p style={{ fontSize: px(10.5), color: c.faint, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: lh(15.75) }}>{s.label}</p>
-              <p style={{ fontSize: px(16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: c.ink, lineHeight: lh(22) }}>{s.value}</p>
+              <p style={{ fontSize: px(web ? 13 : 10.5), color: c.faint, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", lineHeight: lh(web ? 20 : 15.75) }}>{s.label}</p>
+              <p style={{ fontSize: px(web ? 17 : 16), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: c.ink, lineHeight: lh(web ? 24 : 22) }}>{s.value}</p>
             </div>
           ))}
         </div>
       )}
-      {line && <p style={{ fontSize: px(11.5), color: c.ink2, marginTop: 8, lineHeight: lh(16) }}>{line}</p>}
+      {line && <p style={{ fontSize: px(web ? 13 : 11.5), color: c.ink2, marginTop: 8, lineHeight: lh(web ? 20 : 16) }}>{line}</p>}
       {actions.length > 0 && (
-        <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+        <div style={{ display: "flex", gap: 6, marginTop: web ? 10 : 12 }}>
           {actions.map((a) => (
             <button
               key={a.key}
@@ -734,13 +806,14 @@ function PromoCard({
                 justifyContent: "center",
                 gap: 5,
                 fontFamily: "inherit",
-                fontSize: px(12),
-                fontWeight: 800,
+                fontSize: px(web ? 15 : 12),
+                ...(web ? { lineHeight: lh(24), boxSizing: "border-box" as const, whiteSpace: "nowrap" as const } : {}),
+                fontWeight: web ? 600 : 800,
                 cursor: a.disabled ? "default" : "pointer",
                 opacity: a.disabled ? 0.4 : 1,
               }}
             >
-              <a.icon size={14} strokeWidth={2.2} aria-hidden />
+              <a.icon size={web ? 16 : 14} strokeWidth={2.2} aria-hidden />
               {a.label}
             </button>
           ))}
@@ -776,22 +849,23 @@ function OfferCard({
   teal?: boolean;
   menu?: { label: string; disabled: boolean; onOpen: (el: HTMLElement) => void };
 }) {
+  const web = useMarketWebType();
   return (
     <div style={{ borderRadius: 20, background: c.card, border: `1px solid ${teal ? c.teal : c.border}`, padding: "14px 16px" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <Icon size={17} strokeWidth={2} aria-hidden />
+        <span style={{ width: web ? 40 : 36, height: web ? 40 : 36, borderRadius: 11, background: c.pale, color: c.pdark, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={web ? 20 : 17} strokeWidth={2} aria-hidden />
         </span>
         <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: "block", fontSize: px(14), fontWeight: 800, color: c.ink, lineHeight: lh(20) }}>{title}</span>
-          <span style={{ display: "block", fontSize: px(11.5), color: c.faint, lineHeight: lh(16) }}>{sub}</span>
+          <span style={{ display: "block", fontSize: px(web ? 17 : 14), fontWeight: 800, color: c.ink, lineHeight: lh(web ? 24 : 20) }}>{title}</span>
+          <span style={{ display: "block", fontSize: px(web ? 13 : 11.5), color: c.faint, lineHeight: lh(web ? 20 : 16) }}>{sub}</span>
         </span>
         <SheetSwitch on={on} onChange={(x) => onSwitch?.(x)} label={on ? t("Turn off {name}", { name: title }) : t("Turn on {name}", { name: title })} disabled={switchDisabled || !onSwitch} />
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${c.div}` }}>
-        <span style={{ fontSize: px(11), fontWeight: 600, color: c.faint }}>{t("On your card:")}</span>
-        <span style={{ fontSize: px(10.5), fontWeight: 800, color: on ? c.pdark : c.faint, background: on ? c.pale : c.soft, opacity: on ? 1 : 0.6, borderRadius: 999, padding: "2px 8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chip}</span>
-        {used && <span style={{ marginInlineStart: "auto", fontSize: px(11), color: c.faint, whiteSpace: "nowrap" }}>{used}</span>}
+        <span style={{ fontSize: px(web ? 13 : 11), fontWeight: 600, color: c.faint, ...(web ? { lineHeight: lh(20), whiteSpace: "nowrap" as const } : {}) }}>{t("On your card:")}</span>
+        <span style={{ fontSize: px(web ? 11 : 10.5), fontWeight: 800, color: on ? c.pdark : c.faint, background: on ? c.pale : c.soft, opacity: on ? 1 : 0.6, borderRadius: 999, padding: "2px 8px", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{chip}</span>
+        {used && <span style={{ marginInlineStart: "auto", fontSize: px(web ? 13 : 11), color: c.faint, whiteSpace: "nowrap" }}>{used}</span>}
         {menu && (
           <button
             type="button"

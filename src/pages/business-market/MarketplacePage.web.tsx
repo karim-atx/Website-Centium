@@ -1,17 +1,17 @@
-import React from "react";
 import { Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { MarketSkeleton } from "../../components/market/MarketStates";
 import { BizShareButton } from "../../components/share/business/BizShareButton";
 import { fetchRatingLine } from "../../components/share/business/useBizBrand";
 import { useWebLayout } from "../../components/web/useWebLayout";
+import { MarketWebType } from "../../components/market/webType";
 import { WebSegmented } from "../business-analytics/AnalyticsParts.web";
 import { MarketProvider, MARKET_TAB_KEYS, tabKeyOf, useMarket, type MarketTabKey } from "./MarketContext";
 import { HiddenBanner } from "./MarketplacePage";
 import { OverviewWeb } from "./Overview.web";
 import { ShowcaseManager } from "./ShowcaseManager";
-import { OffersTab } from "./OffersManager";
-import { PerformanceTab } from "./PerformanceTab";
+import { OffersTabWeb } from "./OffersWeb.web";
+import { PerformanceTabWeb } from "./PerformanceWeb.web";
 import PhotosPage from "./PhotosPage";
 import PreviewPage from "./PreviewPage";
 import SeeAllPage from "./SeeAllPage";
@@ -22,14 +22,15 @@ import { t } from "../../i18n/core";
 // from 1024px wide, for a gym or a classes business (a store's Marketplace is
 // its Products page). The page header (64: "Marketplace", the line, the 40
 // share button at the end) and the segmented tabs (40, full width) over the
-// tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase,
-// Offers and Performance (WB-MA.2-.4) show their mobile tab in a centred
-// column under the web tabs until their web layouts are built. The other
+// tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase
+// (WB-MA.2) its list-detail with the docked editor (ShowcaseManager reads
+// MarketWebType and draws ShowcaseWeb); Offers (WB-MA.3) its three columns
+// (OffersWeb); Performance (WB-MA.4) its offer charts and Listing
+// (PerformanceWeb). The other
 // Marketplace routes (photos, preview, See all, the offer editor) keep their
 // mobile pages in the shell's centred column. The tab lives in ?tab= as on
 // mobile; the mobile Marketplace page is not touched.
 
-const Column: React.FC<{ children: React.ReactNode }> = ({ children }) => <div style={{ maxWidth: 430, margin: "0 auto" }}>{children}</div>;
 
 export default function MarketRoutesWeb() {
   return (
@@ -92,10 +93,10 @@ function Body() {
           ) : tab === "overview" ? (
             <OverviewWeb rail={rail} />
           ) : (
-            <Column>
+            <MarketWebType.Provider value={rail ? "rail" : "wide"}>
               <HiddenBanner />
-              {tab === "showcase" ? <ShowcaseManager /> : tab === "offers" ? <OffersTab /> : <PerformanceTab />}
-            </Column>
+              {tab === "showcase" ? <ShowcaseManager /> : tab === "offers" ? <OffersTabWeb /> : <PerformanceTabWeb />}
+            </MarketWebType.Provider>
           )}
         </div>
       </div>

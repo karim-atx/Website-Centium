@@ -23,6 +23,8 @@ import { BizShareButton } from "../../../../components/share/business/BizShareBu
 import { productData } from "../../../../components/share/business/bizCardModel";
 import { MasterSheet, CentredDialog, PrimaryButton, SaveError, SheetBox, SheetSwitch, fieldStyle, px, useMarketColors } from "../../../business-market/listingParts";
 import { CategoryPicker } from "./CategoryPicker";
+import { DockBox, DockedSheet } from "../../../business-market/ShowcaseDock.web";
+import { DOCK_SAVE, dockField } from "../../../business-market/showcaseDockStyle";
 import { CONTACT_TEXT, moderationRefusal } from "../../../../services/moderation/text";
 import { t, tk } from "../../../../i18n/core";
 
@@ -83,9 +85,14 @@ export interface ProductEditorProps {
    * one picks its Explore category; the price may be empty).
    */
   variant?: "store" | "showcase";
+  /**
+   * Website viewport (WB-MA.2): drawn docked beside the Showcase list in the
+   * board's web frame and sizes instead of as a sheet. Mobile never sets it.
+   */
+  docked?: boolean;
 }
 
-export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved, variant = "store" }: ProductEditorProps) {
+export function ProductEditorSheet({ open, onClose, businessId, businessType, stockShipped, product, initial, onSaved, variant = "store", docked = false }: ProductEditorProps) {
   const m = useMarketColors();
   const online = useOnline();
   const { authUserId } = useApp();
@@ -258,6 +265,10 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
   const shownUrl = photo?.preview ?? (ownState?.status === "pending" ? ownState.url : null) ?? imageUrl;
 
   const canPhoto = stockShipped && online && !photoBusy;
+  // Docked (web only): the board's frame, boxes and field sizes; otherwise the mobile sheet as before.
+  const Shell = docked ? DockedSheet : MasterSheet;
+  const Box = docked ? DockBox : SheetBox;
+  const field = (invalid?: boolean) => (docked ? dockField(invalid) : fieldStyle(m, invalid));
   const share =
     product && product.visible ? (
       <BizShareButton label={t("Share {name}", { name: product.name })} getData={() => ({ t: "product", d: productData({ id: product.id, title: product.name, price: product.price !== null ? formatPrice(product.price) : "", description: product.description }, product.imageUrl) })} />
@@ -277,22 +288,22 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
 
   return (
     <>
-      <MasterSheet
-        open={open && del === 0}
+      <Shell
+        open={docked ? open : open && del === 0}
         onClose={onClose}
         title={product ? t("Edit item") : t("Add item")}
         headerAction={share}
         footer={
           <>
-            <PrimaryButton onClick={() => void save()} disabled={!valid || !changed || !online || photoBusy} busy={busy}>
+            <PrimaryButton onClick={() => void save()} disabled={!valid || !changed || !online || photoBusy} busy={busy} style={docked ? DOCK_SAVE : undefined}>
               {busy ? t("Saving…") : t("Save")}
             </PrimaryButton>
             {error && <SaveError>{error}</SaveError>}
           </>
         }
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, color: m.ink, lineHeight: "normal", ...(docked ? { flex: 1, justifyContent: "space-between" } : {}) }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: docked ? 0 : 4 }}>
             <button
               type="button"
               aria-label={shownUrl ? t("Change photo") : t("Add a photo")}
@@ -301,7 +312,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               disabled={!canPhoto}
               onClick={() => setPhotoOpen(true)}
               className="market-focus"
-              style={{ position: "relative", width: 132, height: 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: canPhoto ? "pointer" : "default", overflow: "visible" }}
+              style={{ position: "relative", width: docked ? 104 : 132, height: docked ? 104 : 132, borderRadius: 18, background: m.soft, border: 0, padding: 0, display: "flex", alignItems: "center", justifyContent: "center", cursor: canPhoto ? "pointer" : "default", overflow: "visible" }}
             >
               {shownUrl ? (
                 <img src={shownUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block" }} />
@@ -333,10 +344,10 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               </p>
             ) : null}
           </div>
-          <SheetBox label={t("Name")} htmlFor={`${ids}-name`}>
-            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={store ? t("e.g. Whey Protein 2 kg") : t("e.g. 10-class pack")} style={fieldStyle(m)} />
-          </SheetBox>
-          <SheetBox label={t("Short description")} htmlFor={`${ids}-desc`}>
+          <Box label={t("Name")} htmlFor={`${ids}-name`}>
+            <input id={`${ids}-name`} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder={store ? t("e.g. Whey Protein 2 kg") : t("e.g. 10-class pack")} style={field()} />
+          </Box>
+          <Box label={t("Short description")} htmlFor={`${ids}-desc`}>
             <textarea
               id={`${ids}-desc`}
               value={description}
@@ -344,10 +355,10 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               maxLength={500}
               rows={1}
               placeholder={t("Optional")}
-              style={{ ...fieldStyle(m), resize: "none", minHeight: 41, fieldSizing: "content" } as React.CSSProperties}
+              style={{ ...field(), resize: "none", minHeight: docked ? 40 : 41, fieldSizing: "content" } as React.CSSProperties}
             />
-          </SheetBox>
-          <SheetBox label={t("Display price")} htmlFor={`${ids}-price`}>
+          </Box>
+          <Box label={t("Display price")} htmlFor={`${ids}-price`}>
             <input
               id={`${ids}-price`}
               value={price}
@@ -359,24 +370,24 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               placeholder={store ? "$0.00" : t("Optional")}
               aria-invalid={touched.price && !priceEmpty && !priceOk ? true : undefined}
               aria-describedby={touched.price && !priceEmpty && !priceOk ? `${ids}-price-err` : undefined}
-              style={fieldStyle(m, touched.price && !priceEmpty && !priceOk)}
+              style={field(touched.price && !priceEmpty && !priceOk)}
             />
             {touched.price && !priceEmpty && !priceOk ? (
               <p id={`${ids}-price-err`} role="alert" style={{ fontSize: px(11.5), fontWeight: 700, color: m.high, marginTop: 6 }}>
                 {t(PRICE_ERROR)}
               </p>
             ) : null}
-          </SheetBox>
+          </Box>
           {store ? (
             <>
               {stockShipped ? (
                 <CategoryPicker categories={categories} value={categoryId} onPick={setCategoryId} onCreate={addCategory} disabled={!online} />
               ) : (
-                <SheetBox label={t("Category")}>
+                <Box label={t("Category")}>
                   <div style={{ ...fieldStyle(m), color: m.faint, opacity: 0.6 }}>{t(SOON)}</div>
-                </SheetBox>
+                </Box>
               )}
-              <SheetBox label={t("In stock")} htmlFor={`${ids}-stock`}>
+              <Box label={t("In stock")} htmlFor={`${ids}-stock`}>
                 <input
                   id={`${ids}-stock`}
                   value={stock}
@@ -393,11 +404,11 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                 <p style={{ fontSize: px(11.5), color: stockShipped && touched.stock && !stockOk ? m.high : m.faint, fontWeight: stockShipped && touched.stock && !stockOk ? 700 : 400, marginTop: 6 }}>
                   {!stockShipped ? t(SOON) : touched.stock && !stockOk ? t(STOCK_ERROR) : t("Leave empty if you don't track stock.")}
                 </p>
-              </SheetBox>
+              </Box>
             </>
           ) : !product ? (
-            <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
-              <p id={`${ids}-cat`} style={{ fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
+            <div style={{ background: m.sgrey, borderRadius: 14, padding: docked ? "10px 14px" : "12px 14px" }}>
+              <p id={`${ids}-cat`} style={docked ? { fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#575863", marginBottom: 6 } : { fontSize: px(13), fontWeight: 500, color: m.slabel, marginBottom: 8 }}>
                 {t("Explore category")}
               </p>
               <div role="radiogroup" aria-labelledby={`${ids}-cat`} style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -420,13 +431,13 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               </div>
             </div>
           ) : null}
-          <div style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+          <div style={{ background: m.sgrey, borderRadius: 14, padding: docked ? "10px 14px" : "12px 14px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
               <div style={{ minWidth: 0 }}>
-                <div id={`${ids}-vis`} style={{ fontSize: px(14), fontWeight: 700 }}>
+                <div id={`${ids}-vis`} style={docked ? { fontSize: 15, lineHeight: "24px", fontWeight: 700 } : { fontSize: px(14), fontWeight: 700 }}>
                   {t("Show in showcase")}
                 </div>
-                <div id={`${ids}-vis-sub`} style={{ fontSize: px(11.5), color: m.faint }}>
+                <div id={`${ids}-vis-sub`} style={docked ? { fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { fontSize: px(11.5), color: m.faint }}>
                   {stockShipped ? t("Off hides it from members") : t(SOON)}
                 </div>
               </div>
@@ -442,13 +453,13 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
               }}
               disabled={busy || !online}
               className="market-focus"
-              style={{ alignSelf: "center", minHeight: 44, padding: "0 12px", border: 0, background: "transparent", color: m.high, fontSize: px(14), fontWeight: 700, fontFamily: "inherit", cursor: "pointer", opacity: busy || !online ? 0.4 : 1 }}
+              style={{ alignSelf: "center", minHeight: docked ? 40 : 44, padding: docked ? "0 14px" : "0 12px", borderRadius: docked ? 12 : undefined, border: 0, background: "transparent", color: m.high, fontSize: docked ? 15 : px(14), fontWeight: 700, fontFamily: "inherit", cursor: "pointer", opacity: busy || !online ? 0.4 : 1 }}
             >
               {t("Delete item")}
             </button>
           ) : null}
         </div>
-      </MasterSheet>
+      </Shell>
       <MasterSheet open={open && del === 0 && photoOpen} onClose={() => setPhotoOpen(false)} title={t("Item photo")}>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 14 }}>
           {photoRow(

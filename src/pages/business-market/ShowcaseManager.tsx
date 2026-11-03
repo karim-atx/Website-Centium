@@ -10,7 +10,9 @@ import { fetchStoreProducts, productCounts, stockChip, type Product, type Produc
 import { reorderShowcase } from "../../services/business-market/overview";
 import { marketPalette } from "../../theme/marketTokens";
 import { ProductEditorSheet } from "../business-ops/store/products/ProductEditorSheet";
+import { useMarketWebType } from "../../components/market/webType";
 import { useMarket } from "./MarketContext";
+import { ShowcaseWeb } from "./ShowcaseWeb.web";
 import { usePendingPhotos } from "./usePendingPhotos";
 import { CapsLabel, OutlineButton, TextLink, lh, px, useMarketColors, useStrip } from "./listingParts";
 import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine } from "./showcaseModel";
@@ -63,6 +65,12 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
   const [editor, setEditor] = useState<{ open: boolean; product: Product | null }>({ open: false, product: null });
   const [strip, showStrip] = useStrip();
   const reload = useCallback(() => setTick((t) => t + 1), []);
+  // Website viewport (WB-MA.2): inside the web Marketplace a gym or classes
+  // business gets the list-detail with the docked editor (ShowcaseWeb); the
+  // store and the category See all keep this layout. Mobile has no provider.
+  const web = useMarketWebType() && !store && !section;
+  // The docked editor's item: undefined = the first row (the board's default), null = closed, "new" = Add item.
+  const [sel, setSel] = useState<string | null | undefined>(undefined);
   // Round C Release 2: a photo waiting for approval shows in its row's frame (only to this business).
   const pending = usePendingPhotos("showcase_image", tick);
 
@@ -102,7 +110,7 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
     showStrip(r.offline ? t("You're offline. Try again when you're connected.") : r.message, r.offline ? "neutral" : "error");
   };
 
-  const open = (p: Product | null) => setEditor({ open: true, product: p });
+  const open = (p: Product | null) => (web ? setSel(p ? p.id : "new") : setEditor({ open: true, product: p }));
   const allIds = products.map((p) => p.id);
   const banner = !store ? (
     <div style={{ borderRadius: 16, background: c.pale, padding: "12px 14px", fontSize: px(12.5), lineHeight: lh(18), fontWeight: 700, color: c.pdark, marginBottom: 12 }}>
@@ -194,6 +202,54 @@ export function ShowcaseManager({ section }: { section?: string | null }) {
     }
   }
 
+  if (web) {
+    const current = sel === undefined ? (products[0]?.id ?? null) : sel;
+    const product = current && current !== "new" ? (products.find((p) => p.id === current) ?? null) : null;
+    return (
+      <ShowcaseWeb
+        loading={!businessId || state.status === "loading"}
+        failed={state.status === "error" || state.status === "pending"}
+        onRetry={reload}
+        offline={<MarketOffline loaded={state.status === "ok"} onRetry={reload} style={{ marginBottom: 12 }} />}
+        count={products.length}
+        canAdd={canEdit && online}
+        onAdd={() => open(null)}
+        list={
+          <ItemList label={t("Showcase items")} items={products} pending={pending} store={false} canReorder={canEdit} onOpen={open} onReorder={(ids) => void reorder(ids)} web selectedId={current === "new" ? null : current} />
+        }
+        editor={
+          businessId && state.status === "ok" && current && (current === "new" || product) ? (
+            <ProductEditorSheet
+              open
+              docked
+              onClose={() => {
+                // Focus goes back to the row the editor showed (or to Add item).
+                const back = current;
+                setSel(null);
+                requestAnimationFrame(() => {
+                  const el = back === "new" ? document.querySelector<HTMLElement>("[data-showcase] .sc-web-btn") : document.querySelector<HTMLElement>(`[data-row-id="${back}"] > button:nth-of-type(2)`);
+                  el?.focus();
+                });
+              }}
+              businessId={businessId}
+              businessType={business?.type ?? null}
+              stockShipped={state.value.stockShipped}
+              product={product}
+              variant="showcase"
+              onSaved={(msg) => {
+                // An edit stays on its item; after an add or a delete the first row is shown.
+                if (current === "new" || (product && msg === t("{name} deleted.", { name: product.name }))) setSel(undefined);
+                showStrip(msg);
+                reload();
+              }}
+            />
+          ) : null
+        }
+        strip={strip}
+      />
+    );
+  }
+
   return (
     <div style={{ paddingBottom: 32, color: c.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
@@ -256,6 +312,16 @@ function EmptyShowcase({ store, canAdd, onAdd }: { store: boolean; canAdd: boole
   );
 }
 
+/** Website viewport: a row's hover tint (#F7F5FD), not on the selected row. */
+const WEB_ROW_CSS = "[data-web-row]:not([aria-current]):hover{background:#F7F5FD}";
+
+/** Website viewport: the board's handle (2.8 dots, 3.4 apart across, 4.2 down, in the 16 box). */
+const DOTS_WEB = (
+  <>
+    {[7.35, 16.65].flatMap((x) => [1.5, 12, 22.5].map((y) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2.1" />))}
+  </>
+);
+
 /** The six-dot drag handle (16, fill --tert). */
 const DOTS = (
   <>
@@ -276,6 +342,8 @@ function ItemList({
   canReorder,
   onOpen,
   onReorder,
+  web = false,
+  selectedId = null,
 }: {
   label: string;
   items: Product[];
@@ -285,6 +353,9 @@ function ItemList({
   canReorder: boolean;
   onOpen: (p: Product) => void;
   onReorder: (ids: string[]) => void;
+  /** Website viewport (WB-MA.2): the board's row sizes, the selected row tinted. */
+  web?: boolean;
+  selectedId?: string | null;
 }) {
   const dark = useIsDark();
   const c = marketPalette(dark);
@@ -379,6 +450,7 @@ function ItemList({
       <span aria-live="assertive" className="sr-only">
         {announce}
       </span>
+      {web ? <style>{WEB_ROW_CSS}</style> : null}
       <div ref={listRef} role="list" aria-label={label} style={{ borderRadius: 24, background: c.card, border: `1px solid ${c.border}`, overflow: "hidden" }}>
         {shown.map((p, i) => {
           const lifted = drag?.id === p.id;
@@ -390,19 +462,22 @@ function ItemList({
           const op = p.visible ? 1 : 0.5;
           const photo = pending.get(p.id) ?? p.imageUrl;
           const price = priceLine(p, store);
+          const current = web && selectedId === p.id;
           return (
             <div
               key={p.id}
               role="listitem"
               data-row-id={p.id}
+              data-web-row={web ? "" : undefined}
+              aria-current={current || undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                paddingBlock: "10px", paddingInline: "8px 14px",
+                gap: web ? 12 : 10,
+                ...(web ? { minHeight: 72, boxSizing: "border-box" as const, paddingBlock: "8px", paddingInline: "10px 16px", background: lifted ? c.card : current ? "#EFEDF8" : undefined } : { paddingBlock: "10px", paddingInline: "8px 14px" }),
                 borderTop: i ? `0.5px solid ${c.div}` : 0,
                 position: "relative",
-                background: lifted ? c.card : undefined,
+                ...(web ? {} : { background: lifted ? c.card : undefined }),
                 boxShadow: lifted ? (dark ? "0 10px 24px rgba(0,0,0,0.45)" : "0 10px 24px rgba(36,31,27,0.16)") : undefined,
                 zIndex: lifted ? 1 : undefined,
                 transition: reduce ? undefined : "box-shadow 140ms ease",
@@ -421,7 +496,7 @@ function ItemList({
                 style={{ width: 16, height: 16, padding: 0, border: 0, background: "transparent", flexShrink: 0, cursor: canReorder ? (lifted ? "grabbing" : "grab") : "default", touchAction: "none", display: "flex", opacity: canReorder ? 1 : 0.4 }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill={c.tert} stroke="none" aria-hidden style={{ transform: "none" }}>
-                  {DOTS}
+                  {web ? DOTS_WEB : DOTS}
                 </svg>
               </button>
               <button
@@ -429,18 +504,26 @@ function ItemList({
                 onClick={() => onOpen(p)}
                 aria-label={`${p.name}${p.visible ? "" : `${t(", ")}${t("hidden")}`}${stockWords ? `${t(", ")}${stockWords}` : ""}. ${t("Edit item")}`}
                 className="market-focus"
-                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 10, padding: 0, border: 0, background: "transparent", textAlign: "start", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
+                style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: web ? 12 : 10, padding: 0, border: 0, background: "transparent", textAlign: "start", fontFamily: "inherit", color: c.ink, cursor: "pointer" }}
               >
-                <span style={{ width: 52, height: 52, borderRadius: 12, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: op, overflow: "hidden" }}>
-                  {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={18} strokeWidth={1.8} color={c.tert} aria-hidden />}
+                <span style={{ width: web ? 56 : 52, height: web ? 56 : 52, borderRadius: 12, background: c.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, opacity: op, overflow: "hidden" }}>
+                  {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={web ? 20 : 18} strokeWidth={1.8} color={c.tert} aria-hidden />}
                 </span>
+                {web ? (
+                  <span style={{ flex: 1, minWidth: 0, opacity: op }}>
+                    <span style={{ display: "block", fontSize: px(15), lineHeight: lh(22), fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+                    {p.description ? <span style={{ display: "block", fontSize: px(13), lineHeight: lh(20), color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.description}</span> : null}
+                    {price ? <span style={{ display: "block", fontSize: px(13), lineHeight: lh(20), fontWeight: 700 }}>{price}</span> : null}
+                  </span>
+                ) : (
                 <span style={{ flex: 1, minWidth: 0, opacity: op, lineHeight: "normal" }}>
                   <span style={{ display: "block", fontSize: px(13.5), fontWeight: 700 }}>{p.name}</span>
                   {p.description ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.description}</span> : null}
                   {price ? <span style={{ display: "block", fontSize: px(12), fontWeight: 700, marginTop: 1 }}>{price}</span> : null}
                 </span>
-                {chip ? <span style={{ fontSize: px(10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, flexShrink: 0, lineHeight: "normal" }}>{chipText}</span> : null}
-                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
+                )}
+                {chip ? <span style={{ fontSize: px(web ? 11 : 10.5), fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: chipBg, color: chipInk, flexShrink: 0, lineHeight: web ? lh(16) : "normal" }}>{chipText}</span> : null}
+                <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} style={{ flexShrink: 0 }} />
               </button>
             </div>
           );

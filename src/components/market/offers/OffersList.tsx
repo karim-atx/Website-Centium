@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Plus } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useOnline } from "../../../hooks/useOnline";
 import { textPx } from "../../../theme/textSize";
@@ -15,6 +15,11 @@ import { FOCUS_CSS } from "../usePress";
 import { fetchMyOffers, offerMeta, offerStatus, setOfferPaused, sortOffers, type ManagedOffer, type OfferOwner } from "../../../services/offers/manage";
 import { Caps, OutlineButton } from "./parts";
 import { useOverlayStrip } from "./useOverlayStrip";
+import { useMarketWebType } from "../webType";
+
+/** Website viewport (WB-MA.3): the column's caps (13/20 .08em) and the outlined button (40, r12, 15/24 600, + 20). */
+const WEB_CAPS: React.CSSProperties = { fontSize: 13, lineHeight: "20px", letterSpacing: "0.08em" };
+const WEB_BTN: React.CSSProperties = { minHeight: 40, boxSizing: "border-box", fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", flex: "none" };
 
 // Market + Share 3.0 · W3 · the Offers Manager list (B-MA.3 `offersList`,
 // Business Marketplace Screens lines 159–176; P-MA.3 `ofList` / `ofEmpty`,
@@ -50,6 +55,17 @@ export interface OffersListProps {
 
 type Load = { kind: "loading" } | { kind: "ready"; offers: ManagedOffer[] } | { kind: "error" } | { kind: "offline" };
 
+/** Website viewport: the outlined Create offer in the board's web size (hover #F0EDF9). */
+const WebCreate: React.FC<{ label: string; onPress: () => void; icon?: boolean; disabled?: boolean; style?: React.CSSProperties }> = ({ label, onPress, icon = true, disabled, style }) => (
+  <>
+    <style>{".of-web-btn:not(:disabled):hover{background:#F0EDF9}"}</style>
+    <button type="button" onClick={onPress} disabled={disabled} className="of-web-btn market-focus" style={{ ...WEB_BTN, borderRadius: 12, border: "1px solid rgba(36,31,27,0.11)", background: "transparent", color: "#7D6BB5", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "0 14px", fontFamily: "inherit", cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1, ...style }}>
+      {icon ? <Plus size={20} strokeWidth={2.4} aria-hidden style={NO_ICON_SCALE} /> : null}
+      {label}
+    </button>
+  </>
+);
+
 export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManage, onCreate, onOpen, flash }) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
@@ -59,6 +75,8 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
   const [menu, setMenu] = useState<{ offer: ManagedOffer; anchor: HTMLElement } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [strip, showStrip] = useOverlayStrip();
+  // Website viewport: the board's web sizes inside the web Marketplace (no provider elsewhere).
+  const web = useMarketWebType();
   const ownerKey = owner ? (owner.variant === "business" ? owner.businessId : "me") : null;
 
   useEffect(() => {
@@ -103,12 +121,12 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
   const empty = load.kind === "ready" && offers.length === 0;
 
   return (
-    <section aria-labelledby={`offers-caps-${variant}`} style={{ color: m.ink, lineHeight: "normal" }}>
+    <section aria-labelledby={`offers-caps-${variant}`} style={{ color: m.ink, lineHeight: "normal", ...(web ? { display: "flex", flexDirection: "column", flex: "1 0 auto" } : null) }}>
       <style>{FOCUS_CSS}</style>
       {strip}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <Caps id={`offers-caps-${variant}`}>{t("Point offers")}</Caps>
-        {canManage ? <OutlineButton label={t("Create offer")} onPress={onCreate} disabled={!owner} /> : null}
+        <Caps id={`offers-caps-${variant}`} style={web ? WEB_CAPS : undefined}>{t("Point offers")}</Caps>
+        {canManage ? web ? <WebCreate label={t("Create offer")} onPress={onCreate} disabled={!owner} /> : <OutlineButton label={t("Create offer")} onPress={onCreate} disabled={!owner} /> : null}
       </div>
 
       {load.kind === "loading" ? <MarketSkeleton radius={20} rows={2} count={3} label={tk("Loading offers")} style={{ marginTop: 10 }} /> : null}
@@ -118,7 +136,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
       {offers.length > 0 ? (
         <>
           {!online ? <MarketOffline loaded style={{ marginTop: 10 }} /> : null}
-          <ul style={{ listStyle: "none", margin: "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+          <ul style={{ listStyle: "none", margin: web ? "12px 0 0" : "10px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 10 }}>
             {offers.map((o) => {
               const status = offerStatus(o);
               const meta = offerMeta(o);
@@ -157,7 +175,20 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
         </>
       ) : null}
 
-      {empty ? (
+      {empty && web ? (
+        <div style={{ marginTop: 12, flex: 1, minHeight: 280, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 10, border: "1.5px dashed #AEA1DC", borderRadius: 24, padding: 24 }}>
+          <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <PointsLeaf height={24} label={null} />
+          </span>
+          <div style={{ fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{t("No offers yet")}</div>
+          <div style={{ fontSize: 15, lineHeight: 1.55, color: "#8C8378", maxWidth: 360 }}>
+            {variant === "professional"
+              ? t("Offer a discount on your services that clients can redeem with their points. You fund it in full.")
+              : t("Offer a discount that members can redeem with their points. You fund it in full.")}
+          </div>
+          {canManage ? <WebCreate label={t("Create offer")} icon={false} onPress={onCreate} style={{ marginTop: 6 }} /> : null}
+        </div>
+      ) : empty ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "44px 24px 0" }}>
           <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: dark ? m.pale : "#EEEAF8", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <PointsLeaf height={24} label={null} />
