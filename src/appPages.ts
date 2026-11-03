@@ -16,6 +16,10 @@ import HomeMobile from "./pages/home/Home";
 import HomeWeb from "./pages/home/Home.web";
 import MindMobile from "./pages/mind/Mind";
 import MindWeb from "./pages/mind/Mind.web";
+import ProfessionalsMobile from "./pages/professionals/Professionals";
+import ProfessionalDetailMobile from "./pages/professionals/ProfessionalDetail";
+import ProfessionalReviewsMobile from "./pages/professionals/ProfessionalReviews";
+import ProfessionalsWeb from "./pages/professionals/Professionals.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -42,9 +46,10 @@ export { default as Cycle } from "./pages/cycle/Cycle";
 export { default as Contraception } from "./pages/contraception/Contraception";
 // Website viewport v1: the Mind hub's web layout from 1024px wide (WC-MI); the sections and the mobile page below.
 export const Mind = withWeb(MindMobile, MindWeb);
-export { default as Professionals } from "./pages/professionals/Professionals";
-export { default as ProfessionalDetail } from "./pages/professionals/ProfessionalDetail";
-export { default as ProfessionalReviews } from "./pages/professionals/ProfessionalReviews";
+// Website viewport v1: Professionals' web layout from 1024px wide (WC-PR, WC-PR.1 to .3: one page for the list, the profile and the reviews); the mobile pages below.
+export const Professionals = withWeb(ProfessionalsMobile, ProfessionalsWeb);
+export const ProfessionalDetail = withWeb(ProfessionalDetailMobile, ProfessionalsWeb);
+export const ProfessionalReviews = withWeb(ProfessionalReviewsMobile, ProfessionalsWeb);
 export { default as ProVerification } from "./pages/professionals/ProVerification";
 export { default as Messages } from "./pages/messages/Messages";
 export { default as CallLink, LegacyCallLink } from "./components/calls/CallLink";
