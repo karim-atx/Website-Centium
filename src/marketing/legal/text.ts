@@ -181,7 +181,8 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
 ];
 
 // Copied verbatim from the handoff's `healthData`: a flat bullet list. The
-// page (LG1) shows it under its "In detail" heading, which is not legal text.
+// page (LG1 v5) groups it under five sub-headings (legal/anchors.ts), which
+// are not legal text.
 export const HEALTH_ITEMS: string[] = [
   "Nutrition targets, training suggestions, biomarker readings and trend analysis are informational. They are generated from the data you enter and from general, published health standards, not from an assessment of your individual medical situation.",
   "Always consult a qualified healthcare professional before starting a new diet or training programme, changing medication, or acting on any reading shown in the app. Never delay seeking medical advice because of something you saw in Centium.",

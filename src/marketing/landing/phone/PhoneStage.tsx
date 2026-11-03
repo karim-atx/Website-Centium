@@ -20,7 +20,9 @@ const PHONE_SHELL: React.CSSProperties = {
   top: "50%",
   width: "290px",
   height: "662px",
-  marginInlineStart: "-145px",
+  // A physical margin with the physical left: 50% (C7): in Arabic the
+  // reading-direction margin put every phone 145px right of centre.
+  marginLeft: "-145px",
   marginTop: "-331px",
   padding: "9px",
   borderRadius: "48px",

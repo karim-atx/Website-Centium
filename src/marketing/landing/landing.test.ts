@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { clamp, easeInOut3, prog, sm, swing } from "./engine/math";
-import { anchorHash, chooseLoader, lo1Target, loTarget, pageOf, LOCKUP_RATIO, type LoaderInputs } from "./loading/loaderChoice";
+import { anchorHash, chooseLoader, LO1_PACE, LO2_PACE, newPace, paceStep, pageOf, LOCKUP_RATIO, type LoaderInputs, type LoaderMode, type Pace } from "./loading/loaderChoice";
 import { pickBands } from "./lines/pickBands";
 
 // Centium landing v29: the prototype's pure functions, checked against values
@@ -44,17 +44,57 @@ describe("landing v29 progress maths", () => {
   });
 });
 
-describe("landing v29 loading targets", () => {
-  it("LO1 follows real progress, paced to 1.9 s and forced down by 2.4 s", () => {
-    assert.equal(lo1Target(0.95, 1, "first"), 0.5); // all loaded: still no faster than t / 1.9
-    assert.equal(lo1Target(1, 0.2, "first"), 0.2); // slow network: real progress
-    assert.equal(lo1Target(2.4, 0, "first"), 1); // nothing loaded: lands anyway
-    assert.equal(lo1Target(0.16, 0, "repeat"), 0.5); // repeat visit: 0.32 s, real progress ignored
+/** Runs the fall at `hz` frames a second; `h(p)` is the loading progress at
+ *  time p. Returns when the fall ended (u reached 1) and the largest sway. */
+function fall(K: Pace, hz: number, h: (p: number) => number, mode: LoaderMode = "first", skipAt = Infinity) {
+  const S = newPace();
+  let maxSway = 0,
+    heldU = 0;
+  for (let n = 0; n < hz * 5; n++) {
+    const p = n / hz,
+      u = paceStep(S, p, h(p), mode, p >= skipAt, K);
+    maxSway = Math.max(maxSway, Math.abs(S.sway));
+    if (S.hs != null && h(p) < 1 && p < K.D) heldU = u;
+    if (u >= 0.999) return { end: p, maxSway, heldU };
+  }
+  return { end: Infinity, maxSway, heldU };
+}
+
+describe("landing update loading pace (LO1 / LO2 v3, LOADING.md)", () => {
+  it("LO1: the fall takes 1.9 s by real time, the same at 60, 120 and 144 Hz, however fast loading is", () => {
+    for (const hz of [60, 120, 144]) {
+      const r = fall(LO1_PACE, hz, () => 1); // everything loaded at once
+      assert.ok(Math.abs(r.end - 1.9) <= 1.9 * 0.05, hz + " Hz: " + r.end);
+      assert.equal(r.maxSway, 0);
+    }
   });
 
-  it("LO2 follows real progress, paced to 1.2 s and forced down by 1.6 s", () => {
-    assert.equal(loTarget(0.6, 1), 0.5);
-    assert.equal(loTarget(1.6, 0), 1);
+  it("LO1 on a slow connection: holds at 86% with a gentle sway, released by D (fall ends by 2.4 s)", () => {
+    const r = fall(LO1_PACE, 60, () => 0); // never loads
+    assert.ok(Math.abs(r.heldU - 0.86) < 0.001, "held at " + r.heldU);
+    assert.ok(r.maxSway > 0.5 && r.maxSway <= 1, "sway " + r.maxSway);
+    assert.ok(r.end > 2.13 && r.end <= 2.4, "ends at " + r.end);
+  });
+
+  it("LO1: loading that finishes during the hold lets the fall finish at once from 86%", () => {
+    const r = fall(LO1_PACE, 60, (p) => (p >= 1.8 ? 1 : 0.5));
+    assert.ok(r.end >= 1.8 && r.end < 2.1, "ends at " + r.end);
+  });
+
+  it("LO1 repeat visit: 0.32 s, loading ignored", () => {
+    const r = fall(LO1_PACE, 60, () => 0, "repeat");
+    assert.ok(Math.abs(r.end - 0.32) < 0.02, "ends at " + r.end);
+  });
+
+  it("a scroll or key during loading skips smoothly to the end", () => {
+    const r = fall(LO1_PACE, 60, () => 0, "first", 0.5);
+    assert.ok(r.end > 0.5 && r.end < 0.8, "ends at " + r.end);
+  });
+
+  it("LO2: the fall takes 1.2 s, and is released by 1.43 s (fall ends by 1.6 s)", () => {
+    for (const hz of [60, 144]) assert.ok(Math.abs(fall(LO2_PACE, hz, () => 1).end - 1.2) <= 0.06);
+    const slow = fall(LO2_PACE, 60, () => 0);
+    assert.ok(slow.end > 1.43 && slow.end <= 1.6, "ends at " + slow.end);
   });
 
   it("sizes the lockup on the navbar logo's own proportions", () => {

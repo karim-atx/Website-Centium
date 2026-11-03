@@ -41,9 +41,12 @@ interface DotMetrics {
 const dmCache: Record<string, DotMetrics> = {};
 
 /** Where the dot of an "i" sits in this font, measured by drawing "i" and the
- *  dotless "ı" and keeping the pixels only the first has (prototype `dotMetrics`). */
-export function dotMetrics(fs: number, fam: string): DotMetrics {
-  const key = fs.toFixed(2) + fam;
+ *  dotless "ı" and keeping the pixels only the first has (prototype `dotMetrics`).
+ *  Arabic (C13): the same with "ز" and "ر", the same letter without its dot. */
+export function dotMetrics(fs: number, fam: string, ar = false): DotMetrics {
+  const key = fs.toFixed(2) + fam + (ar ? "ar" : "");
+  const dotted = ar ? "ز" : "i",
+    dotless = ar ? "ر" : "ı";
   if (dmCache[key]) return dmCache[key];
   const S = Math.ceil(fs * 2),
     cv = document.createElement("canvas");
@@ -60,8 +63,8 @@ export function dotMetrics(fs: number, fam: string): DotMetrics {
     c.fillText(ch, fs * 0.5, fs * 1.4);
     return c.getImageData(0, 0, S, S).data;
   };
-  const a = ink("i"),
-    b = ink("ı");
+  const a = ink(dotted),
+    b = ink(dotless);
   let x0 = 1e9,
     x1 = -1,
     y0 = 1e9,
@@ -77,7 +80,7 @@ export function dotMetrics(fs: number, fam: string): DotMetrics {
       }
     }
   c.font = "800 " + fs + "px " + fam;
-  const m = c.measureText("ı");
+  const m = c.measureText(dotless);
   const asc = m.fontBoundingBoxAscent || fs * 0.95;
   const r: DotMetrics =
     x1 < 0
@@ -88,7 +91,8 @@ export function dotMetrics(fs: number, fam: string): DotMetrics {
   // it never met this; here the dot is also re-placed on every measure).
   let ready = true;
   try {
-    ready = !document.fonts || document.fonts.check("800 " + fs + "px " + fam);
+    // With the letter itself, so Arabic waits for IBM Plex Sans Arabic, not Manrope.
+    ready = !document.fonts || document.fonts.check("800 " + fs + "px " + fam, dotted);
   } catch {
     ready = true;
   }
@@ -104,15 +108,19 @@ export interface DotPlace {
   measured: boolean;
 }
 
-/** Sizes and places the leaf dot over the dotless i (prototype `placeDot`). */
+/** Sizes and places the leaf dot over the dotless i (prototype `placeDot`).
+ *  Arabic (C13, data-ar on the wrap): over the ز in [data-zt], whose own dot
+ *  is masked out of the glyph, so the leaf is the only dot. */
 export function placeDot(wrap: HTMLElement | null, dot: HTMLElement | null): DotPlace | null {
   if (!wrap || !dot) return null;
-  const tn = wrap.firstChild;
+  const ar = wrap.hasAttribute("data-ar"),
+    zt = ar ? wrap.querySelector<HTMLElement>("[data-zt]") : null,
+    tn = ar ? zt?.firstChild : wrap.firstChild;
   if (!tn || tn.nodeType !== 3) return null;
   const cs = getComputedStyle(wrap),
     fs = parseFloat(cs.fontSize),
     fam = cs.fontFamily,
-    m = dotMetrics(fs, fam);
+    m = dotMetrics(fs, fam, ar);
   const rg = document.createRange();
   rg.selectNodeContents(tn);
   const rr = rg.getBoundingClientRect(),
@@ -121,6 +129,15 @@ export function placeDot(wrap: HTMLElement | null, dot: HTMLElement | null): Dot
   const L = m.d * 1.55,
     cx = rr.left + m.dx,
     cy = rr.top + m.asc - m.dy;
+  if (zt) {
+    // Only the font's dot is hidden (a circle of 0.62 times its size); the
+    // letter and its shadda stay.
+    const zr = zt.getBoundingClientRect(),
+      R = m.d * 0.62,
+      mask = `radial-gradient(circle at ${(cx - zr.left).toFixed(2)}px ${(cy - zr.top).toFixed(2)}px, transparent ${R.toFixed(2)}px, #000 ${(R + 0.8).toFixed(2)}px)`;
+    zt.style.webkitMaskImage = mask;
+    zt.style.maskImage = mask;
+  }
   dot.style.left = (cx - wr.left - L / 2).toFixed(2) + "px";
   dot.style.top = (cy - wr.top - L / 2).toFixed(2) + "px";
   dot.style.width = L.toFixed(2) + "px";

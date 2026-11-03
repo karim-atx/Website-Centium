@@ -126,7 +126,7 @@ export const PaneCoaching: React.FC<{ r: SectionVals }> = ({ r }) => (
               <span style={{ width: "20px", height: "20px", flexShrink: "0", borderRadius: "99px", background: "#DAEAE7", color: "#2F5F58", fontSize: "10px", fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {lp.n}
               </span>
-              <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <span className="cl-arwrap" style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                 {t(lp.t)}
               </span>
               <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "11px", color: "#2F5F58", whiteSpace: "nowrap" }}>

@@ -150,7 +150,10 @@ export class Strands {
 
   private tip(l: Line, R: StrandRect): Pt {
     if (this.o.vert) return [R.x + R.w * l.t, l.side < 0 ? R.y + 2 : R.y + R.h - 2];
-    return [l.side < 0 ? R.x + 2 : R.x + R.w - 2, R.y + R.h * l.t];
+    // IN1 / IN2 v3: a title line (groups 5 and 6) ends 10% of the title box's
+    // width inside it, so it dissolves behind the first or last words.
+    const q = l.g >= 5 ? R.w * 0.1 : 2;
+    return [l.side < 0 ? R.x + q : R.x + R.w - q, R.y + R.h * l.t];
   }
 
   private pt(l: Line, R: StrandRect, u: number, t: number): Pt {
@@ -253,8 +256,17 @@ export class Strands {
       tipA = wm >= 2 ? 0.08 : r >= 0.999 ? 0.55 : 0.3 + 0.3 * r;
     g.addColorStop(0, "rgba(" + C[2] + ",0)");
     g.addColorStop(0.2, "rgba(" + C[1] + "," + (a * 0.7).toFixed(3) + ")");
-    g.addColorStop(0.62, "rgba(" + C[0] + "," + a.toFixed(3) + ")");
-    g.addColorStop(1, "rgba(" + C[0] + "," + (a * tipA).toFixed(3) + ")");
+    if (l.g >= 5) {
+      // IN1 / IN2 v3: a title line fades out over its last 22%, with no hard tip.
+      g.addColorStop(0.55, "rgba(" + C[0] + "," + a.toFixed(3) + ")");
+      g.addColorStop(0.78, "rgba(" + C[0] + "," + (a * 0.8).toFixed(3) + ")");
+      g.addColorStop(0.86, "rgba(" + C[0] + "," + (a * 0.42).toFixed(3) + ")");
+      g.addColorStop(0.93, "rgba(" + C[0] + "," + (a * 0.14).toFixed(3) + ")");
+      g.addColorStop(1, "rgba(" + C[0] + ",0)");
+    } else {
+      g.addColorStop(0.62, "rgba(" + C[0] + "," + a.toFixed(3) + ")");
+      g.addColorStop(1, "rgba(" + C[0] + "," + (a * tipA).toFixed(3) + ")");
+    }
     c.strokeStyle = g;
     c.lineCap = dash ? "butt" : "round";
     if (dash) {

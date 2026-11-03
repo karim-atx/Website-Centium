@@ -11,8 +11,12 @@
 // the desktop inline styles are cleared (so nothing disappears after a resize
 // or a toggle), and a nowrap text that does not fit is allowed to wrap.
 // The counter reads "0k / 05" and the progress bar fills k/5.
+// Right to left (C10, centium/ARABIC-RTL.md 7): the slide offsets and the
+// drag are multiplied by the reading direction, so in Arabic the next slide
+// peeks from the left and dragging right moves forward.
 
 import { clamp, prog, type Track } from "../engine/math";
+import { dirSign } from "../engine/env";
 import type { EngineCtx, EngineSection } from "../engine/scrollEngine";
 import { anim, collect, type AnimItem } from "./anim";
 import { scrollToInline } from "../../../utils/inlineScroll";
@@ -113,6 +117,23 @@ export class EcoMotion implements EngineSection {
     }
   }
 
+  /** EC1 v4 (C10, both languages): switching Professionals / Businesses starts
+   *  again at the first box. Phones: the shown row back to its start. Desktop:
+   *  the slides follow the pinned track, so the page returns to the track
+   *  start, 30ms after the switch, when it is below it. */
+  restart() {
+    const set = document.querySelector<HTMLElement>('[data-eset="' + this.seg + '"]');
+    if (set) set.scrollLeft = 0;
+    this.left = 0;
+    this.dragOff = 0;
+    window.setTimeout(() => {
+      const tr = document.getElementById("eco-track");
+      if (!tr || window.innerWidth < 1024) return;
+      const top = tr.getBoundingClientRect().top + window.scrollY;
+      if (window.scrollY > top + 2) window.scrollTo({ top: top + 1, behavior: "auto" });
+    }, 30);
+  }
+
   /** Prototype ecoSnap: the slides glide (.5s) to where a jump puts them. */
   private snap() {
     if (this.rm) return;
@@ -135,7 +156,7 @@ export class EcoMotion implements EngineSection {
   private move = (e: PointerEvent) => {
     if (this.x0 == null) return;
     const w = (this.slides[0] ? this.slides[0].el.offsetWidth : 800) * 0.74;
-    this.dragOff = Math.max(-this.base, Math.min(4 - this.base, -(e.clientX - this.x0) / w));
+    this.dragOff = Math.max(-this.base, Math.min(4 - this.base, (-(e.clientX - this.x0) / w) * dirSign()));
     this.scroll(window.scrollY);
   };
   private up = () => {
@@ -194,13 +215,14 @@ export class EcoMotion implements EngineSection {
   scroll(y: number) {
     if (!this.slides.length) return;
     const idx = this.idx(y),
-      lg = this.lg;
+      lg = this.lg,
+      dir = dirSign();
     this.slides.forEach((s, i) => {
       const d = i - idx,
         ad = Math.abs(d);
       if (lg) {
         const w = this.sw[i] ?? s.el.offsetWidth;
-        s.el.style.transform = "translateX(" + (d * w * 0.74).toFixed(1) + "px) scale(" + (1 - Math.min(1.2, ad) * 0.14).toFixed(4) + ")";
+        s.el.style.transform = "translateX(" + (d * w * 0.74 * dir).toFixed(1) + "px) scale(" + (1 - Math.min(1.2, ad) * 0.14).toFixed(4) + ")";
         s.el.style.opacity = (ad > 1.7 ? 0 : 1 - Math.min(1, ad) * 0.55).toFixed(3);
         s.el.style.zIndex = String(10 - Math.round(ad * 2));
         s.el.style.pointerEvents = ad < 0.5 ? "auto" : "none";

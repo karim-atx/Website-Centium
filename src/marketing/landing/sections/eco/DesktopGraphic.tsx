@@ -99,7 +99,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 {tOpt(ce.t)}
                 {ce.on ? (
                   <>
-                    <span data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span className="cl-arwrap" data-w={ce.w} data-stamp="" style={{ position: "absolute", inset: "0", borderRadius: "7px", background: ce.c, color: ce.ink, fontFamily: 'Manrope,"IBM Plex Sans Arabic",sans-serif', fontSize: r.eF10, fontWeight: "800", display: "flex", alignItems: "center", padding: "0 6px", opacity: "0", whiteSpace: "nowrap", overflow: "hidden" }}>
                       {tOpt(ce.n)}
                     </span>
                   </>
@@ -118,7 +118,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   <span style={{ width: "24px", height: "24px", flexShrink: "0", borderRadius: "99px", background: "#DED4F4", color: "#5C48A8", fontSize: r.eF9, fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {ib.i}
                   </span>
-                  <span style={{ flex: "1", minWidth: "0", fontSize: r.eF115, fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span className="cl-arwrap" style={{ flex: "1", minWidth: "0", fontSize: r.eF115, fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tOpt(ib.n)}
                   </span>
                   {ib.dot ? (
@@ -189,7 +189,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   <span style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: r.eF11, color: "#756D63" }}>
                     {tOpt(nx.t)}
                   </span>
-                  <span style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span className="cl-arwrap" style={{ flex: "1", minWidth: "0", fontSize: "12px", fontWeight: "700", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tOpt(nx.n)}
                   </span>
                   <span style={{ fontSize: r.eF105, fontWeight: "800", color: nx.c }}>
@@ -249,7 +249,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
               {sl.lib!.map((lb, lbI) => (
                 <span key={lbI} style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 8px", borderRadius: "8px", border: `1px solid ${lb.bd}`, fontSize: r.eF11, fontWeight: "700", color: lb.ink, background: lb.bg }}>
                   <span style={{ width: "7px", height: "7px", flexShrink: "0", borderRadius: "99px", background: lb.c }} />
-                  <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <span className="cl-arwrap" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {tOpt(lb.t)}
                   </span>
                 </span>
@@ -278,10 +278,10 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                 </div>
                 {cl.items.map((it, itI) => (
                   <span key={itI} data-w={it.w} data-tx={it.tx} style={{ padding: "5px 6px", borderRadius: "8px", background: it.bg, border: `1px solid ${it.bd}`, fontSize: r.eF10, fontWeight: "700", lineHeight: "1.25", color: it.ink, opacity: "0" }}>
-                    <span style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <span className="cl-arwrap" style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {tOpt(it.t)}
                     </span>
-                    <span style={{ display: "block", fontSize: r.eF9, fontWeight: "600", color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <span className="cl-arwrap" style={{ display: "block", fontSize: r.eF9, fontWeight: "600", color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {tOpt(it.m)}
                     </span>
                   </span>
@@ -324,7 +324,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
           <div style={{ flex: "1", display: "flex", flexDirection: "column", gap: "10px", minHeight: "0" }}>
             <div style={{ display: "flex", height: "34px", borderRadius: "10px", overflow: "hidden", gap: "2px" }}>
               {sl.seg!.map((sg, sgI) => (
-                <span key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingInlineStart: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
+                <span className="cl-arwrap" key={sgI} data-w={sg.w} data-sx="" style={{ flex: sg.f, background: sg.c, transformOrigin: "left", transform: "scaleX(0)", display: "flex", alignItems: "center", paddingInlineStart: "8px", fontSize: r.eF105, fontWeight: "800", color: sg.ink, whiteSpace: "nowrap", overflow: "hidden" }}>
                   {tOpt(sg.t)}
                 </span>
               ))}
@@ -400,7 +400,7 @@ export const DesktopGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r 
                   </div>
                 </div>
                 <div style={{ position: "relative", height: "22px", borderRadius: "6px", background: "repeating-linear-gradient(90deg,#FAF9FE 0 calc(100% / 17 - 1px),#F0EDE8 calc(100% / 17 - 1px) calc(100% / 17))" }}>
-                  <span data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingInlineStart: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
+                  <span className="cl-arwrap" data-w={sf.w} data-sx="" style={{ position: "absolute", top: "3px", bottom: "3px", left: sf.l, width: sf.wd, borderRadius: "5px", background: sf.c, transformOrigin: "left", transform: "scaleX(0)", fontSize: r.eF9, fontWeight: "800", color: "#fff", display: "flex", alignItems: "center", paddingInlineStart: "6px", whiteSpace: "nowrap", overflow: "hidden" }}>
                     {tOpt(sf.s)}
                   </span>
                 </div>

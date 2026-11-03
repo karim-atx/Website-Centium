@@ -1,6 +1,13 @@
 // Centium landing v29: the loading sequences LO1 and LO2, ported literally
-// from the prototype's initLoading / lo1Apply / lo1Target / loApply /
-// loTarget / lo1Pose / loPose (handover 03_motion/01-loading-LO1-LO2.md).
+// from the prototype's initLoading / lo1Apply / loApply / lo1Pose / loPose
+// (handover 03_motion/01-loading-LO1-LO2.md).
+//
+// LO1 / LO2 v3 (landing update, centium/LOADING.md): the fall runs at its
+// designed pace by real elapsed time, on a clock started at the first painted
+// frame (the second animation frame); loading progress only decides when the
+// leaf may land (paceStep: hold at 86% with a gentle sway until loaded or the
+// release time). In Arabic the LO1 fall is mirrored and lands as the dot of
+// the ز (C13, title.ts).
 //
 // Part of the eager shell on purpose: the loader has to run while the
 // code-split chunks (motion engine, line engine) are still arriving, and it
@@ -10,9 +17,10 @@
 // top and ends on its own (forced landing by 2.4 s for LO1).
 
 import { clamp, sm, swing } from "../engine/math";
-import { LG } from "../engine/env";
-import { LETTER_BASE, LETTER_H, LOCKUP_RATIO, lo1Target, loTarget, type LoaderEntry, type LoaderMode } from "./loaderChoice";
+import { LG, dirSign } from "../engine/env";
+import { LETTER_BASE, LETTER_H, LO1_PACE, LO2_PACE, LOCKUP_RATIO, newPace, paceStep, type LoaderEntry, type LoaderMode } from "./loaderChoice";
 import { placeDot, titleIn, titleLift, type DotPlace } from "./title";
+import { ensureArabicFont } from "../../../i18n/fonts";
 
 const byId = <T extends Element = HTMLElement>(id: string) => document.getElementById(id) as T | null;
 
@@ -43,7 +51,10 @@ function lo1Pose(): Lo1Pose | null {
   };
 }
 
-function lo1Apply(G: Lo1Pose, u: number, f: number, t: number, mode: LoaderMode): DotPlace | null {
+function lo1Apply(G: Lo1Pose, u: number, f: number, t: number, mode: LoaderMode, holdSway: number): DotPlace | null {
+  // A re-render (the Arabic title) can replace the dot's elements: find them again.
+  if (!G.wrap?.isConnected) G.wrap = byId("i-wrap");
+  if (!G.dot?.isConnected) G.dot = byId("i-dot");
   const D = placeDot(G.wrap, G.dot);
   if (!D) return null;
   const rm = mode === "rm",
@@ -59,8 +70,10 @@ function lo1Apply(G: Lo1Pose, u: number, f: number, t: number, mode: LoaderMode)
   const SW = swing(u, mode === "repeat" ? 1 : 3, G.vw * (lg ? 0.125 : 0.175)),
     sy = -LS * 1.6,
     y = sy + (D.y - sy) * SW.desc - SW.lift;
-  const sway = SW.x,
-    rot = SW.rot,
+  // Right to left: the fall's own x and rotation are mirrored, then the hold sway is added.
+  const dir = dirSign(),
+    sway = dir * SW.x + holdSway * G.vw * 0.03,
+    rot = dir * SW.rot + holdSway * 9,
     fl = SW.fl,
     sx = SW.sx;
   const k = 1 + (ts - 1) * sm(0.5, 1, u);
@@ -177,7 +190,7 @@ function loPose(): LoPose | null {
   };
 }
 
-function loApply(G: LoPose, u: number, f: number, g: number, t: number, mode: LoaderMode) {
+function loApply(G: LoPose, u: number, f: number, g: number, t: number, mode: LoaderMode, holdSway = 0) {
   const rm = mode === "rm",
     lg = G.vw >= LG;
   const slide = sm(0.88, 1.28, f),
@@ -196,9 +209,9 @@ function loApply(G: LoPose, u: number, f: number, g: number, t: number, mode: Lo
   G.lock.style.transform = "translate(" + X.toFixed(2) + "px," + Y.toFixed(2) + "px) scale(" + K.toFixed(5) + ")";
   const fallH = G.top + G.mw * 1.15 + 40,
     SW = swing(rm ? 1 : u, 2, G.vw * (lg ? 0.125 : 0.175));
-  const sway = SW.x,
+  const sway = SW.x + holdSway * G.vw * 0.03,
     yy = -fallH * (1 - SW.desc) - SW.lift,
-    rot = SW.rot,
+    rot = SW.rot + holdSway * 9,
     fl = SW.fl,
     sx = SW.sx;
   const settle = f > 0 && f < 0.2 ? 1 - 0.04 * Math.sin((Math.PI * f) / 0.2) : 1;
@@ -280,7 +293,7 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
       }),
   );
   const total = Math.max(1, tasks.length);
-  const t0 = performance.now();
+  let t0 = performance.now();
   let ff: number | null = null;
   const onEarly = () => {
     if (ff == null) ff = (performance.now() - t0) / 1000;
@@ -298,13 +311,20 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
     let u = 0,
       tL: number | null = null,
       lastT = 0,
-      fT = 0;
+      fT = 0,
+      frames = 0;
+    const S = newPace();
     const lo = byId("lo1");
     const tick = () => {
       if (dead) return;
+      // The clock starts at the first painted frame (the second call).
+      if (++frames === 2) {
+        t0 = performance.now();
+        lastT = 0;
+      }
       const t = (performance.now() - t0) / 1000;
       if (mode === "rm") {
-        lo1Apply(G, 1, 1, t, "rm");
+        lo1Apply(G, 1, 1, t, "rm", 0);
         if (t >= 0.55) {
           end();
           return;
@@ -313,11 +333,9 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
         return;
       }
       const real = done / total,
-        target = ff != null ? 1 : lo1Target(t, real, mode),
         dt = Math.max(0, t - lastT);
       lastT = t;
-      u += (target - u) * (1 - Math.exp(-dt * (ff != null ? 30 : 22)));
-      if (target - u < 0.002 || (target >= 1 && t >= 2.35)) u = target;
+      u = paceStep(S, t, real, mode, ff != null, LO1_PACE);
       if (lo) lo.setAttribute("aria-valuenow", String(Math.round(real * 100)));
       if (u >= 0.999 && tL == null) {
         u = 1;
@@ -326,7 +344,7 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
       const rate = ff != null ? 3 : 1;
       if (tL != null) fT += dt * rate;
       const fEnd = mode === "repeat" ? 0.26 : 0.8;
-      lo1Apply(G, u, tL == null ? 0 : mode === "repeat" ? Math.min(fT, 0.26) : fT, t, mode);
+      lo1Apply(G, u, tL == null ? 0 : mode === "repeat" ? Math.min(fT, 0.26) : fT, t, mode, S.sway);
       if (tL != null && fT >= fEnd) {
         end();
         return;
@@ -350,10 +368,13 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
   let u = 0,
     tL: number | null = null,
     ffT: number | null = null,
-    lastT = 0;
+    frames = 0;
+  const S = newPace();
   const lo = byId("loader");
   const tick = () => {
     if (dead) return;
+    // The clock starts at the first painted frame (the second call).
+    if (++frames === 2) t0 = performance.now();
     const t = (performance.now() - t0) / 1000;
     if (mode === "rm") {
       loApply(G, 1, 1.45, 0, t, "rm");
@@ -375,12 +396,7 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
       return;
     }
     const real = done / total;
-    let target = loTarget(t, real);
-    if (ff != null) target = 1;
-    const dt = Math.max(0, t - lastT);
-    lastT = t;
-    u += (target - u) * (1 - Math.exp(-dt * (ff != null ? 26 : 22)));
-    if (target - u < 0.002 || (target >= 1 && t >= 1.6)) u = target;
+    u = paceStep(S, t, real, mode, ff != null, LO2_PACE);
     if (u >= 0.999 && tL == null) {
       u = 1;
       tL = t;
@@ -393,7 +409,7 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
       f = 1.45;
       g = clamp((t - ffT) / 0.3);
     } else if (f > 1.45) g = clamp((f - 1.45) / 0.55);
-    loApply(G, u, Math.min(f, 1.45), g, t, mode);
+    loApply(G, u, Math.min(f, 1.45), g, t, mode, S.sway);
     if (g >= 1) {
       end();
       return;
@@ -407,6 +423,13 @@ export function runLoader(entry: LoaderEntry, tasks: Promise<unknown>[], onEnd: 
       cleanup();
     },
   };
+}
+
+/** Arabic (LANGUAGE.md): adds the IBM Plex Sans Arabic stylesheet and loads
+ *  its bold Arabic face; resolves when loaded, or after 1.5 s. */
+export function arabicFontTask(): Promise<unknown> {
+  const load = ensureArabicFont().then(() => document.fonts?.load('700 16px "IBM Plex Sans Arabic"', "ز").catch(() => []));
+  return Promise.race([load, new Promise((r) => setTimeout(r, 1500))]);
 }
 
 /** The real-progress task for a font (prototype `fl`): resolves when loaded, or after 3 s. */

@@ -8,8 +8,12 @@
 // card of two copies (the prototype divided scrollWidth by 3, 6px short of a
 // period, so the loop stepped 6px at every wrap), and nothing is written
 // while the row is off-screen.
+// Right to left (RV1 v4, C11): the row is laid out from the right edge (the
+// first card there) and slides right, the reading end, at the same 22 px/s:
+// the offset is applied with the reading direction's sign.
 
 import type { EngineCtx, EngineSection } from "../engine/scrollEngine";
+import { dirSign } from "../engine/env";
 
 export class ReviewsMotion implements EngineSection {
   /** Set while the pointer or focus is inside the row. */
@@ -36,9 +40,24 @@ export class ReviewsMotion implements EngineSection {
    *  its focus ring is visible. The row stays paused there until focus leaves. */
   reveal(card: EventTarget) {
     if (this.rm || !this.row || !this.period || !(card instanceof HTMLElement) || card.parentElement !== this.row) return;
+    const wrap = this.row.parentElement ?? this.row;
+    if (dirSign() < 0) {
+      // Right to left: the row overflows to the left, so offsetLeft counts from
+      // its far end; the card's place at rest is its rect less the translate
+      // last written. It is brought in 24px from the right edge.
+      const tx = parseFloat(/translate3d\(([-\d.]+)px/.exec(this.row.style.transform)?.[1] ?? "0"),
+        r = card.getBoundingClientRect(),
+        rest = r.left - tx,
+        at = rest + (this.off % this.period);
+      if (at >= 0 && at + r.width <= window.innerWidth) return;
+      const m = wrap.getBoundingClientRect().right - 24 - (rest + r.width);
+      this.off = m;
+      this.row.style.transform = "translate3d(" + m.toFixed(1) + "px,0,0)";
+      return;
+    }
     // From the slide offset, not the card's rect: off-screen the row's
     // transform is not written, so the rect can be stale.
-    const left = (this.row.parentElement ?? this.row).getBoundingClientRect().left + card.offsetLeft - (this.off % this.period);
+    const left = wrap.getBoundingClientRect().left + card.offsetLeft - (this.off % this.period);
     if (left >= 0 && left + card.offsetWidth <= window.innerWidth) return;
     // The focusable cards are the first copy (offsetLeft 0 .. period), so no
     // wrap: the first card gives -24 (the row 24px right of its rest), which
@@ -56,7 +75,7 @@ export class ReviewsMotion implements EngineSection {
     const cards = row.children;
     const a = cards[0] as HTMLElement | undefined,
       b = cards[n] as HTMLElement | undefined;
-    this.period = a && b ? b.offsetLeft - a.offsetLeft : row.scrollWidth;
+    this.period = a && b ? Math.abs(b.offsetLeft - a.offsetLeft) : row.scrollWidth;
     const wrap = row.parentElement ?? row;
     const r = wrap.getBoundingClientRect();
     this.top = r.top + window.scrollY;
@@ -71,9 +90,9 @@ export class ReviewsMotion implements EngineSection {
     if (!this.paused) this.off += dt * 22;
     const y = window.scrollY;
     if (this.top > y + ctx.vh || this.top + this.height < y) return;
-    // dir -1: speed factor 0.85 + |dir| * 0.15 = 1, x = -m.
+    // dir -1: speed factor 0.85 + |dir| * 0.15 = 1, x = -m (right to left: +m).
     const m = this.off % this.period;
-    this.row.style.transform = "translate3d(" + (-m).toFixed(1) + "px,0,0)";
+    this.row.style.transform = "translate3d(" + (-dirSign() * m).toFixed(1) + "px,0,0)";
   }
 
   destroy() {

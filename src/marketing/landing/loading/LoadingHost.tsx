@@ -8,7 +8,8 @@ import { useLocation } from "react-router-dom";
 import { reducedMotion } from "../engine/env";
 import { clearLoadingTasks, landingState, loadingTasksFor } from "../state";
 import { consumeLoaderEntry, loaderEntryFor, markVisited } from "./pickLoader";
-import { fontTask, runLoader } from "./loader";
+import { arabicFontTask, fontTask, runLoader } from "./loader";
+import { isRtl } from "../../../i18n/core";
 import { Lo1, Lo2 } from "./Loaders";
 import { titleIn, titleLift } from "./title";
 
@@ -41,6 +42,10 @@ const RouteLoader: React.FC = () => {
     const navLogo = document.getElementById("nav-logo");
     if (navLogo) navLogo.style.opacity = "0";
     const tasks = [fontTask("800 78px Manrope"), fontTask("700 13px Manrope"), ...loadingTasksFor(key)];
+    // Arabic (LANGUAGE.md): the font is requested now, before the first paint,
+    // and loading waits for it (at most 1.5 s), so the leaf lands on the ز of
+    // IBM Plex Sans Arabic, not of a fallback face.
+    if (isRtl()) tasks.push(arabicFontTask());
     const run = runLoader(entry, tasks, () => {
       // Prototype `end`.
       const rm = entry.mode === "rm" || reducedMotion();

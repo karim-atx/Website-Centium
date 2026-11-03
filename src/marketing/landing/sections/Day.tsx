@@ -6,12 +6,15 @@
 // horizontal rail, the phone slot, then the step texts. All motion (pin
 // progress, the phone's day, clock, rail, steps) is motion/day.ts, which
 // finds these elements by id and data attribute as the prototype does.
+// Right to left (C8): the rails and the moments are placed from the reading
+// start (inset-inline-start), so in Arabic the desktop rail is on the right
+// with 17px clear before its text, and the phone rail fills from the right.
 
 import React from "react";
 import { ChapterMark } from "./ChapterMark";
 import * as D from "./data/day";
 import type { SectionVals } from "./sectionVals";
-import { t } from "../../../i18n/core";
+import { isRtl, t } from "../../../i18n/core";
 
 export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div id="day-track" data-screen-label="DY1 v15 Your day, pillar by pillar" style={{ position: "relative", zIndex: "2", height: r.dayTrackH }}>
@@ -51,10 +54,10 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
             ))}
           </div>
           <div style={{ position: "relative", height: r.railH }}>
-            <span style={{ position: "absolute", left: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
-            <span id="rail-fill" style={{ position: "absolute", left: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "top", transform: "scaleY(0)" }} />
+            <span style={{ position: "absolute", insetInlineStart: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
+            <span id="rail-fill" style={{ position: "absolute", insetInlineStart: "5px", top: "0", bottom: "0", width: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "top", transform: "scaleY(0)" }} />
             {D.moments.map((mo, moI) => (
-              <div key={moI} style={{ position: "absolute", left: "0", top: mo.l, display: "flex", alignItems: "center", gap: "12px", transform: "translateY(-50%)" }}>
+              <div key={moI} style={{ position: "absolute", insetInlineStart: "0", top: mo.l, display: "flex", alignItems: "center", gap: "12px", transform: "translateY(-50%)" }}>
                 <span style={{ position: "relative", width: "12px", height: "12px", flexShrink: "0", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
                   <span data-rd={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
                 </span>
@@ -82,9 +85,9 @@ export const Day: React.FC<{ r: SectionVals }> = ({ r }) => (
           </div>
           <div style={{ position: "relative", height: "16px" }}>
             <span style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#EFEAFB" }} />
-            <span id="rail-fill-m" style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: "left", transform: "scaleX(0)" }} />
+            <span id="rail-fill-m" style={{ position: "absolute", left: "0", right: "0", top: "7px", height: "2px", borderRadius: "2px", background: "#775FD7", transformOrigin: isRtl() ? "right" : "left", transform: "scaleX(0)" }} />
             {D.momentsH.map((mo, moI) => (
-              <span key={moI} style={{ position: "absolute", left: mo.l, top: "2px", width: "12px", height: "12px", marginInlineStart: "-6px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
+              <span key={moI} style={{ position: "absolute", insetInlineStart: mo.l, top: "2px", width: "12px", height: "12px", marginInlineStart: "-6px", borderRadius: "99px", background: "#FFFFFF", border: "2px solid #D9D2EE" }}>
                 <span data-rdm={mo.i} style={{ position: "absolute", inset: "-2px", borderRadius: "99px", background: "#775FD7", opacity: "0" }} />
               </span>
             ))}

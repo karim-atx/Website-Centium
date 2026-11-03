@@ -33,12 +33,30 @@ describe("legal text, word for word", () => {
     assert.equal(T.HEALTH_ITEMS.length, 7);
     assert.deepEqual(
       LEGAL_DOCS.map((d) => d.groups.length),
-      [12, 10, 1],
+      [12, 10, 5],
     );
     assert.equal(LEGAL_DOCS[0].groups[11].h, "Liability");
     assert.deepEqual(LEGAL_DOCS[0].groups[11].items, [T.LIABILITY_TEXT]);
-    assert.equal(LEGAL_DOCS[2].groups[0].h, "In detail");
-    assert.deepEqual(LEGAL_DOCS[2].groups[0].items, T.HEALTH_ITEMS);
+  });
+
+  it("groups the health points under five sub-headings, none changed or reordered (LG1 v5)", () => {
+    const health = LEGAL_DOCS[2].groups;
+    assert.deepEqual(
+      health.map((g) => [g.h, g.id, g.items.length]),
+      [
+        ["Informational only", "health-informational-only", 2],
+        ["Biomarker capture", "health-biomarker-capture", 1],
+        ["Voice and video calls", "health-voice-and-video-calls", 1],
+        ["Independent providers", "health-independent-providers", 2],
+        ["Not an emergency service", "health-not-an-emergency-service", 1],
+      ],
+    );
+    assert.deepEqual(
+      health.flatMap((g) => g.items),
+      T.HEALTH_ITEMS,
+    );
+    // QA Y5: the same 8 paragraphs and 1665 characters as before.
+    assert.equal(T.HEALTH_ITEMS.join("").length + T.INTRO.health.length, 1665);
   });
 
   it("still has every heading the app's in-app Privacy and Terms pages link to", () => {
@@ -95,10 +113,12 @@ describe("the legal hash shim", () => {
     for (const id of ["terms", "privacy", "health"]) assert.ok(LEGAL_IDS.has(id));
   });
 
-  it("lists every terms and privacy group in On this page, and no health group", () => {
+  it("lists every terms, privacy and health group in On this page (the page adds 04's 15)", () => {
     assert.equal(LEGAL_TOC.filter((e) => e.doc).length, 3);
-    assert.equal(LEGAL_TOC.filter((e) => !e.doc).length, 22);
-    assert.ok(!LEGAL_TOC.some((e) => e.h.startsWith("#health-")));
+    assert.equal(LEGAL_TOC.filter((e) => !e.doc).length, 27);
+    assert.equal(LEGAL_TOC.filter((e) => e.h.startsWith("#health-")).length, 5);
     for (const e of LEGAL_TOC) assert.ok(LEGAL_IDS.has(e.h.slice(1)), e.h);
+    // With 04 and its 14 sections: 45 entries (QA Y2).
+    assert.equal(LEGAL_TOC.length + 15, 45);
   });
 });

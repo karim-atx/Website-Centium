@@ -11,6 +11,8 @@
 //   prototype; nothing switches it on automatically.
 // The prototype's QA-only flags (still, ip, only, fitw, ...) are not ported.
 
+import { isRtl } from "../../../i18n/core";
+
 export function reducedMotion(): boolean {
   if (typeof window === "undefined") return false;
   if (document.documentElement.classList.contains("reduce-motion")) return true;
@@ -30,3 +32,9 @@ export function lowQuality(): boolean {
 export const LG = 1024;
 /** Tablet breakpoint of the handover (sm = width >= 640). */
 export const SM = 640;
+
+/** The reading direction as a sign: 1 left to right, -1 right to left
+ *  (Arabic). Every direction-aware offset, drag and key in the landing
+ *  multiplies by it. Read from the active language, which is set before the
+ *  page renders (the <html dir> attribute follows a moment later). */
+export const dirSign = (): 1 | -1 => (isRtl() ? -1 : 1);

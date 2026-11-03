@@ -59,7 +59,12 @@ describe("the Arabic legal documents have the English shape", () => {
       LEGAL_DOCS.map((d) => [d.id, d.num, d.c, d.box, d.groups.map((g) => [g.id, g.items.length])]),
     );
     assert.deepEqual(docs[0].groups[11].items, [AR.LIABILITY_TEXT]);
-    assert.deepEqual(docs[2].groups[0].items, AR.HEALTH_ITEMS);
+    assert.deepEqual(
+      docs[2].groups.flatMap((g) => g.items),
+      AR.HEALTH_ITEMS,
+    );
+    // QA Y5: the same 8 paragraphs and 1328 characters as before.
+    assert.equal(AR.HEALTH_ITEMS.join("").length + AR.INTRO.health.length, 1328);
     assert.deepEqual(
       legalTocFor(docs).map((e) => e.h),
       LEGAL_TOC.map((e) => e.h),

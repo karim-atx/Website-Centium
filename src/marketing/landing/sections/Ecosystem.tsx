@@ -8,6 +8,12 @@
 // a drag) moves the carousel; mobile: a swipe carousel of equal cards (432px,
 // 400px under 380px) with the slide's mobile copy and graphic.
 // Motion: motion/eco.ts, registered with the page's scroll engine.
+// Landing update: switching the toggle starts again at the first box (C10,
+// both languages). Right to left (C9, C10): the first option is on the right
+// with the indicator under the selected one, the slides are centred with a
+// physical margin, and the arrows, drag and arrow keys follow the reading
+// direction (in Arabic ArrowLeft is Next; in the tablist ArrowRight is the
+// previous tab, D9).
 
 import React, { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ChapterMark } from "./ChapterMark";
@@ -17,7 +23,9 @@ import { ecoSets } from "./eco/data";
 import type { SectionVals } from "./sectionVals";
 import { SectionHostContext } from "../sectionHost";
 import { EcoMotion } from "../motion/eco";
-import { t, tk } from "../../../i18n/core";
+import { isRtl, t, tk } from "../../../i18n/core";
+import { dirSign } from "../engine/env";
+import { tablistKeys, useIndicator } from "./segmented";
 
 const SEGS = [tk("Professionals"), tk("Businesses")];
 
@@ -60,6 +68,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
       return;
     }
     host?.measure();
+    motion.current?.restart();
   }, [seg, host]);
 
   const step = (d: number) => {
@@ -69,13 +78,16 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
-      step(-1);
+      step(-1 * dirSign());
     }
     if (e.key === "ArrowRight") {
       e.preventDefault();
-      step(1);
+      step(1 * dirSign());
     }
   };
+  const rtl = isRtl();
+  const segRef = useRef<HTMLDivElement>(null);
+  const ind = useIndicator(segRef, seg, SEGS.length);
   // Mobile card height: the prototype's fitEco sets every card to
   // padding * 2 + text area + 16 + graphic area = 432px (400px under 380px).
   const cardH = r.lg ? r.slH : vw < 380 ? "400px" : "432px";
@@ -92,8 +104,10 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
         </div>
         <div style={{ display: "flex", justifyContent: "center", marginTop: "24px" }}>
           <div
+            ref={segRef}
             role="tablist"
             aria-label={t("Audience")}
+            onKeyDown={tablistKeys(SEGS.length, seg, setSeg)}
             style={{
               position: "relative",
               display: "grid",
@@ -109,15 +123,13 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
               id="eco-ind"
               style={{
                 position: "absolute",
-                left: "4px",
                 top: "4px",
                 bottom: "4px",
-                width: "calc(50% - 4px)",
                 borderRadius: "999px",
                 background: "#775FD7",
                 boxShadow: "0 6px 16px rgba(125,103,217,.28)",
-                transform: `translateX(${seg ? "100%" : "0%"})`,
-                transition: "transform .45s cubic-bezier(.22,1,.36,1)",
+                transition: "transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1)",
+                ...ind,
               }}
             />
             {SEGS.map((seg0, i) => (
@@ -181,7 +193,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                     top: "0",
                     width: r.slW,
                     height: cardH,
-                    marginInlineStart: r.slML,
+                    marginLeft: r.slML,
                     flex: `0 0 ${r.slW}`,
                     scrollSnapAlign: "center",
                     transformOrigin: "50% 50%",
@@ -235,10 +247,10 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
               } as React.CSSProperties
             }
           >
-            ←
+            {rtl ? "→" : "←"}
           </button>
           <div style={{ flex: "1", height: "3px", borderRadius: "9px", background: "#EFEAFB", overflow: "hidden" }}>
-            <div id="eco-prog" style={{ height: "100%", width: "100%", background: "#775FD7", transformOrigin: "left", transform: "scaleX(.2)" }} />
+            <div id="eco-prog" style={{ height: "100%", width: "100%", background: "#775FD7", transformOrigin: rtl ? "right" : "left", transform: "scaleX(.2)" }} />
           </div>
           <span id="eco-count" aria-live="polite" style={{ fontFamily: "'JetBrains Mono','IBM Plex Sans Arabic',monospace", fontSize: "13px", color: "#5B5349", minWidth: "62px", textAlign: "center" }}>
             01 / 05
@@ -261,7 +273,7 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
               } as React.CSSProperties
             }
           >
-            →
+            {rtl ? "←" : "→"}
           </button>
         </div>
       </div>
