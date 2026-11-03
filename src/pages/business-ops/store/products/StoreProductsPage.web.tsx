@@ -12,9 +12,10 @@ import { WebPageHeader } from "../../../../components/web/WebPageHeader";
 import { useWebLayout } from "../../../../components/web/useWebLayout";
 import { MarketProvider, MARKET_TAB_KEYS, tabKeyOf, useMarket, type MarketTabKey } from "../../../business-market/MarketContext";
 import { HiddenBanner } from "../../../business-market/MarketplacePage";
-import { Overview } from "../../../business-market/Overview";
-import { OffersTab } from "../../../business-market/OffersManager";
-import { PerformanceTab } from "../../../business-market/PerformanceTab";
+import { OverviewWeb } from "../../../business-market/Overview.web";
+import { OffersTabWeb } from "../../../business-market/OffersWeb.web";
+import { PerformanceTabWeb } from "../../../business-market/PerformanceWeb.web";
+import { MarketWebType } from "../../../../components/market/webType";
 import { usePendingPhotos } from "../../../business-market/usePendingPhotos";
 import { useStrip } from "../../../business-market/listingParts";
 import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine } from "../../../business-market/showcaseModel";
@@ -30,8 +31,7 @@ import { t, tk, tx } from "../../../../i18n/core";
 // (pointer and keyboard), the stock chips and the editor (ProductEditorSheet,
 // a 440 side sheet on web). Loading, saving and the order rules are the
 // mobile ShowcaseManager's. Overview, Offers and Performance are the
-// Marketplace tabs (WB-MA, another area): they show their mobile screens in
-// a centred column until their web layouts land.
+// Marketplace's own web tabs (WB-MA.1, .3, .4).
 
 const CAP = 3;
 const BORDER = "1px solid rgba(36,31,27,0.11)";
@@ -50,6 +50,7 @@ export default function StoreProductsPageWeb() {
 
 function ProductsScreen() {
   const m = useMarket();
+  const { rail } = useWebLayout();
   const [params, setParams] = useSearchParams();
   const category = params.get("category");
   const tab = tabKeyOf(params.get("tab"), "showcase");
@@ -114,12 +115,16 @@ function ProductsScreen() {
                 <HiddenBanner />
                 <Showcase />
               </>
+            ) : !m.kindKnown && m.loading ? (
+              <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} />
+            ) : tab === "overview" ? (
+              // WB-MA tabs: the Marketplace's own web layouts (WB-MA.1, .3, .4).
+              <OverviewWeb rail={rail} />
             ) : (
-              // WB-MA tabs (another area): their mobile screens, centred, until their web layouts land.
-              <div data-web-frame="mobile" className="max-w-[430px] mx-auto">
-                {tab !== "overview" && <HiddenBanner />}
-                {!m.kindKnown && m.loading ? <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} /> : tab === "offers" ? <OffersTab /> : tab === "perf" ? <PerformanceTab /> : <Overview />}
-              </div>
+              <MarketWebType.Provider value={rail ? "rail" : "wide"}>
+                <HiddenBanner />
+                {tab === "offers" ? <OffersTabWeb /> : <PerformanceTabWeb />}
+              </MarketWebType.Provider>
             )}
           </div>
         </div>

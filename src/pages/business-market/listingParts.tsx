@@ -691,7 +691,7 @@ export function PhotosCard({ photos, line, onOpen }: { photos: string[]; line: s
         <p style={{ fontSize: px(web ? 17 : 14), fontWeight: 700, color: m.ink, lineHeight: web ? lh(24) : "normal" }}>{t("Photos")}</p>
         <TextLink onClick={onOpen} style={{ gap: 2, marginInlineEnd: -4 }}>
           {photos.length ? t("Manage") : t("Add photos")}
-          <ChevronRight size={web ? 16 : 14} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={web ? 16 : 14} aria-hidden className={web ? undefined : "rtl:-scale-x-100"} />
         </TextLink>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 6 }}>
