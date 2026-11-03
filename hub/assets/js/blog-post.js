@@ -125,30 +125,79 @@
     prog();
   }
 
-  /* ---------- sharing ---------- */
+  /* ---------- sharing: an icon row with tooltips on desktop, one Share button on phones ---------- */
   var share = $('.sl-share');
   if (share && post && post.slug) {
     var url = location.href.split('#')[0], title = document.title;
-    share.querySelector('[data-share="linkedin"]').href = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url);
-    share.querySelector('[data-share="x"]').href = 'https://x.com/intent/post?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title);
-    share.querySelector('[data-share="email"]').href = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(url);
-    var cb = share.querySelector('[data-share-copy]'), live = share.querySelector('.sl-share-live'), tm = 0;
-    var done = function (good) {
-      clearTimeout(tm);
-      if (good) { cb.textContent = 'Copied'; cb.classList.add('is-copied'); live.textContent = 'Link copied'; }
-      else live.textContent = 'Couldn’t copy the link.';
-      tm = setTimeout(function () { cb.textContent = 'Copy link'; cb.classList.remove('is-copied'); live.textContent = ''; }, 1800);
+    var HREF = {
+      linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(url),
+      whatsapp: 'https://wa.me/?text=' + encodeURIComponent(title + ' ' + url),
+      x: 'https://x.com/intent/post?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(title),
+      email: 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(url)
     };
-    var fallback = function () {
-      var ta = document.createElement('textarea'), ok = false;
-      ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta); ta.select();
-      try { ok = document.execCommand('copy'); } catch { ok = false; }
-      ta.remove(); done(ok);
+    [].forEach.call(share.querySelectorAll('[data-share]'), function (a) { a.href = HREF[a.getAttribute('data-share')]; });
+    var live = share.querySelector('.sl-share-live'), cb = share.querySelector('[data-share-copy]'), tm = 0;
+    var copy = function (then) {
+      var ok = function () { then(true); }, bad = function () {
+        var ta = document.createElement('textarea'), r = false;
+        ta.value = url; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        try { r = document.execCommand('copy'); } catch { r = false; }
+        ta.remove(); then(r);
+      };
+      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(ok, bad); else bad();
     };
+    var said = function (good) { live.textContent = good ? 'Link copied' : 'Couldn’t copy the link.'; };
     cb.addEventListener('click', function () {
-      if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(function () { done(true); }, fallback);
-      else fallback();
+      copy(function (good) {
+        said(good); clearTimeout(tm);
+        if (good) { cb.classList.add('is-copied'); cb.setAttribute('data-tip', 'Link copied'); }
+        tm = setTimeout(function () { cb.classList.remove('is-copied'); cb.setAttribute('data-tip', 'Copy link'); live.textContent = ''; }, 1800);
+      });
+    });
+    /* phones: one Share button. The system share menu where the browser has one; otherwise a sheet */
+    var btn = share.querySelector('.sl-share-btn'), sheet = null, last = null, st = 0;
+    function build() {
+      sheet = document.createElement('div'); sheet.className = 'sh-sheet'; sheet.hidden = true;
+      sheet.innerHTML = '<div class="sh-scrim"></div><div class="sh-panel" role="dialog" aria-modal="true" aria-labelledby="sh-t"><span class="sh-handle" aria-hidden="true"></span><div class="sh-head"><strong id="sh-t">Share this post</strong><button type="button" class="sh-x" aria-label="Close"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="sh-grid"><button type="button" class="sh-tile" data-sh="copy"><span class="sh-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg></span><span class="sh-n">Copy link</span></button><a class="sh-tile" data-sh="linkedin" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn (opens in a new tab)"><span class="sh-ic"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true" focusable="false"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.53-1 1.84-2.05 3.79-2.05 4.05 0 4.8 2.67 4.8 6.13V21h-4v-5.4c0-1.29-.02-2.95-1.8-2.95-1.8 0-2.07 1.4-2.07 2.85V21h-4V9Z"/></svg></span><span class="sh-n">LinkedIn</span></a><a class="sh-tile" data-sh="whatsapp" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp (opens in a new tab)"><span class="sh-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 21l1.6-4.6A8.6 8.6 0 1 1 7.9 19.7L3 21Z"/><path d="M9 8.6c0 3.6 2.8 6.4 6.4 6.4l1-1.6-2-1-1 1c-1.1-.5-2.3-1.7-2.8-2.8l1-1-1-2L9 8.6Z" stroke-width="1.5"/></svg></span><span class="sh-n">WhatsApp</span></a><a class="sh-tile" data-sh="x" target="_blank" rel="noopener noreferrer" aria-label="X (opens in a new tab)"><span class="sh-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.78L17.75 3Zm-1.08 16.2h1.7L7.4 4.73H5.58l11.09 14.47Z"/></svg></span><span class="sh-n">X</span></a><a class="sh-tile" data-sh="email"><span class="sh-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg></span><span class="sh-n">Email</span></a></div><p class="sh-toast" role="status" aria-live="polite"></p></div>';
+      document.body.appendChild(sheet);
+      [].forEach.call(sheet.querySelectorAll('a[data-sh]'), function (a) { a.href = HREF[a.getAttribute('data-sh')]; a.addEventListener('click', function () { setTimeout(close, 150); }); });
+      var toast = sheet.querySelector('.sh-toast'), tile = sheet.querySelector('[data-sh="copy"]');
+      tile.addEventListener('click', function () {
+        copy(function (good) {
+          clearTimeout(st); toast.textContent = good ? 'Link copied' : 'Couldn’t copy the link.'; toast.classList.add('is-on'); tile.classList.toggle('is-copied', good);
+          st = setTimeout(function () { toast.classList.remove('is-on'); tile.classList.remove('is-copied'); }, 1600);
+        });
+      });
+      sheet.querySelector('.sh-scrim').addEventListener('click', close);
+      sheet.querySelector('.sh-scrim').addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+      sheet.querySelector('.sh-x').addEventListener('click', close);
+      sheet.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+        if (e.key !== 'Tab') return;
+        var f = [].slice.call(sheet.querySelectorAll('button, a[href]')), i = f.indexOf(document.activeElement);
+        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+      });
+    }
+    function open() {
+      if (!sheet) build();
+      last = document.activeElement; sheet.hidden = false; document.documentElement.classList.add('sh-on');
+      requestAnimationFrame(function () { sheet.classList.add('is-open'); });
+      btn.setAttribute('aria-expanded', 'true');
+      setTimeout(function () { try { sheet.querySelector('.sh-tile').focus({ preventScroll: true }); } catch { /* ignore */ } }, 60);
+    }
+    function close() {
+      if (!sheet || sheet.hidden) return;
+      sheet.classList.remove('is-open'); document.documentElement.classList.remove('sh-on'); btn.setAttribute('aria-expanded', 'false');
+      var rm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setTimeout(function () { sheet.hidden = true; }, rm ? 0 : 300);
+      if (last) try { last.focus({ preventScroll: true }); } catch { /* ignore */ }
+    }
+    btn.setAttribute('aria-expanded', 'false');
+    btn.addEventListener('click', function () {
+      if (navigator.share) {
+        navigator.share({ title: title, url: url }).catch(function (err) { if (!err || err.name !== 'AbortError') open(); });
+      } else open();
     });
   }
 })();

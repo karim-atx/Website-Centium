@@ -12,7 +12,8 @@
    - VA1 v7 (star halos), VA1 v9 (each value holds, then clears) and VA1 v11
      (the value graphics are the stars).
    - Round 8 and 13: the tappable planets and their cards (PO1), the planet
-     labels ("Click to explore" / "Tap to explore").
+     pills ("Centium" / "Coming soon"), each one button with its planet, and
+     the phone bottom sheet.
    - JN1: the chapter dock on phones.
    - SP1: on phones the planet box sits 40px under the Portfolio title block,
      measured from layout.
@@ -230,7 +231,7 @@
     var VGP = VG.map(function (o) { return o ? [o.st.offsetLeft + o.st.offsetWidth / 2, o.st.offsetTop + o.st.offsetHeight / 2] : null; });
     var pfOn = !!(pfCard && pf.top < G.vh && pf.top + pf.h > 0), cw = 290, chh = 220;
     /* B5 (audit 14): the one-time phone hint sits under the Centium window's
-       own "Tap to explore" pill, not on it: its offset below the planet is
+       own pill, not on it: its offset below the planet is
        the window's half height, the pill's gap and height, and an 8px gap */
     if (mob && pfOn && pfHint && !hintDy && hitC) { var tip = hitC.querySelector('.pf-hit-tip'); hintDy = hitC.offsetHeight / 2 + 2 + 8 + (tip ? tip.offsetHeight : 30) + 8; }
     if (pfOn && !mob) { cw = pfCard.offsetWidth || 290; chh = pfCard.offsetHeight || 220; }
@@ -300,21 +301,37 @@
     var skyK = cb.map(Math.round).join(' ') + '|' + ca.map(function (v) { return v.toFixed(3); }).join(' ') + '|' + cn.map(function (v) { return v.toFixed(3); }).join(' ');
     if (sky && skyK !== api._skyK) { api._skyK = skyK; sky.style.setProperty('--base', 'rgb(' + cb.map(Math.round).join(' ') + ')'); sky.style.setProperty('--na', 'rgb(' + ca.slice(0, 3).map(Math.round).join(' ') + ' / ' + ca[3].toFixed(3) + ')'); sky.style.setProperty('--nb', 'rgb(' + cn.slice(0, 3).map(Math.round).join(' ') + ' / ' + cn[3].toFixed(3) + ')');
       sky.style.setProperty('--ax', ca[4].toFixed(1) + '%'); sky.style.setProperty('--ay', ca[5].toFixed(1) + '%'); sky.style.setProperty('--bx', cn[4].toFixed(1) + '%'); sky.style.setProperty('--by', cn[5].toFixed(1) + '%'); }
-    if (PF.open && PF.k < .97) pfCtl.auto();
+    /* leaving the chapter closes a desktop box (the phone sheet closes only when asked) */
+    if (PF.open && PF.k < .9) pfCtl.auto();
     if (pfOn) {
       /* the clickable windows follow the projected planets every frame */
       var wp = toPx(W2), pr2 = toPx(W3);
       if (!mob) { var lx = wp[0] + 52; if (lx + cw > G.vw - 24) { lx = wp[0] - 52 - cw; pfCard.classList.add('is-left'); } else pfCard.classList.remove('is-left'); lx = clamp(lx, 16, G.vw - cw - 16); pfCard.style.left = lx.toFixed(1) + 'px'; pfCard.style.top = clamp(wp[1] - 40, 90, G.vh - chh - 24).toFixed(1) + 'px'; }
       if (hitC) hitC.style.transform = 'translate(' + (wp[0] - 34).toFixed(1) + 'px,' + (wp[1] - 34).toFixed(1) + 'px)';
-      if (hitP) hitP.style.transform = 'translate(' + (pr2[0] - 30).toFixed(1) + 'px,' + (pr2[1] - 30).toFixed(1) + 'px)';
+      /* on phones the two items never share a tap: if the planets project
+         closer than 88px the Coming soon hit moves out along their axis, and its
+         pill flips above its planet when the two pills would meet */
+      var pX = pr2[0], pY = pr2[1];
+      if (mob) { var dxp = pX - wp[0], dyp = pY - wp[1], dd = Math.sqrt(dxp * dxp + dyp * dyp) || 1; if (dd < 88) { pX = wp[0] + dxp / dd * 88; pY = wp[1] + dyp / dd * 88; }
+        if (hitP) hitP.classList.toggle('pf-tip-up', Math.abs(pX - wp[0]) < 170 && pY > wp[1] - 10 && pY - wp[1] < 140); }
+      if (hitP) hitP.style.transform = 'translate(' + (pX - 30).toFixed(1) + 'px,' + (pY - 30).toFixed(1) + 'px)';
+      /* on phones both items stay fully on screen: the hit (72/64px) keeps 8px from
+         the edges and its pill slides sideways to stay inside the viewport */
+      if (mob) [[hitC, wp[0], wp[1], 72], [hitP, pX, pY, 64]].forEach(function (z) {
+        var h = z[0]; if (!h) return; var s = z[3], cx = clamp(z[1], s / 2 + 8, G.vw - s / 2 - 8);
+        h.style.transform = 'translate(' + (cx - s / 2).toFixed(1) + 'px,' + (z[2] - s / 2).toFixed(1) + 'px)';
+        var tp = h.querySelector('.pf-hit-tip'); if (!tp) return; var hw = (tp.offsetWidth || 100) / 2, tc = clamp(cx, hw + 8, G.vw - hw - 8);
+        tp.style.translate = (tc - cx).toFixed(1) + 'px 0';
+      });
       /* a window only accepts clicks when fully on screen and opaque */
       var onS = function (q) { return q[0] > 8 && q[0] < G.vw - 8 && q[1] > 60 && q[1] < G.vh - 8; };
       var fm = red ? 1 : clamp((PF.k - .9) / .07, 0, 1);
       PF.clickC = fm >= 1 && onS(wp); PF.clickP = fm >= 1 && onS(pr2);
       [[hitC, PF.clickC], [hitP, PF.clickP]].forEach(function (x) { var h = x[0]; if (!h) return; var hk = fm.toFixed(3) + x[1]; if (h.__k === hk) return; h.__k = hk; if (!x[1] && document.activeElement === h) h.blur(); h.style.opacity = fm.toFixed(3); h.style.pointerEvents = x[1] ? '' : 'none'; h.tabIndex = x[1] ? 0 : -1; h.setAttribute('aria-hidden', x[1] ? 'false' : 'true'); h.classList.toggle('is-off', !x[1]); });
-      if (PF.open && !(PF.open === 'centium' ? PF.clickC : PF.clickP)) pfCtl.auto();
+      if (PF.open && !mob && !(PF.open === 'centium' ? PF.clickC : PF.clickP)) pfCtl.auto();
       if (mob && pfHint) { pfHint.style.left = clamp(wp[0] - 80, 12, G.vw - 172).toFixed(1) + 'px'; pfHint.style.top = (wp[1] + (hintDy || 44)).toFixed(1) + 'px'; }
-      if (pfProto && !mob) { pfProto.style.left = (pr2[0] + 36).toFixed(1) + 'px'; pfProto.style.top = (pr2[1] - 18).toFixed(1) + 'px'; }
+      /* the Coming soon box flips sides and is clamped like the Centium box */
+      if (pfProto && !mob) { var pw = pfProto.offsetWidth || 220, ph = pfProto.offsetHeight || 110, px = pr2[0] + 36; if (px + pw > G.vw - 16) { px = pr2[0] - 36 - pw; pfProto.classList.add('is-left'); } else pfProto.classList.remove('is-left'); pfProto.style.left = clamp(px, 16, G.vw - pw - 16).toFixed(1) + 'px'; pfProto.style.top = clamp(pr2[1] - 18, 90, G.vh - ph - 24).toFixed(1) + 'px'; }
       if (!mob && !red) pfCard.style.transform = 'perspective(900px) rotateY(' + (ptr.x * 7).toFixed(2) + 'deg) rotateX(' + (-ptr.y * 5).toFixed(2) + 'deg)';
     } else if (PF.inRange !== false) {
       /* HANDOVER e.1: the planet labels show only in this chapter. Out of it
@@ -376,7 +393,7 @@
   if (pfCard) { pfCard.addEventListener('pointerenter', function () { ptr.th = 1; kick(); }); pfCard.addEventListener('pointerleave', function () { ptr.th = 0; kick(); }); }
   function onReduced() { root.classList.toggle('jr-reduced', reduced()); G.vw = root.clientWidth; G.vh = window.innerHeight; build(); now(); }
   if (mqR.addEventListener) mqR.addEventListener('change', onReduced);
-  if (mqM.addEventListener) mqM.addEventListener('change', function () { swFocus(); tips(); rebuild(); });
+  if (mqM.addEventListener) mqM.addEventListener('change', function () { swFocus(); rebuild(); });
   Atx.onQuality(function (n) { if (AtxScene && AtxScene.QUAL[n]) { qName = n; rebuild(); } });
   Atx.onKick(kick);
 
@@ -550,22 +567,38 @@
 
   /* ================= Portfolio: the tappable planets and their cards (PO1) ================= */
   var pfCtl = { auto: function () {} };
-  function tips() { [].forEach.call(J.querySelectorAll('.pf-hit-tip'), function (t) { t.textContent = mqM.matches ? 'Tap to explore' : 'Click to explore'; }); }
-  tips();
   (function () {
     var sec = S.portfolio.el; if (!sec) return;
     var cardsBy = { centium: sec.querySelector('#pf-card-centium'), soon: sec.querySelector('#pf-card-soon') };
     var hits = { centium: hitC, soon: hitP };
     var track = sec.querySelector('.pf-track');
     var cur = '', tmr = 0;
+    /* on phones and coarse pointers the boxes are a bottom sheet that lives directly under <body>
+       (no transformed or pinned ancestor can misplace it or tuck it behind other layers),
+       with its own scrim; the page behind is locked while it is open */
+    var phone = function () { return mqM.matches; };
+    var scrim = document.createElement('div'); scrim.className = 'pf-sheet-scrim'; scrim.setAttribute('aria-hidden', 'true');
+    var home = track && track.parentNode, homeNext = track && track.nextSibling;
+    function place() {
+      if (!track) return;
+      if (phone()) { if (track.parentNode !== document.body) { document.body.appendChild(scrim); document.body.appendChild(track); track.classList.add('pf-sheet'); } }
+      else if (track.parentNode === document.body) { home.insertBefore(track, homeNext); track.classList.remove('pf-sheet'); scrim.remove(); }
+    }
+    place();
+    if (mqM.addEventListener) mqM.addEventListener('change', function () { if (cur) close(true); place(); });
+    scrim.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
+    scrim.addEventListener('click', function () { close(false); });
+    if (track) track.addEventListener('touchmove', function (e) { if (phone() && cur) e.stopPropagation(); }, { passive: true });
+    function sheetOn(on) { root.classList.toggle('pf-sheet-on', !!on && phone()); }
     var pfDots = SWP.portfolio && SWP.portfolio.dots;
     function set(id) { PF.open = id; root.classList.toggle('pf-card-open', !!id); if (pfDots) pfDots.inert = !id; kick(); }
     function focusables(id) { return [].slice.call(cardsBy[id].querySelectorAll('a[href], button')); }
     function open(id, focus) {
       if (cur && cur !== id) close(true);
-      cur = id; clearTimeout(tmr); sec.classList.remove('pf-closing'); sec.classList.add('pf-open'); sec.setAttribute('data-pf-open', id);
+      cur = id; pfCtl.at = Date.now(); clearTimeout(tmr); sec.classList.remove('pf-closing'); sec.classList.add('pf-open'); sec.setAttribute('data-pf-open', id);
       Object.keys(cardsBy).forEach(function (k) { var on = k === id; cardsBy[k].classList.toggle('is-open', on); cardsBy[k].setAttribute('aria-hidden', on ? 'false' : 'true'); hits[k].setAttribute('aria-expanded', on ? 'true' : 'false'); });
-      if (mqM.matches && track) { var c = cardsBy[id]; track.scrollLeft = c.offsetLeft - (track.clientWidth - c.offsetWidth) / 2; }
+      if (track) track.classList.remove('is-closing');
+      sheetOn(true); if (phone()) { PF.hov = ''; }
       set(id); seen();
       if (focus) setTimeout(function () { var b = cardsBy[id].querySelector('a, .pf-x'); try { b.focus({ preventScroll: true }); } catch { /* ignore */ } }, 60);
     }
@@ -573,20 +606,21 @@
       if (!cur) return; var was = cur; cur = '';
       Object.keys(cardsBy).forEach(function (k) { hits[k].setAttribute('aria-expanded', 'false'); cardsBy[k].setAttribute('aria-hidden', 'true'); });
       sec.classList.add('pf-closing'); sec.removeAttribute('data-pf-open');
-      var done = function () { sec.classList.remove('pf-closing', 'pf-open'); Object.keys(cardsBy).forEach(function (k) { cardsBy[k].classList.remove('is-open'); }); };
-      if (instant) done(); else tmr = setTimeout(done, 280);
-      set(''); if (back) { try { hits[was].focus({ preventScroll: true }); } catch { /* ignore */ } }
+      if (track && phone() && !instant) track.classList.add('is-closing');
+      var done = function () { sec.classList.remove('pf-closing', 'pf-open'); if (track) track.classList.remove('is-closing'); sheetOn(false); Object.keys(cardsBy).forEach(function (k) { cardsBy[k].classList.remove('is-open'); }); };
+      if (instant || reduced()) done(); else tmr = setTimeout(done, 280);
+      PF.hov = ''; set(''); if (back) { try { hits[was].focus({ preventScroll: true }); } catch { /* ignore */ } }
     }
     Object.keys(hits).forEach(function (k) {
       if (!hits[k] || !cardsBy[k]) return;
       hits[k].addEventListener('click', function (e) { e.stopPropagation(); if (cur === k) close(false); else open(k, e.detail === 0); });
-      hits[k].addEventListener('pointerenter', function () { PF.hov = k; kick(); });
+      /* touch never leaves a hover glow behind: only a mouse or pen hovers */
+      hits[k].addEventListener('pointerenter', function (e) { if (e.pointerType === 'touch') return; PF.hov = k; kick(); });
       hits[k].addEventListener('pointerleave', function () { PF.hov = ''; kick(); });
-      hits[k].addEventListener('focus', function () { PF.hov = k; kick(); });
+      hits[k].addEventListener('focus', function () { if (phone()) return; PF.hov = k; kick(); });
       hits[k].addEventListener('blur', function () { PF.hov = ''; kick(); });
       cardsBy[k].querySelector('.pf-x').addEventListener('click', function (e) { e.stopPropagation(); close(false, true); });
     });
-    if (track) track.addEventListener('scroll', function () { if (!cur || !mqM.matches) return; var c = track.children, step = c.length > 1 ? c[1].offsetLeft - c[0].offsetLeft : 1, i = Math.round(track.scrollLeft / (step || 1)), id = i ? 'soon' : 'centium'; if (id !== cur) { cur = id; Object.keys(cardsBy).forEach(function (k) { var on = k === id; cardsBy[k].classList.toggle('is-open', on); cardsBy[k].setAttribute('aria-hidden', on ? 'false' : 'true'); hits[k].setAttribute('aria-expanded', on ? 'true' : 'false'); }); sec.setAttribute('data-pf-open', id); set(id); } }, { passive: true });
     document.addEventListener('pointerdown', function (e) { if (!cur) return; var t = e.target; if (t.closest && (t.closest('.pf-card') || t.closest('.pf-proto') || t.closest('.pf-hit') || t.closest('.jr-dots'))) return; close(false); });
     document.addEventListener('keydown', function (e) {
       if (!cur) return;
@@ -603,7 +637,9 @@
     function seen() { try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ } if (pfHint) pfHint.classList.remove('is-on'); }
     function maybeHint() { var s0; try { s0 = localStorage.getItem(KEY); } catch { /* storage blocked */ } if (s0 || !mqM.matches || !pfHint || cur) return; var r = sec.getBoundingClientRect(); if (r.top < innerHeight * .3 && r.bottom > innerHeight * .7) { pfHint.classList.add('is-on'); setTimeout(function () { pfHint.classList.remove('is-on'); try { localStorage.setItem(KEY, '1'); } catch { /* storage blocked */ } }, 4200); removeEventListener('scroll', maybeHint); } }
     addEventListener('scroll', maybeHint, { passive: true });
-    pfCtl.auto = function () { if (cur) close(false); };
+    /* a desktop box closes when its planet leaves (never in the frame it opened in);
+       the phone sheet closes only when asked: the close button, the scrim or Escape */
+    pfCtl.auto = function () { if (cur && !phone() && Date.now() - (pfCtl.at || 0) > 900) close(false); };
   })();
 
   /* ================= JN1: the chapter dock on phones ================= */

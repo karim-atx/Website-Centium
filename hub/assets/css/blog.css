@@ -36,13 +36,48 @@
 .bl .btn--primary { border: 1px solid transparent; box-shadow: 0 0 0 0 rgb(143 216 232 / 0), 0 10px 24px -18px rgb(0 0 0 / .6); }
 
 /* sharing */
-.sl-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: 1.4rem; }
+.sl-share { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-top: 1.4rem; }
 .sl-share[hidden] { display: none; }
-.sl-share > span:first-child { margin-right: .3rem; font-size: .68rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #8FB3BE; }
+.sl-share > .sl-share-lab { margin-right: .1rem; font-size: .68rem; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #8FB3BE; }
 .sl-share a, .sl-share button { display: inline-flex; align-items: center; min-height: 40px; padding: 0 .95rem; border-radius: 999px; font: inherit; font-size: .82rem; font-weight: 700; color: #DCEEF2; text-decoration: none; cursor: pointer; background: rgb(255 255 255 / .06); border: 1px solid rgb(143 216 232 / .22); transition: border-color .18s ease, background-color .18s ease; }
 .sl-share a:hover, .sl-share button:hover, .sl-share a:focus-visible, .sl-share button:focus-visible { border-color: #8FD8E8; background: rgb(143 216 232 / .1); }
 .sl-share button.is-copied { background: #8FD8E8; color: #0B2B33; border-color: #8FD8E8; }
 @media (hover: none) { .sl-share a:hover, .sl-share button:not(.is-copied):hover { border-color: rgb(143 216 232 / .22); background: rgb(255 255 255 / .06); } }
+/* desktop: an icon row with tooltips; phones: one Share button */
+.sl-share-icons { display: flex; gap: .45rem; }
+.sl-share .sl-ic { position: relative; width: 40px; height: 40px; min-height: 40px; padding: 0; justify-content: center; border-radius: 999px; color: #DCEEF2; }
+.sl-share .sl-ic svg { display: block; }
+.sl-ic::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); translate: -50% 4px; padding: .32rem .6rem; border-radius: 8px; background: #F4FAFC; color: #023B4A; font-size: .72rem; font-weight: 700; letter-spacing: 0; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .16s ease, translate .16s ease; box-shadow: 0 8px 20px -10px rgb(0 0 0 / .6); }
+.sl-ic:hover::after, .sl-ic:focus-visible::after, .sl-ic.is-copied::after { opacity: 1; translate: -50% 0; }
+.sl-share .sl-ic:focus-visible { outline: 2px solid #8FD8E8; outline-offset: 3px; }
+.sl-share .sl-share-btn { display: none; }
+@media (max-width: 760px) {
+  .sl-share > .sl-share-lab, .sl-share-icons { display: none; }
+  .sl-share .sl-share-btn { display: inline-flex; gap: .55rem; min-height: 48px; padding: 0 1.25rem 0 1.05rem; font-size: .9rem; color: #F4FAFC; background: rgb(143 216 232 / .1); border-color: rgb(143 216 232 / .4); }
+  .sl-share .sl-share-btn:active { transform: scale(.985); }
+}
+/* phones without a system share menu: the sheet of options */
+html.sh-on, html.sh-on body { overflow: hidden !important; }
+.sh-sheet { position: fixed; inset: 0; z-index: 90; }
+.sh-sheet[hidden] { display: none; }
+.sh-scrim { position: absolute; inset: 0; background: rgb(1 4 8 / .55); opacity: 0; transition: opacity .3s ease; touch-action: none; }
+.sh-panel { position: absolute; left: 0; right: 0; bottom: 0; padding: 1.3rem 1.1rem calc(1.2rem + env(safe-area-inset-bottom)); border-radius: 22px 22px 0 0; background: rgb(6 18 26 / .97); border: 1px solid rgb(143 216 232 / .2); border-bottom: 0; box-shadow: 0 -24px 60px -20px rgb(0 0 0 / .85); translate: 0 100%; transition: translate .32s cubic-bezier(.22,1,.36,1); font-family: var(--font); }
+.sh-sheet.is-open .sh-scrim { opacity: 1; }
+.sh-sheet.is-open .sh-panel { translate: 0 0; }
+.sh-handle { position: absolute; left: 50%; top: 9px; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: rgb(165 192 202 / .45); }
+.sh-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .2rem 0 1rem; }
+.sh-head strong { font-size: 1.05rem; font-weight: 800; color: #F4FAFC; }
+.sh-x { width: 44px; height: 44px; margin: -6px -6px -6px 0; display: grid; place-items: center; border: 0; border-radius: 999px; background: rgb(255 255 255 / .06); color: #DCEEF2; cursor: pointer; }
+.sh-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; }
+.sh-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; min-height: 88px; padding: .8rem .4rem; border-radius: 16px; border: 1px solid rgb(143 216 232 / .18); background: rgb(255 255 255 / .04); color: #DCEEF2; font: inherit; text-decoration: none; cursor: pointer; transition: background-color .2s ease, border-color .2s ease; -webkit-tap-highlight-color: transparent; }
+.sh-tile:active { background: rgb(143 216 232 / .12); }
+.sh-tile:focus-visible, .sh-x:focus-visible { outline: 2px solid #8FD8E8; outline-offset: 2px; }
+.sh-ic { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: rgb(143 216 232 / .1); color: #EAF6F8; }
+.sh-n { font-size: .8rem; font-weight: 700; color: #DCEEF2; }
+.sh-tile.is-copied { border-color: #8FD8E8; background: rgb(143 216 232 / .14); }
+.sh-toast { margin: .9rem 0 0; min-height: 1.4em; text-align: center; font-size: .85rem; font-weight: 700; color: #8FD8E8; opacity: 0; transition: opacity .2s ease; }
+.sh-toast.is-on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .sh-panel, .sh-scrim, .sl-ic::after { transition: none !important; } }
 
 /* reading progress */
 .sl-progress { position: fixed; left: 0; top: 0; z-index: 120; width: 100%; height: 2px; transform-origin: 0 50%; transform: scaleX(var(--rp, 0)); background: linear-gradient(90deg, #4FA3B0, #8FD8E8); box-shadow: 0 0 12px rgb(143 216 232 / .7); pointer-events: none; }
@@ -180,4 +215,3 @@ html.sl-post.sc-still .sl-sky {
   background-image: linear-gradient(rgb(2 6 12 / .45), rgb(2 6 12 / .45)), image-set(url("../../atraxia/blog-scene-still.avif") type("image/avif"), url("../../atraxia/blog-scene-still.webp") type("image/webp"), url("../../atraxia/blog-scene-still.jpg") type("image/jpeg"));
 }
 html.sc-still .sl-sky .sc-canvas { display: none; }
-
