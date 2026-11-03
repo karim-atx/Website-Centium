@@ -5,6 +5,7 @@ import { MarketSkeleton } from "../../components/market/MarketStates";
 import { BizShareButton } from "../../components/share/business/BizShareButton";
 import { fetchRatingLine } from "../../components/share/business/useBizBrand";
 import { useWebLayout } from "../../components/web/useWebLayout";
+import { MarketWebType } from "../../components/market/webType";
 import { WebSegmented } from "../business-analytics/AnalyticsParts.web";
 import { MarketProvider, MARKET_TAB_KEYS, tabKeyOf, useMarket, type MarketTabKey } from "./MarketContext";
 import { HiddenBanner } from "./MarketplacePage";
@@ -22,9 +23,10 @@ import { t } from "../../i18n/core";
 // from 1024px wide, for a gym or a classes business (a store's Marketplace is
 // its Products page). The page header (64: "Marketplace", the line, the 40
 // share button at the end) and the segmented tabs (40, full width) over the
-// tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase,
-// Offers and Performance (WB-MA.2-.4) show their mobile tab in a centred
-// column under the web tabs until their web layouts are built. The other
+// tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase
+// (WB-MA.2) its list-detail with the docked editor (ShowcaseManager reads
+// MarketWebType and draws ShowcaseWeb); Offers and Performance (WB-MA.3-.4)
+// show their mobile tab in a centred column until their web layouts land. The other
 // Marketplace routes (photos, preview, See all, the offer editor) keep their
 // mobile pages in the shell's centred column. The tab lives in ?tab= as on
 // mobile; the mobile Marketplace page is not touched.
@@ -91,10 +93,15 @@ function Body() {
             <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} />
           ) : tab === "overview" ? (
             <OverviewWeb rail={rail} />
+          ) : tab === "showcase" ? (
+            <MarketWebType.Provider value={rail ? "rail" : "wide"}>
+              <HiddenBanner />
+              <ShowcaseManager />
+            </MarketWebType.Provider>
           ) : (
             <Column>
               <HiddenBanner />
-              {tab === "showcase" ? <ShowcaseManager /> : tab === "offers" ? <OffersTab /> : <PerformanceTab />}
+              {tab === "offers" ? <OffersTab /> : <PerformanceTab />}
             </Column>
           )}
         </div>

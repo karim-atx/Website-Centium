@@ -188,7 +188,7 @@ const MembershipsBody: React.FC<{ onAddRef?: (open: () => void) => void }> = ({ 
           <span style={{ display: "block", marginTop: 2, fontSize: 13, lineHeight: "20px", color: INK2 }}>{priceLine(p)}</span>
           {line && <span style={{ display: "block", marginTop: 1, fontSize: 13, lineHeight: "20px", color: MUTED }}>{line}</span>}
         </span>
-        <ChevronRight size={18} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" style={{ color: MUTED, flex: "none" }} />
+        <ChevronRight size={18} strokeWidth={2.2} aria-hidden style={{ color: MUTED, flex: "none" }} />
       </button>
     );
   };

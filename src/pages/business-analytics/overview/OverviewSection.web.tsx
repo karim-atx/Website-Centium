@@ -254,7 +254,7 @@ function InsightCard({ rail, Icon, col, title, data, onOpen }: { rail: boolean; 
         <span aria-hidden style={{ width: rail ? 24 : 32, height: rail ? 24 : 32, borderRadius: 10, background: tint(col, 0.14), color: col, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
           <Icon size={rail ? 16 : 18} strokeWidth={2.2} />
         </span>
-        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378", flex: "none" }} />}
+        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden style={{ color: "#8C8378", flex: "none" }} />}
       </div>
       <span style={{ marginTop: rail ? 6 : 8, fontSize: rail ? 15 : 17, lineHeight: rail ? "20px" : "24px", fontWeight: 700, whiteSpace: "nowrap", color: "#241F1B", textAlign: "start" }}>{title}</span>
       {data ? (
