@@ -10,6 +10,9 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/classes\/rules\/?$/, // WB-CS-SC.8 Class rules
   /^\/app\/business\/classes\/?$/, // WB-CS-SC Schedule (List and Week)
   /^\/app\/business\/classes\/[^/]+\/?$/, // WB-CS-SC.3 Class page · Bookings
+  /^\/app\/business\/orders\/?$/, // WB-ST-OR Orders tabs (list-detail)
+  /^\/app\/business\/orders\/returns\/[^/]+\/?$/, // WB-ST-OR.2 Return detail
+  /^\/app\/business\/orders\/(?!list\/|returns\/)[^/]+\/?$/, // WB-ST-OR.1 Order detail
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {

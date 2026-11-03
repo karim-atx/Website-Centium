@@ -8,6 +8,8 @@ import StoreOrdersPage from "./StoreOrdersPage";
 import OrderDetailPage from "./OrderDetailPage";
 import ReturnDetailPage from "./ReturnDetailPage";
 import OrdersListPage from "./OrdersListPage";
+import OrdersPageWeb from "./OrdersPage.web";
+import { withWeb } from "../../../components/web/withWeb";
 import StoreProductsPage from "./products/StoreProductsPage";
 
 // v6 Batch 4 · Store routes (one App.tsx line each):
@@ -20,13 +22,21 @@ import StoreProductsPage from "./products/StoreProductsPage";
 // one route, NAV-001 row 8): BusinessOperationsTab renders StoreOrdersPage
 // for a store.
 
+// Website viewport v1 (WB-ST-OR, .1, .2): from 1024px wide the Orders tabs,
+// an order and a return are one list-detail page at /app/business/orders
+// (BusinessOperationsTab sends a store there on web). Below 1024 every route
+// is the mobile one.
+const OrdersIndex = withWeb(() => <Navigate to="/app/business/operations" replace />, OrdersPageWeb);
+const OrderRoute = withWeb(OrderDetailPage, OrdersPageWeb);
+const ReturnRoute = withWeb(ReturnDetailPage, OrdersPageWeb);
+
 export function BusinessOrdersRoutes() {
   return (
     <Routes>
-      <Route index element={<Navigate to="/app/business/operations" replace />} />
+      <Route index element={<OrdersIndex />} />
       <Route path="list/:which" element={<OrdersListPage />} />
-      <Route path="returns/:returnId" element={<ReturnDetailPage />} />
-      <Route path=":orderId" element={<OrderDetailPage />} />
+      <Route path="returns/:returnId" element={<ReturnRoute />} />
+      <Route path=":orderId" element={<OrderRoute />} />
     </Routes>
   );
 }

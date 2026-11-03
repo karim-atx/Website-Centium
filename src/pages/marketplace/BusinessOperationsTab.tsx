@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { useIsWeb } from "../../components/web/useWebLayout";
 import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Users, CalendarDays, ChevronRight, KeyRound, Store } from "lucide-react";
@@ -21,8 +22,17 @@ import { t } from "../../i18n/core";
 // B7: each branch is gated on the permission its readers ask business_can
 // for (staff see the no-access card instead of an empty business); the gym
 // Front desk's Memberships tab needs 'members' on top of 'front_desk'.
+// Website viewport v1: from 1024px wide a Classes business's Schedule and a
+// store's Orders are web pages on their own routes (WB-CS-SC, WB-ST-OR); the
+// navbar slot's one route sends them there. Below 1024 nothing changes.
+const WEB_ROUTE: Partial<Record<string, string>> = { classes: "/app/business/classes", store: "/app/business/orders" };
+
 export default function BusinessOperationsTab() {
   const kind = useBusinessNavKind();
+  const web = useIsWeb();
+  const { search } = useLocation();
+  const webTo = web ? WEB_ROUTE[kind] : undefined;
+  if (webTo) return <Navigate to={{ pathname: webTo, search }} replace />;
   if (kind === "gym")
     return (
       <ConsoleGate need={["front_desk", "members"]}>

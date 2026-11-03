@@ -12,6 +12,8 @@ import type { Catalogue } from "../core";
 export const FILES: string[] = [
   "pages/business-ops/classes/SchedulePage.web.tsx",
   "pages/business-ops/classes/SessionPage.web.tsx",
+  "pages/business-ops/store/OrdersPage.web.tsx",
+  "pages/business-ops/store/webKit.tsx",
 ];
 
 const webcs: Catalogue = {
