@@ -132,6 +132,22 @@ export const ConfirmCard: React.FC<{
   useEffect(() => {
     cancelRef.current = onCancel;
   });
+  // Website viewport v1 (section 3): 400 wide from 1024px.
+  const web = useIsWeb();
+  // Website viewport v1 (section 3): from 1024px Escape also cancels the row
+  // layout, and every layout hands focus back to what opened it on close.
+  useEffect(() => {
+    if (!open || !web) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancelRef.current();
+    };
+    if (layout === "row") document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    };
+  }, [open, web, layout]);
   useEffect(() => {
     if (!open || layout === "row") return;
     // Stacked focuses the primary action, decision the safe one (OP1-085 O3,
@@ -143,8 +159,6 @@ export const ConfirmCard: React.FC<{
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, layout, initialFocus]);
-  // Website viewport v1 (section 3): 400 wide from 1024px.
-  const web = useIsWeb();
   if (!open) return null;
 
   const ink = "rgb(var(--c-charcoal))";

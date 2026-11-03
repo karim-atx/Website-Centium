@@ -141,7 +141,7 @@ export function WebDashActions({
         >
           <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: chip.dot }} />
           {chip.text}
-          <ChevronRight size={12} strokeWidth={2.6} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={12} strokeWidth={2.6} aria-hidden />
         </button>
       )}
       <button
@@ -332,7 +332,7 @@ export function WebAttentionPopover({
               {unreadBadge(notificationsUnread)}
             </span>
           ) : null}
-          <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" style={{ color: c.faint, flexShrink: 0 }} />
+          <ChevronRight size={16} aria-hidden style={{ color: c.faint, flexShrink: 0 }} />
         </button>
         <p style={{ margin: "12px 4px 10px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: c.faint }}>{t("Needs your attention")}</p>
         {(items ?? []).map((a, n) => {
@@ -649,7 +649,7 @@ export function WebVenueSection({ c, gymId, cols, onConsole, style }: { c: DashP
             <span style={{ display: "block", fontSize: 17, lineHeight: "24px", fontWeight: 700, color: c.ink }}>{t("Venue console")}</span>
             <span style={{ display: "block", fontSize: 13, lineHeight: "20px", color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t("Members, class rosters, opening hours, logo and cover")}</span>
           </span>
-          <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" style={{ color: c.faint }} />
+          <ChevronRight size={16} aria-hidden style={{ color: c.faint }} />
         </button>
       </div>
       {d && d.amountAwaitingPayment !== null && (
@@ -678,9 +678,8 @@ const TYPE_ICON: Record<ActivityKind | TotalType, LucideIcon> = {
 
 function badgeOf(c: DashPalette, k: ActivityKind | TotalType) {
   if (k === "join" || k === "payment") return c.good;
-  if (k === "end") return c.high;
-  if (k === "cancel") return c.caution;
-  if (k === "booking" || k === "appointment") return c.dark ? "#7F6BD8" : c.pDark;
+  if (k === "end" || k === "cancel") return c.high;
+  if (k === "booking" || k === "appointment" || k === "order") return c.dark ? "#7F6BD8" : c.pDark;
   if (k === "review") return c.warn;
   return c.tealDark;
 }
@@ -924,7 +923,7 @@ export function WebRecentActivity({
           style={{ flex: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 4, minHeight: 44, padding: "11px 0 13px", boxSizing: "border-box", borderTop: `1px solid ${c.divider}`, borderInlineStart: 0, borderInlineEnd: 0, borderBottom: 0, background: "none", fontSize: 15, lineHeight: "20px", fontWeight: 700, color: c.pDark, cursor: "pointer", whiteSpace: "nowrap", width: "100%" }}
         >
           {open ? t("See all activity") : t("Show {n} more and this week's totals", { n: Math.max(week.length - 3, 0) })}
-          <ChevronRight size={14} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronRight size={14} aria-hidden />
         </button>
       )}
     </section>
@@ -1016,7 +1015,7 @@ export function WebActivityScreen({
           className="hover:!bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
           style={{ width: 40, height: 40, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "transparent", border: 0, cursor: "pointer", color: "#5B5349" }}
         >
-          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
+          <ChevronLeft size={20} aria-hidden />
         </button>
         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 14 }}>
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", whiteSpace: "nowrap" }}>{t("Recent activity")}</h1>
