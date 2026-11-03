@@ -277,7 +277,7 @@ function MindHubWeb() {
             )}
             {habits.length === 0 && !habitsLoading && (
               <button type="button" onClick={() => navigate("/app/mind/habits")} className="flex items-center justify-center" style={{ padding: "24px 16px", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
-                {t("No habits yet.")}&nbsp;<b style={{ color: "#7D6BB5" }}>{t("Add one")}</b>
+                {t("No habits yet.")}{" "}<b style={{ color: "#7D6BB5" }}>{t("Add one")}</b>
               </button>
             )}
           </section>
