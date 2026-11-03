@@ -14,12 +14,17 @@ export const FILES: string[] = [
   "pages/health/web/HealthWebKit.tsx",
   "pages/health/web/Health.web.tsx",
   "components/health/metric/MetricKit.web.tsx",
+  "components/health/records/BiomarkersTab.web.tsx",
+  "pages/health/web/Records.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {
   // == Health overview (pages/health/web/Health.web, WC-HE) ==
   "Click + to log a drink": "انقر + لتسجيل مشروب", // note: health wording (mobile «اضغط + لتسجيل مشروب», 7.3)
   "Click to add one": "انقر لإضافة قراءة", // note: health wording (mobile «اضغط لإضافة قراءة», 7.3)
+
+  // == Biomarkers (components/health/records/BiomarkersTab.web, WC-HE.9) ==
+  "View history": "عرض السجل", // note: health wording (View «عرض» + History «السجل», as the marker history is named)
 };
 
 export default webclienthealth;

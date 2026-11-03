@@ -75,7 +75,7 @@ export const HealthWebHeader: React.FC<{
 };
 
 /** The header's primary action: 40 tall, pad 0 16, r12, #9A8CD6, an 18 icon and a 15/24 600 label. */
-export const HeaderCta = React.forwardRef<HTMLButtonElement, { label: string; icon?: React.ReactNode; onClick: () => void; disabled?: boolean }>(
+export const HeaderCta = React.forwardRef<HTMLButtonElement, { label: string; icon?: React.ReactNode; onClick: (e: React.MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }>(
   ({ label, icon, onClick, disabled }, ref) => (
     <button
       ref={ref}
