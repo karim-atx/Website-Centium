@@ -18,6 +18,7 @@ import { coachTone } from "../workout/coachColors";
 import type { HabitItem, Streak } from "../../types";
 import MindMobile, { useCoachHabits } from "./Mind";
 import AchievementsWeb from "./web/AchievementsWeb";
+import HabitsWeb from "./web/HabitsWeb";
 import { t, tk, tn } from "../../i18n/core";
 
 const AUTO_LABEL: Record<NonNullable<Streak["category"]>, string> = {
@@ -95,6 +96,7 @@ const Ring: React.FC<{ done: number; total: number }> = ({ done, total }) => {
 export default function MindWeb() {
   const { section } = useParams<{ section?: string }>();
   if (section === "achievements") return <MindSectionEffects section={section}><AchievementsWeb /></MindSectionEffects>;
+  if (section === "habits") return <MindSectionEffects section={section}><HabitsWeb /></MindSectionEffects>;
   if (section) return <MindMobile />;
   return <MindHubWeb />;
 }

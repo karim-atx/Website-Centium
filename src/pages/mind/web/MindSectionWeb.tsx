@@ -47,7 +47,7 @@ export const MindSectionWeb: React.FC<{
           </p>
         </div>
         {cta && (
-          <button type="button" onClick={cta.onClick} disabled={cta.disabled} className="mind-web-press" style={{ ...mindPrimary, opacity: cta.disabled ? 0.5 : 1 }}>
+          <button type="button" data-mind-cta onClick={cta.onClick} disabled={cta.disabled} className="mind-web-press" style={{ ...mindPrimary, opacity: cta.disabled ? 0.5 : 1 }}>
             <Plus size={18} color="#FFFFFF" aria-hidden />
             {cta.label}
           </button>

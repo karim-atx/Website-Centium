@@ -16,6 +16,7 @@ export const FILES: string[] = [
   "pages/mind/web/MindSectionWeb.tsx",
   "pages/mind/web/ChipStrip.tsx",
   "pages/mind/web/AchievementsWeb.tsx",
+  "pages/mind/web/HabitsWeb.tsx",
 ];
 
 const webclienthome: Catalogue = {
@@ -28,6 +29,12 @@ const webclienthome: Catalogue = {
 
   // == WC-MI.3 Achievements (pages/mind/web/AchievementsWeb) ==
   "Nothing unlocked yet. Log a meal or a workout to earn your first badge.": "لم يُفتح شيء بعد. سجّل وجبة أو تمرينًا لتنال أول شارة.",
+
+  // == WC-MI.1 Habits (pages/mind/web/HabitsWeb) ==
+  "{habit} colour: {colour}. Click to change": "لون {habit}: {colour}. انقر للتغيير",
+  "best {n}": "الأفضل {n}", // note: a habit's longest streak in days, after its current one
+  "Add a habit to start a streak.": "أضف عادة لتبدأ سلسلة.",
+  "Auto streaks count from what you log across the app.": "تُحتسب السلاسل التلقائية مما تسجّله في التطبيق كله.",
 };
 
 export default webclienthome;

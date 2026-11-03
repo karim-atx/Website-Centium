@@ -7,6 +7,7 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/?$/, // WC-HO Home
   /^\/app\/mind\/?$/, // WC-MI Mind hub
   /^\/app\/mind\/achievements\/?$/, // WC-MI.3 Achievements
+  /^\/app\/mind\/habits\/?$/, // WC-MI.1 Habits
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)
