@@ -36,6 +36,8 @@ test("the adapted business pages fill the content area; everything else keeps th
   const { webPageFor } = await import("./webPages");
   assert.equal(webPageFor("/app/business/services", true), true);
   assert.equal(webPageFor("/app/business/classes/rules", true), true);
-  assert.equal(webPageFor("/app/business/classes", true), false);
+  assert.equal(webPageFor("/app/business/classes", true), true); // area cs: WB-CS-SC
+  assert.equal(webPageFor("/app/business/orders/a8000000-0000-4000-8000-000000001048", true), true); // area cs: WB-ST-OR.1
+  assert.equal(webPageFor("/app/business/orders/list/to-fulfil", true), false); // area cs: See all lists keep the mobile column
   assert.equal(webPageFor("/app/business/services", false), false);
 });
