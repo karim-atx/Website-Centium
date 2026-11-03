@@ -19,7 +19,7 @@ import { usePendingPhotos } from "../../../business-market/usePendingPhotos";
 import { useStrip } from "../../../business-market/listingParts";
 import { dropIndex, groupByCategory, itemsHeader, mergeSectionOrder, moveTo, priceLine } from "../../../business-market/showcaseModel";
 import { ProductEditorSheet } from "./ProductEditorSheet";
-import { FOCUS } from "../webKit";
+import { ExtrasHeader, FOCUS } from "../webKit";
 import { t, tk, tx } from "../../../../i18n/core";
 
 // Website viewport v1 · WB-ST-PR Products · Showcase (WB-ST Products Web v2)
@@ -66,7 +66,7 @@ function ProductsScreen() {
     return (
       <div style={{ color: "#241F1B" }}>
         <div className="sticky top-0 z-30">
-          <WebPageHeader title={category === "Other" ? t("Other") : category} kicker={t("Products")} back={{ to: "/app/business/products", label: tk("Back to Products"), square: true }} />
+          <ExtrasHeader kicker={t("Products")} title={category === "Other" ? t("Other") : category} backLabel={t("Back to Products")} onBack={() => onTab(tab)} />
         </div>
         <div style={{ padding: 32 }}>
           <div className="max-w-[1280px]">
@@ -497,7 +497,7 @@ function ItemCard({
                     {chipText}
                   </span>
                 ) : null}
-                <ChevronRight size={16} strokeWidth={2} color="#8C8378" aria-hidden className="shrink-0 rtl:-scale-x-100" />
+                <ChevronRight size={16} strokeWidth={2} color="#8C8378" aria-hidden className="shrink-0" />
               </button>
             </div>
           );

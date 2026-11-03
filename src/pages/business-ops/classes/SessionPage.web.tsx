@@ -384,7 +384,7 @@ export default function SessionPageWeb() {
                         : t("Click to choose who teaches it")}
                   </span>
                 </span>
-                <ChevronRight size={16} strokeWidth={2} className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} aria-hidden />
+                <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
               </button>
               {details.map((d) => (
                 <div key={d.l} className="flex flex-col justify-center" style={{ padding: "12px 16px", borderTop: DIV }}>

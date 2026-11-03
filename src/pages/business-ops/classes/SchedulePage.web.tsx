@@ -240,7 +240,7 @@ export default function SchedulePageWeb() {
               <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{r.title}</span>
               <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{r.sub}</span>
             </span>
-            <ChevronRight size={16} strokeWidth={2} className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
           </button>
         ))}
       </div>
@@ -385,7 +385,7 @@ export default function SchedulePageWeb() {
 
                   <div className="flex items-center justify-between" style={{ height: 44 }}>
                     <WeekArrow label={t("Previous week")} onClick={() => moveWeek(-1)}>
-                      <ChevronLeft size={16} strokeWidth={2} className="rtl:-scale-x-100" aria-hidden />
+                      <ChevronLeft size={16} strokeWidth={2} aria-hidden />
                     </WeekArrow>
                     <button
                       type="button"
@@ -402,7 +402,7 @@ export default function SchedulePageWeb() {
                       {weekOf(week)}
                     </button>
                     <WeekArrow label={t("Next week")} onClick={() => moveWeek(1)}>
-                      <ChevronRight size={16} strokeWidth={2} className="rtl:-scale-x-100" aria-hidden />
+                      <ChevronRight size={16} strokeWidth={2} aria-hidden />
                     </WeekArrow>
                   </div>
 

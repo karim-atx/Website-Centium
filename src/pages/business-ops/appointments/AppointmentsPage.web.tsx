@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Banknote, CalendarCheck, CalendarPlus, CircleX, Clock, FileWarning, MessageCircle, Plus, Tag, User } from "lucide-react";
 import { apptChip, cancelAppointment, fetchDiary, fetchDiaryDetail, fetchFreeStretches, fetchServices, hasAppointments, markAppointment, markAppointmentPaid, payWords, type DiaryAppt, type Service } from "../../../services/appointments";
 import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
@@ -12,9 +12,10 @@ import { WebPageHeader } from "../../../components/web/WebPageHeader";
 import { useWebLayout } from "../../../components/web/useWebLayout";
 import { ErrorCard, KitPop, useOpsToast } from "../store/opsKit";
 import { APPT_KINDS, useLive, useMessagePerson, useStoreBusiness } from "../store/storeShared";
-import { FOCUS, WebBoxes, WebEmpty, WebLabel, WebList, WebListSkeleton, WebRow } from "../store/webKit";
+import { ExtrasHeader, ExtrasList, ExtrasRow, FOCUS, WebBoxes, WebEmpty, WebLabel, WebList, WebListSkeleton, WebRow } from "../store/webKit";
+import { mondayIndex } from "../../../utils/week";
 import { AddAppointmentSheet } from "./AddAppointmentSheet";
-import { serviceTitle, time, todaySub } from "./apptShared";
+import { dayDate, serviceTitle, time, todaySub, weekdayShort } from "./apptShared";
 import { t, tk, tn, tx } from "../../../i18n/core";
 
 // Website viewport v1 · WB-ST-AP Appointments and WB-ST-AP.1 Appointment
@@ -436,5 +437,119 @@ function ApptPane({ id, rail, onChanged }: { id: string; rail: boolean; onChange
       />
       {toast}
     </>
+  );
+}
+
+/**
+ * WB-ST-AP.4 · Day list (WB-ST Store Extras Web, "day-*"): the 72 header (Back, the Appointments kicker over the day),
+ * the 14-day strip as equal chips across the row (60 tall, r14, gap 8, 24 under it; the selected day #AEA1DC with
+ * white text, the others #F0EDF9 / #7D6BB5; the weekday 13/20 700 caps over the date 17/24 800), then the whole
+ * day's bookings and free slots in one card (rows 64), or the dashed "Nothing this day" card. The day (?date=),
+ * loading, the rows' destinations and Add appointment from a free slot are the mobile AppointmentsDayPage's.
+ */
+export function AppointmentsDayPageWeb() {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { businessId } = useStoreBusiness();
+  const date = params.get("date") ?? isoDate(new Date());
+  const live = useLive(businessId ? () => loadDay(businessId, date) : null, 120000, date, { businessId, kinds: APPT_KINDS });
+  const s = live.state;
+  const d = s.status === "ok" ? s.value : null;
+  const items = useMemo(() => (d ? merge(d) : []), [d]);
+  const [toast, showToast] = useOpsToast();
+  const [sheet, setSheet] = useState<{ open: boolean; prefill: { date: string; startsAt: string } | null }>({ open: false, prefill: null });
+
+  const strip = useMemo(() => {
+    const d0 = new Date();
+    const monday = new Date(d0.getFullYear(), d0.getMonth(), d0.getDate() - mondayIndex(d0.getDay()));
+    return Array.from({ length: 14 }, (_, i) => new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i));
+  }, []);
+  const [y, m, dd] = date.split("-").map(Number);
+  const day = new Date(y, m - 1, dd);
+  const back = () => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/appointments"));
+
+  return (
+    <div style={{ color: "#241F1B" }}>
+      <div className="sticky top-0 z-30">
+        <ExtrasHeader kicker={t("Appointments")} title={dayDate(day)} backLabel={t("Back")} onBack={back} />
+      </div>
+      <div style={{ padding: 32 }}>
+        <div className="max-w-[1280px] flex flex-col">
+          <div role="tablist" aria-label={t("Day")} className="grid" style={{ gridTemplateColumns: "repeat(14,minmax(0,1fr))", gap: 8, marginBottom: 24 }}>
+            {strip.map((x) => {
+              const v = isoDate(x);
+              const on = v === date;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  aria-label={dayDate(x)}
+                  data-day-chip
+                  onClick={() => setParams({ date: v }, { replace: true })}
+                  className={`min-w-0 flex flex-col items-center justify-center ${on ? "" : "hover:bg-[#E6E1F6]"} ${FOCUS}`}
+                  style={{ height: 60, borderRadius: 14, background: on ? "#AEA1DC" : "#F0EDF9", color: on ? "#FFFFFF" : "#7D6BB5" }}
+                >
+                  <span className="uppercase" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700 }}>
+                    {weekdayShort(x)}
+                  </span>
+                  <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{x.getDate()}</span>
+                </button>
+              );
+            })}
+          </div>
+          {s.status === "error" ? (
+            <ErrorCard text={t("Couldn't load your appointments.")} onRetry={live.reload} />
+          ) : s.status === "loading" ? (
+            <WebListSkeleton rows={4} rowH={64} label={t("Loading your appointments")} />
+          ) : items.length === 0 ? (
+            <WebEmpty icon={CalendarCheck} title={t("Nothing this day")} body={t("Bookings and free slots for this day show here.")} padding="40px 32px" />
+          ) : (
+            <ExtrasList label={dayDate(day)}>
+              {items.map((it, i) =>
+                it.kind === "appt" ? (
+                  <ExtrasRow
+                    key={it.a.id}
+                    icon={Clock}
+                    title={serviceTitle(it.a)}
+                    sub={`${time(it.a.startsAt)} · ${it.a.clientLabel}`}
+                    chip={chipOf(apptChip(it.a.status))}
+                    rule={i > 0}
+                    onClick={() => navigate(`/app/business/appointments/${it.a.id}`)}
+                  />
+                ) : (
+                  <ExtrasRow
+                    key={`free-${it.f.startsAt}`}
+                    icon={Clock}
+                    title={t("Free slot")}
+                    sub={t("{from} to {to}", { from: time(it.f.startsAt), to: time(it.f.endsAt) })}
+                    chip={{ label: tx("Open", "free slot"), tone: "soft" }}
+                    rule={i > 0}
+                    onClick={() => setSheet({ open: true, prefill: { date, startsAt: it.f.startsAt } })}
+                  />
+                )
+              )}
+            </ExtrasList>
+          )}
+        </div>
+      </div>
+      {businessId && d && (
+        <AddAppointmentSheet
+          open={sheet.open}
+          onClose={() => setSheet({ open: false, prefill: null })}
+          businessId={businessId}
+          services={d.services}
+          team={d.team}
+          prefill={sheet.prefill}
+          onAdded={(a) => {
+            setSheet({ open: false, prefill: null });
+            showToast(a.waiverPending ? t("Appointment added. {client} still has your terms to accept.", { client: a.clientLabel }) : t("Appointment added. It's in {client}'s calendar.", { client: a.clientLabel }), false);
+            void live.refresh();
+          }}
+        />
+      )}
+      {toast}
+    </div>
   );
 }

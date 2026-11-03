@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgePercent, ChevronRight, IdCard, MailPlus, ScanLine, Ticket } from "lucide-react";
-import BusinessDashboard from "./BusinessDashboard";
+import { BusinessDashboardKindWeb } from "./BusinessDashboardKinds.web";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { useApp } from "../../context/AppContext";
 import { useMyVenues } from "../../hooks/useMyVenues";
@@ -39,10 +39,9 @@ import { t } from "../../i18n/core";
 // Reading, polling, saving and the destinations are the mobile
 // BusinessDashboard's, unchanged; the mobile page itself is not touched.
 //
-// The Classes and Store dashboards (WB-HO · CS / · ST) have their own web
-// designs, not built yet: until then those businesses (and a gym that runs
-// classes, which the app draws with the class set) see the mobile dashboard
-// in the centred column, as every page without a web layout does.
+// The Classes and Store dashboards (WB-HO · CS / · ST, and a gym that runs
+// classes, which the app draws with the class set) render
+// BusinessDashboardKinds.web with this page's state.
 
 const POLL_MS = 2 * 60 * 1000;
 const GAP = 24;
@@ -189,12 +188,47 @@ export default function BusinessDashboardWeb() {
     else go(to[s.to]);
   };
 
-  // Not a gym (or a gym that runs classes): the mobile dashboard in the centred column until WB-HO · CS / · ST are built.
-  if (kind !== "gym") {
+  // WB-HO · CS / · ST: the Classes (and a gym that runs classes) and Store dashboards (BusinessDashboardKinds.web); See all activity below is shared.
+  if (kind !== "gym" && !(activityOpen && raw)) {
     return (
-      <MobileColumn>
-        <BusinessDashboard />
-      </MobileColumn>
+      <BusinessDashboardKindWeb
+        kind={kind}
+        c={c}
+        raw={raw}
+        error={error}
+        now={now}
+        today={today}
+        rail={rail}
+        online={online}
+        reducedMotion={reducedMotion}
+        venues={venues}
+        selected={selected}
+        select={select}
+        isOwner={isOwner}
+        gymId={gymId}
+        gauges={gauges}
+        attention={attention}
+        steps={steps}
+        notifUnread={notifUnread}
+        panelOpen={panelOpen}
+        setPanelOpen={setPanelOpen}
+        sheetOpen={sheetOpen}
+        setSheetOpen={setSheetOpen}
+        setupHidden={setupHidden}
+        setSetupHidden={setSetupHidden}
+        onToggleListing={onToggleListing}
+        onAttention={onAttention}
+        onStep={onStep}
+        openListing={openListing}
+        load={() => void load()}
+        schedule={schedule}
+        weekActivity={weekActivity}
+        totals={totals}
+        feed={feed}
+        updatedAt={updatedAt}
+        refreshing={refreshing}
+        onSeeAllActivity={() => setActivityOpen(true)}
+      />
     );
   }
 

@@ -16,6 +16,9 @@ export const FILES: string[] = [
   "pages/business-ops/store/webKit.tsx",
   "pages/business-ops/store/products/StoreProductsPage.web.tsx",
   "pages/business-ops/appointments/AppointmentsPage.web.tsx",
+  "pages/business-ops/store/OrdersListPage.web.tsx",
+  "components/business-dashboard/DashboardKinds.web.tsx",
+  "pages/marketplace/BusinessDashboardKinds.web.tsx",
 ];
 
 const webcs: Catalogue = {
@@ -24,6 +27,8 @@ const webcs: Catalogue = {
   // == Class page (pages/business-ops/classes/SessionPage.web, WB-CS-SC.3) ==
   "Showing {shown} of {total}": "يُعرض {shown} من {total}", // note: under the two-column roster, before "See all {n}"
   "Click to choose who teaches it": "انقر لاختيار من يدرّسها", // note: web copy of «Tap to choose…» (7.3)
+  // == Classes and Store dashboards (components/business-dashboard/DashboardKinds.web, WB-HO · CS / · ST) ==
+  "Nothing low on stock": "لا منتجات بمخزون منخفض", // note: Low stock list on the Store dashboard with no product under 5 left; «مخزون منخفض» as the Low stock label
 };
 
 export default webcs;
