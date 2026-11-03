@@ -13,6 +13,9 @@ import { PaneScope, usePanePad } from "./paneWebScope";
 // popups they render exactly as on mobile.
 
 /** Inside a sheet or popup opened from a pane page: the mobile kit look. */
+/** A web page with a pane of its own (the client More): the kit draws the pane rows. */
+export const PaneWebOn: React.FC<{ children: React.ReactNode }> = ({ children }) => <PaneScope.Provider value="on">{children}</PaneScope.Provider>;
+
 export const PaneWebOff: React.FC<{ children: React.ReactNode }> = ({ children }) => <PaneScope.Provider value="off">{children}</PaneScope.Provider>;
 
 /**

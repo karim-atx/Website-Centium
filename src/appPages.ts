@@ -12,6 +12,8 @@ import ServicesPageMobile from "./pages/business-ops/appointments/ServicesPage";
 import ServicesPageWeb from "./pages/business-ops/appointments/ServicesPage.web";
 import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
+import MoreMobile from "./pages/profile/More";
+import MoreWeb from "./pages/profile/More.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -79,7 +81,8 @@ export { default as BusinessCalendarTab } from "./pages/marketplace/BusinessCale
 export { default as Profile } from "./pages/profile/Profile";
 export { default as MyCv } from "./pages/profile/MyCv";
 export { default as Subscription } from "./pages/subscription/Subscription";
-export { default as More } from "./pages/profile/More";
+// Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
+export const More = withWeb(MoreMobile, MoreWeb);
 export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
 export { default as Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 export { default as Settings } from "./pages/settings/Settings";

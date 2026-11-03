@@ -3,7 +3,9 @@
 // mobile screen in the web shell's centred column (WebLayout › MobileFrame).
 // Grows as pages are adapted; see docs/web-viewport/PROGRESS.md.
 
-const CLIENT_PAGES: RegExp[] = [];
+const CLIENT_PAGES: RegExp[] = [
+  /^\/app\/more\/?$/, // the client More column (decision 4)
+];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)
   /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
