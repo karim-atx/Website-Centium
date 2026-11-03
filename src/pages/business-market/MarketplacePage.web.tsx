@@ -11,7 +11,7 @@ import { MarketProvider, MARKET_TAB_KEYS, tabKeyOf, useMarket, type MarketTabKey
 import { HiddenBanner } from "./MarketplacePage";
 import { OverviewWeb } from "./Overview.web";
 import { ShowcaseManager } from "./ShowcaseManager";
-import { OffersTab } from "./OffersManager";
+import { OffersTabWeb } from "./OffersWeb.web";
 import { PerformanceTab } from "./PerformanceTab";
 import PhotosPage from "./PhotosPage";
 import PreviewPage from "./PreviewPage";
@@ -25,8 +25,9 @@ import { t } from "../../i18n/core";
 // share button at the end) and the segmented tabs (40, full width) over the
 // tab. Overview (WB-MA.1) has its web columns (Overview.web); Showcase
 // (WB-MA.2) its list-detail with the docked editor (ShowcaseManager reads
-// MarketWebType and draws ShowcaseWeb); Offers and Performance (WB-MA.3-.4)
-// show their mobile tab in a centred column until their web layouts land. The other
+// MarketWebType and draws ShowcaseWeb); Offers (WB-MA.3) its three columns
+// (OffersWeb); Performance (WB-MA.4) shows its mobile tab in a centred column
+// until its web layout lands. The other
 // Marketplace routes (photos, preview, See all, the offer editor) keep their
 // mobile pages in the shell's centred column. The tab lives in ?tab= as on
 // mobile; the mobile Marketplace page is not touched.
@@ -93,15 +94,15 @@ function Body() {
             <MarketSkeleton radius={24} rows={3} count={2} label={t("Loading your marketplace")} />
           ) : tab === "overview" ? (
             <OverviewWeb rail={rail} />
-          ) : tab === "showcase" ? (
+          ) : tab === "showcase" || tab === "offers" ? (
             <MarketWebType.Provider value={rail ? "rail" : "wide"}>
               <HiddenBanner />
-              <ShowcaseManager />
+              {tab === "showcase" ? <ShowcaseManager /> : <OffersTabWeb />}
             </MarketWebType.Provider>
           ) : (
             <Column>
               <HiddenBanner />
-              {tab === "offers" ? <OffersTab /> : <PerformanceTab />}
+              <PerformanceTab />
             </Column>
           )}
         </div>
