@@ -26,7 +26,8 @@ import {
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
 import { ChipStrip } from "./ChipStrip";
-import { MindSectionWeb, mindCaps } from "./MindSectionWeb";
+import { MindSectionWeb } from "./MindSectionWeb";
+import { mindCaps } from "./mindWebStyles";
 
 /**
  * The tier card's colours (WC-MI Mind Web v5 "achievements", literal): Bronze
