@@ -4,10 +4,12 @@ import type { OnboardingDraft } from "./Onboarding";
 import type { AccountType, CustomerSubtype, ProfessionalSubtype } from "../../types";
 import { previewClientCode, type ClientCodePreview } from "../../services/redemption";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { ObFooter, ObHeader, ObPage, ObProgress, ObTitle } from "./shell/ObShell";
+import { ObFooter, ObHeader, ObPage, ObProgress, ObTitle, ObWebMid } from "./shell/ObShell";
 import { ObSelectCard } from "./shell/ObBlocks";
 import { Composed, OB, type Composition } from "./shell/visuals";
 import { useOnboardingFlow } from "./shell/flow";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { AccountTypeCardsWeb } from "./web/ObWeb";
 import { t, tk } from "../../i18n/core";
 
 interface Props {
@@ -106,6 +108,8 @@ const subtypeLabel: Record<ProfessionalSubtype, string> = {
 
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const flow = useOnboardingFlow();
+  // Website viewport v1 (WC-OB.6): from 1024px the cards sit in a row.
+  const web = useIsWeb();
   const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
   const enteredCode = draft.professionalUserIdCode.trim().toUpperCase();
   const [check, setCheck] = useState<CodeCheck>({ status: "idle" });
@@ -203,37 +207,30 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
   const conf = sel ? CONFIRM[sel] : null;
 
   return (
-    <ObPage backdrop>
+    <ObPage backdrop web="intro">
       <div className={`ob-body ${flow?.leaving ? "ob-step-out" : "ob-step-in"}`}>
         <ObProgress count={12} index={2} variant="intro" />
         <ObHeader margin="intro" onBack={onBack} />
-        <ObTitle
-          variant="intro"
-          eyebrow={t("Your account")}
-          title={t("What brings you to Centium?")}
-          subtitle={t("This shapes your experience. You can adjust it later.")}
-          fade={leaving ? 0.25 : 1}
-        />
-        <div className="ob-cards" role="radiogroup" aria-label={t("Account type")}>
-          {CARDS.map((c) => {
-            const on = sel === c.type;
-            const recede = !!sel && !on;
-            return (
-              <ObSelectCard
-                key={c.type}
-                title={t(c.title)}
-                desc={t(c.desc)}
-                points={c.points.map((p) => t(p))}
-                dot={c.dot}
-                tile={c.tile}
-                on={on}
-                recede={recede}
-                leaving={leaving}
-                visual={({ recede: r }) => <Composed comp={c.comp} w={r ? 34 : 40} />}
-                onSelect={() => chooseType(c.type)}
-                subs={
-                  c.type === "customer"
-                    ? SUBS.map((s) => (
+        <ObWebMid>
+          <ObTitle
+            variant="intro"
+            eyebrow={t("Your account")}
+            title={t("What brings you to Centium?")}
+            subtitle={t("This shapes your experience. You can adjust it later.")}
+            fade={leaving ? 0.25 : 1}
+          />
+          {web ? (
+            <AccountTypeCardsWeb
+              label={t("Account type")}
+              cards={CARDS.map((c) => ({ key: c.type, comp: c.comp, title: t(c.title), desc: t(c.desc), points: c.points.map((p) => t(p)), tile: c.tile, dot: c.dot }))}
+              selected={sel}
+              leaving={leaving}
+              onSelect={(k) => chooseType(k as AccountType)}
+              below={
+                sel === "customer" && !leaving ? (
+                  <>
+                    <div className="ob-web-subs">
+                      {SUBS.map((s) => (
                         <button
                           key={s.value}
                           type="button"
@@ -243,18 +240,57 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                         >
                           {t(s.label)}
                         </button>
-                      ))
-                    : undefined
-                }
-                extra={c.type === "customer" && needsCode ? <ClientCodeField draft={draft} setDraft={setDraft} check={check} error={codeError} /> : undefined}
-              />
-            );
-          })}
-        </div>
-        <p className="ob-cards-note" style={{ opacity: leaving ? 0.25 : 1 }}>
-          {/* V6-69: no multi-account backend, so the second line. */}
-          {t("You can change this later in Settings.")}
-        </p>
+                      ))}
+                    </div>
+                    {needsCode && <ClientCodeField draft={draft} setDraft={setDraft} check={check} error={codeError} inset={false} />}
+                  </>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="ob-cards" role="radiogroup" aria-label={t("Account type")}>
+              {CARDS.map((c) => {
+                const on = sel === c.type;
+                const recede = !!sel && !on;
+                return (
+                  <ObSelectCard
+                    key={c.type}
+                    title={t(c.title)}
+                    desc={t(c.desc)}
+                    points={c.points.map((p) => t(p))}
+                    dot={c.dot}
+                    tile={c.tile}
+                    on={on}
+                    recede={recede}
+                    leaving={leaving}
+                    visual={({ recede: r }) => <Composed comp={c.comp} w={r ? 34 : 40} />}
+                    onSelect={() => chooseType(c.type)}
+                    subs={
+                      c.type === "customer"
+                        ? SUBS.map((s) => (
+                            <button
+                              key={s.value}
+                              type="button"
+                              className="ob-card-sub tap"
+                              aria-pressed={draft.customerSubtype === s.value}
+                              onClick={() => setDraft((d) => ({ ...d, customerSubtype: s.value }))}
+                            >
+                              {t(s.label)}
+                            </button>
+                          ))
+                        : undefined
+                    }
+                    extra={c.type === "customer" && needsCode ? <ClientCodeField draft={draft} setDraft={setDraft} check={check} error={codeError} /> : undefined}
+                  />
+                );
+              })}
+            </div>
+          )}
+          <p className="ob-cards-note" style={{ opacity: leaving ? 0.25 : 1 }}>
+            {/* V6-69: no multi-account backend, so the second line. */}
+            {t("You can change this later in Settings.")}
+          </p>
+        </ObWebMid>
       </div>
       <ObFooter primary={{ label: t("Continue"), disabled: !canContinue || leaving, onClick: () => setSheet(true) }} />
       {conf && (
@@ -290,7 +326,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               >
                 <Composed comp={conf.comp} w={42} />
               </span>
-              <p style={{ fontSize: 14, lineHeight: "20px", color: "var(--ob-ink-soft)", textWrap: "pretty" }}>{t(conf.lead)}</p>
+              <p style={{ fontSize: web ? 15 : 14, lineHeight: web ? "24px" : "20px", color: "var(--ob-ink-soft)", textWrap: "pretty" }}>{t(conf.lead)}</p>
             </div>
             <div style={{ background: "var(--ob-list)", borderRadius: 18, padding: "4px 0" }}>
               {conf.rows.map(([Icon, row], k) => (
@@ -299,11 +335,11 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                   <span className="ob-sq-ic">
                     <Icon size={17} strokeWidth={1.75} />
                   </span>
-                  <span style={{ fontSize: 13.5, fontWeight: 700, lineHeight: "18px" }}>{t(row)}</span>
+                  <span style={{ fontSize: web ? 15 : 13.5, fontWeight: 700, lineHeight: "18px" }}>{t(row)}</span>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 12, lineHeight: "17px", color: "var(--ob-faint)", marginTop: 12, textAlign: "center" }}>{t(conf.note)}</p>
+            <p style={{ fontSize: web ? 13 : 12, lineHeight: web ? "20px" : "17px", color: "var(--ob-faint)", marginTop: 12, textAlign: "center" }}>{t(conf.note)}</p>
           </div>
         </BottomSheet>
       )}
@@ -317,8 +353,10 @@ const ClientCodeField: React.FC<{
   setDraft: React.Dispatch<React.SetStateAction<OnboardingDraft>>;
   check: CodeCheck;
   error: string | null;
-}> = ({ draft, setDraft, check, error }) => (
-  <div style={{ marginBlock: "12px 0", marginInline: "70px 0" }}>
+  /** Web (WC-OB.6): the field sits under the row of cards, not inside Personal. */
+  inset?: boolean;
+}> = ({ draft, setDraft, check, error, inset = true }) => (
+  <div style={{ marginBlock: "12px 0", marginInline: inset ? "70px 0" : 0 }}>
     <label className="ob-label" htmlFor="ob-client-code" style={{ display: "block", marginBottom: 6 }}>
       {t("Your professional's code")}
     </label>

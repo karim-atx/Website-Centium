@@ -1,0 +1,636 @@
+/* Website viewport v1 · WC-OB Onboarding & auth, from 1024px wide.
+
+   Literal values from the handover's WC-OB Onboarding Web v4.dc.html (1440
+   and 1024 frames). Applies only to a page that sets ObPage `web` (data-web on
+   `.ob`, written only from 1024px: useIsWeb), and to the pop-ups, menus and
+   toasts portalled while such a page is on screen (body:has). Below 1024px,
+   and on the professional and business lanes (no web design yet), nothing
+   here applies. Colours stay the shell's tokens (onboarding.css), so dark,
+   themes and High contrast follow; in Centium light they are the reference's
+   hex. Web type floor: 13px. */
+
+@media (min-width: 1024px) {
+  /* ---- The frame: page padding 24 × 48 (32 at the rail), column(s) centred, gap 24 ---- */
+  .ob[data-web] {
+    height: 100dvh;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: 24px 48px;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    /* clip, not hidden: a focused field scrolled into view must move the body, never the page */
+    overflow: clip;
+  }
+  .ob[data-web] > .ob-col {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    box-sizing: border-box;
+    border-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* intro: 640, no border, transparent; the leaf sits behind it on the page */
+  .ob[data-web="intro"] > .ob-col {
+    position: static;
+    max-width: 640px;
+    background: transparent;
+    overflow: visible;
+  }
+  /* lane: 736, 1px rgba(36,31,27,0.08), white */
+  .ob[data-web="lane"] > .ob-col {
+    max-width: 736px;
+    border: 1px solid rgb(var(--c-charcoal) / 0.08);
+    background: var(--ob-card);
+  }
+  /* ready: the form takes half, beside the panel */
+  .ob[data-web="ready"] > .ob-col {
+    max-width: none;
+    background: var(--ob-page);
+  }
+
+  /* The scrolling body: bar and header on top, the rest centred vertically. */
+  .ob[data-web] .ob-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: none;
+    padding: 0 0 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .ob[data-web] .ob-body::-webkit-scrollbar {
+    display: none;
+  }
+  .ob[data-web="lane"] .ob-body {
+    padding: 0 48px 24px;
+  }
+  .ob[data-web="ready"] .ob-body {
+    padding: 0 40px 24px;
+  }
+  .ob[data-web] .ob-body > * {
+    flex-shrink: 0;
+  }
+  /* ObWebMid: the body under the header (data-ob="body"), centred */
+  .ob[data-web] .ob-web-mid {
+    margin-top: auto;
+    margin-bottom: auto;
+  }
+
+  /* The intro leaf (data-ob="leaf"): 75% of the page's inner height, from the
+     centre + 45, 7.5% down; stroke 2 (non-scaling) in water. */
+  .ob[data-web="intro"] .ob-backdrop {
+    position: absolute;
+    top: calc(24px + (100dvh - 48px) * 0.075);
+    inset-inline-end: auto;
+    inset-inline-start: calc(50% + 45px);
+    width: calc((100dvh - 48px) * 0.75);
+    height: calc((100dvh - 48px) * 0.75);
+  }
+  .ob[data-web="intro"] .ob-backdrop path {
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* ---- Header ---- */
+  .ob[data-web="intro"] .ob-head[data-m="intro"] {
+    margin: 14px 0 14px;
+  }
+  .ob-weblogo {
+    display: flex;
+    align-items: center;
+    gap: 2.5px;
+    height: 28px;
+  }
+  .ob[data-web] .ob-exit {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* ---- Chip, eyebrow, title, subtitle ---- */
+  .ob[data-web] .ob-chip {
+    font-size: 13px;
+  }
+  .ob[data-web] .ob-eb {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-title {
+    font-size: 30px;
+    line-height: 36px;
+  }
+  .ob[data-web] .ob-sub {
+    font-size: 15px;
+    line-height: 23px;
+  }
+
+  /* ---- Pinned footer: 16 × form padding × 32, hairline 5% on top ---- */
+  .ob[data-web] .ob-foot {
+    position: relative;
+    flex: none;
+    padding: 16px 0 32px;
+    background: transparent;
+    box-shadow: none;
+    border-top: 1px solid rgb(var(--c-charcoal) / 0.05);
+  }
+  .ob[data-web="lane"] .ob-foot {
+    padding: 16px 48px 32px;
+    background: var(--ob-card);
+  }
+  .ob[data-web="ready"] .ob-foot {
+    padding: 16px 40px 32px;
+    background: var(--ob-page);
+  }
+  .ob[data-web] .ob-foot-err {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-btn {
+    font-size: 15px;
+    line-height: 22px;
+  }
+  .ob[data-web] .ob-btn-primary {
+    height: 44px;
+    border-radius: 12px;
+  }
+  .ob[data-web] .ob-btn-secondary {
+    height: 52px;
+    border-radius: 16px;
+    line-height: 24px;
+  }
+  .ob[data-web] .ob-or-t {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-link,
+  .ob[data-web] .ob-link[data-v="lane"] {
+    font-size: 15px;
+    line-height: 22px;
+    font-weight: 600;
+    margin-top: 14px;
+  }
+  /* You're all set: the health disclaimer 13/1.5, max 310, 12 above the button */
+  .ob[data-web="ready"] .ob-foot > p:not(.ob-foot-err) {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* ---- Fields ---- */
+  .ob[data-web] .ob-label {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-tag {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-help > span:first-child {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-help-count {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* Sign in: Remember me / Forgot password? 13/20 */
+  .ob[data-web] .ob-remember label,
+  .ob[data-web] .ob-remember-link {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* Create your account: strength card and terms */
+  .ob[data-web] .ob-str-head > span:first-child,
+  .ob[data-web] .ob-str-head > span:last-child {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-str-ck {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web="intro"] .ob-terms {
+    margin: 0 0 6px;
+  }
+  .ob[data-web="ready"] .ob-terms {
+    margin: 0 0 14px;
+  }
+  .ob[data-web] .ob-terms-t {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-terms-err {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* You're signed in; Check your email */
+  .ob[data-web] .ob-info {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-mail-email {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .ob[data-web] .ob-mail-body {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-hint {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* ---- Lane blocks ---- */
+  .ob[data-web] .ob-sec-t {
+    font-size: 13px;
+  }
+  .ob[data-web] .ob-sec-tag {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-tip p {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-seg > button {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-coll-t {
+    font-size: 15px;
+  }
+  .ob[data-web] .ob-coll-s {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-pilltag {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-unit-sw > button {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* A gentler start */
+  .ob[data-web] .ob-tg-para {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .ob[data-web] .ob-tg-t {
+    font-size: 15px;
+  }
+  .ob[data-web] .ob-tg-d,
+  .ob[data-web] .ob-tg-cap,
+  .ob[data-web] .ob-tg-eff {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* Goals and activity: six tiles in three columns */
+  .ob[data-web] .ob-goals {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ob[data-web] .ob-goal-ref {
+    font-size: 13px;
+  }
+  .ob[data-web] .ob-scale > button {
+    font-size: 13px;
+  }
+  .ob[data-web] .ob-scale-cap {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-rowlink-t {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .ob[data-web] .ob-rowlink-d {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* What to track: two columns (TrackStep's web branch), rows 15/18 · 13/20 */
+  .ob-web-track {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+  .ob-web-track > div {
+    min-width: 0;
+  }
+  .ob[data-web] .ob-trk-t {
+    font-size: 15px;
+  }
+  .ob[data-web] .ob-trk-d,
+  .ob[data-web] .ob-trk-cnt {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* What brings you to Centium? (AccountTypeStep's web cards) */
+  .ob[data-web] .ob-cards-note {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  /* You're all set: the vis moves to the panel; text 13/20 · 30/36 · 15/24 */
+  .ob[data-web="ready"] .ob-status-vis {
+    display: none;
+  }
+  .ob[data-web] .ob-status-eb {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  .ob[data-web] .ob-status-t {
+    font-size: 30px;
+    line-height: 36px;
+  }
+  .ob[data-web] .ob-status-s {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .ob[data-web] .ob-chip-b {
+    font-size: 13px;
+    line-height: 20px;
+  }
+
+  /* The art panel (data-ob="panel"): r24, list fill. */
+  .ob-web-panel {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    border-radius: 24px;
+    background: var(--ob-list);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- WC-OB.1 Welcome (WelcomeWeb): padding 32 × margin × 40, gap 28 ---- */
+  .ob[data-web="welcome"] {
+    padding: 32px 48px 40px;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 28px;
+  }
+  .ob-web-panels {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .ob-web-panel-card {
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+    border-radius: 24px;
+    background: var(--ob-list);
+    padding: 28px 28px 32px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .ob-web-rings {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(300px, 100%);
+    aspect-ratio: 1 / 1;
+  }
+  .ob-web-rings > span {
+    position: absolute;
+    border-radius: 999px;
+  }
+  .ob-web-panel-h {
+    margin-top: 10px;
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+  }
+  .ob-web-panel-s {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 23px;
+    font-weight: 500;
+    color: var(--ob-ink-soft);
+    text-wrap: pretty;
+  }
+  .ob .ob-web-start {
+    height: 44px;
+    border-radius: 12px;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    transition: transform 120ms ease;
+  }
+  .ob .ob-web-start:hover {
+    transform: scale(0.99);
+  }
+  .ob-web-have {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 15px;
+    line-height: 24px;
+    font-weight: 700;
+    color: var(--ob-ink-soft);
+    margin-top: 14px;
+    cursor: pointer;
+  }
+
+  /* ---- WC-OB.6 account type cards (AccountTypeCardsWeb) ---- */
+  .ob-web-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 12px;
+  }
+  .ob-wcard {
+    position: relative;
+    min-width: 0;
+    border-radius: 22px;
+    background: var(--ob-card);
+    border: 1px solid var(--ob-border);
+    box-shadow: var(--ob-card-sh);
+    padding: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    cursor: pointer;
+    text-align: start;
+    transition:
+      opacity 180ms var(--ob-ease),
+      transform 500ms var(--ob-ease),
+      box-shadow 500ms var(--ob-ease);
+  }
+  .ob-wcard[aria-checked="true"] {
+    border: 1.5px solid var(--ob-brand);
+    box-shadow: var(--ob-sel-sh);
+    transform: translateY(-2px);
+  }
+  .ob-wcard[data-recede="true"] {
+    opacity: 0.55;
+  }
+  .ob-wcard[data-gone="true"] {
+    opacity: 0;
+  }
+  .ob-wcard[data-lift="true"] {
+    transform: translateY(-6px);
+  }
+  .ob-wcard:focus-visible {
+    outline: 2px solid var(--ob-lav);
+    outline-offset: 2px;
+  }
+  .ob-wcard-tile {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .ob-wcard-ring {
+    position: absolute;
+    inset: 7px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+  }
+  .ob-wcard[aria-checked="true"] .ob-wcard-ring {
+    border-color: var(--ob-ring);
+  }
+  .ob-wcard-radio {
+    width: 22px;
+    height: 22px;
+    box-sizing: border-box;
+    border-radius: 999px;
+    border: 1.5px solid var(--ob-border);
+    color: var(--ob-on-fill);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .ob-wcard[aria-checked="true"] .ob-wcard-radio {
+    border: 0;
+    background: var(--ob-brand);
+  }
+  .ob-wcard-t {
+    display: block;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .ob-wcard-d {
+    display: block;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ob-ink-soft);
+    margin-top: 2px;
+  }
+  .ob-wcard-pts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: auto;
+  }
+  .ob-wcard-pt {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ob-ink-soft);
+  }
+  .ob-wcard-pt > span {
+    width: 5px;
+    height: 5px;
+    margin-top: 5.5px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+  /* General user / Client of a professional: two columns under the row */
+  .ob-web-subs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .ob .ob-web-subs .ob-card-sub {
+    min-height: 42px;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    justify-content: center;
+    text-align: center;
+    font-size: 13px;
+    line-height: 16px;
+  }
+
+  /* ---- Portals while a web onboarding page is on screen ---- */
+  body:has(.ob[data-web]) .ob-vars .ob-pop-b {
+    line-height: 20px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-pop-err {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-pop-a {
+    height: 44px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-pop-k {
+    height: 40px;
+    border-radius: 12px;
+    font-size: 15px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-toast {
+    width: 358px;
+    font-size: 13px;
+    line-height: 20px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-menu-t {
+    font-size: 13px;
+    line-height: 20px;
+    margin: 2px 4px 8px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-menu-o {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-label {
+    font-size: 13px;
+    line-height: 20px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-btn {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  body:has(.ob[data-web]) .ob-vars .ob-btn:not(.ob-btn-secondary) {
+    height: 44px;
+    border-radius: 12px;
+  }
+}
+
+/* The rail size (as the app shell: under 1280): page margin 32. */
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .ob[data-web] {
+    padding: 24px 32px;
+  }
+  .ob[data-web="welcome"] {
+    padding: 32px 32px 40px;
+  }
+}

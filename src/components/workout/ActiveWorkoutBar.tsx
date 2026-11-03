@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { ChevronUp } from "lucide-react";
+import { useWebLayout } from "../web/useWebLayout";
+import { webPageFor } from "../web/webPages";
+import { secondaryLayoutFor } from "../web/webNav";
 import { useApp } from "../../context/AppContext";
 import { activeBarLine, loggedFraction } from "../../services/workout/activeBar";
 import { WorkoutSessionSheet } from "./WorkoutSessionSheet";
@@ -57,6 +61,14 @@ function useKeyboardOpen(): boolean {
 const BAR_HEIGHT = 48;
 const BAR_LIFT = BAR_HEIGHT + 8;
 
+// Website viewport v1 (no web design draws the bar): from 1024px there is no
+// navbar, so the bar sits 24 above the bottom of the content area, at the
+// mobile bar's width (the 430 column less 22 each side), centred on the page
+// column: the centred mobile column on pages that show their mobile screen,
+// the content area beside the sidebar on pages with a web layout.
+const WEB_BAR_W = 430 - 44;
+const WEB_BAR_BOTTOM = 24;
+
 /**
  * WO17 · Persistent active-workout bar, in the app shell above the navbar on
  * every tab while a session is active and no logger, sheet, popup or
@@ -79,6 +91,10 @@ export const ActiveWorkoutBar: React.FC = () => {
   const loggerOpen = loggerFor !== null;
   const loggerRoutine = loggerFor ? routines.find((r) => r.id === loggerFor) ?? null : null;
   const [now, setNow] = useState(() => Date.now());
+  const { web, sidebarW } = useWebLayout();
+  const { pathname } = useLocation();
+  // Web: is this page shown in the centred mobile column (WebLayout's MobileFrame, the same test)?
+  const mobileFrame = web && !secondaryLayoutFor(pathname, false) && !webPageFor(pathname, false);
 
   const routine = activeSession ? routines.find((r) => r.id === activeSession.routineId) ?? null : null;
   const visible = !!activeSession && !!routine && !loggerOpen && !overlayOpen && !keyboardOpen;
@@ -117,9 +133,21 @@ export const ActiveWorkoutBar: React.FC = () => {
         <button
           onClick={() => setLoggerFor(routine.id)}
           aria-label={t("Open {name}: {detail}", { name: routine.name, detail: bar.subline })}
-          className="tap fixed z-40 start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)] text-start bg-primary-fill"
+          className={
+            web
+              ? "tap fixed z-40 text-start bg-primary-fill"
+              : "tap fixed z-40 start-[calc(var(--app-gutter)+22px)] end-[calc(var(--app-gutter)+22px)] text-start bg-primary-fill"
+          }
           style={{
-            bottom: "calc(env(safe-area-inset-bottom) + 84px)",
+            ...(web
+              ? {
+                  bottom: WEB_BAR_BOTTOM,
+                  width: WEB_BAR_W,
+                  insetInlineStart: mobileFrame
+                    ? `calc(50vw - ${WEB_BAR_W / 2}px)`
+                    : `calc(${sidebarW}px + (100vw - ${sidebarW}px) / 2 - ${WEB_BAR_W / 2}px)`,
+                }
+              : { bottom: "calc(env(safe-area-inset-bottom) + 84px)" }),
             height: BAR_HEIGHT,
             borderRadius: 14,
             boxShadow: "0 8px 20px rgba(36,31,27,0.2)",
