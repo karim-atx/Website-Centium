@@ -10,6 +10,7 @@ export const FILES: string[] = [
   "pages/profile/More.web.tsx",
   "pages/profile/Profile.web.tsx",
   "pages/profile/web/moWeb.tsx",
+  "pages/subscription/Subscription.web.tsx",
 ];
 
 const webclientmore: Catalogue = {

@@ -1,5 +1,6 @@
 import React from "react";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react";
+import { t } from "../../../i18n/core";
 import { useWebLayout } from "../../../components/web/useWebLayout";
 
 // Website viewport v1 · WC-MO More Web v7: the parts the client More
@@ -10,8 +11,9 @@ import { useWebLayout } from "../../../components/web/useWebLayout";
 // 24 32 (24 24 on the rail).
 
 /** The page frame: header and a body that fills the rest of the viewport. */
-export const MoPage: React.FC<{ title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode; frame: string }> = ({
+export const MoPage: React.FC<{ title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode; frame: string; onBack?: () => void }> = ({
   title,
+  onBack,
   sub,
   action,
   children,
@@ -22,6 +24,19 @@ export const MoPage: React.FC<{ title: string; sub?: string; action?: React.Reac
   return (
     <div className="flex flex-col bg-white" style={{ height: "100dvh" }} data-web-mo={frame}>
       <header className="shrink-0 flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 12, padding: `0 ${margin}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+        {/* The back button (a child page): 36, margin-start -8, chevron 20 #5B5349, hover #F5F5F6. */}
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={t("Back")}
+            title={t("Back")}
+            className="shrink-0 grid place-items-center hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+            style={{ width: 36, height: 36, marginInlineStart: -8, borderRadius: 999 }}
+          >
+            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "#5B5349" }} aria-hidden />
+          </button>
+        )}
         <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 14 }}>
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>
             {title}

@@ -16,6 +16,8 @@ import MoreMobile from "./pages/profile/More";
 import MoreWeb from "./pages/profile/More.web";
 import ProfileMobile from "./pages/profile/Profile";
 import ProfileWeb from "./pages/profile/Profile.web";
+import SubscriptionMobile from "./pages/subscription/Subscription";
+import SubscriptionWeb from "./pages/subscription/Subscription.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -82,7 +84,7 @@ export { default as BusinessVenueTab } from "./pages/marketplace/BusinessVenueTa
 export { default as BusinessCalendarTab } from "./pages/marketplace/BusinessCalendarTab";
 export const Profile = withWeb(ProfileMobile, ProfileWeb);
 export { default as MyCv } from "./pages/profile/MyCv";
-export { default as Subscription } from "./pages/subscription/Subscription";
+export const Subscription = withWeb(SubscriptionMobile, SubscriptionWeb);
 // Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
 export const More = withWeb(MoreMobile, MoreWeb);
 export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
