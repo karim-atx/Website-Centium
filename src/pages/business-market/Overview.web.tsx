@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { RedeemVoucherTile } from "../../components/market/RedeemVoucherTile";
 import { ListingToggleTile } from "../../components/market/ListingToggleTile";
 import { HeroStatCard } from "../../components/market/HeroStatCard";
+import { MarketWebType } from "../../components/market/webType";
 import { StatLedger } from "../../components/market/StatLedger";
 import { MarketError, MarketOffline, MarketSkeleton } from "../../components/market/MarketStates";
 import { FOCUS_CSS } from "../../components/market/usePress";
@@ -35,11 +36,16 @@ import { t, tk, tn } from "../../i18n/core";
 // 5 | 4 | 4: Redeem voucher with the Listing toggle, the rating, Clients
 // reached and the ledger | the Gym rows (or the studio's Hiring) and Listing
 // strength | Your card, Photos and Activities. On the rail, 2 columns with
-// Your card, Photos and Activities in a row below. The blocks are the mobile
-// components at their own size (the board's web type for them is not built);
+// Your card, Photos and Activities in a row below.
 // reading, the listing switch, the strength items and every sheet (Hours,
 // Amenities, First visit: 440 side sheets from 1024, WB-MA.5) are the mobile
-// Overview's, copied here so the mobile tab stays untouched.
+// Overview's, copied here so the mobile tab stays untouched. The shared
+// blocks take the board's web type through MarketWebType (13/20 captions,
+// 15–17 titles, the 40/48 Clients reached figure, ledger rows 10 / 8 tall,
+// Listing strength open); the voucher row is 1fr | 112; the columns are 24
+// apart (20 on the rail), and on the rail Your card, Photos and Activities
+// sit in a row of three below. The board's fill-the-viewport height for
+// Clients reached is not built (the page scrolls).
 
 export function OverviewWeb({ rail }: { rail: boolean }) {
   const m = useMarket();
@@ -120,7 +126,7 @@ export function OverviewWeb({ rail }: { rail: boolean }) {
   const colA = (
     <div data-ma-col="a" style={column}>
       <div>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,3fr) minmax(0,1fr)", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 112px", gap: 12 }}>
           <RedeemVoucherTile onPress={() => navigate("/app/business/redeem")} />
           <ListingToggleTile variant="biz" on={business.active} disabled={!canSwitch} onChange={(on) => (on ? void sw.turnOn() : sw.requestOff())} />
         </div>
@@ -166,30 +172,19 @@ export function OverviewWeb({ rail }: { rail: boolean }) {
     </div>
   );
   const colC = listing && (
-    <div data-ma-col="c" style={rail ? { gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, alignItems: "start" } : column}>
-      {rail ? (
-        <>
-          <div style={column}>{listing.yourCard}</div>
-          <div style={column}>
-            {listing.photos}
-            {listing.categories}
-          </div>
-        </>
-      ) : (
-        <>
-          {listing.yourCard}
-          {listing.photos}
-          {listing.categories}
-        </>
-      )}
+    <div data-ma-col="c" style={rail ? { gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 12, alignItems: "start" } : column}>
+      {listing.yourCard}
+      {listing.photos}
+      {listing.categories}
     </div>
   );
 
   return (
+    <MarketWebType.Provider value={rail ? "rail" : "wide"}>
     <div data-ma-overview style={{ color: c.ink, paddingBottom: 32 }}>
       <style>{FOCUS_CSS}</style>
       <MarketOffline loaded />
-      <div style={{ display: "grid", gridTemplateColumns: cols, columnGap: 24, rowGap: 24, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: cols, columnGap: rail ? 20 : 24, rowGap: rail ? 20 : 24, alignItems: "start" }}>
         {colA}
         {colB}
         {colC}
@@ -198,6 +193,7 @@ export function OverviewWeb({ rail }: { rail: boolean }) {
       {sw.popup}
       {sw.toast}
     </div>
+    </MarketWebType.Provider>
   );
 }
 
@@ -252,11 +248,11 @@ function GymRow({ title, sub, onOpen, badge }: { title: string; sub: string; onO
       type="button"
       onClick={onOpen}
       className="market-focus hover:!bg-[#FAF8FE]"
-      style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", width: "100%", background: "transparent", border: 0, textAlign: "start", color: c.ink, fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", minHeight: 62, boxSizing: "border-box" }}
+      style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", width: "100%", background: "transparent", border: 0, textAlign: "start", color: c.ink, fontFamily: "inherit", lineHeight: "normal", cursor: "pointer", minHeight: 64, boxSizing: "border-box" }}
     >
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontSize: px(14), fontWeight: 700 }}>{title}</span>
-        {sub ? <span style={{ display: "block", fontSize: px(11.5), color: c.faint }}>{sub}</span> : null}
+        <span style={{ display: "block", fontSize: px(15), lineHeight: lh(24), fontWeight: 700 }}>{title}</span>
+        {sub ? <span style={{ display: "block", fontSize: px(13), lineHeight: lh(20), color: c.faint }}>{sub}</span> : null}
       </span>
       {badge}
       <ChevronRight size={16} strokeWidth={2} color={c.faint} aria-hidden className="rtl:-scale-x-100" style={{ flexShrink: 0 }} />
