@@ -9,6 +9,7 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
   /^\/app\/business\/classes\/rules\/?$/, // WB-CS-SC.8 Class rules
   /^\/app\/business\/classes\/?$/, // WB-CS-SC Schedule (List and Week)
+  /^\/app\/business\/classes\/[^/]+\/?$/, // WB-CS-SC.3 Class page · Bookings
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {
