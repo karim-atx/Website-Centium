@@ -101,7 +101,7 @@ export default function HabitsWeb() {
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
-  useEscCancel(!!deleting, () => setDeleting(null));
+  useEscCancel(!!deleting, () => setDeleting(null), () => openerRef.current);
   const [menu, setMenu] = useState<{ habit: HabitItem; anchor: HTMLElement } | null>(null);
   const [toast, setToast] = useState<{ id: number; message: string; undo?: string } | null>(null);
   const [retrying, setRetrying] = useState(false);
@@ -470,7 +470,10 @@ export default function HabitsWeb() {
           if (!menu) return;
           if (v === "edit") openEdit(menu.habit, menu.anchor);
           else if (v === "archive") archive(menu.habit);
-          else setDeleting(menu.habit);
+          else {
+            openerRef.current = menu.anchor;
+            setDeleting(menu.habit);
+          }
         }}
       />
       <ConfirmCard
