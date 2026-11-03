@@ -240,7 +240,7 @@ export default function Home() {
  * an INSERT or UPDATE of one of the member's own client-kind rows re-reads
  * the count only (useInboxRealtime, coalesced), never the list.
  */
-function HomeBell() {
+export function HomeBell() {
   const navigate = useNavigate();
   const { authUserId } = useApp();
   const [unread, setUnread] = useState(0);

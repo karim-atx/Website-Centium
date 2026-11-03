@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { CalendarPickerSheet } from "./CalendarPickerSheet";
@@ -17,15 +17,29 @@ const dayLabel = (iso: string) => {
  * `partB` (FO1 #7-#8, v6 Part B): the pill's 0.5px #8F68F6@28% border in both
  * modes (X-09) and 44px hit areas on the 24px chevrons. Off by default, so
  * Home is unchanged.
+ *
+ * `web` (website viewport v1, WC-HO header, HO Date Selector): the pill fills
+ * its 260 box in the page header, with no margin below, and the calendar opens
+ * as a popover under it (centred on the pill, 6px below). Off on mobile.
  */
-export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) => {
+export const DateSelector: React.FC<{ partB?: boolean; web?: boolean }> = ({ partB = false, web = false }) => {
   const { selectedDate, goToPrevDate, goToNextDate, goToToday, goToDate, today } = useApp();
   const isToday = selectedDate === today;
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pillRef = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<{ left: number; top: number } | undefined>(undefined);
+  const openPicker = () => {
+    if (web && pillRef.current) {
+      const r = pillRef.current.getBoundingClientRect();
+      setAnchor({ left: Math.round(r.left + r.width / 2 - 199), top: Math.round(r.bottom + 6) });
+    }
+    setPickerOpen(true);
+  };
 
   return (
     <div
-      className={`flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#1C1F28] px-3 py-2 mb-[13px] animate-fade-slide-up ${
+      ref={web ? pillRef : undefined}
+      className={`flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#1C1F28] px-3 py-2 ${web ? "w-full box-border" : "mb-[13px]"} animate-fade-slide-up ${
         partB ? "" : "border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34]"
       }`}
       style={partB ? { border: "0.5px solid rgb(var(--c-team-nav-accent) / 0.28)" } : undefined}
@@ -38,7 +52,7 @@ export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) =
         <ChevronLeft size={15} className="rtl:-scale-x-100" />
       </button>
       <span className="flex items-center gap-[7px] min-w-0">
-        <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-[7px] min-w-0">
+        <button onClick={openPicker} className="tap flex items-center gap-[7px] min-w-0">
           <CalendarDays size={14} className="text-team-nav-accent shrink-0" />
           <span className="text-[12.5px] font-bold text-charcoal whitespace-nowrap">{dayLabel(selectedDate)}</span>
         </button>
@@ -65,6 +79,7 @@ export const DateSelector: React.FC<{ partB?: boolean }> = ({ partB = false }) =
         selectedDate={selectedDate}
         today={today}
         onSelect={goToDate}
+        anchor={web ? anchor : undefined}
       />
     </div>
   );

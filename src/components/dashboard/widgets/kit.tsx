@@ -9,6 +9,7 @@ import { clock12 } from "../../../utils/time12";
 import { t } from "../../../i18n/core";
 import { weekLetters } from "./weekLetters";
 import { MetricWidget, type MetricWidgetProps } from "../../health/MetricWidget";
+import { useWebTileHeight } from "./tileHeight";
 
 // v6 Batch 2 · Home: the parts every HO1 widget shares, on top of Health A's
 // MetricWidget (preset "home", V6-56). Literal values from home-handover.md
@@ -183,6 +184,8 @@ export const HomeCard: React.FC<
     innerActions?: boolean;
   }
 > = ({ size, editMode, onOpen, innerActions, style, ariaLabel, ...rest }) => {
+  // Website viewport v1: the web board's tile height; null on mobile.
+  const h = useWebTileHeight() ?? CARD_HEIGHT[size];
   const card = (
     <MetricWidget
       {...rest}
@@ -191,7 +194,7 @@ export const HomeCard: React.FC<
       ariaLabel={innerActions ? undefined : ariaLabel}
       onClick={!innerActions && !editMode ? onOpen : undefined}
       onRetry={editMode ? undefined : rest.onRetry}
-      style={{ height: CARD_HEIGHT[size], minHeight: CARD_HEIGHT[size], ...style }}
+      style={{ height: h, minHeight: h, ...style }}
     />
   );
   if (!innerActions || editMode) return card;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { JumpToToday } from "../ui/JumpToToday";
@@ -9,6 +9,7 @@ import { monthLeadingBlanks } from "../../utils/week";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
 import { weekLetters } from "./widgets/weekLetters";
+import { useWebDismiss } from "./web/useWebDismiss";
 
 // Monday first (v6 X-13), one letter each in the app's language (widgets/kit).
 
@@ -94,9 +95,18 @@ export const CalendarPickerSheet: React.FC<{
    * charcoal (#F5F3FA) either way.
    */
   dayInk?: "black" | "ink";
-}> = ({ open, onClose, selectedDate, today, onSelect, title = t("Choose a date"), markers, maxDate, confirm, confirmLabel = t("Done"), children, variant = "default", minDate, dayInk = "black" }) => {
+  /**
+   * Website viewport v1 (WC-HO.2, HO Calendar Picker mode "web"): the same
+   * card, 398 wide, anchored at this viewport position under its date pill
+   * instead of centred at the top; Escape closes it and focus returns.
+   * Absent on mobile.
+   */
+  anchor?: { left: number; top: number };
+}> = ({ open, onClose, selectedDate, today, onSelect, title = t("Choose a date"), markers, maxDate, confirm, confirmLabel = t("Done"), children, variant = "default", minDate, dayInk = "black", anchor }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
+  const webPanel = useRef<HTMLDivElement>(null);
+  useWebDismiss(open && !!anchor, onClose, webPanel);
   const dark = useIsDark();
   const cal = (key: keyof typeof CAL_COLORS) => CAL_COLORS[key][dark ? 1 : 0];
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));
@@ -168,10 +178,17 @@ export const CalendarPickerSheet: React.FC<{
   return createPortal(
     <div className="fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
-      <div className="absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+80px)]">
+      <div
+        className={anchor ? "absolute" : "absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+80px)]"}
+        style={anchor ? { left: anchor.left, top: anchor.top, width: 398 } : undefined}
+      >
         <div
+          ref={anchor ? webPanel : undefined}
+          role={anchor ? "dialog" : undefined}
+          aria-label={anchor ? title : undefined}
+          tabIndex={anchor ? -1 : undefined}
           className="relative w-full max-w-[398px] shadow-lift overflow-hidden animate-drop-down"
-          style={{ background: cal("shell"), borderRadius: 28, border: `1px solid ${cal("hairline")}` }}
+          style={{ background: cal("shell"), borderRadius: 28, border: `1px solid ${cal("hairline")}`, ...(anchor ? { outline: "none" } : null) }}
         >
           <div className="flex items-center justify-center" style={{ height: 37 }}>
             <p style={{ margin: 0, fontSize: textPx(20), fontWeight: 800, letterSpacing: "-0.015em", color: cal("title") }}>

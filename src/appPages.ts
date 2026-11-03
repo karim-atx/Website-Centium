@@ -12,12 +12,15 @@ import ServicesPageMobile from "./pages/business-ops/appointments/ServicesPage";
 import ServicesPageWeb from "./pages/business-ops/appointments/ServicesPage.web";
 import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
+import HomeMobile from "./pages/home/Home";
+import HomeWeb from "./pages/home/Home.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
 export { default as Onboarding } from "./pages/onboarding/Onboarding";
 export { default as BusinessSetupPage } from "./pages/onboarding/business/BusinessSetupPage";
-export { default as Home } from "./pages/home/Home";
+// Website viewport v1: the client Home's web layout from 1024px wide (WC-HO); business accounts and the mobile page below.
+export const Home = withWeb(HomeMobile, HomeWeb);
 export { default as Food } from "./pages/food/Food";
 export { default as NutrientSummaryPage } from "./pages/food/NutrientSummaryPage";
 export { default as Workout } from "./pages/workout/Workout";

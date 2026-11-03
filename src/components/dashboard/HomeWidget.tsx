@@ -22,6 +22,7 @@ import { HeartRateWidget } from "./widgets/HeartRateWidget";
 import { HabitsWidget } from "./widgets/HabitsWidget";
 import { JournalWidget } from "./widgets/JournalWidget";
 import { MeditationWidget } from "./widgets/MeditationWidget";
+import { useWebTileHeight } from "./widgets/tileHeight";
 
 // v6 Batch 2 · Home (home-handover.md HO1.W1-W11): every widget except Water
 // and Food is drawn by its own file in ./widgets on the shared MetricWidget
@@ -132,6 +133,8 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   const atOrAboveGoal = pctPercent >= 100;
   const overGoal = pctPercent > 100;
   const dark = useIsDark();
+  // Website viewport v1: the web board's tile height; null on mobile.
+  const webH = useWebTileHeight();
   // In dark mode, below the goal: the light waves' white layers at half
   // strength, so the light type above them keeps its contrast.
   const dimWaves = dark && !atOrAboveGoal;
@@ -162,7 +165,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   return (
     <div
       className="relative w-full h-[131px] rounded-[15px] overflow-hidden box-border"
-      style={{ background: dark ? WATER_DARK.ground : "linear-gradient(180deg, #F4F8FE, #ECF4FE)" }}
+      style={{ background: dark ? WATER_DARK.ground : "linear-gradient(180deg, #F4F8FE, #ECF4FE)", ...(webH ? { height: webH } : null) }}
     >
       <style>{`
         @keyframes cent-water-drift { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--cent-drift, 358px))); } }
@@ -357,13 +360,15 @@ export const HomeWidget: React.FC<{
 
   // Small: 114 tall, padding 11px 12px. Large: 150 tall, padding 14px 16px.
   // HO1.1: both fill the width their grid span gives them.
+  // Website viewport v1: on the web board both are the board's tile height.
+  const webH = useWebTileHeight();
   const shell = (bg: string, content: React.ReactNode) =>
     isLarge ? (
-      <div className="w-full h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg }}>
+      <div className="w-full h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg, ...(webH ? { height: webH } : null) }}>
         {content}
       </div>
     ) : (
-      <div className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg }}>
+      <div className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg, ...(webH ? { height: webH } : null) }}>
         {content}
       </div>
     );

@@ -35,7 +35,9 @@ const Lotus: PickerIcon = ({ size = 12, style }) => <LotusGlyph size={size} stro
  * V4: Body Fat is not offered (a Health-page metric only). Tints and inks:
  * [light, dark] from each HO1 table; Water and Food keep their repo tints.
  */
-const allWidgetTypes: { type: WidgetType; label: string; icon: PickerIcon; tint: [string, string]; ink: [string, string] }[] = [
+// Exported for the web board (website viewport v1), which offers the same picker.
+// oxlint-disable-next-line react/only-export-components
+export const allWidgetTypes: { type: WidgetType; label: string; icon: PickerIcon; tint: [string, string]; ink: [string, string] }[] = [
   { type: "steps", label: tk("Steps"), icon: Footprints, tint: ["#EAF1E4", "rgb(var(--metric-steps-tint))"], ink: ["#55733F", "rgb(var(--metric-steps-main))"] },
   { type: "weight", label: tk("Weight"), icon: WeightScaleIcon, tint: ["rgb(var(--th-f0edf9))", "rgb(var(--metric-weight-tint))"], ink: ["rgb(var(--thi-5f5093))", "rgb(var(--metric-weight-main))"] },
   { type: "water", label: tk("Water"), icon: Droplet, tint: ["rgba(143,192,232,.17)", "rgba(143,192,232,.17)"], ink: ["#3F6F98", "#9CC8EE"] },
@@ -53,7 +55,7 @@ const allWidgetTypes: { type: WidgetType; label: string; icon: PickerIcon; tint:
 ];
 
 /** One picker row (OURS-home-shell picker #2-#3). The S / L chips choose the size; the row adds it. */
-const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean; onAdd: (size: WidgetSize) => void }> = ({ item, dark, onAdd }) => {
+export const PickerRow: React.FC<{ item: (typeof allWidgetTypes)[number]; dark: boolean; onAdd: (size: WidgetSize) => void }> = ({ item, dark, onAdd }) => {
   const [size, setSize] = useState<WidgetSize>("small");
   const ink = item.ink[dark ? 1 : 0];
   return (
