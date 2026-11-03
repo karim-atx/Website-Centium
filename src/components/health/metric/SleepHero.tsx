@@ -3,6 +3,7 @@ import { Moon } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, hairline, useHealthMode } from "./MetricKit";
+import { useIsWeb } from "../../web/useWebLayout";
 import { t } from "../../../i18n/core";
 
 // HE1.3 #10-#16 night hero: solid #2E4A48 in both modes (no pattern),
@@ -56,10 +57,14 @@ export const SleepHero: React.FC<{
   wakeLabel?: string;
   /** B1 sleep_segments as fractions of the night (0-1, bed to wake): the band takes the stage colours (Deep #4F8F8A, Light #A2C8C2, REM #A2C8C2@45%, Awake #E4E1EE). */
   segments?: { stage: "awake" | "light" | "deep" | "rem"; from: number; to: number }[];
-}> = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments, bedLabel = t("Bedtime"), wakeLabel = t("Wake") }) => {
+}> & { webRole?: "hero" } = ({ value, sub, emptyTitle, loading, ariaLabel, bed, wake, segments, bedLabel = t("Bedtime"), wakeLabel = t("Wake") }) => {
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const play = running ? "running" : "paused";
   const arc = "M43 137 A120 120 0 0 1 283 137";
+  // Website viewport v1 (WC-HE Health Web v5, Sleep night hero): this whole
+  // block is the hero's 326 visual (MetricHero lays it out beside the stats);
+  // value 40/40, sub 13/18, bedtime / wake 17/24 800 over 13/18 600.
+  const web = useIsWeb();
   return (
     <div ref={ref}>
       <MetricHero metric="sleep" pattern={null} padding="16px 16px 14px" background="#2E4A48" loading={loading} ariaLabel={ariaLabel}>
@@ -98,8 +103,8 @@ export const SleepHero: React.FC<{
             </span>
             {value !== null ? (
               <>
-                <span data-hero-value style={{ marginTop: 6, fontSize: 36, lineHeight: "36px", fontWeight: 800, letterSpacing: -1.4, color: "#F5F3FA" }}>{value}</span>
-                <span style={{ marginTop: 6, maxWidth: 160, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: "#C9DEDA" }}>{sub}</span>
+                <span data-hero-value style={{ marginTop: 6, fontSize: web ? 40 : 36, lineHeight: web ? "40px" : "36px", fontWeight: 800, letterSpacing: -1.4, color: "#F5F3FA" }}>{value}</span>
+                <span style={{ marginTop: 6, maxWidth: 160, fontSize: web ? 13 : textPx(12), lineHeight: web ? "18px" : linePx(18), fontWeight: 600, color: "#C9DEDA" }}>{sub}</span>
               </>
             ) : (
               <span style={{ marginTop: 10, fontSize: textPx(17), lineHeight: linePx(25.5), fontWeight: 800, letterSpacing: -0.3, color: "#F5F3FA" }}>{emptyTitle}</span>
@@ -115,8 +120,8 @@ export const SleepHero: React.FC<{
               { t: wake, l: wakeLabel, align: "right" as const },
             ].map((x) => (
               <span key={x.l} className="flex flex-col" style={{ textAlign: x.align }}>
-                <span style={{ fontSize: textPx(15), lineHeight: linePx(22.5), fontWeight: 800, color: "#F5F3FA" }}>{x.t}</span>
-                <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: "#C9DEDA" }}>{x.l}</span>
+                <span style={{ fontSize: web ? 17 : textPx(15), lineHeight: web ? "24px" : linePx(22.5), fontWeight: 800, color: "#F5F3FA" }}>{x.t}</span>
+                <span style={{ fontSize: web ? 13 : textPx(10.5), lineHeight: web ? "18px" : linePx(15.8), fontWeight: 600, color: "#C9DEDA" }}>{x.l}</span>
               </span>
             ))}
           </div>
@@ -202,3 +207,5 @@ export const SleepStagesCard: React.FC<{ stages: StageMinutes | null; right: str
     </section>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+SleepHero.webRole = "hero";

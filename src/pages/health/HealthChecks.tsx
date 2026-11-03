@@ -1,5 +1,5 @@
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GeneralPlan } from "../../components/health-checks/GeneralPlan";
 import { Bell, ChevronRight } from "lucide-react";
@@ -15,6 +15,7 @@ import { COPY, PHASES, type Phase } from "../../services/health-checks/guidance"
 import { checkInDue, lastChecked, planRowsFor } from "../../services/health-checks/plan";
 import { localDayOf, todayLocal, formatShortDate } from "../../utils/date";
 import { t, tx } from "../../i18n/core";
+import { useIsWeb } from "../../components/web/useWebLayout";
 
 const WARNING_ID = "warning-signs";
 
@@ -38,6 +39,11 @@ export default function HealthChecks() {
   const checks = useHealthChecks();
   const { refresh } = checks;
   const wantsGeneral = (location.state as { plan?: string } | null)?.plan === "general";
+  // Website viewport v1: this route has a web page (the general plan, WC-HE.8); the
+  // other plans and the neutral loading line keep their mobile screen in a centred
+  // 430 column, as the shell draws a page with no web layout.
+  const web = useIsWeb();
+  const Column = web ? WebColumn : React.Fragment;
 
   // Read the setting fresh on every visit.
   useEffect(() => {
@@ -45,18 +51,32 @@ export default function HealthChecks() {
   }, [refresh]);
 
   if (!wantsGeneral && checks.available) {
-    if (checks.on === true) return <MonitoringPlan />;
+    if (checks.on === true)
+      return (
+        <Column>
+          <MonitoringPlan />
+        </Column>
+      );
     if (checks.on === null) {
       // Neutral while the setting is read: no heading that could name either plan.
       return (
-        <div className="pb-8 pt-6">
-          <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>
-        </div>
+        <Column>
+          <div className="pb-8 pt-6">
+            <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>
+          </div>
+        </Column>
       );
     }
   }
   return <GeneralPlan />;
 }
+
+/** Website viewport v1: a mobile screen in the centred 430 column of the web shell's MobileFrame. */
+const WebColumn: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+  <div data-web-frame="mobile" className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
+    {children}
+  </div>
+);
 
 /** The Advanced health monitoring plan, as built (only reached when the mode is on). */
 function MonitoringPlan() {

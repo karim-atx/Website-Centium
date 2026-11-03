@@ -3,6 +3,9 @@ import { hourLabel12 } from "../../../utils/time12";
 import type { MetricKey } from "../MetricWidget";
 import { mc, useHealthMode } from "./MetricKit";
 import { isRtl } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { AxisBarsWeb } from "./WebAxisChart";
+import { hourAxisLabel } from "./webAxis";
 
 /**
  * Day view by hour (HE1.2.d / HE1.4.d chart, Database B1 activity_hourly):
@@ -13,14 +16,39 @@ import { isRtl } from "../../../i18n/core";
  * week chart (20 on 46.6 → 8 on 13.6 for 24 bars); exact geometry of the
  * handover's hourly chart is measured per page in its checklist row.
  */
-export const HourlyBars: React.FC<{
+type HourlyBarsProps = {
   metric: MetricKey;
   /** value per hour 0-23 (null = nothing reported). */
   values: (number | null)[];
   /** The current hour when the day is today, else null. */
   nowHour: number | null;
   label: (hour: number, value: number | null) => string;
-}> = ({ metric, values, nowHour, label }) => {
+};
+
+/** Website viewport v1: from 1024px wide the web axis chart (24 bars, gridlines without labels, every 3rd hour named). */
+export const HourlyBars: React.FC<HourlyBarsProps> & { webNative?: boolean } = (props) => {
+  const web = useIsWeb();
+  if (!web) return <HourlyBarsMobile {...props} />;
+  const { metric, values, nowHour, label } = props;
+  const ahead = (h: number) => nowHour !== null && h > nowHour;
+  return (
+    <AxisBarsWeb
+      metric={metric}
+      tickLabel={null}
+      bars={values.map((v, h) => ({
+        key: String(h),
+        value: ahead(h) ? null : v,
+        ghost: ahead(h),
+        current: h === nowHour,
+        label: hourAxisLabel(h),
+        ariaLabel: label(h, ahead(h) ? null : v),
+      }))}
+    />
+  );
+};
+HourlyBars.webNative = true;
+
+const HourlyBarsMobile: React.FC<HourlyBarsProps> = ({ metric, values, nowHour, label }) => {
   const { dark, hc } = useHealthMode();
   const BASE = 117;
   const TOP = 12;

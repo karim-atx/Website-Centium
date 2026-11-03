@@ -27,6 +27,7 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/forum\/nickname\/?$/, // WC-CO.3 Choose a nickname (changing it)
   /^\/app\/forum\/post\/[^/]+\/?$/, // WC-CO.1 Post
   /^\/app\/forum\/courses\/(?!(?:mine|certificates)\/?$)[^/]+\/?$/, // WC-CO.4 a course (not My courses; lessons and certificates stay mobile)
+  /^\/app\/health\/checks\/?$/, // WC-HE.8 Your health checks (general plan; the other plans in a centred column)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY, · CS and · ST Dashboards

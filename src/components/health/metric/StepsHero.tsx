@@ -3,6 +3,8 @@ import { Footprints } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { HeroPill, MetricHero, StatCard, mc, metricIconInk, metricTextInk, useHealthMode, type Stat } from "./MetricKit";
+import { useIsWeb } from "../../web/useWebLayout";
+import { HeroWebLayout } from "./MetricKit.web";
 
 // HE1.2 #10-#27 hero: tint card 358 r22 pad 18 16 16 16 with p1.svg; the
 // ring 196 x 196 (viewBox 0 0 196 196) centred, measured from HE1.2.png:
@@ -85,9 +87,40 @@ export const StepsHero: React.FC<{
   stats: Stat[];
   loading?: boolean;
   ariaLabel: string;
-}> = ({ pct, value, sub, pills, stats, loading, ariaLabel }) => {
+}> & { webRole?: "hero" } = ({ pct, value, sub, pills, stats, loading, ariaLabel }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
+  const web = useIsWeb();
+  if (web)
+    // Website viewport v1 (WC-HE Health Web v5, Steps hero): the 196 ring with
+    // the feet, the value 40/40 800 ls-1.4 and the sub 13/18 600 (max 200)
+    // inside; the stats and the pills in the hero column.
+    return (
+      <div ref={ref}>
+        <MetricHero metric="steps" pattern={1} padding="" loading={loading} ariaLabel={ariaLabel}>
+          <HeroWebLayout
+            metric="steps"
+            visualWidth={196}
+            stats={stats}
+            pills={pills}
+            visual={
+              <div className="relative" style={{ width: 196, height: 196 }}>
+                <StepsRing pct={pct} running={running} />
+                <div className="absolute inset-0 flex flex-col items-center" style={{ paddingTop: 55 }}>
+                  <SteppingFeet running={running} color={mc("steps", "accent")} />
+                  <span data-hero-value style={{ marginTop: 6, fontSize: 40, lineHeight: "40px", fontWeight: 800, letterSpacing: -1.4, fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>
+                    {value}
+                  </span>
+                  <span className="text-center" style={{ marginTop: 6, maxWidth: 200, fontSize: 13, lineHeight: "18px", fontWeight: 600, color: mc("steps", "ink") }}>
+                    {sub}
+                  </span>
+                </div>
+              </div>
+            }
+          />
+        </MetricHero>
+      </div>
+    );
   return (
     <div ref={ref}>
       <MetricHero metric="steps" pattern={1} padding="18px 16px 16px" loading={loading} ariaLabel={ariaLabel}>
@@ -115,3 +148,5 @@ export const StepsHero: React.FC<{
     </div>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+StepsHero.webRole = "hero";

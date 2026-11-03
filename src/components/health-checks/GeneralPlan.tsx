@@ -26,6 +26,8 @@ import { hairAt, isoDay } from "../health/log/LogSheetParts";
 import { CheckTile, InfoBox } from "./HealthCheckParts";
 import { CheckFormPopup, CheckReminderSheet, HideOrDeletePopup, HiddenChecksSheet, MarkDonePopup, type CheckOption } from "./HealthCheckPopups";
 import { t, tn, tx } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
+import { GeneralPlanWeb } from "./GeneralPlan.web";
 
 // HE1.8 "Your health checks" (health-b-handover.md 79-203), the general
 // plan of the neutral /app/health/checks route, and the pregnancy schedule
@@ -84,6 +86,7 @@ export function GeneralPlan() {
   const navigate = useNavigate();
   const back = useBack();
   const dark = useIsDark();
+  const web = useIsWeb();
   const { authUserId, user, bloodMarkers, bloodPressure, pregnancy, recoverySensitive, recoveryModePending } = useApp();
   const store = useHealthCheckStore(authUserId);
   // Round D O12: a failed load says so when it's the connection.
@@ -147,7 +150,7 @@ export function GeneralPlan() {
     const done = pregnancyChecksDone(bloodMarkers, pregnancy);
     const next = pregnancyComingUp(gestation.week, done);
     return (
-      <div style={{ paddingBottom: 96 }}>
+      <div style={{ paddingBottom: 96 }} className={web ? "max-w-[430px] mx-auto px-4 pt-6" : undefined} data-web-frame={web ? "mobile" : undefined}>
         <HeaderRow title={PREGNANCY_CHECKS_COPY.heading} onBack={() => navigate("/app/health")} />
         {/* The pregnancy warning signs sit on top (board: "urgent-signs card on
             top"): pre-eclampsia can show symptoms before a reading does. */}
@@ -357,6 +360,145 @@ export function GeneralPlan() {
     );
   };
 
+  const overlays = (
+    <>
+        {/* V6-80: the generic personal reminder stays behind the row for everyone. */}
+        <PersonalReminderSheet open={reminderOpen} onClose={() => setReminderOpen(false)} />
+  
+        <MarkDonePopup
+          open={!!markFor}
+          onClose={() => setMarkFor(null)}
+          check={markFor}
+          doneOn={markFor?.doneOn ?? null}
+          today={today}
+          onSave={(day) => checkStoreActions.markDone(markFor!.id, day)}
+          onUndo={() => checkStoreActions.undoDone(markFor!.id)}
+        />
+        <CheckFormPopup
+          open={!!formFor}
+          onClose={() => setFormFor(null)}
+          options={options}
+          editing={formFor?.editing ?? null}
+          doneOn={formFor?.editing?.doneOn ?? null}
+          remindOn={!!formFor?.editing?.hasReminder}
+          remindersReady={ready}
+          notificationsOff={notificationsOff}
+          today={today}
+          onSave={async ({ checkId, otherName, intervalMonths, doneOn, remind }) => {
+            let id = checkId;
+            const editingCustom = formFor?.editing?.custom ? formFor.editing.id : undefined;
+            if (otherName !== null) {
+              const r = await checkStoreActions.saveCustom(
+                { id: editingCustom, name: otherName, intervalMonths, doneOn: editingCustom ? undefined : doneOn },
+                allSuggested.map((s) => s.name)
+              );
+              if (!r.ok) return r;
+              id = r.id ?? null;
+            }
+            if (!id) return { ok: false, message: t("Couldn't save. Try again.") };
+            const steps: Promise<{ ok: boolean; message?: string }>[] = [];
+            if (otherName === null || editingCustom) steps.push(doneOn ? checkStoreActions.markDone(id, doneOn) : checkStoreActions.undoDone(id));
+            // Shown again if it had been hidden and is chosen from the list.
+            steps.push(checkStoreActions.show(id));
+            // S3: a reminder at Next due, 9:00 AM (today when Next is not known).
+            const has = store.reminders.some((r) => r.checkId === id);
+            if (remind && !has) {
+              const months = otherName !== null ? intervalMonths : (options.find((o) => o.id === id)?.cadence as { months?: number } | undefined)?.months;
+              steps.push(checkStoreActions.setReminder({ checkId: id, date: nextDueDay(doneOn, months, today), time: "09:00", repeat: { kind: "none" } }));
+            }
+            if (!remind && has) steps.push(checkStoreActions.removeReminder(id));
+            const results = await Promise.all(steps);
+            return results.find((x) => !x.ok) ?? { ok: true };
+          }}
+        />
+        <HideOrDeletePopup open={!!hideFor} onClose={() => setHideFor(null)} check={hideFor} onConfirm={() => hideNow(hideFor!)} />
+        <HiddenChecksSheet open={hiddenOpen} onClose={() => setHiddenOpen(false)} hidden={hiddenRows} onShow={(id) => checkStoreActions.show(id)} />
+        {remindFor && (
+          <CheckReminderSheet
+            open={!!remindFor}
+            onClose={() => setRemindFor(null)}
+            checks={rows}
+            initial={remindFor.initial}
+            editing={remindFor.editing}
+            notificationsOff={notificationsOff}
+            today={today}
+            onSave={(r) => checkStoreActions.setReminder(r)}
+            onRemove={(id) => checkStoreActions.removeReminder(id)}
+          />
+        )}
+        <PopupMenu
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          anchor={menuEl}
+          width={172}
+          options={[{ value: "hidden", label: t("Hidden checks ({n})", { n: hiddenRows.length }) }]}
+          onSelect={() => {
+            setMenuOpen(false);
+            setHiddenOpen(true);
+          }}
+        />
+        <PopupMenu
+          open={!!rowMenu}
+          onClose={() => setRowMenu(null)}
+          anchor={rowMenu?.anchor ?? null}
+          width={172}
+          options={[
+            { value: "edit", label: t("Edit") },
+            { value: "hide", label: rowMenu?.row.custom ? t("Delete") : t("Hide"), destructive: !!rowMenu?.row.custom },
+            ...(ready ? [{ value: "remind", label: t("Set a reminder") }] : []),
+          ]}
+          onSelect={(v) => {
+            const row = rowMenu?.row;
+            setRowMenu(null);
+            if (!row) return;
+            if (v === "edit") setFormFor({ editing: row });
+            if (v === "hide") setHideFor(row);
+            if (v === "remind") openReminder(row);
+          }}
+        />
+        <Toast
+          open={!!toast}
+          message={toast?.message ?? ""}
+          onUndo={toast?.undo ? () => { toast.undo?.(); setToast(null); } : undefined}
+          onExpire={() => setToast(null)}
+        />
+    </>
+  );
+
+  // Website viewport v1 (WC-HE.8): from 1024px wide the plan as a web page (GeneralPlan.web.tsx), with these rows, rules and popups.
+  if (web) {
+    const byId = (id: string) => rows.find((r) => r.id === id);
+    return (
+      <GeneralPlanWeb
+        title={t(SCREENING_COPY.cardTitle)}
+        subtitle={SCREENING_COPY.cardSubtitle}
+        intro={SCREENING_COPY.intro}
+        ready={ready}
+        rows={rows.map((r) => ({ id: r.id, name: r.name, frequency: r.frequency, who: r.who, state: r.state, done: !!r.doneOn, custom: r.custom }))}
+        hiddenCount={hiddenRows.length}
+        noAge={noAge}
+        error={
+          store.status === "error" ? (
+            <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#C0392B" }}>
+              {online ? t("Couldn't load your checks.") : t(OFFLINE_MESSAGE)}{" "}
+              <button type="button" onClick={store.retry} className="underline" style={{ fontWeight: 700 }}>
+                {t("Retry")}
+              </button>
+            </p>
+          ) : null
+        }
+        onMark={(id) => setMarkFor(byId(id) ?? null)}
+        onEdit={(id) => setFormFor({ editing: byId(id) ?? null })}
+        onHide={(id) => setHideFor(byId(id) ?? null)}
+        onRemind={(id) => openReminder(byId(id))}
+        onAdd={() => setFormFor({ editing: null })}
+        onHidden={() => setHiddenOpen(true)}
+        onPersonalReminder={() => setReminderOpen(true)}
+        overlays={overlays}
+      />
+    );
+  }
+
   return (
     <div style={{ paddingBottom: ready ? 176 : 96 }}>
       <HeaderRow
@@ -433,106 +575,7 @@ export function GeneralPlan() {
         />
       )}
 
-      {/* V6-80: the generic personal reminder stays behind the row for everyone. */}
-      <PersonalReminderSheet open={reminderOpen} onClose={() => setReminderOpen(false)} />
-
-      <MarkDonePopup
-        open={!!markFor}
-        onClose={() => setMarkFor(null)}
-        check={markFor}
-        doneOn={markFor?.doneOn ?? null}
-        today={today}
-        onSave={(day) => checkStoreActions.markDone(markFor!.id, day)}
-        onUndo={() => checkStoreActions.undoDone(markFor!.id)}
-      />
-      <CheckFormPopup
-        open={!!formFor}
-        onClose={() => setFormFor(null)}
-        options={options}
-        editing={formFor?.editing ?? null}
-        doneOn={formFor?.editing?.doneOn ?? null}
-        remindOn={!!formFor?.editing?.hasReminder}
-        remindersReady={ready}
-        notificationsOff={notificationsOff}
-        today={today}
-        onSave={async ({ checkId, otherName, intervalMonths, doneOn, remind }) => {
-          let id = checkId;
-          const editingCustom = formFor?.editing?.custom ? formFor.editing.id : undefined;
-          if (otherName !== null) {
-            const r = await checkStoreActions.saveCustom(
-              { id: editingCustom, name: otherName, intervalMonths, doneOn: editingCustom ? undefined : doneOn },
-              allSuggested.map((s) => s.name)
-            );
-            if (!r.ok) return r;
-            id = r.id ?? null;
-          }
-          if (!id) return { ok: false, message: t("Couldn't save. Try again.") };
-          const steps: Promise<{ ok: boolean; message?: string }>[] = [];
-          if (otherName === null || editingCustom) steps.push(doneOn ? checkStoreActions.markDone(id, doneOn) : checkStoreActions.undoDone(id));
-          // Shown again if it had been hidden and is chosen from the list.
-          steps.push(checkStoreActions.show(id));
-          // S3: a reminder at Next due, 9:00 AM (today when Next is not known).
-          const has = store.reminders.some((r) => r.checkId === id);
-          if (remind && !has) {
-            const months = otherName !== null ? intervalMonths : (options.find((o) => o.id === id)?.cadence as { months?: number } | undefined)?.months;
-            steps.push(checkStoreActions.setReminder({ checkId: id, date: nextDueDay(doneOn, months, today), time: "09:00", repeat: { kind: "none" } }));
-          }
-          if (!remind && has) steps.push(checkStoreActions.removeReminder(id));
-          const results = await Promise.all(steps);
-          return results.find((x) => !x.ok) ?? { ok: true };
-        }}
-      />
-      <HideOrDeletePopup open={!!hideFor} onClose={() => setHideFor(null)} check={hideFor} onConfirm={() => hideNow(hideFor!)} />
-      <HiddenChecksSheet open={hiddenOpen} onClose={() => setHiddenOpen(false)} hidden={hiddenRows} onShow={(id) => checkStoreActions.show(id)} />
-      {remindFor && (
-        <CheckReminderSheet
-          open={!!remindFor}
-          onClose={() => setRemindFor(null)}
-          checks={rows}
-          initial={remindFor.initial}
-          editing={remindFor.editing}
-          notificationsOff={notificationsOff}
-          today={today}
-          onSave={(r) => checkStoreActions.setReminder(r)}
-          onRemove={(id) => checkStoreActions.removeReminder(id)}
-        />
-      )}
-      <PopupMenu
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        anchor={menuEl}
-        width={172}
-        options={[{ value: "hidden", label: t("Hidden checks ({n})", { n: hiddenRows.length }) }]}
-        onSelect={() => {
-          setMenuOpen(false);
-          setHiddenOpen(true);
-        }}
-      />
-      <PopupMenu
-        open={!!rowMenu}
-        onClose={() => setRowMenu(null)}
-        anchor={rowMenu?.anchor ?? null}
-        width={172}
-        options={[
-          { value: "edit", label: t("Edit") },
-          { value: "hide", label: rowMenu?.row.custom ? t("Delete") : t("Hide"), destructive: !!rowMenu?.row.custom },
-          ...(ready ? [{ value: "remind", label: t("Set a reminder") }] : []),
-        ]}
-        onSelect={(v) => {
-          const row = rowMenu?.row;
-          setRowMenu(null);
-          if (!row) return;
-          if (v === "edit") setFormFor({ editing: row });
-          if (v === "hide") setHideFor(row);
-          if (v === "remind") openReminder(row);
-        }}
-      />
-      <Toast
-        open={!!toast}
-        message={toast?.message ?? ""}
-        onUndo={toast?.undo ? () => { toast.undo?.(); setToast(null); } : undefined}
-        onExpire={() => setToast(null)}
-      />
+      {overlays}
     </div>
   );
 }

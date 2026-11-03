@@ -122,7 +122,7 @@ export const BloodPressureHero: React.FC<{
   loading?: boolean;
   empty?: { title: string; hint: string; onTap: () => void };
   ariaLabel?: string;
-}> = ({ data, loading, empty, ariaLabel }) => {
+}> & { webRole?: "hero" } = ({ data, loading, empty, ariaLabel }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const ink = metricIconInk(K, dark);
@@ -509,3 +509,5 @@ export const BpReferenceCard: React.FC<{
     </section>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+BloodPressureHero.webRole = "hero";

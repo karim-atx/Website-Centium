@@ -41,7 +41,7 @@ import { useShareLocks } from "../../components/share/client/useShareLocks";
 import { imagingTypeLabel } from "../../components/health/imagingTypes";
 import { t, tn, tx } from "../../i18n/core";
 import { useIsWeb } from "../../components/web/useWebLayout";
-import { RecordsWeb, WebMobileColumn } from "./web/Records.web";
+import { RecordsWeb } from "./web/Records.web";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
 // HE1.9 · Biomarkers & imaging (docs/health-b-handover.md 614-2863): one full
@@ -435,10 +435,9 @@ export default function HealthRecords() {
   );
 
   if (marker && markerKey) {
-    // Website viewport v1: the marker page keeps its mobile layout, centred in the web page (WC-HE.9.5 not built yet).
-    const Frame = web ? WebMobileColumn : React.Fragment;
+    // Website viewport v1: from 1024px wide the marker page draws its own web page (WC-HE.9.5, MarkerPage.web.tsx).
     return (
-      <Frame>
+      <>
         <MarkerPage
           marker={marker}
           results={resultsByKey.get(markerKey) ?? []}
@@ -459,7 +458,7 @@ export default function HealthRecords() {
           }
         />
         {overlays}
-      </Frame>
+      </>
     );
   }
 
@@ -483,6 +482,8 @@ export default function HealthRecords() {
           onOpen={(m) => setPopupKey(resultKey(m))}
           confirmation={confirmation}
           highlight={highlight}
+          historyOf={(m) => resultsByKey.get(resultKey(m)) ?? []}
+          onHistory={(m) => setMarkerKey(resultKey(m))}
         />
       )}
       {/* Round G3: comparing two reports (nothing while the Premium switch is off). */}

@@ -3,6 +3,10 @@ import { Lock } from "lucide-react";
 import type { BloodMarker } from "../../../types";
 import { useWebLayout } from "../../web/useWebLayout";
 import { StatusWord, fmtDate, rangeText, statusColor } from "./kit";
+import type { LabResult } from "../../../services/labs/results";
+import { useApp } from "../../../context/AppContext";
+import { reportLabel } from "../BiomarkerDetailSheet";
+import { MarkerChartWeb } from "./MarkerChart.web";
 import { t, tn, tx } from "../../../i18n/core";
 
 // Website viewport v1 · WC-HE.9 Biomarkers (WC-HE Records Web v3, screens
@@ -29,8 +33,11 @@ export const BiomarkersWeb: React.FC<{
   lit: (m: BloodMarker) => boolean;
   confirmation: React.ReactNode;
   professional: boolean;
-}> = ({ markers, rows, query, latestDate, sharedLine, onChangeSharing, onOpen, isThreshold, remarkFor, flagFor, lit, confirmation, professional }) => {
+  historyOf?: (m: BloodMarker) => LabResult[];
+  onHistory?: (m: BloodMarker) => void;
+}> = ({ markers, rows, query, latestDate, sharedLine, onChangeSharing, onOpen, isThreshold, remarkFor, flagFor, lit, confirmation, professional, historyOf, onHistory }) => {
   const { rail } = useWebLayout();
+  const { today } = useApp();
   const focus = markers.find((m) => !isThreshold(m) && m.status && m.status !== "normal") ?? markers[0] ?? null;
   const caps: React.CSSProperties = { fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "1.3px", textTransform: "uppercase", color: "#8C8378" };
   return (
@@ -123,12 +130,32 @@ export const BiomarkersWeb: React.FC<{
               <span style={{ fontSize: 15, fontWeight: 600, color: "#8C8378" }}>{focus.unit}</span>
             </p>
             <p style={{ margin: "-8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Latest results from {date}", { date: fmtDate(latestDate) })}</p>
+            {historyOf && (() => {
+              // The small history chart (WC-HE.9 side card, chart() "compact": All, about 3 ticks); the reference grows it to the card (flex 1, min 90): 240 here.
+              const h = historyOf(focus);
+              return h.length > 0 ? (
+                <MarkerChartWeb
+                  compact
+                  points={h.map((r) => ({ key: r.id, date: r.date, value: r.value, status: isThreshold(focus) ? null : r.status, source: reportLabel(r) }))}
+                  low={focus.rangeLow ?? null}
+                  high={focus.rangeHigh ?? null}
+                  unit={focus.unit}
+                  threshold={isThreshold(focus)}
+                  spanDays={null}
+                  today={today}
+                  height={240}
+                  label={focus.name}
+                  dateLabel={fmtDate}
+                  emptyText=""
+                />
+              ) : null;
+            })()}
             {!isThreshold(focus) && rangeText(focus.rangeLow, focus.rangeHigh) !== "–" && (
               <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#241F1B" }}>{t("Reference range {range} {unit}", { range: rangeText(focus.rangeLow, focus.rangeHigh), unit: focus.unit })}</p>
             )}
             <button
               type="button"
-              onClick={() => onOpen(focus)}
+              onClick={() => (onHistory ?? onOpen)(focus)}
               className="whitespace-nowrap hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
               style={{ height: 40, borderRadius: 12, border: "1px solid #E0D5FC", background: "#FFFFFF", color: "#5F5093", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
             >

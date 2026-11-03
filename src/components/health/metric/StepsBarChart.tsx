@@ -3,6 +3,10 @@ import type { MetricKey } from "../MetricWidget";
 import { mc, useHealthMode } from "./MetricKit";
 import { daysOf, monthLetter, monthlyAverages, weekLetter, type Period } from "./periods";
 import { isRtl } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { AxisBarsWeb } from "./WebAxisChart";
+import { axisLabel, kLabel } from "./webAxis";
+import { ScaledChart } from "./MetricKit.web";
 
 // The rounded-bar range chart (HE1.2 week pattern), shared by Steps, Water,
 // Sleep (duration fallback) and Calories burned. Geometry measured from the
@@ -34,7 +38,7 @@ const TOP = 14;
 const X0 = 2.4;
 const PLOT_W = 323.6;
 
-export const GoalBarChart: React.FC<{
+type GoalBarChartProps = {
   metric: MetricKey;
   mode: "week" | "month" | "year";
   bars: GoalBar[];
@@ -49,7 +53,39 @@ export const GoalBarChart: React.FC<{
   plotTop?: number;
   /** Added (release gate, Sleep year): extra marks drawn in the same 326-wide svg (the average-bedtime line). */
   overlay?: React.ReactNode;
-}> = ({ metric, mode, bars, goal, goalLabel, ghostValue, onBarTap, barLabel, plotTop, overlay }) => {
+  /** Website viewport v1: the web chart's y tick labels (default "12k" style). */
+  tickLabel?: (v: number) => string;
+};
+
+/**
+ * Website viewport v1: from 1024px wide the axis-labelled web chart
+ * (WebAxisChart.tsx); a chart with an `overlay` (Sleep year's bedtime line,
+ * drawn in the 326 grid) keeps the mobile drawing, scaled to the card.
+ */
+export const GoalBarChart: React.FC<GoalBarChartProps> & { webNative?: boolean } = (props) => {
+  const web = useIsWeb();
+  if (!web) return <GoalBarChartMobile {...props} />;
+  if (props.overlay)
+    return (
+      <ScaledChart>
+        <GoalBarChartMobile {...props} />
+      </ScaledChart>
+    );
+  const { metric, mode, bars, goal, goalLabel, onBarTap, barLabel, tickLabel } = props;
+  return (
+    <AxisBarsWeb
+      metric={metric}
+      goal={goal}
+      goalLabel={goalLabel}
+      tickLabel={tickLabel ?? kLabel}
+      onBarTap={onBarTap}
+      bars={bars.map((b, i) => ({ key: b.key, value: b.value, ghost: b.ghost, current: b.current, label: axisLabel(mode, b.key, i), ariaLabel: barLabel?.(b) }))}
+    />
+  );
+};
+GoalBarChart.webNative = true;
+
+const GoalBarChartMobile: React.FC<GoalBarChartProps> = ({ metric, mode, bars, goal, goalLabel, ghostValue, onBarTap, barLabel, plotTop, overlay }) => {
   const { dark, hc } = useHealthMode();
   const ref = goal ?? ghostValue ?? 1;
   const maxVal = Math.max(0, ...bars.map((b) => b.value ?? 0));

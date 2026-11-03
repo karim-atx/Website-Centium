@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import React, { useContext, useEffect, useRef, useState } from "react";
+import { HeroRowContext, HeroSlotContext, type HeroSlot, type HeroStat } from "./heroSlot";
+import { ChevronLeft, ChevronRight, MoreVertical, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { HistoryWindowLine } from "../../premium/HistoryWindowLine";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { useWebLayout } from "../../web/useWebLayout";
@@ -26,9 +27,15 @@ type IconLike = React.ComponentType<{ size?: number; strokeWidth?: number; style
 const mc = (metric: MetricKey, part: "main" | "tint" | "accent" | "ink", alpha?: number) =>
   alpha === undefined ? `rgb(var(--metric-${metric}-${part}))` : `rgb(var(--metric-${metric}-${part}) / ${alpha})`;
 
-/** Elements MetricPageWeb moves to the History column (tagged in MetricKit.tsx). */
-export type WebRole = "history" | "caps";
+/**
+ * Elements MetricPageWeb moves (tagged in MetricKit.tsx and the hero files):
+ * History and its caps label to the History column; the page's stat card and
+ * its freshness lines into the hero ("hero"), as the reference draws them.
+ */
+export type WebRole = "history" | "caps" | "hero" | "stats" | "freshness";
 const roleOf = (el: React.ReactElement): WebRole | undefined => (el.type as { webRole?: WebRole }).webRole;
+
+type StatLike = HeroStat;
 
 /** The page's children flattened through fragments (conditionals already dropped). */
 function flatten(children: React.ReactNode): React.ReactNode[] {
@@ -48,22 +55,30 @@ export interface MetricPageWebProps {
   menu?: { value: string; label: string; icon?: React.ReactNode; onSelect: () => void }[];
   cta?: { label: string; icon?: React.ReactNode; onClick: () => void; disabled?: boolean };
   headerAction?: React.ReactNode;
+  sourceTag?: string | null;
   children: React.ReactNode;
 }
 
-export const MetricPageWeb: React.FC<MetricPageWebProps> = ({ metric, title, range, onRangeChange, menu, cta, headerAction, children }) => {
+export const MetricPageWeb: React.FC<MetricPageWebProps> = ({ metric, title, range, onRangeChange, menu, cta, headerAction, sourceTag, children }) => {
   const { rail } = useWebLayout();
   const [menuBtn, setMenuBtn] = useState<HTMLButtonElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const items = flatten(children);
   // History: the HistoryCard and the "History" caps label right before it.
+  // With a hero on the page: the first stat card and the freshness lines go
+  // into the hero (stats beside the hero visual, source row under the pills).
+  const hasHero = items.some((c) => React.isValidElement(c) && roleOf(c) === "hero");
+  const slot: HeroSlot = { stats: null, source: hasHero ? (sourceTag ?? null) : null, lines: [] };
   const aside: React.ReactNode[] = [];
   const main: React.ReactNode[] = [];
   items.forEach((c, i) => {
     const el = React.isValidElement(c) ? c : null;
     const next = items[i + 1];
-    if (el && roleOf(el) === "history") aside.push(React.cloneElement(el, { key: el.key ?? `h${i}` }));
-    else if (el && roleOf(el) === "caps" && React.isValidElement(next) && roleOf(next) === "history") return;
+    const role = el ? roleOf(el) : undefined;
+    if (el && role === "history") aside.push(React.cloneElement(el, { key: el.key ?? `h${i}` }));
+    else if (el && role === "caps" && React.isValidElement(next) && roleOf(next) === "history") return;
+    else if (el && hasHero && role === "stats" && !slot.stats) slot.stats = (el.props as { stats: StatLike[] }).stats;
+    else if (el && hasHero && role === "freshness") slot.lines.push(React.cloneElement(el, { key: el.key ?? `f${i}` }));
     else main.push(React.isValidElement(c) && c.key === null ? React.cloneElement(c, { key: `m${i}` }) : c);
   });
 
@@ -87,7 +102,7 @@ export const MetricPageWeb: React.FC<MetricPageWebProps> = ({ metric, title, ran
         </div>
         <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,8fr) minmax(0,4fr)", gap: 24 }}>
           <div className="min-w-0 flex flex-col" data-metric-main>
-            {main}
+            <HeroSlotContext.Provider value={hasHero ? slot : null}>{main}</HeroSlotContext.Provider>
           </div>
           <aside className="min-w-0 flex flex-col" style={{ gap: 12 }} data-metric-history>
             {aside.length > 0 && <WebCaps as="h2">{t("History")}</WebCaps>}
@@ -121,6 +136,113 @@ export const HeroPillWeb: React.FC<{ metric: MetricKey; children: React.ReactNod
     {children}
   </span>
 );
+
+/** The hero's colours: the tint heroes, and Sleep's night hero (#2E4A48). */
+const heroInks = (metric: MetricKey, night: boolean) =>
+  night
+    ? { ink: "#FFFFFF", sub: "rgba(255,255,255,0.8)", pillBg: "rgba(255,255,255,0.14)", pillInk: "#FFFFFF", statBg: "rgba(255,255,255,0.08)", line: "rgba(255,255,255,0.18)", chipBg: "rgba(255,255,255,0.12)", sync: "#C9DEDA" }
+    : { ink: "#241F1B", sub: mc(metric, "ink"), pillBg: "rgba(255,255,255,0.8)", pillInk: mc(metric, "ink"), statBg: "rgba(255,255,255,0.5)", line: "#E5E7EB", chipBg: "rgba(255,255,255,0.8)", sync: "#5B5349" };
+
+/**
+ * The web hero's contents (WC-HE Health Web v5 detail hero): a row that wraps,
+ * gap 24, centred: the metric's visual at its own width, then a column
+ * (flex 1 1 300, min 0) holding the stats (r16 pad 12 4 on #FFFFFF@50%, m-bottom
+ * 14; each a 28 r8 #FFFFFF@80% tile with the 16 icon in the accent beside
+ * the 20/24 800 value, the 13/18 600 label under it, 0.5px #E5E7EB between),
+ * the pills (gap 8: pad 4 12 r999 13/20 700 metric ink on #FFFFFF@80%), the
+ * legend (m-top 10, gap 6 14, 10 × 6 r3 swatches, 13/20 600), the page's
+ * extra controls, and the source row (m-top 12, gap 8 12: a 28 chip pad 0 10
+ * with a 12 refresh icon, 13 700; the freshness line 13/20 600 #5B5349).
+ * Sleep's night hero takes the white inks.
+ */
+export const HeroWebLayout: React.FC<{
+  metric: MetricKey;
+  night?: boolean;
+  visual: React.ReactNode;
+  visualWidth: number;
+  pills?: React.ReactNode[];
+  legend?: { color: string; label: string }[];
+  /** The hero's own stats (Steps); otherwise the page's stat card. */
+  stats?: StatLike[];
+  children?: React.ReactNode;
+}> & { webHeroLayout?: boolean } = ({ metric, night = false, visual, visualWidth, pills, legend, stats, children }) => {
+  const slot = useContext(HeroSlotContext);
+  const k = heroInks(metric, night);
+  const st = stats ?? slot?.stats ?? null;
+  const source = slot?.source ?? null;
+  const lines = slot?.lines ?? [];
+  const extra = flatten(children);
+  const hasCol = !!(st?.length || pills?.length || legend?.length || extra.length || source || lines.length);
+  return (
+    <div className="relative flex flex-wrap items-center" style={{ gap: 24, color: k.ink }} data-web-hero>
+      <div className="relative shrink-0" style={{ width: hasCol ? visualWidth : "100%", maxWidth: "100%" }} data-web-hero-visual>
+        {visual}
+      </div>
+      {hasCol && (
+        <div className="relative min-w-0" style={{ flex: "1 1 300px" }} data-web-hero-col>
+          {st && st.length > 0 && (
+            <div className="flex items-stretch" style={{ borderRadius: 16, padding: "12px 4px", marginBottom: 14, background: k.statBg }} data-web-stats>
+              {st.map((s, i) => (
+                <div key={s.label} className="flex-1 min-w-0 flex flex-col items-center justify-center" style={{ padding: "0 8px", borderInlineStart: i === 0 ? undefined : `0.5px solid ${k.line}` }}>
+                  <span className="flex items-center" style={{ gap: 6 }}>
+                    <span className="grid place-items-center shrink-0" style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.8)" }}>
+                      <s.icon size={16} strokeWidth={1.5} style={{ color: mc(metric, "accent") }} />
+                    </span>
+                    <span className="whitespace-nowrap" style={{ fontSize: 20, lineHeight: "24px", fontWeight: 800, letterSpacing: "-0.4px", fontVariantNumeric: "tabular-nums", color: k.ink }}>
+                      {s.value}
+                    </span>
+                  </span>
+                  <span className="truncate max-w-full" style={{ marginTop: 4, fontSize: 13, lineHeight: "18px", fontWeight: 600, color: k.sub }}>
+                    {s.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {pills && pills.length > 0 && (
+            <div className="flex flex-wrap" style={{ gap: 8 }} data-web-pills>
+              {pills.map((p, i) => (
+                <span key={i} className="inline-flex items-center whitespace-nowrap" style={{ borderRadius: 999, padding: "4px 12px", gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: k.pillInk, background: k.pillBg }}>
+                  {p}
+                </span>
+              ))}
+            </div>
+          )}
+          {legend && legend.length > 0 && (
+            <div className="flex flex-wrap" style={{ marginTop: 10, columnGap: 14, rowGap: 6 }}>
+              {legend.map((l) => (
+                <span key={l.label} className="inline-flex items-center whitespace-nowrap" style={{ gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: k.sub }}>
+                  <span aria-hidden style={{ width: 10, height: 6, borderRadius: 3, background: l.color, display: "inline-block" }} />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          )}
+          {extra.length > 0 && <div style={{ marginTop: 12 }}>{extra}</div>}
+          {(source || lines.length > 0) && (
+            <div className="flex flex-wrap items-center" style={{ marginTop: 12, columnGap: 12, rowGap: 8 }} data-web-source>
+              {source && (
+                <span className="inline-flex items-center whitespace-nowrap" style={{ height: 28, padding: "0 10px", borderRadius: 999, gap: 5, background: k.chipBg, fontSize: 13, fontWeight: 700, color: k.sub }}>
+                  <RefreshCw size={12} aria-hidden style={{ color: mc(metric, "accent") }} />
+                  {source}
+                </span>
+              )}
+              <HeroRowContext.Provider value={k.sync}>{lines}</HeroRowContext.Provider>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+HeroWebLayout.webHeroLayout = true;
+
+/** A hero's contents on the web: its own HeroWebLayout, or (no web layout of its own) the mobile contents as the 326 visual beside the column. */
+export const HeroWebChildren: React.FC<{ metric: MetricKey; night: boolean; children?: React.ReactNode }> = ({ metric, night, children }) => {
+  const list = flatten(children);
+  if (list.length === 1 && React.isValidElement(list[0]) && (list[0].type as { webHeroLayout?: boolean }).webHeroLayout) return <>{children}</>;
+  return <HeroWebLayout metric={metric} night={night} visual={children} visualWidth={326} />;
+};
 
 /**
  * Stat card: r16 pad 12 4 in the metric tint (#FFFFFF@50% inside a hero),
@@ -156,7 +278,7 @@ export const StatCardWeb: React.FC<{ metric: MetricKey; stats: { icon: IconLike;
  * The page's chart, drawn by the mobile part at its own 326 wide geometry and
  * scaled to the card (at most 1.6×), centred.
  */
-const ScaledChart: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ScaledChart: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [k, setK] = useState(1.4);
   useEffect(() => {
@@ -171,6 +293,12 @@ const ScaledChart: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <div style={{ width: 326, marginInline: "auto", zoom: k }}>{children}</div>
     </div>
   );
+};
+
+/** True when every chart child draws itself for the web (GoalBarChart, HourlyBars …: `webNative`), so nothing is scaled. */
+const webNative = (children: React.ReactNode) => {
+  const list = flatten(children);
+  return list.length > 0 && list.every((c) => React.isValidElement(c) && !!(c.type as { webNative?: boolean }).webNative);
 };
 
 /**
@@ -232,6 +360,8 @@ export const ChartCardWeb: React.FC<{
               <span key={i} aria-hidden className="block animate-skeleton-pulse" style={{ width: 40, height: h * 1.5, borderRadius: 8, background: "#F5F5F6" }} />
             ))}
           </div>
+        ) : webNative(children) ? (
+          children
         ) : (
           <ScaledChart>{children}</ScaledChart>
         )}

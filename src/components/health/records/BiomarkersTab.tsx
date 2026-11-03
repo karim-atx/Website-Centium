@@ -7,6 +7,7 @@ import { FlagChip } from "../../ui/FlagNote";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { BloodMarker } from "../../../types";
+import type { LabResult } from "../../../services/labs/results";
 import { resultKey } from "../../../services/labs/results";
 import {
   useHealthMode,
@@ -73,7 +74,11 @@ export const BiomarkersTab: React.FC<{
    * keeps the client's own Records exactly as before.
    */
   professional?: { emptyTitle: string; emptyBody: string };
-}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight, professional }) => {
+  /** Website viewport v1: a marker's results, oldest first, for the web side card's small history chart. */
+  historyOf?: (m: BloodMarker) => LabResult[];
+  /** Website viewport v1: the web side card's View history (the marker's page); omitted, it opens the marker as a row does. */
+  onHistory?: (m: BloodMarker) => void;
+}> = ({ markers, query, latestDate, loading, error, onRetry, isThreshold, remarkFor, matches, sharing, onChangeSharing, onOpen, confirmation, highlight, professional, historyOf, onHistory }) => {
   const { dark, hc } = useHealthMode();
   const reduced = useReducedMotion();
   const pregnancyFlags = usePregnancyFlags();
@@ -144,6 +149,8 @@ export const BiomarkersTab: React.FC<{
         lit={(m) => !reduced && highlight.has(resultKey(m))}
         confirmation={confirmation ? <Confirmation {...confirmation} /> : null}
         professional={!!professional}
+        historyOf={historyOf}
+        onHistory={onHistory}
       />
     );
   }

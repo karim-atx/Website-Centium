@@ -494,6 +494,7 @@ export default function WaterPage() {
               goal={goal}
               goalLabel={goalText}
               barLabel={(b) => (b.value === null ? t("{date}, nothing logged", { date: b.key }) : `${b.key}, ${vt(b.value)}`)}
+              tickLabel={(v) => (v === 0 ? "0" : vt(v, 0))}
             />
           )}
         </ChartCard>

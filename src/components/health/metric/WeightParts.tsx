@@ -129,7 +129,7 @@ export const WeightHero: React.FC<{
   ariaLabel?: string;
   empty?: React.ReactNode;
   onSetGoal: () => void;
-}> = ({ data, loading, ariaLabel, empty, onSetGoal }) => {
+}> & { webRole?: "hero" } = ({ data, loading, ariaLabel, empty, onSetGoal }) => {
   const { dark, hc } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   if (!data) {
@@ -506,3 +506,5 @@ export function weightLegend(range: MetricRange, hasGoal: boolean, startLabel: s
   if (range !== "day" && hasGoal) out.push({ label: t("Goal"), swatch: dash });
   return out;
 }
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+WeightHero.webRole = "hero";
