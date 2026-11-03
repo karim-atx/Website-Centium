@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import {
   Accessibility,
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { PaneFrame } from "../../components/business-more/paneWeb";
 import { usePaneEligible } from "../../components/business-more/paneWebScope";
+import { bizSettingsSection, type BizSettingsSection } from "../../components/web/webNav";
 import { REFUND_POLICY_PATH } from "../../marketing/legal/refund";
 import { BizCard, BizLabel, BizRow, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { SettingsRowVariant } from "../../components/ui/settingsRowVariant";
@@ -136,15 +137,32 @@ export default function BusinessSettings() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const languageName = languageEntry(language).name;
   // Website viewport v1 (WB-SE, ST Settings Web): in the Settings pane from
-  // 1024px the page fills the pane and the kit draws the pane rows; the five
-  // sections stay on one page, the column scrolls to the one picked.
+  // 1024px the page fills the pane, the kit draws the pane rows and the pane
+  // shows the one section picked in the column (?section=, Appearance first),
+  // titled with its name. Below 1024 every section, as on mobile.
   const paneWeb = usePaneEligible();
+  const { search } = useLocation();
+  const section = bizSettingsSection(search);
+  const show = (k: BizSettingsSection) => !paneWeb || section === k;
   const Frame = paneWeb ? PaneFrame : "div";
+  const PANE_TITLE: Record<BizSettingsSection, string> = {
+    appearance: t("Appearance"),
+    permissions: t("Permissions"),
+    security: t("Security"),
+    data: t("Data & account"),
+    general: t("General"),
+  };
 
   return (
     <Frame>
-      <SubHeader title={t("Settings")} />
+      {paneWeb ? (
+        <SubHeader title={PANE_TITLE[section]} sub={section === "security" ? t("Keep your business account safe.") : undefined} />
+      ) : (
+        <SubHeader title={t("Settings")} />
+      )}
 
+      {show("appearance") && (
+      <>
       <BizLabel>{t("Appearance")}</BizLabel>
       <BizCard>
         <BizRow icon={paneWeb ? Sun : undefined} title={t("Dark mode")} toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }} />
@@ -202,7 +220,11 @@ export default function BusinessSettings() {
           </p>
         )}
       </div>
+      </>
+      )}
 
+      {show("permissions") && (
+      <>
       <BizLabel>{t("Permissions")}</BizLabel>
       <BizCard>
         <BizRow icon={paneWeb ? Camera : undefined} title={t("Camera")} desc={permDesc("camera", camera, t("For photos of your space"))} toggle={permToggle("camera", camera, () => void askCamera())} />
@@ -214,8 +236,13 @@ export default function BusinessSettings() {
           toggle={{ checked: !!push, disabled: !pushAvailable || pushBusy || push === null, onChange: (v) => void togglePush(v) }}
         />
       </BizCard>
+      </>
+      )}
 
-      <BizLabel>{t("Security")}</BizLabel>
+      {show("security") && (
+      <>
+      {/* The pane draws the two-factor row under "Sign in" (the pane title is Security). */}
+      <BizLabel>{paneWeb ? t("Sign in") : t("Security")}</BizLabel>
       <BizCard>
         <BizRow
           icon={ShieldCheck}
@@ -227,7 +254,11 @@ export default function BusinessSettings() {
 
       {/* Round G1 (EA): "Include Premium for members", owner only, with the Premium switch on. */}
       <GymPremiumSetting />
+      </>
+      )}
 
+      {show("data") && (
+      <>
       <BizLabel>{t("Data & account")}</BizLabel>
       <SettingsRowVariant.Provider value="business">
         <BizCard>
@@ -245,7 +276,13 @@ export default function BusinessSettings() {
           <BizRow icon={EyeOff} title={t("Deactivate or delete")} desc={t("Pause, close or delete your business")} onClick={() => navigate("/app/business/more/deactivate")} />
         </BizCard>
       </SettingsRowVariant.Provider>
+      {/* The pane: "Delete business account" closes Data & account (ST Settings Web). */}
+      {paneWeb && <DeleteLine onClick={() => setDeleteOpen(true)} />}
+      </>
+      )}
 
+      {show("general") && (
+      <>
       <BizLabel>{t("General")}</BizLabel>
       <BizCard>
         <BizRow icon={Languages} title={t("Language")} value={<span lang={language}>{languageName}</span>} onClick={() => navigate("/app/settings/language")} />
@@ -271,14 +308,13 @@ export default function BusinessSettings() {
           {t("Centium for Business")}
         </p>
       )}
-      <button
-        type="button"
-        onClick={() => setDeleteOpen(true)}
-        className={paneWeb ? "self-start inline-flex items-center hover:underline" : "tap w-full flex items-center justify-center text-[14px] font-bold text-status-high"}
-        style={paneWeb ? { height: 40, padding: "0 4px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#B4372C", whiteSpace: "nowrap" } : { height: 48 }}
-      >
-        {t("Delete business account")}
-      </button>
+      {!paneWeb && (
+        <button type="button" onClick={() => setDeleteOpen(true)} className="tap w-full flex items-center justify-center text-[14px] font-bold text-status-high" style={{ height: 48 }}>
+          {t("Delete business account")}
+        </button>
+      )}
+      </>
+      )}
 
       <ContactUsPopup open={contactOpen} onClose={() => setContactOpen(false)} />
       <ReportBugPopup key={bugOpen ? "bug-open" : "bug-closed"} open={bugOpen} onClose={() => setBugOpen(false)} />
@@ -286,5 +322,20 @@ export default function BusinessSettings() {
       <ChangePasswordSheet key={pwOpen ? "pw-open" : "pw-closed"} open={pwOpen} onClose={() => setPwOpen(false)} />
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} business />
     </Frame>
+  );
+}
+
+/** The pane's delete line: 40, 15/24 600 #B4372C, at the start. */
+function DeleteLine({ onClick }: { onClick: () => void }) {
+  const { t } = useApp();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="self-start inline-flex items-center hover:underline"
+      style={{ height: 40, padding: "0 4px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#B4372C", whiteSpace: "nowrap" }}
+    >
+      {t("Delete business account")}
+    </button>
   );
 }
