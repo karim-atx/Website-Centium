@@ -16,7 +16,8 @@ import { useHiringBusiness } from "./useHiringBusiness";
 import { CLOSED_OPENING_MENU, HiringEmpty, OpeningCard, OpeningMenuButton, UserPlusGlyph, fixedPair, useHiringRead, useHiringStrip, type OpeningAction } from "./hiringParts";
 import PostOpeningSheet from "./PostOpeningSheet";
 import { HiringCreditsCard } from "../../../components/premium/HiringCreditsCard";
-import { useHiringCredits } from "../../../components/premium/usePlanLevel";
+import { ClassCreditsCard } from "../../../components/premium/ClassCreditsCard";
+import { useClassCredits, useHiringCredits } from "../../../components/premium/usePlanLevel";
 import { HUB_TABS, bannerStub, countLine, deleteDialogOf, scheduleLine, tabOf, teamButtonText, typeLabel, type HubTab } from "./hubModel";
 import { t, tx } from "../../../i18n/core";
 
@@ -84,6 +85,8 @@ export default function HubPage() {
   const id = biz.canHire ? biz.businessId : null;
   // Round G1 (#15): the hiring credit balance and packs, only when credits_on.
   const { credits } = useHiringCredits(id);
+  // Round G5: the class credit balance and packs beside it, only when credits_on.
+  const { credits: classCredits } = useClassCredits(id);
 
   const openings = useHiringRead(() => (id ? fetchMyOpenings(id, tab) : null), [id, tab]);
   // "Team" alone until my_team answers.
@@ -205,7 +208,8 @@ export default function HubPage() {
         </button>
       ) : null}
 
-      <HiringCreditsCard credits={credits} className="mb-3" />
+      <HiringCreditsCard credits={credits} classCreditsOn={classCredits?.creditsOn === true} className="mb-3" />
+      <ClassCreditsCard credits={classCredits} className="mb-3" />
 
       <div data-hub-track style={{ display: "grid", gridTemplateColumns: biz.isOwner ? "1fr 1fr" : "1fr", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
         <button type="button" onClick={() => navigate(HIRING_ROUTES.team)} className="tap market-focus" style={trackBtn}>

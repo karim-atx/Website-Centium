@@ -11,7 +11,9 @@ import { t, tn } from "../../i18n/core";
 // class-slot hires are billed as today. Credits are bought in the Centium app
 // only (decision G10): $39 for 1, $99 for 3 (HIRING_CREDIT_PRICES), through
 // "Buy in the Centium app" (Coming soon).
-export function HiringCreditsCard({ credits, className }: { credits: HiringCredits | null; className?: string }) {
+// Round G5: while class credits are on too (classCreditsOn), a class-slot hire
+// uses a class credit (ClassCreditsCard), so the "billed as before" half goes.
+export function HiringCreditsCard({ credits, classCreditsOn = false, className }: { credits: HiringCredits | null; classCreditsOn?: boolean; className?: string }) {
   if (!credits?.creditsOn) return null;
   const packs = credits.packs.filter((p) => p.remaining > 0);
   return (
@@ -21,7 +23,7 @@ export function HiringCreditsCard({ credits, className }: { credits: HiringCredi
         <p className="flex-1 min-w-0 text-[14px] font-extrabold text-charcoal">{t("Hiring credits")}</p>
         <p className="text-[13px] font-bold text-primary-dark whitespace-nowrap">{tn(credits.free, "{n} left to use", "{n} left to use")}</p>
       </div>
-      <p className="text-[12px] leading-[17px] text-charcoal-soft mt-1.5">{t("Each role hire uses 1 hiring credit instead of the hiring fee. Class-slot hires are billed as before.")}</p>
+      <p className="text-[12px] leading-[17px] text-charcoal-soft mt-1.5">{classCreditsOn ? t("Each role hire uses 1 hiring credit instead of the hiring fee.") : t("Each role hire uses 1 hiring credit instead of the hiring fee. Class-slot hires are billed as before.")}</p>
       {packs.length > 0 && (
         <ul className="mt-2.5 space-y-1">
           {packs.map((p, i) => (

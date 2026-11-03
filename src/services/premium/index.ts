@@ -17,6 +17,7 @@ import {
   choiceAlreadyMade,
   choosePlanLevelArgs,
   parseCandidates,
+  parseClassCredits,
   parseFreeLimits,
   parseGymPasses,
   parseHiringCredits,
@@ -24,8 +25,10 @@ import {
   parseLevelPrices,
   parseMyPasses,
   parseMyPremium,
+  parseProPlanInApp,
   parseSwitches,
   premiumCodeMessage,
+  type ClassCredits,
   type FreeLimits,
   type GymPasses,
   type HiringCredits,
@@ -35,6 +38,7 @@ import {
   type PlanLevel,
   type PlanLevelPrice,
   type PlanPeriod,
+  type ProPlanInApp,
   type Switches,
 } from "./model";
 
@@ -128,3 +132,15 @@ export async function choosePlanLevel(businessId: string, seatBlocks: number, p:
 
 export const fetchHiringCredits = (businessId: string): Promise<Read<HiringCredits>> =>
   read(() => supabase.rpc("my_hiring_credits", { p_business_id: businessId }), parseHiringCredits, t("Couldn't load your hiring credits."));
+
+// ---- class credits (Round G5) ----
+
+/** my_class_credits: a failed read or a database without G5 (PGRST202 / 42883) is not ok, which every caller reads as off. */
+export const fetchClassCredits = (businessId: string): Promise<Read<ClassCredits>> =>
+  read(() => supabase.rpc("my_class_credits", { p_business_id: businessId }), parseClassCredits, t("Couldn't load your class credits."));
+
+// ---- professional plans in the app (Round G5) ----
+
+/** my_professional_plan_in_app (self only): null for a non-professional; a failed read or no G5 is not ok, read as off (today's email). */
+export const fetchProPlanInApp = (): Promise<Read<ProPlanInApp | null>> =>
+  read(() => supabase.rpc("my_professional_plan_in_app"), parseProPlanInApp, t("Couldn't load your plan."));

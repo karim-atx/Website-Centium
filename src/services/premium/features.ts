@@ -135,3 +135,20 @@ export function hiringCreditPricesText(): string {
   const three = formatPremiumPrice(HIRING_CREDIT_PRICES.three) ?? "";
   return t("{one} for 1 hiring credit, {three} for 3", { one, three });
 }
+
+/**
+ * Round G5 · class credits' prices (Karim 2026-11-03): 1 credit $3, 10
+ * credits $25, each pack valid 12 months. A class-slot hire uses one in place
+ * of the percentage fee while the business plans switch is on. Bought only in
+ * the Centium app: the App Store or Google Play sets the real price the owner
+ * pays; these are the prices shown on the web (my_class_credits() returns
+ * none).
+ */
+export const CLASS_CREDIT_PRICES = { one: 3, ten: 25, validMonths: 12 } as const;
+
+/** "$3 for 1 class credit, $25 for 10, valid for 12 months", through i18n/format (formatPremiumPrice). */
+export function classCreditPricesText(): string {
+  const one = formatPremiumPrice(CLASS_CREDIT_PRICES.one) ?? "";
+  const ten = formatPremiumPrice(CLASS_CREDIT_PRICES.ten) ?? "";
+  return tn(CLASS_CREDIT_PRICES.validMonths, "{one} for 1 class credit, {ten} for 10, valid for {n} month", "{one} for 1 class credit, {ten} for 10, valid for {n} months", { one, ten });
+}

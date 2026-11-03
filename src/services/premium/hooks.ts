@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { fetchFreeLimits, fetchMyPremium, fetchSwitches, type Read } from "./index";
-import type { FreeLimits, MyPremium, Switches } from "./model";
+import { fetchFreeLimits, fetchMyPremium, fetchProPlanInApp, fetchSwitches, type Read } from "./index";
+import type { FreeLimits, MyPremium, ProPlanInApp, Switches } from "./model";
 
 // Round G1 · the switches and the member's Premium, read ONCE PER SESSION per
 // account (the app's keyed-hook pattern, as useMySubscriptionTier: an answer
@@ -14,7 +14,12 @@ import type { FreeLimits, MyPremium, Switches } from "./model";
 // not cached, so the next screen asks again.
 
 type Entry<T> = { value: T | null; promise: Promise<T | null> | null };
-const caches = { switches: new Map<string, Entry<Switches>>(), premium: new Map<string, Entry<MyPremium>>(), limits: new Map<string, Entry<FreeLimits>>() };
+const caches = {
+  switches: new Map<string, Entry<Switches>>(),
+  premium: new Map<string, Entry<MyPremium>>(),
+  limits: new Map<string, Entry<FreeLimits>>(),
+  proPlanInApp: new Map<string, Entry<ProPlanInApp>>(),
+};
 const listeners = new Set<() => void>();
 
 function load<T>(cache: Map<string, Entry<T>>, userId: string, fetcher: () => Promise<Read<T | null>>): Promise<T | null> {
@@ -34,6 +39,7 @@ export function invalidatePremium(): void {
   caches.switches.clear();
   caches.premium.clear();
   caches.limits.clear();
+  caches.proPlanInApp.clear();
   listeners.forEach((l) => l());
 }
 
@@ -101,6 +107,16 @@ export function usePremium(): PremiumState {
 /** free_limits(): the free tier's numbers (G5). Null while unknown. */
 export function useFreeLimits(): FreeLimits | null {
   return useCached(caches.limits, fetchFreeLimits).value;
+}
+
+/**
+ * Round G5 · my_professional_plan_in_app(): where the professional's plan is
+ * bought. Null while loading, for a non-professional, after a failed read or
+ * without the Database's G5: read as off, so every upgrade stays today's
+ * emailed request (proPlanPath).
+ */
+export function useProPlanInApp(): ProPlanInApp | null {
+  return useCached(caches.proPlanInApp, fetchProPlanInApp).value;
 }
 
 export { supportOpen, useMarkSupportSurface } from "./support";

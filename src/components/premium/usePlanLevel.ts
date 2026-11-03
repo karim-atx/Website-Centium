@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchHiringCredits, fetchLevelPrices, fetchPlanLevel, type HiringCredits, type PlanLevel, type PlanLevelPrice } from "../../services/premium";
+import { fetchClassCredits, fetchHiringCredits, fetchLevelPrices, fetchPlanLevel, type ClassCredits, type HiringCredits, type PlanLevel, type PlanLevelPrice } from "../../services/premium";
 
 // Round G1 · #15: where a business stands on plan levels, and its hiring
 // credits, keyed to the business asked about. Null while loading, after a
@@ -31,6 +31,12 @@ export function usePlanLevel(businessId: string | null | undefined): { level: Pl
 
 export function useHiringCredits(businessId: string | null | undefined): { credits: HiringCredits | null; reload: () => void } {
   const r = useBusinessRead(businessId, fetchHiringCredits);
+  return { credits: r.value, reload: r.reload };
+}
+
+/** Round G5: my_class_credits. Null while loading, after a failed read, or without the Database's G5: off (today's fee). */
+export function useClassCredits(businessId: string | null | undefined): { credits: ClassCredits | null; reload: () => void } {
+  const r = useBusinessRead(businessId, fetchClassCredits);
   return { credits: r.value, reload: r.reload };
 }
 

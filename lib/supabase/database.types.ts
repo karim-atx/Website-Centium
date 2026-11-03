@@ -30210,6 +30210,14 @@ export type Database = {
           title: string
         }[]
       }
+      my_class_credits: {
+        Args: { p_business_id: string }
+        Returns: {
+          credits_on: boolean
+          free: number
+          packs: Json
+        }[]
+      }
       my_class_waitlist_position: {
         Args: { p_class_id: string }
         Returns: number
@@ -30561,6 +30569,17 @@ export type Database = {
           max_clients: number
           may_connect_clients: boolean
           source: Database["public"]["Enums"]["professional_plan_source"]
+          tier_id: string
+          tier_name: string
+        }[]
+      }
+      my_professional_plan_in_app: {
+        Args: never
+        Returns: {
+          billing_period: Database["public"]["Enums"]["subscription_billing_period"]
+          bought_in_app: boolean
+          plans_in_app: boolean
+          renews_at: string
           tier_id: string
           tier_name: string
         }[]
