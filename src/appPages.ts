@@ -16,6 +16,8 @@ import BusinessOperationsTabMobile from "./pages/marketplace/BusinessOperationsT
 import BusinessOperationsTabWeb from "./pages/marketplace/BusinessOperationsTab.web";
 import AnalyticsShellMobile from "./pages/business-analytics/AnalyticsShell";
 import AnalyticsShellWeb from "./pages/business-analytics/AnalyticsShell.web";
+import MarketRoutesMobile from "./pages/business-market/MarketRoutes";
+import MarketRoutesWeb from "./pages/business-market/MarketplacePage.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -60,7 +62,8 @@ export { ClientOnly } from "./pages/marketplace/ClientOnly";
 export { default as ClientNotificationsPage } from "./pages/notifications/ClientNotificationsPage";
 // Website viewport v1: the Analytics web layout from 1024px wide (WB-AN); the mobile shell below.
 export const AnalyticsShell = withWeb(AnalyticsShellMobile, AnalyticsShellWeb);
-export { default as MarketRoutes } from "./pages/business-market/MarketRoutes";
+// Website viewport v1: the Marketplace tabs web layout from 1024px wide (WB-MA); the mobile routes below.
+export const MarketRoutes = withWeb(MarketRoutesMobile, MarketRoutesWeb);
 export { default as RedeemVoucher } from "./pages/business-market/RedeemVoucher";
 export { default as HiringRoutes } from "./pages/business-market/hiring/HiringRoutes";
 export { default as BusinessNotificationsPage } from "./pages/notifications/BusinessNotificationsPage";

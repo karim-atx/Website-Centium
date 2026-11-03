@@ -20,6 +20,8 @@ export const FILES: string[] = [
   "pages/business-analytics/AnalyticsParts.web.tsx",
   "pages/business-analytics/overview/OverviewSection.web.tsx",
   "pages/business-analytics/members/MembersSection.web.tsx",
+  "pages/business-market/MarketplacePage.web.tsx",
+  "pages/business-market/Overview.web.tsx",
 ];
 
 const webgym: Catalogue = {
