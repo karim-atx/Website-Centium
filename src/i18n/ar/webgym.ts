@@ -38,6 +38,10 @@ const webgym: Catalogue = {
   "Sold today": "المبيع اليوم",
   "New this month": "الجدد هذا الشهر",
 
+  // == See all activity (components/business-dashboard/DashboardParts.web, WB-HO.6) ==
+  "Activity by type": "النشاط حسب النوع",
+  "Last week": "الأسبوع الماضي", // note: the legend of the dashed last-week line
+
   // == Analytics (pages/business-analytics/AnalyticsShell.web, WB-AN) ==
   "Analytics sections": "أقسام التحليلات", // note: the accessible name of the section tabs
 };

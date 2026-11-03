@@ -24,8 +24,7 @@ import { activityEvents, weekTotals } from "../../components/business-dashboard/
 import { useActivityFeed } from "../../components/business-dashboard/useActivityFeed";
 import { ErrorRow } from "../../components/business-dashboard/parts";
 import { ScheduleBlock } from "../../components/business-dashboard/ScheduleBlock";
-import { ActivityScreen } from "../../components/business-dashboard/RecentActivity";
-import { WebAttentionPopover, WebDashActions, WebListingPopup, WebRecentActivity, WebSetupCard, WebTodayGym, WebVenueChip, WebVenueSection } from "../../components/business-dashboard/DashboardParts.web";
+import { WebActivityScreen, WebAttentionPopover, WebDashActions, WebListingPopup, WebRecentActivity, WebSetupCard, WebTodayGym, WebVenueChip, WebVenueSection } from "../../components/business-dashboard/DashboardParts.web";
 import { useWebLayout } from "../../components/web/useWebLayout";
 import { BUSINESS_KINDS, fetchUnreadNotificationCount } from "../../services/notifications";
 import { BusinessPlanHomeCard } from "../../components/premium/BusinessPlanHomeCard";
@@ -199,15 +198,9 @@ export default function BusinessDashboardWeb() {
     );
   }
 
-  // WB-HO.6 See all activity (its web design is not built yet): the mobile screen in the centred column.
+  // WB-HO.6 See all activity: the KPI band, the timeline and this week's charts with Activity by type.
   if (activityOpen && raw) {
-    return (
-      <MobileColumn>
-        <div style={{ color: c.ink }}>
-          <ActivityScreen c={c} events={allActivity} now={now} today={today} onBack={() => setActivityOpen(false)} newIds={feed.newIds} />
-        </div>
-      </MobileColumn>
-    );
+    return <WebActivityScreen c={c} events={allActivity} totals={totals} now={now} today={today} todayIndex={mondayIndex(now.getDay())} rail={rail} onBack={() => setActivityOpen(false)} newIds={feed.newIds} />;
   }
 
   const controls: ClusterControl[] = [

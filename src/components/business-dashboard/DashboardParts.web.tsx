@@ -14,6 +14,8 @@ import {
   Eye,
   EyeOff,
   ImageOff,
+  ChevronLeft,
+  ListFilter,
   Package,
   PackageMinus,
   Receipt,
@@ -45,6 +47,7 @@ import { openNowTag } from "../../services/venues/hours";
 import { bellBadge, unreadBadge } from "../../services/notifications/notificationsModel";
 import { appLocale } from "../../i18n/format";
 import { isRtl, t, tk, tn, tx } from "../../i18n/core";
+import { WebMenu } from "../../pages/business-ops/frontdesk/FrontDeskParts.web";
 
 // Website viewport v1 · WB-HO · GY Dashboard (WB-HO Dashboard Web v4, the
 // "web" token set W): the dashboard's header actions, the anchored "Needs your
@@ -925,5 +928,270 @@ export function WebRecentActivity({
         </button>
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------- see all activity
+
+type ActivityFilter = "all" | ActivityKind;
+const ACT_FILTERS: { value: ActivityFilter; label: string }[] = [
+  { value: "all", label: tk("All") },
+  { value: "booking", label: tk("Bookings") },
+  { value: "cancel", label: tk("Cancellations") },
+  { value: "join", label: tk("Joins") },
+  { value: "end", label: tk("Ended") },
+  { value: "check_in", label: tk("Check-ins") },
+  { value: "order", label: tk("Orders") },
+  { value: "payment", label: tk("Payments") },
+  { value: "appointment", label: tk("Appointments") },
+  { value: "review", label: tk("Reviews") },
+];
+const filterLabel = (f: { value: ActivityFilter; label: string }) => (f.value === "check_in" ? tx("Check-ins", "entries") : t(f.label));
+
+/**
+ * WB-HO.6 · See all activity (web): the page header (back 40, "Recent
+ * activity", "Last 30 days", the 40 filter button and its 220 menu) over the
+ * KPI band (four cards: tile 32 / 28, label 15/22, count 28/36 / 24/30 700),
+ * then the timeline card in 8 columns (5 on the rail: the filter tabs, day
+ * groups with a sticky 13/20 caps label, rows 64 / 60 with the 40 tile) and,
+ * in 4 (3), this week's Joined and Ended charts and Activity by type. Counts
+ * are the 30 days of business_activity the dashboard already reads; there is
+ * no earlier period on this reader, so the KPI cards say "Last 30 days"
+ * instead of a comparison. Filters offer only the kinds this caller receives.
+ */
+export function WebActivityScreen({
+  c,
+  events,
+  totals,
+  now,
+  today,
+  todayIndex,
+  rail,
+  onBack,
+  newIds,
+}: {
+  c: DashPalette;
+  events: ActivityEvent[];
+  totals: WeekTotal[] | null;
+  now: Date;
+  today: string;
+  todayIndex: number;
+  rail: boolean;
+  onBack: () => void;
+  newIds: Set<number>;
+}) {
+  const [filter, setFilter] = useState<ActivityFilter>("all");
+  const [menu, setMenu] = useState<HTMLElement | null>(null);
+  const kinds = new Set(events.map((e) => e.type));
+  const options = ACT_FILTERS.filter((f) => f.value === "all" || kinds.has(f.value as ActivityKind));
+  const shown = filter === "all" ? events : events.filter((e) => e.type === filter);
+  const groups: { day: string; label: string; items: ActivityEvent[] }[] = [];
+  for (const e of shown) {
+    const last = groups[groups.length - 1];
+    if (last && last.day === e.day) last.items.push(e);
+    else groups.push({ day: e.day, label: dayLabel(e.day, today), items: [e] });
+  }
+  const count = (k: ActivityKind) => events.filter((e) => e.type === k).length;
+  const empty = events.length === 0;
+  const KPIS: { k: ActivityKind; label: string }[] = [
+    { k: "check_in", label: tx("Check-ins", "entries") },
+    { k: "join", label: t("Joins") },
+    { k: "end", label: t("Ended") },
+    { k: "payment", label: t("Payments") },
+  ];
+  const byType = (["check_in", "payment", "join", "end", "booking", "cancel", "order", "appointment", "review"] as ActivityKind[])
+    .filter((k) => kinds.has(k) || ["check_in", "payment", "join", "end", "review"].includes(k))
+    .map((k) => ({ k, n: count(k), label: filterLabel(ACT_FILTERS.find((f) => f.value === k)!) }));
+  const maxType = Math.max(1, ...byType.map((b) => b.n));
+  const card: React.CSSProperties = { minWidth: 0, boxSizing: "border-box", background: c.card, borderRadius: 20, border: "1px solid rgba(36,31,27,0.11)" };
+
+  return (
+    <div data-activity="web" style={{ color: c.ink, display: "flex", flexDirection: "column", height: "100dvh", minHeight: 560 }}>
+      <header style={{ height: 64, flex: "none", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 12, padding: "0 32px 0 20px", borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+        <button
+          type="button"
+          aria-label={t("Back")}
+          title={t("Back")}
+          onClick={onBack}
+          className="hover:!bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+          style={{ width: 40, height: 40, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "transparent", border: 0, cursor: "pointer", color: "#5B5349" }}
+        >
+          <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" />
+        </button>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 14 }}>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", whiteSpace: "nowrap" }}>{t("Recent activity")}</h1>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: c.faint, whiteSpace: "nowrap" }}>{t("Last 30 days")}</p>
+        </div>
+        <button
+          type="button"
+          aria-label={t("Filter")}
+          title={t("Filter")}
+          aria-haspopup="menu"
+          aria-expanded={!!menu}
+          onClick={(e) => setMenu(e.currentTarget)}
+          className="hover:!bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+          style={{ width: 40, height: 40, borderRadius: 999, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: menu ? "#F0EDF9" : "transparent", border: 0, cursor: "pointer", color: "#5B5349" }}
+        >
+          <ListFilter size={20} aria-hidden />
+        </button>
+      </header>
+      <WebMenu
+        open={!!menu}
+        anchor={menu}
+        onClose={() => setMenu(null)}
+        label={t("Filter")}
+        selected={filter}
+        options={options.map((f) => ({ value: f.value, label: filterLabel(f) }))}
+        onSelect={(v) => {
+          setMenu(null);
+          setFilter(v);
+        }}
+      />
+
+      <div style={{ flex: 1, minHeight: 0, boxSizing: "border-box", maxWidth: 1280, width: "100%", padding: 32, display: "flex", flexDirection: "column", gap: 24 }}>
+        <div data-band="kpis" style={{ flex: "none", display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 24 }}>
+          {KPIS.map(({ k, label }) => {
+            const col = badgeOf(c, k);
+            const n = count(k);
+            const Icon = TYPE_ICON[k];
+            return (
+              <div key={k} data-kpi={k} style={{ ...card, padding: rail ? "12px 14px" : "16px 20px", display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                  <span aria-hidden style={{ width: rail ? 28 : 32, height: rail ? 28 : 32, borderRadius: 10, background: empty ? c.soft : rgbaOf(col, 0.12), color: empty ? c.tert : col, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                    <Icon size={16} strokeWidth={2.2} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>
+                </div>
+                <span style={{ fontSize: rail ? 24 : 28, lineHeight: rail ? "30px" : "36px", fontWeight: 700, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: empty ? c.tert : c.ink }}>{empty ? "–" : n.toLocaleString(appLocale("en-US"))}</span>
+                <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: c.faint, whiteSpace: "nowrap" }}>{empty ? t("No activity yet") : t("Last 30 days")}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, gridTemplateRows: "minmax(0,1fr)", columnGap: 24 }}>
+          <section aria-label={t("Recent activity")} data-activity-list style={{ gridColumn: `span ${rail ? 5 : 8}`, ...card, borderRadius: 24, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: "none", padding: "16px 20px 12px" }}>
+              <div role="tablist" aria-label={t("Filter")} style={{ display: "grid", gridTemplateColumns: `repeat(${options.length},minmax(0,1fr))`, gap: 4, padding: 5, borderRadius: 14, background: "#F5F5F6" }}>
+                {options.map((f) => {
+                  const on = f.value === filter;
+                  return (
+                    <button
+                      key={f.value}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => setFilter(f.value)}
+                      className="hover:!text-[#241F1B] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                      style={{ minWidth: 0, height: 30, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, lineHeight: "24px", fontWeight: on ? 700 : 600, background: on ? "#FFFFFF" : "transparent", color: on ? "#5F5093" : c.faint, boxShadow: on ? "0 1px 3px rgba(95,80,147,0.22)" : "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", border: 0, cursor: "pointer", padding: "0 6px" }}
+                    >
+                      {filterLabel(f)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div data-tl="scroll" style={{ flex: 1, minHeight: 0, overflow: "auto", scrollbarWidth: "thin", padding: "0 20px 8px", display: "flex", flexDirection: "column" }}>
+              {groups.map((g) => (
+                <div key={g.day} style={{ flex: "none" }}>
+                  <p className="rtl:tracking-normal" style={{ position: "sticky", top: 0, zIndex: 1, margin: 0, padding: "12px 0 6px", background: c.card, borderBottom: "1px solid rgba(36,31,27,0.06)", fontSize: 13, lineHeight: "20px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.09em", color: c.faint }}>
+                    {g.label}
+                  </p>
+                  {g.items.map((e) => {
+                    const col = badgeOf(c, e.type);
+                    const Icon = TYPE_ICON[e.type];
+                    return (
+                      <div key={e.key} data-tl-row style={{ height: rail ? 60 : 64, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid rgba(36,31,27,0.04)", background: newIds.has(e.id) ? "rgba(174,161,220,0.12)" : "transparent" }}>
+                        <span aria-hidden style={{ width: 40, height: 40, borderRadius: 12, background: rgbaOf(col, 0.12), color: col, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                          <Icon size={20} strokeWidth={2} />
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0 }}>
+                          <span title={e.title} style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {e.title}
+                            {e.isMinor && <span style={{ fontSize: 13, fontWeight: 700, color: c.faint }}> · {t("Under 18")}</span>}
+                          </span>
+                          {e.sub && (
+                            <span title={e.sub} style={{ display: "block", fontSize: 13, lineHeight: "20px", color: c.faint, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {e.sub}
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ flex: "none", fontSize: 13, lineHeight: "20px", color: c.faint, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{whenLabel(e.at, now)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {groups.length === 0 && (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center", padding: 24 }}>
+                  <span aria-hidden style={{ width: 56, height: 56, boxSizing: "border-box", borderRadius: 999, border: "1.5px dashed #A79E93", flex: "none" }} />
+                  <p style={{ margin: 0, maxWidth: 380, fontSize: 15, lineHeight: "24px", color: c.faint, textWrap: "pretty" } as React.CSSProperties}>{t(EMPTY_TEXT)}</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <aside aria-label={t("This week, compared with last week")} style={{ gridColumn: `span ${rail ? 3 : 4}`, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: rail ? 16 : 24 }}>
+            {(totals ?? [])
+              .filter((wt) => wt.type === "join" || wt.type === "end")
+              .map((wt) => {
+                const col = badgeOf(c, wt.type);
+                const has = wt.n + wt.prev > 0;
+                const diff = wt.n - wt.prev;
+                const goodDir = wt.type === "end" ? diff < 0 : diff > 0;
+                const trend = !has ? t("No activity yet") : diff === 0 ? t("Same as last wk") : t("{delta} vs last wk", { delta: `${diff > 0 ? "↑ +" : "↓ −"}${Math.abs(diff)}` });
+                const Icon = TYPE_ICON[wt.type];
+                return (
+                  <div
+                    key={wt.type}
+                    data-big-total={wt.type}
+                    style={{ flex: "1 1 0", minHeight: 120, boxSizing: "border-box", borderRadius: 20, background: has ? rgbaOf(col, 0.06) : c.soft, border: `1px solid ${has ? rgbaOf(col, 0.22) : "rgba(36,31,27,0.11)"}`, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)", padding: rail ? "12px 14px" : "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}
+                  >
+                    <div style={{ flex: "none", display: "flex", alignItems: "center", gap: 10 }}>
+                      <span aria-hidden style={{ width: 32, height: 32, borderRadius: 10, background: has ? rgbaOf(col, 0.14) : c.soft, color: has ? col : c.tert, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
+                        <Icon size={16} strokeWidth={2.4} />
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: "22px", fontWeight: 700, color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {wt.label}
+                        <span style={{ fontWeight: 500, color: c.faint }}> · {t("this week")}</span>
+                      </span>
+                      <span style={{ fontSize: rail ? 24 : 28, lineHeight: rail ? "30px" : "32px", fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: has ? c.ink : c.tert }}>{has ? String(wt.n) : "–"}</span>
+                    </div>
+                    <div style={{ flex: 1, minHeight: 56 }}>
+                      <WeekChart c={c} days={wt.days} prev={wt.prevDays} col={has ? col : c.tert} cur={todayIndex} has={has} />
+                    </div>
+                    <div style={{ flex: "none", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: !has || diff === 0 ? c.faint : goodDir ? c.good : c.high, whiteSpace: "nowrap" }}>{trend}</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, lineHeight: "16px", fontWeight: 600, color: c.faint, whiteSpace: "nowrap" }}>
+                        <span aria-hidden style={{ width: 14, borderTop: "1.5px dashed #B9B2A8" }} />
+                        {t("Last week")}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            <div data-card="by-type" style={{ flex: "1.1 1 0", minHeight: 160, ...card, padding: rail ? "12px 14px" : "16px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ flex: "none", display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, whiteSpace: "nowrap" }}>{t("Activity by type")}</span>
+                <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: c.faint, whiteSpace: "nowrap" }}>{t("Last 30 days")}</span>
+              </div>
+              <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", justifyContent: "space-evenly", gap: 4 }}>
+                {byType.map((b) => (
+                  <div key={b.k} style={{ display: "grid", gridTemplateColumns: rail ? "64px minmax(0,1fr) 40px" : "76px minmax(0,1fr) 48px", alignItems: "center", gap: 10 }}>
+                    <span title={b.label} style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#5B5349", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {b.label}
+                    </span>
+                    <span aria-hidden style={{ height: 8, borderRadius: 999, background: "#F5F5F6", overflow: "hidden", display: "block" }}>
+                      <span style={{ display: "block", height: "100%", width: b.n ? `${Math.max(3, Math.round((b.n / maxType) * 100))}%` : "0%", borderRadius: 999, background: badgeOf(c, b.k) }} />
+                    </span>
+                    <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 700, color: b.n ? c.ink : c.tert, textAlign: "end", fontVariantNumeric: "tabular-nums" }}>{b.n.toLocaleString(appLocale("en-US"))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
   );
 }
