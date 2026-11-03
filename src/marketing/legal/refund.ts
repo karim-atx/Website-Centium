@@ -1,10 +1,19 @@
 // Round F (DN): the Refund and Cancellation Policy, confirmed by legal counsel.
 // The text is docs/legal/refund-policy.md (English) and refund-policy.ar.md
 // (Arabic, which prevails), read by policyDoc.ts; nothing here restates it.
+// Landing update (C14): it is Legal section 04 (pages/Legal.tsx), no longer a
+// page of its own.
 
 import { tk } from "../../i18n/core";
 
+/** The policy's former page. It redirects to Legal section 04 (public/_redirects
+ *  at the edge, pages/RefundPolicy.tsx in the router); the web app's plan
+ *  screens still link here (RefundPolicyLink), so the landing update leaves /app as it is. */
 export const REFUND_POLICY_PATH = "/legal/refund-policy";
+/** The policy's id on the Legal page (C14): section 04. */
+export const REFUND_POLICY_ID = "refund-policy";
+/** Where the marketing site links the policy: Legal section 04. */
+export const REFUND_POLICY_HREF = "/legal#" + REFUND_POLICY_ID;
 /** Shown as t(REFUND_POLICY_LABEL). */
 export const REFUND_POLICY_LABEL = tk("Refund and cancellation policy");
 /** The in-app article for clients and professionals (F5); the business one is in Help. */
@@ -25,15 +34,3 @@ export const REFUND_POLICY_LINKS: Record<PolicyLang, [string, string][]> = {
     ["reportaproblem.apple.com", "https://reportaproblem.apple.com"],
   ],
 };
-
-/** The page's opening line: section 13 of each version, shown at the top of both. */
-export const PREVAILS_SECTION_ID = "section-13";
-
-/** ?lang=ar, then the app's own language, then the browser's; English otherwise. */
-export function initialPolicyLang(search: string, htmlLang: string, browserLang: string): PolicyLang {
-  const q = new URLSearchParams(search).get("lang");
-  if (q === "ar" || q === "en") return q;
-  if (htmlLang.toLowerCase().startsWith("ar")) return "ar";
-  if (browserLang.toLowerCase().startsWith("ar")) return "ar";
-  return "en";
-}

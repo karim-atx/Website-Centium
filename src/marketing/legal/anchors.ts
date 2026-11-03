@@ -17,6 +17,7 @@
 import { HEALTH_ITEMS, INTRO, LIABILITY_TEXT, PRIVACY_GROUPS, TERMS_GROUPS, type LegalGroup } from "./text";
 import type * as ArabicText from "./text.ar";
 import { documentFor, t, tk } from "../../i18n/core";
+import { REFUND_POLICY_ID } from "./refund";
 
 export type DocKey = "terms" | "privacy" | "health";
 export const DOC_KEYS: DocKey[] = ["terms", "privacy", "health"];
@@ -45,6 +46,14 @@ export interface LegalDoc {
   groups: LegalDocGroup[];
 }
 
+/** LG1 v5 (C15): the Health points under their five sub-headings, by point
+ *  (1-2, 3, 4, 5-6, 7). `h` gives a heading's words (English, or t()). */
+export const HEALTH_HEADINGS = [tk("Informational only"), tk("Biomarker capture"), tk("Voice and video calls"), tk("Independent providers"), tk("Not an emergency service")];
+const HEALTH_SPLIT: [number, number?][] = [[0, 2], [2, 3], [3, 4], [4, 6], [6]];
+function healthGroups(items: string[], h: (heading: string) => string): LegalGroup[] {
+  return HEALTH_HEADINGS.map((heading, i) => ({ h: h(heading), items: items.slice(...HEALTH_SPLIT[i]) }));
+}
+
 const withIds = (doc: DocKey, groups: LegalGroup[]): LegalDocGroup[] => groups.map((g) => ({ h: g.h, items: g.items, id: doc + "-" + legalSlug(g.h) }));
 
 /** The three documents, in page order (prototype data7 docs). */
@@ -66,8 +75,9 @@ export const LEGAL_DOCS: LegalDoc[] = [
     c: "#775FD7",
     intro: INTRO.health,
     box: true,
-    // "In detail": LG1's heading above the Health points (not legal text).
-    groups: withIds("health", [{ h: tk("In detail"), items: HEALTH_ITEMS }]),
+    // LG1 v5 (C15): five sub-headings taken from the text group the Health
+    // points (not legal text; the points are not changed or reordered).
+    groups: withIds("health", healthGroups(HEALTH_ITEMS, (h) => h)),
   },
 ];
 
@@ -79,12 +89,10 @@ export interface TocEntry {
 }
 
 const tocOf = (docs: LegalDoc[]): TocEntry[] =>
-  docs.flatMap((d) => [
-    { t: d.num + " " + d.title, h: "#" + d.id, doc: true },
-    ...(d.id === "health" ? [] : d.groups.map((g) => ({ t: g.h, h: "#" + g.id, doc: false }))),
-  ]);
+  docs.flatMap((d) => [{ t: d.num + " " + d.title, h: "#" + d.id, doc: true }, ...d.groups.map((g) => ({ t: g.h, h: "#" + g.id, doc: false }))]);
 
-/** "On this page": each document, then its groups (Health lists none). */
+/** "On this page": each document, then its groups (Health's five too, LG1 v5).
+ *  The refund policy (04) is added by the page, from its own text. */
 export const LEGAL_TOC: TocEntry[] = tocOf(LEGAL_DOCS);
 
 /**
@@ -98,7 +106,7 @@ export function legalDocsFor(): LegalDoc[] {
   const words: LegalGroup[][] = [
     AR.TERMS_GROUPS.concat([{ h: AR.LIABILITY_HEADING, items: [AR.LIABILITY_TEXT] }]),
     AR.PRIVACY_GROUPS,
-    [{ h: t("In detail"), items: AR.HEALTH_ITEMS }],
+    healthGroups(AR.HEALTH_ITEMS, t),
   ];
   return LEGAL_DOCS.map((d, i) => ({
     ...d,
@@ -113,6 +121,11 @@ export const legalTocFor = (docs: LegalDoc[]): TocEntry[] => tocOf(docs);
 
 /** Every id on the page a deep link can name. */
 export const LEGAL_IDS: ReadonlySet<string> = new Set(LEGAL_DOCS.flatMap((d) => [d.id as string, ...d.groups.map((g) => g.id)]));
+
+/** C14: the refund policy is section 04, `#refund-policy`, and its 14 sections
+ *  `#refund-policy-1` to `#refund-policy-14` (the files' "### N." headings). */
+export const refundSectionId = (n: number | string) => REFUND_POLICY_ID + "-" + n;
+export const REFUND_IDS: ReadonlySet<string> = new Set([REFUND_POLICY_ID, ...Array.from({ length: 14 }, (_, i) => refundSectionId(i + 1))]);
 
 /** The id an old-shape legal hash points at, or null when the hash needs no
  *  rewrite (an id already, empty, or not a legal hash). `#legal/<doc>/<slug>`

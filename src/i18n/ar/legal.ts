@@ -35,7 +35,13 @@ const legal: Catalogue = {
   "ON THIS PAGE": "في هذه الصفحة",
   "Privacy Policy": "سياسة الخصوصية",
   "Health & Medical Disclaimer": "إخلاء المسؤولية الصحية والطبية",
-  "In detail": "بالتفصيل",
+  // Landing update (LG1 v5): the five sub-headings of the Health & Medical
+  // Disclaimer (copy/centium.md), replacing "In detail".
+  "Informational only": "للعلم فقط",
+  "Biomarker capture": "تسجيل المؤشرات الحيوية",
+  "Voice and video calls": "المكالمات الصوتية والمرئية",
+  "Independent providers": "مقدّمو خدمات مستقلّون",
+  "Not an emergency service": "ليست خدمة طوارئ",
   "Back to home": "العودة إلى الرئيسية",
 
   // == Settings › Terms of Service ==
@@ -59,7 +65,6 @@ const legal: Catalogue = {
   // == Refund and Cancellation Policy links ==
   "Refund and Cancellation Policy": "سياسة الاسترداد والإلغاء", // note: the policy's title, as Karim's Arabic file has it; the Terms sentence links these words
   "Refund and cancellation policy": "سياسة الاسترداد والإلغاء", // note: the link on every plan screen and in Settings › Legal
-  "Refund policy": "سياسة الاسترداد", // note: the website footer's short link
 
   // == Billing and refunds (Settings, and the business Help centre) ==
   "Billing and refunds": "الفوترة والاسترداد",

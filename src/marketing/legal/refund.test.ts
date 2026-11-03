@@ -2,7 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { linkPhrases, parseInline, parsePolicy, plainText, type PolicyBlock } from "./policyDoc.ts";
-import { initialPolicyLang, PREVAILS_SECTION_ID, REFUND_POLICY_LINKS } from "./refund.ts";
+import { REFUND_POLICY_HREF, REFUND_POLICY_LINKS } from "./refund.ts";
+import { REFUND_IDS, refundSectionId } from "./anchors.ts";
 
 // Round F (DN): the page shows the lawyer's files themselves. These checks
 // prove nothing is lost or changed on the way: every word of each file is on
@@ -51,8 +52,18 @@ describe("refund policy, word for word", () => {
     });
   });
 
-  it("both open with their own section 13 (the Arabic version prevails)", () => {
-    for (const t of [EN, AR]) assert.ok(parsePolicy(t).sections.some((s) => s.id === PREVAILS_SECTION_ID));
+  it("is Legal section 04: #refund-policy, then #refund-policy-1 to -14, one per ### section (C14)", () => {
+    assert.equal(REFUND_POLICY_HREF, "/legal#refund-policy");
+    for (const t of [EN, AR]) {
+      const ids = parsePolicy(t).sections.map((s) => refundSectionId(s.id.replace("section-", "")));
+      assert.deepEqual(ids, Array.from({ length: 14 }, (_, i) => "refund-policy-" + (i + 1)));
+      for (const id of ids) assert.ok(REFUND_IDS.has(id), id);
+    }
+    assert.ok(REFUND_IDS.has("refund-policy"));
+    assert.equal(REFUND_IDS.size, 15);
+  });
+
+  it("says the Arabic version prevails", () => {
     assert.match(plainText(parsePolicy(EN)), /If they differ, the Arabic version prevails\./);
   });
 
@@ -74,13 +85,5 @@ describe("refund policy, word for word", () => {
   it("links keep bold and italic and mark only the phrase", () => {
     const out = linkPhrases(parseInline("at **reportaproblem.apple.com now**"), [["reportaproblem.apple.com", "https://x"]]);
     assert.deepEqual(out, [{ t: "at " }, { t: "reportaproblem.apple.com", b: true, href: "https://x" }, { t: " now", b: true }]);
-  });
-
-  it("opens in ?lang, then the app's language, then the browser's", () => {
-    assert.equal(initialPolicyLang("?lang=ar", "en", "en-US"), "ar");
-    assert.equal(initialPolicyLang("?lang=en", "ar", "ar"), "en");
-    assert.equal(initialPolicyLang("", "ar", "en-US"), "ar");
-    assert.equal(initialPolicyLang("", "en", "ar-LB"), "ar");
-    assert.equal(initialPolicyLang("", "", "fr-FR"), "en");
   });
 });

@@ -9,9 +9,10 @@ import { PhoneStage } from "../landing/phone/PhoneStage";
 import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
 import { imageTask } from "../landing/loading/loader";
 import { addLoadingTask, landingState } from "../landing/state";
-import { lowQuality, reducedMotion } from "../landing/engine/env";
+import { LG, dirSign, lowQuality, reducedMotion } from "../landing/engine/env";
+import { scrollToInline } from "../../utils/inlineScroll";
 import type { EngineSection } from "../landing/engine/scrollEngine";
-import { ANCHOR_OFFSET, anchorTarget, scrollToSection, useMarketingNav } from "../landing/navigation";
+import { ANCHOR_OFFSET, anchorTarget, useMarketingNav } from "../landing/navigation";
 import { SectionHostContext, type SectionHost } from "../landing/sectionHost";
 import type { LandingMotion } from "../landing/motion";
 
@@ -181,9 +182,49 @@ export const Home: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // HE1 v3 (C3, centium/HE1-pillars.md): each pillar word goes to its own
+  // pillar. Desktop: the middle of its step in the pinned track, re-aimed once
+  // the smooth scroll has had time to settle (late layout). Phones: the
+  // pillars, with that card centred in the carousel.
+  const pillarTimer = useRef(0);
   const onPillar = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    scrollToSection("platform");
+    const i = Number(e.currentTarget.dataset.pil) || 0,
+      rm = reducedMotion(),
+      behavior: ScrollBehavior = rm ? "auto" : "smooth",
+      track = document.getElementById("pl-track");
+    if (window.innerWidth >= LG && track) {
+      const target = () => track.getBoundingClientRect().top + window.scrollY + (Math.max(0, track.offsetHeight - window.innerHeight) * (i + 0.5)) / 5;
+      window.scrollTo({ top: target(), behavior });
+      window.clearTimeout(pillarTimer.current);
+      // 1100ms later (50ms with reduced motion), more than 8px away: jump
+      // there. After a jump it is checked again 150ms later (up to 2s),
+      // because Chrome lets a smooth scroll still running carry on past it.
+      const t0 = performance.now();
+      const aim = () => {
+        const y = target();
+        if (Math.abs(window.scrollY - y) <= 8) return;
+        window.scrollTo({ top: y, behavior: "auto" });
+        if (performance.now() - t0 < 2000) pillarTimer.current = window.setTimeout(aim, 150);
+      };
+      const stop = () => window.clearTimeout(pillarTimer.current);
+      (["wheel", "touchstart", "keydown"] as const).forEach((ev) => window.addEventListener(ev, stop, { passive: true, once: true }));
+      pillarTimer.current = window.setTimeout(aim, rm ? 50 : 1100);
+      return;
+    }
+    const platform = document.getElementById("platform") ?? track,
+      car = document.getElementById("pl-panes"),
+      card = car?.children[i] as HTMLElement | undefined;
+    if (platform) window.scrollTo({ top: platform.getBoundingClientRect().top + window.scrollY - ANCHOR_OFFSET, behavior });
+    if (car && card) {
+      // Card i centred: offsetLeft - (clientWidth - offsetWidth) / 2, from the
+      // rendered boxes (the panes are zoomed on small phones, which offsets
+      // do not include), counted from the reading start.
+      const cr = car.getBoundingClientRect(),
+        k = card.getBoundingClientRect(),
+        d = dirSign() * (k.left + k.width / 2 - (cr.left + cr.width / 2));
+      scrollToInline(car, Math.abs(car.scrollLeft) + d, behavior);
+    }
   };
 
   const onContact = (e: React.MouseEvent<HTMLAnchorElement>) => {

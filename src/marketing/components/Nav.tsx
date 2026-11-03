@@ -6,7 +6,6 @@ import { landingState, spyClick } from "../landing/state";
 import { anchorHash, loaderEntryFor } from "../landing/loading/pickLoader";
 import { scrollToSection, useMarketingNav } from "../landing/navigation";
 import { LEAF_TEAL, LOGO_LAVENDER, MARK_C_PATH, MARK_LEAF_PATH } from "../landing/paths";
-import { LanguageSwitch } from "./LanguageSwitch";
 import { t, tk } from "../../i18n/core";
 
 // Centium landing v29: NV1 v16, the Original navbar (02_pages/01-NV1 and the
@@ -21,6 +20,7 @@ import { t, tk } from "../../i18n/core";
 //   Started open the web app (/app), as before.
 // - Kept from the previous nav: aria-current on the active link, aria-expanded
 //   and "Open menu" / "Close menu" on the burger.
+// - No language control (NV1 v3): the AR / ENG toggle is in the footer only.
 // - The logo is the official mark and "entium" wordmark (CentiumMark.tsx),
 //   whose geometry is the prototype's own nav logo (28px mark, 100.42 x 11px word).
 
@@ -368,10 +368,6 @@ export const Nav: React.FC = () => {
               </a>
             ))}
           </nav>
-          {/* Round F (AV): the language switch, above Log in. */}
-          <div style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}>
-            <LanguageSwitch />
-          </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #EDEAE4" }}>
             <Link
               to="/app"

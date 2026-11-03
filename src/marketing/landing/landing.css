@@ -109,3 +109,57 @@ html.larger-icons .centium-site svg {
   color: #756d63;
   opacity: 1;
 }
+
+/* Landing update (HE1 v3, C3): the pillar words. Lavender at rest (inline),
+   teal #3D6E69 on hover (.cl-hc, --hc) and on keyboard focus, with a teal
+   outline (5.86:1 on white). Nothing stays highlighted. */
+.centium-site .cl-pil:focus-visible {
+  color: #3d6e69 !important;
+  outline: 2px solid #3d6e69;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+/* Landing update (FT1 v3, C5): the AR / ENG toggle. Each button's tap area
+   reaches 44 x 44 without changing its 34 x 26 look; the option not chosen
+   darkens on hover. */
+.centium-site .cl-lang button::after {
+  content: "";
+  position: absolute;
+  inset: -9px -5px;
+}
+.centium-site .cl-lang button[aria-pressed="false"]:hover {
+  color: #221e1a !important;
+}
+
+/* Landing update (C6, centium/ARABIC-RTL.md 2): Arabic, right to left, on the
+   marketing pages only (MarketingLayout sets dir on .centium-site). Positive
+   and negative tracking break Arabic joining, and the Latin line heights clip
+   its marks; the inline values are the English design, hence !important.
+   Direction-aware placement and motion live in the components themselves. */
+.centium-site[dir="rtl"],
+.centium-site[dir="rtl"] * {
+  letter-spacing: 0 !important;
+}
+.centium-site[dir="rtl"] :is(h1, h2, h3) {
+  line-height: 1.3 !important;
+}
+.centium-site[dir="rtl"] p {
+  line-height: max(1.6, 1em);
+}
+.centium-site[dir="rtl"] input,
+.centium-site[dir="rtl"] textarea {
+  text-align: right;
+}
+.centium-site[dir="rtl"] input[type="email"] {
+  direction: ltr;
+  text-align: right;
+}
+/* Labels that a fixed width clips in Arabic wrap instead (sections 03, 06 and
+   Pricing; the class marks them in the markup). */
+.centium-site[dir="rtl"] .cl-arwrap {
+  white-space: normal !important;
+  text-overflow: clip !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere;
+}

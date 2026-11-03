@@ -4,9 +4,8 @@ import { CentiumLockup } from "../../components/icons/CentiumMark";
 import { LG, reducedMotion } from "../landing/engine/env";
 import { usePageLink, useMarketingNav, useSectionLink } from "../landing/navigation";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
-import { LanguageSwitch } from "./LanguageSwitch";
+import { LanguageToggle } from "./LanguageSwitch";
 import { isRtl, t, tk } from "../../i18n/core";
-import { REFUND_POLICY_PATH } from "../legal/refund";
 
 // Centium landing v29: FO1 v17, the centred footer (02_pages/22-FO1 and the
 // prototype markup, exact inline styles), replacing the previous footer.
@@ -205,11 +204,11 @@ export const Footer: React.FC = () => {
                   justifyContent: "center",
                   alignItems: "center",
                   gap: "8px",
-                  minHeight: "40px",
-                  fontSize: "10.5px",
+                  minHeight: "44px",
+                  fontSize: "13px",
                   fontWeight: 800,
-                  letterSpacing: ".22em",
-                  color: "#6C655C",
+                  letterSpacing: ".16em",
+                  color: "#221E1A",
                 }}
               >
                 {t(c.t)}
@@ -219,16 +218,17 @@ export const Footer: React.FC = () => {
               </summary>
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", paddingBottom: "10px" }}>
                 {c.l.map((ln) => {
+                  // FT1 v2 (C4): links no larger than their heading; 44px tall below 1024.
                   const style = {
-                    padding: "6px 0",
-                    fontSize: "15px",
-                    fontWeight: 600,
-                    color: "#3B352D",
+                    ...(lg ? { padding: "7px 0" } : { minHeight: "44px", display: "inline-flex", alignItems: "center", padding: "0" }),
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    color: "#5B5349",
                     whiteSpace: "nowrap",
                     background: UNDERLINE,
                     transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
                     "--hc": "#6A54C4",
-                  } as React.CSSProperties;
+                  } as unknown as React.CSSProperties;
                   return ln.app ? (
                     <Link key={ln.t} to="/app" className="cl-hc cl-uline" style={style}>
                       {t(ln.t)}
@@ -286,12 +286,18 @@ export const Footer: React.FC = () => {
             </a>
           ))}
         </div>
+        {/* FT1 v3 (C5): the AR / ENG toggle, the site's only language
+            control, between the social icons and the copyright. */}
+        <div data-ftrow="lang" style={{ display: "flex", justifyContent: "center", marginTop: "-10px" }}>
+          <LanguageToggle />
+        </div>
+        {/* FT1 v3: the copyright, then Legal beneath it (the refund policy is
+            Legal section 04 now, so it has no link of its own). */}
         <div
           data-ftrow="legal"
-          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap: "6px 16px", fontSize: "13px", color: "#5B5349" }}
+          style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: "6px", fontSize: "13px", color: "#5B5349" }}
         >
           <span style={{ whiteSpace: "nowrap" }}>{t("© {year} Centium. All rights reserved.", { year: new Date().getFullYear() })}</span>
-          <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
           <a
             href="/legal"
             onClick={pageLink("/legal")}
@@ -303,33 +309,12 @@ export const Footer: React.FC = () => {
                 background: UNDERLINE,
                 transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
                 "--hc": "#5C48A8",
+                ...(lg ? {} : { minHeight: "44px", display: "inline-flex", alignItems: "center" }),
               } as React.CSSProperties
             }
           >
             {t("Legal")}
           </a>
-          {/* Round F (DN): the Refund and Cancellation Policy, beside Legal. */}
-          <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
-          <a
-            href={REFUND_POLICY_PATH}
-            onClick={pageLink(REFUND_POLICY_PATH)}
-            className="cl-hc cl-uline"
-            style={
-              {
-                fontWeight: 700,
-                color: "#3B352D",
-                background: UNDERLINE,
-                transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
-                "--hc": "#5C48A8",
-              } as React.CSSProperties
-            }
-          >
-            {t("Refund policy")}
-          </a>
-          {/* Round F (AV): the language switch lives here (and in the phone
-              menu), so the nav keeps the handoff's measured layout. */}
-          <span aria-hidden="true" style={{ width: "3px", height: "3px", borderRadius: "99px", background: "#B9B2A8" }} />
-          <LanguageSwitch style={{ fontSize: "13px", fontWeight: 700, color: "#3B352D", padding: "0" }} />
         </div>
       </div>
       {/* Kept from the previous footer (audit 2.C): iOS Safari's rubber-band

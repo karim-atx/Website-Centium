@@ -9,11 +9,13 @@ import { Link } from "react-router-dom";
 import { LEAF_TEAL, MARK_LEAF_PATH } from "../paths";
 import { SCREENS, screenBackground } from "../assets/dashboard";
 import type { IntroVals } from "./introVals";
-import { t, tk } from "../../../i18n/core";
+import { isRtl, t, tk } from "../../../i18n/core";
 
 // The two intro lines are split into words for their reveals (never into
-// letters, so Arabic stays joined); t() runs at render. In Arabic there is no
-// "lives", so no leaf dot: the page gets LO2 instead of LO1 (pickLoader.ts).
+// letters, so Arabic stays joined); t() runs at render. The leaf is the dot
+// of the i in "lives"; in Arabic (C13, centium/ARABIC-LEAF.md) it is the dot
+// of the ز in موزّعة, which is split at the ز (و never joins forward, so the
+// ز is already in its isolated form and the shaping does not change).
 const TITLE = tk("Your health lives in a lot of places.");
 const WORDS = tk("Your food. Your training. Your health. Your coach. Your people.");
 const PILL_TOP = [tk("NUTRITION"), tk("TRAINING"), tk("HEALTH")];
@@ -62,22 +64,30 @@ const appIcon = (style: React.CSSProperties) => (
 );
 
 export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, onContact, onSkip }) => {
-  const pill = (label: string, mobile: boolean, id?: string) => (
+  // HE1 v3 (C3): lavender #775FD7 at rest, teal #3D6E69 on hover and focus
+  // (.cl-pil in landing.css), nothing kept highlighted; each word goes to its
+  // own pillar (data-pil, Home.tsx onPillar). Arabic: no tracking, so no
+  // negative-margin compensation.
+  const ar = isRtl();
+  const pill = (label: string, mobile: boolean, i: number, id?: string) => (
     <a
       key={label}
       id={id}
       href="#platform"
+      data-pil={i}
       onClick={onPillar}
-      className="cl-hc"
+      className="cl-hc cl-pil"
       style={
         {
           fontSize: r.pillSize,
           fontWeight: 700,
-          letterSpacing: r.pillLs,
-          marginRight: r.pillLsNeg,
-          color: "#5B5349",
-          ...(mobile ? { minHeight: "36px", display: "flex", alignItems: "center" } : { padding: "12px 0", display: "block" }),
-          "--hc": mobile ? "#5B5349" : "#6A54C4",
+          letterSpacing: ar ? "0" : r.pillLs,
+          marginRight: ar ? "0" : r.pillLsNeg,
+          color: "#775FD7",
+          cursor: "pointer",
+          transition: "color .2s ease",
+          ...(mobile ? { minHeight: "44px", display: "flex", alignItems: "center" } : { padding: "12px 0", display: "block" }),
+          "--hc": "#3D6E69",
         } as unknown as React.CSSProperties
       }
     >
@@ -85,6 +95,44 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
     </a>
   );
   const title = t(TITLE);
+  const leaf = (
+    <span id="i-dot" aria-hidden="true" style={{ position: "absolute", left: 0, top: 0, width: ".2em", height: ".2em", opacity: dotOp, transformOrigin: "50% 100%" }}>
+      <svg viewBox="556 526 380 368" style={{ display: "block", width: "100%", height: "100%", overflow: "visible" }}>
+        <path d={MARK_LEAF_PATH} fill={LEAF_TEAL} />
+      </svg>
+    </span>
+  );
+  const word = (w: string): React.ReactNode => {
+    if (w === "lives")
+      return (
+        <>
+          {/* i18n-ignore: the English title only */}
+          l
+          <span id="i-wrap" style={{ position: "relative", display: "inline-block" }}>
+            ı{leaf}
+          </span>
+          {/* i18n-ignore */}
+          ves
+        </>
+      );
+    const at = isRtl() ? w.indexOf("ز") : -1;
+    if (at < 0) return w;
+    // The ز with any harakat after it (its shadda) stays in one span.
+    let end = at + 1;
+    while (end < w.length && /[ً-ْٰ]/.test(w[end])) end++;
+    return (
+      <>
+        {w.slice(0, at)}
+        <span id="i-wrap" data-ar="" style={{ position: "relative", display: "inline-block" }}>
+          <span data-zt="" style={{ display: "inline-block" }}>
+            {w.slice(at, end)}
+          </span>
+          {leaf}
+        </span>
+        {w.slice(end)}
+      </>
+    );
+  };
   return (
     <>
       <div id="intro-track" style={{ position: "relative", zIndex: 2, height: r.introH }}>
@@ -95,36 +143,18 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               style={{ fontWeight: 800, fontSize: r.stmSize, lineHeight: 1.04, letterSpacing: "-.04em", color: "#221E1A", textWrap: "balance" }}
             >
               {title.split(" ").map((w, i) => (
-                <span
-                  key={i}
-                  aria-hidden="true"
-                  style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: ".16em 0 .1em", marginBlock: "-.16em -.1em", marginInline: "0 .24em" }}
-                >
-                  <span data-tw="" style={{ display: "inline-block", transform: "translateY(" + twY + ")" }}>
-                    {w === "lives" ? (
-                      <>
-                        {/* i18n-ignore: the English title only */}
-                        l
-                        <span id="i-wrap" style={{ position: "relative", display: "inline-block" }}>
-                          ı
-                          <span
-                            id="i-dot"
-                            aria-hidden="true"
-                            style={{ position: "absolute", left: 0, top: 0, width: ".2em", height: ".2em", opacity: dotOp, transformOrigin: "50% 100%" }}
-                          >
-                            <svg viewBox="556 526 380 368" style={{ display: "block", width: "100%", height: "100%", overflow: "visible" }}>
-                              <path d={MARK_LEAF_PATH} fill={LEAF_TEAL} />
-                            </svg>
-                          </span>
-                        </span>
-                        {/* i18n-ignore */}
-                        ves
-                      </>
-                    ) : (
-                      w
-                    )}
+                <React.Fragment key={i}>
+                  {/* A zero-size space between the words, so a copied title keeps its spaces (QA Z2); the margin still spaces them. */}
+                  {i > 0 && <span style={{ fontSize: 0 }}> </span>}
+                  <span
+                    aria-hidden="true"
+                    style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top", padding: ".16em 0 .1em", marginBlock: "-.16em -.1em", marginInline: "0 .24em" }}
+                  >
+                    <span data-tw="" style={{ display: "inline-block", whiteSpace: "nowrap", transform: "translateY(" + twY + ")" }}>
+                      {word(w)}
+                    </span>
                   </span>
-                </span>
+                </React.Fragment>
               ))}
             </h2>
           </div>
@@ -358,18 +388,18 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               style={{ display: r.pillDesk, gridTemplateColumns: "1fr auto 1fr", columnGap: r.pillGap, alignItems: "center", width: "max-content", margin: "0 auto" }}
             >
               <span style={{ display: "flex", justifyContent: "flex-end", gap: r.pillGap }}>
-                {pill(PILL_TOP[0], false)}
-                {pill(PILL_TOP[1], false)}
+                {pill(PILL_TOP[0], false, 0)}
+                {pill(PILL_TOP[1], false, 1)}
               </span>
-              {pill(PILL_TOP[2], false, "pill-health")}
+              {pill(PILL_TOP[2], false, 2, "pill-health")}
               <span style={{ display: "flex", justifyContent: "flex-start", gap: r.pillGap }}>
-                {pill(PILL_BOT[0], false)}
-                {pill(PILL_BOT[1], false)}
+                {pill(PILL_BOT[0], false, 3)}
+                {pill(PILL_BOT[1], false, 4)}
               </span>
             </nav>
             <nav id="pillar-rows-m" aria-label={t("Pillars")} style={{ display: r.pillMob, flexDirection: "column", alignItems: "center", rowGap: 0 }}>
-              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_TOP.map((p) => pill(p, true))}</span>
-              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_BOT.map((p) => pill(p, true))}</span>
+              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_TOP.map((p, i) => pill(p, true, i))}</span>
+              <span style={{ display: "flex", gap: r.pillGap }}>{PILL_BOT.map((p, i) => pill(p, true, 3 + i))}</span>
             </nav>
             <h1
               id="hero-title"

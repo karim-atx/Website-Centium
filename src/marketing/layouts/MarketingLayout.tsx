@@ -5,6 +5,7 @@ import { Footer } from "../components/Footer";
 import { LoadingHost } from "../landing/loading/LoadingHost";
 import { anchorHash, keepY, loaderEntryFor, pageOf } from "../landing/loading/pickLoader";
 import { PageFadeContext, anchorOffset, anchorTarget } from "../landing/navigation";
+import { isRtl } from "../../i18n/core";
 import "../landing/landing.css";
 
 // Centium landing v29: the marketing shell (Nav, page, Footer, loading).
@@ -124,6 +125,10 @@ export const MarketingLayout: React.FC = () => {
     <PageFadeContext.Provider value={fade}>
       <div
         className="centium-site"
+        // The reading direction on the marketing wrapper itself, from the first
+        // render (the app root sets <html dir> a moment later): every
+        // right-to-left rule in landing.css is scoped to .centium-site[dir="rtl"].
+        dir={isRtl() ? "rtl" : "ltr"}
         style={{
           minHeight: "100vh",
           display: "flex",

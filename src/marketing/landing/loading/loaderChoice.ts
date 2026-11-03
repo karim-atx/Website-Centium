@@ -55,18 +55,74 @@ export function chooseLoader(i: LoaderInputs): LoaderEntry {
   return { ...ent, kind: "lo1", mode, why: "top of the landing page" };
 }
 
-// The falling leaf's progress targets (prototype lo1Target / loTarget) and
+// The falling leaf's pace (LO1 / LO2 v3, handover centium/LOADING.md) and
 // LO2's lockup geometry, here because they are pure.
+//
+// The fall runs on its own clock, advanced by real elapsed time: loading
+// progress only decides when the leaf may land. Until loading is done (or
+// the release time D), the fall holds at H of its length with a gentle sway.
 
-/** LO1 fall progress target: real progress paced to at least 1.9 s, forced to land by 2.4 s (repeat visits: 0.32 s). */
-export function lo1Target(t: number, real: number, mode: LoaderMode): number {
-  if (mode === "repeat") return Math.min(1, t / 0.32);
-  return Math.max(Math.min(real, t / 1.9), Math.pow(Math.min(1, Math.max(0, (t - 1.9) / 0.5)), 1.6));
+/** One loader's fall timings, in seconds (LOADING.md "New timing model"). */
+export interface Pace {
+  /** The fall's designed length. */
+  T: number;
+  /** The share of the fall it holds at while loading is not done. */
+  H: number;
+  /** Released by this time whatever the loading progress. */
+  D: number;
+  /** A repeat visit's fall. */
+  R: number;
 }
+export const LO1_PACE: Pace = { T: 1.9, H: 0.86, D: 2.13, R: 0.32 };
+/** LO2's repeat visit keeps its own 0.5 s glide path, so R is never read. */
+export const LO2_PACE: Pace = { T: 1.2, H: 0.86, D: 1.43, R: 1 };
 
-/** LO2 fall progress target: real progress paced to at least 1.2 s, forced by 1.6 s. */
-export function loTarget(t: number, real: number): number {
-  return Math.max(Math.min(real, t / 1.2), Math.pow(Math.min(1, Math.max(0, (t - 1.15) / 0.45)), 1.6));
+/** The fall's running state: u the fall progress, c its clock, a the last
+ *  frame's time, sw the smoothed sway amplitude, hs the hold start. */
+export interface PaceState {
+  u: number;
+  c: number;
+  a: number;
+  sw: number;
+  hs: number | null;
+  /** This frame's sway, from -1 to 1 (times 3% of the width and 9 degrees). */
+  sway: number;
+}
+export const newPace = (): PaceState => ({ u: 0, c: 0, a: 0, sw: 0, hs: null, sway: 0 });
+
+/**
+ * One frame of the fall (LOADING.md steps 2 to 5). `p` is seconds since the
+ * clock start, `h` the loading progress (0 to 1), `skip` true once the visitor
+ * scrolled or pressed a key. Returns the fall progress u.
+ */
+export function paceStep(S: PaceState, p: number, h: number, mode: LoaderMode, skip: boolean, K: Pace): number {
+  const dt = Math.max(0, p - S.a);
+  S.a = p;
+  if (skip) {
+    S.u += (1 - S.u) * (1 - Math.exp(-dt * 30));
+    if (1 - S.u < 0.002) S.u = 1;
+    S.sw = 0;
+    S.sway = 0;
+    return S.u;
+  }
+  if (mode === "repeat") {
+    S.c += dt;
+    S.u = Math.min(1, S.c / K.R);
+    S.sway = 0;
+    return S.u;
+  }
+  const hold = K.H * K.T,
+    free = h >= 1 || p >= K.D;
+  S.c += dt;
+  if (!free && S.c > hold) {
+    S.c = hold;
+    if (S.hs == null) S.hs = p;
+  }
+  const target = !free && S.hs != null ? Math.min(1, (p - S.hs) / 0.4) : 0;
+  S.sw += (target - S.sw) * (1 - Math.exp(-dt * 6));
+  S.sway = S.sw * Math.sin(((p - (S.hs ?? 0)) * Math.PI * 2) / 1.6);
+  S.u = Math.min(1, S.c / K.T);
+  return S.u;
 }
 
 /** The full lockup's width in mark widths. The prototype's traced lockup was

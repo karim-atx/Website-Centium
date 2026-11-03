@@ -11,6 +11,10 @@
 //   dots goes to the nearest card) and, the first time the cards are 60% in
 //   view, they nudge 56px and back to show they scroll;
 // - "Compare all features" opens a table for the selected audience.
+// Right to left (C9): the thumbs are placed from the reading start and slide
+// by the reading direction, so in Arabic the first option is on the right and
+// the thumb lies under the selected one; the audience tablist's arrow keys
+// follow the reading direction (D9).
 // Prices, plans and the table come from src/content/pricing.ts only. Plan
 // buttons open the web app (/app); business ones open /contact.
 
@@ -21,8 +25,9 @@ import type { SectionVals } from "./sectionVals";
 import { AUDIENCES, DEFAULT_BILLING, SAVE_BADGE, priceFor, type Billing } from "../../../content/pricing";
 import { SectionHostContext } from "../sectionHost";
 import { usePageLink } from "../navigation";
-import { REFUND_POLICY_PATH } from "../../legal/refund";
+import { REFUND_POLICY_HREF } from "../../legal/refund";
 import { clamp, eo } from "../engine/math";
+import { tablistKeys, useIndicator } from "./segmented";
 import { t, tk } from "../../../i18n/core";
 import { scrollToInline } from "../../../utils/inlineScroll";
 
@@ -36,13 +41,12 @@ const PILL_GROUP: React.CSSProperties = {
 };
 const THUMB: React.CSSProperties = {
   position: "absolute",
-  left: "4px",
   top: "4px",
   bottom: "4px",
   borderRadius: "999px",
   background: "#775FD7",
   boxShadow: "0 6px 16px rgba(125,103,217,.28)",
-  transition: "transform .45s cubic-bezier(.22,1,.36,1)",
+  transition: "transform .45s cubic-bezier(.22,1,.36,1),width .45s cubic-bezier(.22,1,.36,1)",
 };
 
 /** The tween's figure format (prototype tweenPrices fmt): whole numbers only once the tween ends. */
@@ -64,6 +68,10 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
   const A = AUDIENCES[aud];
   const annual = bill === "annual";
   const n = A.plans.length;
+  const audRef = useRef<HTMLDivElement>(null),
+    billRef = useRef<HTMLDivElement>(null);
+  const audInd = useIndicator(audRef, aud, AUDIENCES.length),
+    billInd = useIndicator(billRef, annual ? 1 : 0, 2);
 
   const switchPrice = (ch: { aud?: number; bill?: Billing }) => {
     prevPV.current = Array.from(cardsRef.current?.querySelectorAll("[data-pv]") ?? []).map((e) => +(e.getAttribute("data-pv") || 0));
@@ -208,8 +216,14 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             gap: "12px",
           }}
         >
-          <div role="tablist" aria-label={t("Audience")} style={{ ...PILL_GROUP, gridTemplateColumns: "repeat(3,1fr)", width: r.audW, boxShadow: r.pillSh }}>
-            <span style={{ ...THUMB, width: "calc((100% - 8px) / 3)", transform: `translateX(${aud * 100}%)` }} />
+          <div
+            ref={audRef}
+            role="tablist"
+            aria-label={t("Audience")}
+            onKeyDown={tablistKeys(AUDIENCES.length, aud, (i) => switchPrice({ aud: i }))}
+            style={{ ...PILL_GROUP, gridTemplateColumns: "repeat(3,1fr)", width: r.audW, boxShadow: r.pillSh }}
+          >
+            <span style={{ ...THUMB, ...audInd }} />
             {AUDIENCES.map((au, i) => (
               <button
                 key={au.label}
@@ -232,8 +246,8 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             ))}
           </div>
           <div style={{ position: "relative", display: "flex", justifyContent: "center" }}>
-            <div role="group" aria-label={t("Billing period")} style={{ ...PILL_GROUP, gridTemplateColumns: "1fr 1fr", boxShadow: r.pillSh }}>
-              <span style={{ ...THUMB, width: "calc(50% - 4px)", transform: `translateX(${annual ? "100%" : "0%"})` }} />
+            <div ref={billRef} role="group" aria-label={t("Billing period")} style={{ ...PILL_GROUP, gridTemplateColumns: "1fr 1fr", boxShadow: r.pillSh }}>
+              <span style={{ ...THUMB, ...billInd }} />
               {(
                 [
                   ["monthly", tk("Monthly")],
@@ -297,7 +311,8 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             scrollSnapType: "x mandatory",
             overscrollBehaviorX: "contain",
             touchAction: "pan-x pan-y",
-            scrollPaddingLeft: "20px",
+            // C12: from the reading start, so in Arabic the first card rests 20px from the right edge.
+            scrollPaddingInlineStart: "20px",
             scrollbarWidth: "none",
             padding: r.pcPad,
             alignItems: "stretch",
@@ -429,7 +444,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
         <p style={{ marginTop: "16px", textAlign: "center", fontSize: "13px", color: "#5B5349", maxWidth: "760px", marginInlineStart: "auto", marginInlineEnd: "auto" }}>
           {t(A.footnote)}{" "}
           {/* Round F (DN): every place a plan is offered links the Refund and Cancellation Policy. */}
-          <a href={REFUND_POLICY_PATH} onClick={pageLink(REFUND_POLICY_PATH)} style={{ fontWeight: 700, color: "#3B352D", textDecoration: "underline", textUnderlineOffset: "3px" }}>
+          <a href={REFUND_POLICY_HREF} onClick={pageLink(REFUND_POLICY_HREF)} style={{ fontWeight: 700, color: "#3B352D", textDecoration: "underline", textUnderlineOffset: "3px" }}>
             {t("Refund and cancellation policy")}
           </a>
         </p>

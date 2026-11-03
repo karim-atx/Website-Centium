@@ -7,11 +7,18 @@
 // off-screen band is cleared once and then skipped. Reduced motion: drawn
 // complete and still. The line engine (lines/bands.ts) is code-split and
 // arrives on the first measure that finds a band.
+// Landing update (C17): each band carries Tio (motion/tio.ts), hooked into its
+// frame; every band, drawn or not, tells its Tio its pass up the screen and
+// whether it is near, so his images load ahead of time (2.2 screens below,
+// 1.2 above).
 
 import { clamp } from "../engine/math";
 import type { EngineCtx, EngineSection } from "../engine/scrollEngine";
 import type { Band } from "../lines/bands";
 import { pickBands } from "../lines/pickBands";
+import { dirSign } from "../engine/env";
+import { Tio } from "./tio";
+import type { TioKind } from "../tioLayers";
 
 type BandsModule = typeof import("../lines/bands");
 
@@ -23,6 +30,7 @@ interface Slot {
    *  getBoundingClientRect on every band every frame, a forced layout). */
   top: number;
   h: number;
+  tio: Tio | null;
 }
 
 export class BandsMotion implements EngineSection {
@@ -74,10 +82,14 @@ export class BandsMotion implements EngineSection {
           old.b.resize();
           old.top = top;
           old.h = r.height;
+          old.tio?.measure(window.innerWidth);
           return old;
         }
-        const b = new Band(cv, { dom, seed: this.pick.seed[bi], n: window.innerWidth >= 1024 ? 30 : 24, q: this.low ? "low" : "high", rm: this.rm });
-        return { cv, b, on: false, top, h: r.height };
+        const tioEl = cv.parentElement?.querySelector<HTMLElement>("[data-tio]"),
+          tio = tioEl ? (old?.tio ?? new Tio(tioEl, tioEl.getAttribute("data-tio") as TioKind, this.rm, dirSign() < 0)) : null;
+        tio?.measure(window.innerWidth);
+        const b = new Band(cv, { dom, seed: this.pick.seed[bi], n: window.innerWidth >= 1024 ? 30 : 24, q: this.low ? "low" : "high", rm: this.rm, hooks: tio ?? undefined });
+        return { cv, b, on: false, top, h: r.height, tio };
       })
       .filter((s): s is Slot => !!s);
   }
@@ -89,6 +101,12 @@ export class BandsMotion implements EngineSection {
       const r = { top: s.top - y, bottom: s.top - y + s.h };
       const p = this.rm ? 1 : clamp((vh * 0.95 - r.top) / (vh * 0.6));
       const vis = r.bottom > -20 && r.top < vh + 20;
+      if (s.tio) {
+        // Tio's box is the canvas less 120px at each end.
+        const bt = r.top + 120,
+          bh = s.h - 240;
+        s.tio.update(clamp((vh - bt) / (vh + bh)), bt < vh * 2.2 && bt + bh > -vh * 1.2);
+      }
       if (!vis) {
         if (s.on) {
           s.b.draw(0, t);

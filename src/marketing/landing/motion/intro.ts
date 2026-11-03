@@ -10,6 +10,7 @@
 // and the hero fills screen 01 into 02 over 0.82..0.97.
 
 import { clamp, easeInOut3, sm } from "../engine/math";
+import { dirSign } from "../engine/env";
 import type { EngineCtx, EngineSection } from "../engine/scrollEngine";
 import { landingState } from "../state";
 import { placeDot } from "../loading/title";
@@ -370,12 +371,14 @@ export class IntroMotion implements EngineSection {
         e = 1 - Math.pow(1 - v, 3),
         k = 0.85 * pose.sc * (0.82 + 0.18 * e),
         X = e * ((290 * pose.sc) / 2 + (290 * k) / 2 + 22),
-        Y = pose.dy + 14 * e;
+        Y = pose.dy + 14 * e,
+        // C7: mirrored in Arabic (Food on the right, Workout History on the left).
+        dir = dirSign();
       M.pf.forEach((el, j) => {
         if (!el) return;
         el.style.opacity = v.toFixed(3);
         el.style.zIndex = "0";
-        el.style.transform = "translateX(" + ((j ? 1 : -1) * X).toFixed(1) + "px) translateY(" + Y.toFixed(1) + "px) scale(" + k.toFixed(4) + ")";
+        el.style.transform = "translateX(" + ((j ? 1 : -1) * dir * X).toFixed(1) + "px) translateY(" + Y.toFixed(1) + "px) scale(" + k.toFixed(4) + ")";
       });
       if (M.phone) M.phone.style.zIndex = "1";
       this.debug.side = { v: +v.toFixed(3), scale: +k.toFixed(3), offset: Math.round(X) };
