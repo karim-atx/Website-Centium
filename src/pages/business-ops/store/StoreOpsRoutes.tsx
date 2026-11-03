@@ -9,6 +9,7 @@ import OrderDetailPage from "./OrderDetailPage";
 import ReturnDetailPage from "./ReturnDetailPage";
 import OrdersListPage from "./OrdersListPage";
 import OrdersPageWeb from "./OrdersPage.web";
+import OrdersListPageWeb from "./OrdersListPage.web";
 import { withWeb } from "../../../components/web/withWeb";
 import StoreProductsPageMobile from "./products/StoreProductsPage";
 import StoreProductsPageWeb from "./products/StoreProductsPage.web";
@@ -30,6 +31,8 @@ import StoreProductsPageWeb from "./products/StoreProductsPage.web";
 const OrdersIndex = withWeb(() => <Navigate to="/app/business/operations" replace />, OrdersPageWeb);
 const OrderRoute = withWeb(OrderDetailPage, OrdersPageWeb);
 const ReturnRoute = withWeb(ReturnDetailPage, OrdersPageWeb);
+// WB-ST-OR.3: the See all lists.
+const OrdersListRoute = withWeb(OrdersListPage, OrdersListPageWeb);
 // WB-ST-PR, .3: Products (Showcase and a category's See all) from 1024px wide.
 const StoreProductsPage = withWeb(StoreProductsPageMobile, StoreProductsPageWeb);
 
@@ -37,7 +40,7 @@ export function BusinessOrdersRoutes() {
   return (
     <Routes>
       <Route index element={<OrdersIndex />} />
-      <Route path="list/:which" element={<OrdersListPage />} />
+      <Route path="list/:which" element={<OrdersListRoute />} />
       <Route path="returns/:returnId" element={<ReturnRoute />} />
       <Route path=":orderId" element={<OrderRoute />} />
     </Routes>

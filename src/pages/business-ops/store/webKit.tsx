@@ -1,6 +1,7 @@
 import React from "react";
 import type { LucideIcon } from "lucide-react";
-import { Lightbulb } from "lucide-react";
+import { ChevronLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { t } from "../../../i18n/core";
 import type { ChipTone } from "./opsKit";
 
 // Website viewport v1 · the Store and Appointments web pages' shared parts
@@ -199,8 +200,8 @@ export const WebTip: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 );
 
 /** The dashed empty card: 1.5 dashed #AEA1DC r20, padding 32; a 56 tile, the title 22/30 800 and the body 15/24. */
-export const WebEmpty: React.FC<{ icon: LucideIcon; title: string; body: string; minHeight?: number | string; children?: React.ReactNode }> = ({ icon: Icon, title, body, minHeight, children }) => (
-  <div className="flex flex-col items-center justify-center text-center" style={{ border: "1.5px dashed #AEA1DC", borderRadius: 20, padding: 32, minHeight }}>
+export const WebEmpty: React.FC<{ icon: LucideIcon; title: string; body: string; minHeight?: number | string; padding?: number | string; children?: React.ReactNode }> = ({ icon: Icon, title, body, minHeight, padding = 32, children }) => (
+  <div className="flex flex-col items-center justify-center text-center" style={{ border: "1.5px dashed #AEA1DC", borderRadius: 20, padding, minHeight }}>
     <span className="inline-flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: 16, background: "#F0EDF9" }}>
       <Icon size={24} strokeWidth={1.75} style={{ color: "#7D6BB5" }} aria-hidden />
     </span>
@@ -224,4 +225,97 @@ export const WebListSkeleton: React.FC<{ rows?: number; label: string; rowH: num
       </div>
     ))}
   </div>
+);
+
+/**
+ * The See all pages' header (WB-ST Store Extras Web: OR.3, AP.4, PR.3): 72 tall with the bottom divider, a 40
+ * round Back with the 1px border (chevron 20 #5B5349, hover #F5F5F6), the kicker 13/20 700 over the H1 28/36 700.
+ */
+export const ExtrasHeader: React.FC<{ kicker: string; title: string; backLabel: string; onBack: () => void }> = ({ kicker, title, backLabel, onBack }) => (
+  <header className="shrink-0 flex items-center bg-cream" style={{ height: 72, boxSizing: "border-box", gap: 12, padding: "0 32px", borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+    <button
+      type="button"
+      onClick={onBack}
+      title={backLabel}
+      aria-label={backLabel}
+      className={`shrink-0 flex items-center justify-center hover:bg-[#F5F5F6] ${FOCUS}`}
+      style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)" }}
+    >
+      <ChevronLeft size={20} style={{ color: "#5B5349" }} aria-hidden />
+    </button>
+    <div className="flex-1 min-w-0">
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{kicker}</p>
+      <h1 className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>
+        {title}
+      </h1>
+    </div>
+  </header>
+);
+
+/** The See all list card: #F7F7FC r20, padding 4 × 20. */
+export const ExtrasList: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div role="list" aria-label={label} className="flex flex-col" style={{ background: "#F7F7FC", borderRadius: 20, padding: "4px 20px" }}>
+    {children}
+  </div>
+);
+
+/**
+ * A See all row: min 64 (padding 10 0, gap 14), the 54-in rule, tile 40 r12 (glyph 20), title 15/24 700 and sub 13/20
+ * on one line each, the chip 11/16 800 (padding 3 × 10), the value 15/24 800 (min 72, end-aligned), the chevron 16 #9A94B3.
+ */
+export const ExtrasRow: React.FC<{ icon: LucideIcon; title: string; sub: string; chip?: { label: string; tone: ChipTone } | null; value?: string; rule: boolean; onClick: () => void; ariaLabel?: string }> = ({
+  icon: Icon,
+  title,
+  sub,
+  chip,
+  value,
+  rule,
+  onClick,
+  ariaLabel,
+}) => (
+  <button
+    type="button"
+    role="listitem"
+    data-extras-row
+    onClick={onClick}
+    aria-label={ariaLabel}
+    className={`relative flex items-center w-full hover:bg-[#EFEDF8] ${FOCUS}`}
+    style={{ gap: 14, minHeight: 64, padding: "10px 0", boxSizing: "border-box", textAlign: "start", borderRadius: 12 }}
+  >
+    {rule && <span aria-hidden className="absolute top-0" style={{ insetInlineEnd: 0, insetInlineStart: 54, height: 1, background: "#EBEAF6" }} />}
+    <span className="shrink-0 flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: 12, background: "#F0EDF9" }}>
+      <Icon size={20} strokeWidth={1.75} style={{ color: "#7D6BB5" }} aria-hidden />
+    </span>
+    <span className="flex-1 min-w-0">
+      <span title={title} className="block overflow-hidden text-ellipsis whitespace-nowrap" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
+        {title}
+      </span>
+      <span title={sub} className="block overflow-hidden text-ellipsis whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        {sub}
+      </span>
+    </span>
+    {chip && (
+      <span className="shrink-0 whitespace-nowrap uppercase" style={{ borderRadius: 999, fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.04em", padding: "3px 10px", background: CHIP[chip.tone][0], color: CHIP[chip.tone][1] }}>
+        {chip.label}
+      </span>
+    )}
+    {value && (
+      <span className="shrink-0 whitespace-nowrap tabular-nums" style={{ minWidth: 72, textAlign: "end", fontSize: 15, lineHeight: "24px", fontWeight: 800, color: "#241F1B" }}>
+        {value}
+      </span>
+    )}
+    <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#9A94B3" }} aria-hidden />
+  </button>
+);
+
+/** "Show more" under a See all list: centred, 44 tall, padding 0 20, 15/24 700 #7D6BB5, r12 with a #F0EDF9 hover. */
+export const ExtrasMore: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`self-center flex items-center whitespace-nowrap hover:bg-[#F0EDF9] ${FOCUS}`}
+    style={{ marginTop: 8, height: 44, padding: "0 20px", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#7D6BB5", borderRadius: 12 }}
+  >
+    {t("Show more")}
+  </button>
 );
