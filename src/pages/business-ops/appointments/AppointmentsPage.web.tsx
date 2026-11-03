@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Banknote, CalendarCheck, CalendarPlus, CircleX, Clock, FileWarning, MessageCircle, Plus, Tag, User } from "lucide-react";
 import { apptChip, cancelAppointment, fetchDiary, fetchDiaryDetail, fetchFreeStretches, fetchServices, hasAppointments, markAppointment, markAppointmentPaid, payWords, type DiaryAppt, type Service } from "../../../services/appointments";
@@ -259,6 +259,12 @@ function ApptPane({ id, rail, onChanged }: { id: string; rail: boolean; onChange
   const a = s.status === "ok" ? s.value : null;
   const rowH = rail ? 48 : 56;
   const pad = rail ? 16 : 20;
+  // The clock "started" reads (ticks each minute, so Mark as no-show / done turn on at the start time).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   if (s.status === "loading")
     return (
@@ -272,7 +278,7 @@ function ApptPane({ id, rail, onChanged }: { id: string; rail: boolean; onChange
 
   const client = a.clientLabel;
   const booked = a.status === "booked";
-  const started = new Date(a.startsAt).getTime() <= Date.now();
+  const started = new Date(a.startsAt).getTime() <= nowMs;
   const chip = chipOf(apptChip(a.status));
   const unpaid = a.paymentStatus === "pending" && a.price > 0 && a.status !== "cancelled";
   const paidWord = payWords(a.paymentStatus);
