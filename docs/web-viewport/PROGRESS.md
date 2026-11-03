@@ -31,11 +31,11 @@ See "Resume here" at the end of this file.
 
 ## Counts
 
-- not started: 176
-- built: 30
+- not started: 170
+- built: 35
 - mobile layout: 39
 - not built: 2
-- verified: 2
+- verified: 3
 
 ## Client · Home
 
@@ -257,13 +257,13 @@ See "Resume here" at the end of this file.
 
 | Code | Name | Handover status | Guidance | Status | Notes |
 |---|---|---|---|---|---|
-| WB-HO · GY | Dashboard | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.1 | Needs your attention | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.2 | Your listing | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.3 | Venue switcher | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.4 | Quick action name | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.5 | Recent activity expanded | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
-| WB-HO.6 | See all activity | specified |  | not started | Meanwhile its mobile screen shows in the web shell (sheets open as 440 side sheets). |
+| WB-HO · GY | Dashboard | specified |  | built | `BusinessDashboard.web.tsx` + `DashboardParts.web.tsx`. Empty / Finish setting up state checked with the real Gym fixture at 1440 and 1024: header 64, H1 28/36 700, date 13/20 600, bell 40 at the 32 margin; grid 1120 (12 cols) / 880 (8 cols), gaps 24; cluster 320 / 315 (min(320, 4 or 3 columns)); setup card padding 22 × 24 × 12 r24, title 22/30 800, steps 45; Today boxes padding 14 × 16 r16, values 28/36 800; at 1440 the dashed empty box ends 32 above the window bottom (rows auto + 1fr) as in the frame. Filled state (entries, venue figures, activity rows) not checkable locally: the Gym fixture has no entries, venue or activity, and proxy fixtures are only for Classes / Store / Appointments. A Gym that runs classes, and Classes / Store businesses, still see the mobile dashboard centred (WB-HO · CS / · ST not built). |
+| WB-HO.1 | Needs your attention | specified |  | built | Anchored popover 360 at top 58, end at the page margin; rows padding 11 × 12, icon 18, 15/22 + 13/20, buttons 36. The Notifications row (business inbox) and the Retry row are kept from mobile. Checked the all-caught-up state (the fixture has no items): focus moves in, Esc closes, focus returns to the bell. The 3-item state is not available locally. |
+| WB-HO.2 | Your listing | specified |  | built | 480 centred popup (band 53, title 20/800 #7248F8, X 26, row 56, switch 48 × 28 #9A8CD6 / #E4E2EA). Checked Listed at 1440 and 1024: 480 × 159, centred; Esc closes, focus returns to the chip. Saves business_profiles.active as on mobile (not toggled: read-only proxy). |
+| WB-HO.3 | Venue switcher | specified |  | built | Chip 11/16 700, padding 5 × 10, a 2px lavender ring while open; menu 260 (content box, padding 8), rows 11 × 12 at 15/22, notes 13/18, the selected row tinted with a check. Shown only with two venues or more; the Gym fixture has none, so not checked in the browser. |
+| WB-HO.4 | Quick action name | specified |  | verified | GaugeCluster gains a web-only `web` prop: a mouse hover shows the action name (13/20 700, padding 6 × 12). Checked at 1440 and 1024 (Check someone in), gone on leave. Mobile long-press unchanged. |
+| WB-HO.5 | Recent activity expanded | specified |  | built | Card r24, header 14 × 16 × 12, live line 13/20, 36 buttons. Expanded: the two-column week charts (last week dashed, area, dots, today's value, day initials, mirrored in Arabic) and the whole week, scrolling inside the card at its row's height. WeekTotal gains `prevDays` (mobile ignores it). Empty state checked; rows need activity the fixture lacks. |
+| WB-HO.6 | See all activity | specified |  | not started | Meanwhile the mobile See all activity screen shows in the centred column (from the expanded card's footer). |
 | WB-HO.8 | Notifications | NEW · to build | wait for v2 | mobile layout | No web design yet: its mobile screen in the web shell, fully working. |
 
 ## Business · Analytics
@@ -437,17 +437,18 @@ See "Resume here" at the end of this file.
 
 ## QA tooling (outside the repo)
 
-`<scratchpad>/qa-wv/`: `routes.json` (65 mobile routes), `capture.cjs`, `regress.cjs` (430 × 932 after-capture against `baseline-430/`, re-capturing both sides up to 3 times for rendering noise), `shell-check.cjs`, `svc-check.cjs`, `rules-check.cjs`, `mkfx.cjs` (proxy fixtures for the Classes, Store and Appointments types on the Gym owner; install as `rf/fixtures.json` only while checking, then delete).
+`<scratchpad>/qa-wv/`: `routes.json` (65 mobile routes), `capture.cjs`, `regress.cjs` (430 × 932 after-capture against `baseline-430/`, re-capturing both sides up to 3 times for rendering noise), `shell-check.cjs`, `svc-check.cjs`, `rules-check.cjs`, `dash-check.cjs` (WB-HO: header, grid, cluster, setup, Today, popover, listing popup, hover tooltip, Esc and focus return at 1440 and 1024; `dash-probe.cjs <w> <h> [path]` for a quick screenshot), `patch.cjs` (CRLF-safe string patches), `prog-set.cjs` (sets PROGRESS rows from a JSON list and recounts), `mkfx.cjs` (proxy fixtures for the Classes, Store and Appointments types on the Gym owner; install as `rf/fixtures.json` only while checking, then delete).
 
 ## Last checks (head of this branch)
 
 - Mobile regression at 430 × 932: **65 of 65 routes pixel-identical** to the origin/main baseline (pixelmatch threshold 0). Five routes needed a re-capture of both sides to rule out headless rendering noise (before-vs-before differed by the same amount).
 - Shell: sidebars correct for client, Gym, Classes, Store and Appointments at 1440 (256) and 1024 (rail 80); zoom 200% at 1440 falls back to mobile, 125% gives the rail, 80% the full sidebar; Tab walks the sidebar, Enter navigates, the Referral popup opens and Esc returns focus; Arabic puts the sidebar and the More column on the right. No console errors other than the read-only proxy refusing writes (profile row, streak seeding, chat delivered marks).
 - tsc, tests (3792), oxlint (0 errors, 381 warnings = main), vite build: passing.
+- After WB-HO · GY (commit 1108cba1): mobile regression **65 of 65 identical** on the first pass (no re-capture needed); tsc, tests (3794), oxlint (0 errors, 381 warnings; run it with `--ignore-pattern ".qa-before-dist/**" --ignore-pattern "dist/**"`, or it lints the built bundles), vite build and the harness build: passing. No console errors on /app at 1440 or 1024 other than the read-only proxy's 503s.
 
 ## Resume here
 
-1. Business pages next, in this order (each: reference file + frames in INDEX.md, `*.web.tsx` beside the mobile page, `withWeb` + `webPages.ts`, verify at 1440 and 1024 with DOM measurements): WB-HO · GY Dashboard (WB-HO Dashboard Web v4), WB-FD Front desk (v4), WB-AN Analytics (v5), WB-MA Marketplace (v2) + Listing sheets, WB-CS-SC Schedule (v2) + Session (v2) + Sheets (v2), WB-HO · CS and · ST dashboards, WB-ST-OR Orders (v2) + Store Extras, WB-ST-PR Products (v2) + Product editor, WB-ST-AP Appointments (v2) + Add appointment (+ menus).
+1. Business pages next, in this order (each: reference file + frames in INDEX.md, `*.web.tsx` beside the mobile page, `withWeb` + `webPages.ts`, verify at 1440 and 1024 with DOM measurements). WB-HO · GY is built (`pages/marketplace/BusinessDashboard.web.tsx`, wired through `withWeb` in `pages/home/Home.tsx` because `/app` renders Home; parts in `components/business-dashboard/DashboardParts.web.tsx`); left on it: WB-HO.6 See all activity (KPI band, timeline, weekly charts, by type; the mobile screen shows meanwhile) and a filled-state check if a Gym with entries ever exists locally. The web dashboard falls back to the mobile one in a centred column for any kind other than a plain gym (`kindOf`): WB-HO · CS and · ST replace that fallback in the same file. Next: WB-FD Front desk (v4: /app/business/operations → `BusinessOperationsTab` → `frontdesk/FrontDeskPage.tsx`, Entries / Passes and renewals tabs, and Memberships under /app/business/gym as list-detail; Check someone in and Scan a pass follow the current mobile screens with the global rules), WB-AN Analytics (v5), WB-MA Marketplace (v2) + Listing sheets, WB-CS-SC Schedule (v2) + Session (v2) + Sheets (v2), WB-HO · CS and · ST dashboards, WB-ST-OR Orders (v2) + Store Extras, WB-ST-PR Products (v2) + Product editor, WB-ST-AP Appointments (v2) + Add appointment (+ menus).
 2. The designed More / Settings panes (ST Settings Web: Roles and permissions, policies, payments, notifications, export, subscription; Settings Appearance / Permissions / Security / Data & account / General) in place of the repo pages in the pane.
 3. Client pages: WC-HO Home (v12), WC-FO Food (v8), WC-WO Workout (v13, Routines "nothing selected" = Option A), WC-HE Health (v5) and Records (v3), WC-MI Mind (v5; Achievements keep 5 tiers), WC-PR (v3), WC-CO (v3), WC-MO More (v7: Profile list-detail, Calendar, Messages, Referral page, Premium), WC-OB Onboarding (v4). The client More column (decision 4) is not built: on web, /app/more still shows the mobile More.
 4. Before the PR leaves draft: re-run `regress.cjs` (0 differing routes), `git diff origin/main --stat` review, zoom / keyboard / RTL / per-type signed-in checks (`shell-check.cjs`), and delete `.qa-before-dist`, `dist`, `.env.harness.local`.
