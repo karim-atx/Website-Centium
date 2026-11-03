@@ -8,6 +8,11 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/mind\/?$/, // WC-MI Mind hub
   /^\/app\/mind\/achievements\/?$/, // WC-MI.3 Achievements
   /^\/app\/mind\/habits\/?$/, // WC-MI.1 Habits
+  /^\/app\/forum\/?$/, // WC-CO Community (the Forum and Courses tabs)
+  /^\/app\/forum\/new\/?$/, // WC-CO.2 New post (the side sheet over the forum)
+  /^\/app\/forum\/nickname\/?$/, // WC-CO.3 Choose a nickname (changing it)
+  /^\/app\/forum\/post\/[^/]+\/?$/, // WC-CO.1 Post
+  /^\/app\/forum\/courses\/(?!(?:mine|certificates)\/?$)[^/]+\/?$/, // WC-CO.4 a course (not My courses; lessons and certificates stay mobile)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)

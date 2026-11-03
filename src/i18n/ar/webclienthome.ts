@@ -17,6 +17,15 @@ export const FILES: string[] = [
   "pages/mind/web/ChipStrip.tsx",
   "pages/mind/web/AchievementsWeb.tsx",
   "pages/mind/web/HabitsWeb.tsx",
+  "pages/community/Community.web.tsx",
+  "pages/community/web/CommunityFrameWeb.tsx",
+  "pages/community/web/ForumWeb.tsx",
+  "pages/community/web/ForumComposeWeb.tsx",
+  "pages/community/web/ForumPostWeb.tsx",
+  "pages/community/web/NicknameWeb.tsx",
+  "pages/community/web/CoursesWeb.tsx",
+  "pages/community/web/CourseWeb.tsx",
+  "pages/community/web/MenuWeb.tsx",
 ];
 
 const webclienthome: Catalogue = {
@@ -35,6 +44,11 @@ const webclienthome: Catalogue = {
   "best {n}": "الأفضل {n}", // note: a habit's longest streak in days, after its current one
   "Add a habit to start a streak.": "أضف عادة لتبدأ سلسلة.",
   "Auto streaks count from what you log across the app.": "تُحتسب السلاسل التلقائية مما تسجّله في التطبيق كله.",
+
+  // == WC-CO Community (pages/community/Community.web, pages/community/web) ==
+  "Post as {name}": "النشر باسم {name}", // note: the New post sheet's two buttons (nickname or first name), as "Post as" and "Reply as {name}"
+  "PDF": "ملف PDF", // note: a course lesson's kind, before its length ("PDF"), as "{n} PDFs"
+  "Check-in": "متابعة", // note: a course lesson's kind; "check-in" is «متابعة» in courses, as "{n} check-ins"
 };
 
 export default webclienthome;
