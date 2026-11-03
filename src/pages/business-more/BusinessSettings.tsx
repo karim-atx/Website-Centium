@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import clsx from "clsx";
 import {
   Accessibility,
+  BellRing,
   BookOpen,
   Bug,
+  Camera,
   Check,
   CircleHelp,
   EyeOff,
@@ -12,11 +14,15 @@ import {
   KeyRound,
   Languages,
   Lock,
+  MapPin,
   ScrollText,
   ShieldCheck,
   Smartphone,
   Star,
+  Sun,
 } from "lucide-react";
+import { PaneFrame } from "../../components/business-more/paneWeb";
+import { usePaneWeb } from "../../components/business-more/paneWebScope";
 import { REFUND_POLICY_PATH } from "../../marketing/legal/refund";
 import { BizCard, BizLabel, BizRow, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { SettingsRowVariant } from "../../components/ui/settingsRowVariant";
@@ -129,22 +135,34 @@ export default function BusinessSettings() {
   const [pwOpen, setPwOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const languageName = languageEntry(language).name;
+  // Website viewport v1 (WB-SE, ST Settings Web): in the Settings pane from
+  // 1024px the page fills the pane and the kit draws the pane rows; the five
+  // sections stay on one page, the column scrolls to the one picked.
+  const paneWeb = usePaneWeb();
+  const Frame = paneWeb ? PaneFrame : "div";
 
   return (
-    <div>
+    <Frame>
       <SubHeader title={t("Settings")} />
 
       <BizLabel>{t("Appearance")}</BizLabel>
       <BizCard>
-        <BizRow title={t("Dark mode")} toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }} />
+        <BizRow icon={paneWeb ? Sun : undefined} title={t("Dark mode")} toggle={{ checked: theme === "dark", onChange: toggleTheme, label: t("Dark mode") }} />
       </BizCard>
 
       {/* MO1B-029 row 4: the theme in its own card (padding 14 14 12, margin -6 0 13). */}
-      <div className={LIST_BG} style={{ borderRadius: 18, padding: "14px 14px 12px", margin: "-6px 0 13px" }}>
-        <p className="text-[12px] font-bold text-charcoal" style={{ marginBottom: 12 }}>
+      {/* The pane: under the Dark mode row (-16 on the 28 gap), indented 50; label 13/20 600, swatches 52 wide, 16 apart. */}
+      <div
+        className={paneWeb ? undefined : LIST_BG}
+        style={paneWeb ? { marginTop: 12, paddingInlineStart: 50 } : { borderRadius: 18, padding: "14px 14px 12px", margin: "-6px 0 13px" }}
+      >
+        <p
+          className={paneWeb ? undefined : "text-[12px] font-bold text-charcoal"}
+          style={paneWeb ? { margin: "0 0 10px", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" } : { marginBottom: 12 }}
+        >
           {t("Color theme")}
         </p>
-        <div role="radiogroup" aria-label={t("Color theme")} className="flex justify-between">
+        <div role="radiogroup" aria-label={t("Color theme")} className="flex justify-between" style={paneWeb ? { justifyContent: "flex-start", gap: 16 } : undefined}>
           {COLOR_THEMES.map((th) => {
             const on = colorTheme === th.value;
             return (
@@ -155,7 +173,7 @@ export default function BusinessSettings() {
                 aria-checked={on}
                 onClick={() => setColorTheme(th.value)}
                 className="tap flex flex-col items-center"
-                style={{ gap: 9, width: 46 }}
+                style={paneWeb ? { gap: 8, width: 52 } : { gap: 9, width: 46 }}
               >
                 <span
                   className="flex items-center justify-center rounded-full"
@@ -169,7 +187,11 @@ export default function BusinessSettings() {
                 >
                   {on && <Check size={15} strokeWidth={3} aria-hidden />}
                 </span>
-                <span className={clsx("text-[11px] leading-none", on ? "font-bold text-primary-dark" : "font-medium text-charcoal-soft")}>{t(th.label)}</span>
+                {paneWeb ? (
+                  <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: on ? 700 : 500, color: on ? "#7D67D9" : "#5B5349" }}>{t(th.label)}</span>
+                ) : (
+                  <span className={clsx("text-[11px] leading-none", on ? "font-bold text-primary-dark" : "font-medium text-charcoal-soft")}>{t(th.label)}</span>
+                )}
               </button>
             );
           })}
@@ -183,9 +205,10 @@ export default function BusinessSettings() {
 
       <BizLabel>{t("Permissions")}</BizLabel>
       <BizCard>
-        <BizRow title={t("Camera")} desc={permDesc("camera", camera, t("For photos of your space"))} toggle={permToggle("camera", camera, () => void askCamera())} />
-        <BizRow title={t("Location")} desc={permDesc("location", location, t("To pin your business on the map"))} toggle={permToggle("location", location, askLocation)} />
+        <BizRow icon={paneWeb ? Camera : undefined} title={t("Camera")} desc={permDesc("camera", camera, t("For photos of your space"))} toggle={permToggle("camera", camera, () => void askCamera())} />
+        <BizRow icon={paneWeb ? MapPin : undefined} title={t("Location")} desc={permDesc("location", location, t("To pin your business on the map"))} toggle={permToggle("location", location, askLocation)} />
         <BizRow
+          icon={paneWeb ? BellRing : undefined}
           title={t("Push notifications")}
           desc={!pushAvailable ? t(pushUnavailableReason()) : pushLine ? t(pushLine) : undefined}
           toggle={{ checked: !!push, disabled: !pushAvailable || pushBusy || push === null, onChange: (v) => void togglePush(v) }}
@@ -240,14 +263,19 @@ export default function BusinessSettings() {
 
       {/* MO1B-032 row 5: the version line. The build carries no version number
           yet (package.json 0.0.0), so the line names the app only. */}
-      <p className="text-center text-[10.5px] text-th-9a94b3" style={{ margin: "4px 0 6px" }}>
-        {t("Centium for Business")}
-      </p>
+      {paneWeb ? (
+        // The pane's note (13/20 #8C8378) and its delete line (40, 15/24 600 #B4372C, at the start).
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Centium for Business")}</p>
+      ) : (
+        <p className="text-center text-[10.5px] text-th-9a94b3" style={{ margin: "4px 0 6px" }}>
+          {t("Centium for Business")}
+        </p>
+      )}
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
-        className="tap w-full flex items-center justify-center text-[14px] font-bold text-status-high"
-        style={{ height: 48 }}
+        className={paneWeb ? "self-start inline-flex items-center hover:underline" : "tap w-full flex items-center justify-center text-[14px] font-bold text-status-high"}
+        style={paneWeb ? { height: 40, padding: "0 4px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#B4372C", whiteSpace: "nowrap" } : { height: 48 }}
       >
         {t("Delete business account")}
       </button>
@@ -257,6 +285,6 @@ export default function BusinessSettings() {
       <RateAppPopup key={rateOpen ? "rate-open" : "rate-closed"} open={rateOpen} onClose={() => setRateOpen(false)} />
       <ChangePasswordSheet key={pwOpen ? "pw-open" : "pw-closed"} open={pwOpen} onClose={() => setPwOpen(false)} />
       <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} business />
-    </div>
+    </Frame>
   );
 }
