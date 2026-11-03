@@ -18,6 +18,8 @@ export const FILES: string[] = [
   "components/web/WebBusinessSidebar.tsx",
   "components/web/WebLayout.tsx",
   "components/web/WebSecondaryLayout.tsx",
+  "components/web/WebPageHeader.tsx",
+  "pages/business-ops/appointments/ServicesPage.web.tsx",
 ];
 
 const web: Catalogue = {
@@ -27,6 +29,9 @@ const web: Catalogue = {
 
   // == More and Settings columns (components/web/WebSecondaryLayout) ==
   "{title} sections": "أقسام {title}",
+
+  // == Services and free slots (pages/business-ops/appointments/ServicesPage.web, WB-ST-AP.3) ==
+  Visibility: "الظهور", // note: the Services table column (Visible / Hidden)
 };
 
 export default web;

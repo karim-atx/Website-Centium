@@ -7,6 +7,10 @@
 // app route renders synchronously exactly as it did when these were static
 // imports, so moving between app pages never suspends. A new app route adds
 // its page here and takes it from appPages in App.tsx.
+import { withWeb } from "./components/web/withWeb";
+import ServicesPageMobile from "./pages/business-ops/appointments/ServicesPage";
+import ServicesPageWeb from "./pages/business-ops/appointments/ServicesPage.web";
+
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
 export { default as Onboarding } from "./pages/onboarding/Onboarding";
@@ -63,7 +67,8 @@ export { default as BusinessOperationsTab } from "./pages/marketplace/BusinessOp
 export { PlansRoutes } from "./pages/business-ops/plans";
 export { BusinessOrdersRoutes, StoreProductsRoute } from "./pages/business-ops/store/StoreOpsRoutes";
 export { default as BusinessAppointmentsRoutes } from "./pages/business-ops/appointments/AppointmentsRoutes";
-export { default as AppointmentServicesPage } from "./pages/business-ops/appointments/ServicesPage";
+// Website viewport v1: the web layout from 1024px wide (WB-ST-AP.3); the mobile page below.
+export const AppointmentServicesPage = withWeb(ServicesPageMobile, ServicesPageWeb);
 export { default as StoreRoutes } from "./pages/store/StoreRoutes";
 export { default as AppointmentRoutes } from "./pages/appointments/AppointmentRoutes";
 export { default as BusinessVenueTab } from "./pages/marketplace/BusinessVenueTab";

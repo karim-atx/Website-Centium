@@ -4,7 +4,9 @@
 // Grows as pages are adapted; see docs/web-viewport/PROGRESS.md.
 
 const CLIENT_PAGES: RegExp[] = [];
-const BUSINESS_PAGES: RegExp[] = [];
+const BUSINESS_PAGES: RegExp[] = [
+  /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
+];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {
   return (isBusiness ? BUSINESS_PAGES : CLIENT_PAGES).some((re) => re.test(pathname));
