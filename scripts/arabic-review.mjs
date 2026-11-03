@@ -74,6 +74,7 @@ const AREAS = [
   ["web", "Website viewport v1: the web shell (sidebars, More and Settings columns) and the web pages"],
   ["webclienthome", "Website viewport v1: the client Home, Mind, Community, Explore and Professionals web pages"],
   ["webclientfood", "Website viewport v1: the web Food pages (Diary, Goals & Macros, Custom, Nutrient Summary)"],
+  ["webclienthealth", "Website viewport v1: Client · Health at 1024px and wider (overview, metric pages, Records, health checks)"],
 ];
 
 const rows = [];

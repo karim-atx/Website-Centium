@@ -40,6 +40,8 @@ import { textPx, linePx } from "../../theme/textSize";
 import { useShareLocks } from "../../components/share/client/useShareLocks";
 import { imagingTypeLabel } from "../../components/health/imagingTypes";
 import { t, tn, tx } from "../../i18n/core";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { RecordsWeb, WebMobileColumn } from "./web/Records.web";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../types";
 
 // HE1.9 · Biomarkers & imaging (docs/health-b-handover.md 614-2863): one full
@@ -96,6 +98,7 @@ export default function HealthRecords() {
   const location = useLocation();
   const navigate = useNavigate();
   const back = useBack();
+  const web = useIsWeb();
   const online = useOnline();
   const { dark, hc } = useHealthMode();
   const lab = useLabCatalogue();
@@ -432,8 +435,10 @@ export default function HealthRecords() {
   );
 
   if (marker && markerKey) {
+    // Website viewport v1: the marker page keeps its mobile layout, centred in the web page (WC-HE.9.5 not built yet).
+    const Frame = web ? WebMobileColumn : React.Fragment;
     return (
-      <>
+      <Frame>
         <MarkerPage
           marker={marker}
           results={resultsByKey.get(markerKey) ?? []}
@@ -454,43 +459,14 @@ export default function HealthRecords() {
           }
         />
         {overlays}
-      </>
+      </Frame>
     );
   }
 
   const showSearch = tab === "biomarkers" && bloodMarkers.length > 0;
 
-  return (
-    <div style={{ paddingBottom: 176 }}>
-      <RecordsHeader title={t("Biomarkers & imaging")} onBack={back} menu={menu} shared={recordsShared}>
-        <SegmentedTabs
-          className="mt-3"
-          items={TABS.map((x) => ({ key: x.key, label: x.label() }))}
-          activeKey={tab}
-          onChange={(k) => setTab(k as Tab)}
-          size="compact"
-          darkTone="partB"
-          idleInk="rgb(var(--c-charcoal-soft))"
-        />
-        {showSearch && (
-          <label
-            className="flex items-center"
-            style={{ marginTop: 10, height: 42, borderRadius: 12, padding: "0 12px", gap: 8, background: fieldFill(dark), border: `0.5px solid ${hairline(dark, hc, 0.06)}` }}
-          >
-            <Search size={16} style={{ color: INK_FAINT }} aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("Search markers")}
-              aria-label={t("Search markers")}
-              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
-              style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), color: INK }}
-            />
-          </label>
-        )}
-      </RecordsHeader>
-
+  const body = (
+    <>
       {tab === "biomarkers" && (
         <BiomarkersTab
           markers={bloodMarkers}
@@ -550,6 +526,60 @@ export default function HealthRecords() {
           onEditInjury={(injury) => setInjuryForm({ injury })}
         />
       )}
+
+    </>
+  );
+
+  // Website viewport v1 (WC-HE.9-.9.3): from 1024px wide the web layout, the same tab bodies.
+  if (web) {
+    return (
+      <RecordsWeb
+        tabs={TABS.map((x) => ({ key: x.key, label: x.label() }))}
+        tab={tab}
+        onTab={(k) => setTab(k as Tab)}
+        menu={menu}
+        cta={cta}
+        shared={recordsShared}
+        search={showSearch ? { query, onQuery: setQuery } : null}
+        overlays={overlays}
+      >
+        {body}
+      </RecordsWeb>
+    );
+  }
+
+  return (
+    <div style={{ paddingBottom: 176 }}>
+      <RecordsHeader title={t("Biomarkers & imaging")} onBack={back} menu={menu} shared={recordsShared}>
+        <SegmentedTabs
+          className="mt-3"
+          items={TABS.map((x) => ({ key: x.key, label: x.label() }))}
+          activeKey={tab}
+          onChange={(k) => setTab(k as Tab)}
+          size="compact"
+          darkTone="partB"
+          idleInk="rgb(var(--c-charcoal-soft))"
+        />
+        {showSearch && (
+          <label
+            className="flex items-center"
+            style={{ marginTop: 10, height: 42, borderRadius: 12, padding: "0 12px", gap: 8, background: fieldFill(dark), border: `0.5px solid ${hairline(dark, hc, 0.06)}` }}
+          >
+            <Search size={16} style={{ color: INK_FAINT }} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("Search markers")}
+              aria-label={t("Search markers")}
+              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-charcoal-faint"
+              style={{ fontSize: textPx(13.5), lineHeight: linePx(20.3), color: INK }}
+            />
+          </label>
+        )}
+      </RecordsHeader>
+
+      {body}
 
       <HealthDisclaimer className="mt-[18px]" />
 
