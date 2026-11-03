@@ -24,6 +24,10 @@ const webclientworkout: Catalogue = {
   "Play": "بدء",
   "Stop {name}": "إيقاف {name}",
   "Drag folder": "سحب المجلد",
+  // == The docked session logger's header (components/workout/WorkoutSessionSheet, web only) ==
+  // note: the mobile status line "Started {time} · {elapsed} elapsed" «بدأ {time} · مضى {elapsed}», split over two lines.
+  "Started {time}": "بدأ {time}",
+  "{elapsed} elapsed": "مضى {elapsed}",
   // == Library · body view (pages/workout/web/LibraryWeb) ==
   "Select a muscle to see its exercises": "اختر عضلة لعرض تمارينها",
   "Click a muscle on the figure, or pick one from Muscle groups.": "انقر على عضلة في الشكل، أو اختر واحدة من المجموعات العضلية.",

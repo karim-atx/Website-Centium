@@ -990,6 +990,8 @@ export const WorkoutSessionSheet: React.FC<{
   };
 
   const circle = "tap relative flex-none flex items-center justify-center rounded-full";
+  // Web only (docked): whether the header's controls need a line of their own.
+  const dockNarrow = !!dock && dock.clientWidth - 136 - (elapsed > 0 ? 278 : 174) < 112;
   // Round E: the routine's playlist. On a coach's copy it is the coach's (it
   // came with the template); on the member's own routine, the routine's own.
   const routinePlaylist = playlistServiceOf(routineRow?.playlistUrl) ? routineRow!.playlistUrl! : null;
@@ -1007,8 +1009,86 @@ export const WorkoutSessionSheet: React.FC<{
       {/* Docked (web): still an open logger to the active-workout bar, which
           looks for a fixed full-screen layer. */}
       {dock && <i aria-hidden className="fixed inset-0 hidden" />}
-      <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
+      <div className={dock ? "w-full flex flex-col flex-1 min-h-0" : "mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0"}>
         {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
+        {dock ? (
+          // Website viewport v1 · WC-WO.1.8 (WO Logger Column v13): the docked
+          // header. × and ⌄ (36), the name 20/28 700 over its status lines
+          // (13/20 #A79E93), the play controls beside them (Play · Pause +
+          // Stop · Resume + Stop, 40, in the folder's play colour; Stop asks
+          // before quitting, as × does), then the metronome and the note (36).
+          <div className="flex items-center flex-none" style={{ gap: 8, padding: "14px 16px", borderBottom: "1px solid rgb(var(--c-charcoal) / 0.05)" }}>
+            <button onClick={requestClose} aria-label={t("Close workout")} className={circle} style={{ width: 36, height: 36, background: "#F5F5F6", color: "#5B5349" }}>
+              <X size={16} />
+            </button>
+            <button onClick={minimise} aria-label={t("Minimise workout")} className={circle} style={{ width: 36, height: 36, background: "#F5F5F6", color: "#5B5349" }}>
+              <ChevronDown size={18} />
+            </button>
+            {/* A narrow column (the 1024 frame) puts the controls on a line of
+                their own: the name, status, the buttons (≈ 278 with the
+                metronome, 174 before a start) and the 136 of × ⌄ and padding. */}
+            <div className="flex-1 min-w-0 grid items-center" style={{ marginInlineStart: 4, gridTemplateColumns: dockNarrow ? "minmax(0,1fr)" : "minmax(0,1fr) auto", columnGap: 16 }}>
+              <p className="truncate" title={routineName} style={{ gridColumn: 1, gridRow: 1, margin: 0, fontSize: 20, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.3px", color: "rgb(var(--c-charcoal))" }}>
+                {routineName}
+              </p>
+              <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 2, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+                {started ? t("Started {time}", { time: clock12(startedAt) }) : elapsed > 0 ? t("Paused") : t("Not started")}
+              </p>
+              {elapsed > 0 && (
+                <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 3, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+                  {t("{elapsed} elapsed", { elapsed: formatDuration(elapsed) })}
+                </p>
+              )}
+              <div className="flex items-center" style={dockNarrow ? { gridColumn: 1, gridRow: 4, justifySelf: "end", marginTop: 10, gap: 8 } : { gridColumn: 2, gridRow: "1 / span 3", justifySelf: "end", gap: 8 }}>
+                {finished && savedSession && <ShareEntryButton label={t("Share your workout")} onPress={shareSaved} />}
+                {!finished && (
+                  <button
+                    onClick={toggleClock}
+                    aria-label={started ? t("Pause elapsed time") : t("Start elapsed time")}
+                    className="tap flex items-center whitespace-nowrap"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: family.play, color: "#FFFFFF" }}
+                  >
+                    {started ? <Pause size={16} fill="#FFFFFF" /> : <Play size={16} fill="#FFFFFF" />}
+                    {started ? t("Pause") : elapsed > 0 ? t("Resume") : t("Play")}
+                  </button>
+                )}
+                {!finished && elapsed > 0 && (
+                  <button
+                    onClick={requestClose}
+                    className="tap flex items-center whitespace-nowrap"
+                    style={{ height: 40, padding: "0 14px", borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: "#FFFFFF", color: family.tile, border: `1.5px solid ${family.bar}` }}
+                  >
+                    <Square size={16} fill={family.tile} />
+                    {t("Stop")}
+                  </button>
+                )}
+                <Metronome />
+                <button
+                  onClick={() => {
+                    setCoachNoteOpen(true);
+                    if (noteUnread && routineRow) markCoachNoteRead(routineRow.id);
+                  }}
+                  aria-label={noteUnread ? t("Coach's note, unread") : t("Coach's note")}
+                  className={circle}
+                  style={{ width: 36, height: 36, background: "#F5F5F6", color: "#A79E93" }}
+                >
+                  <MessageSquareText size={16} />
+                </button>
+              </div>
+              {coachId && (
+                <p className="flex" style={{ gridColumn: 1, margin: "3px 0 0" }}>
+                  <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, fontWeight: 700, lineHeight: "20px", color: family.tile }}>
+                    <CoachAvatar name={coachWho} avatarUrl={coachAvatar} size={16} tone="teal" />
+                    {t("From {name}", { name: coachName ?? t("your coach") })}
+                  </span>
+                </p>
+              )}
+              <div className="flex empty:hidden" style={{ gridColumn: 1, marginTop: 3 }}>
+                <CyclePhaseChip />
+              </div>
+            </div>
+          </div>
+        ) : (
         <div
           className="grid items-center flex-none"
           style={{
@@ -1088,6 +1168,7 @@ export const WorkoutSessionSheet: React.FC<{
             </button>
           </div>
         </div>
+        )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
           <div className="flex flex-col" style={{ gap: 12 }}>
