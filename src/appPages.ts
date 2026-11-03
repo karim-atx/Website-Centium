@@ -10,6 +10,8 @@
 import { withWeb } from "./components/web/withWeb";
 import ServicesPageMobile from "./pages/business-ops/appointments/ServicesPage";
 import ServicesPageWeb from "./pages/business-ops/appointments/ServicesPage.web";
+import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
+import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -62,7 +64,8 @@ export { default as BusinessMoreRoutes } from "./pages/business-more/BusinessMor
 export { default as TeamRoutes } from "./pages/business-team/TeamRoutes";
 export { default as SchedulePage } from "./pages/business-ops/classes/SchedulePage";
 export { default as SessionPage } from "./pages/business-ops/classes/SessionPage";
-export { default as ClassRulesPage } from "./pages/business-ops/classes/ClassRulesPage";
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC.8); the mobile page below.
+export const ClassRulesPage = withWeb(ClassRulesPageMobile, ClassRulesPageWeb);
 export { default as BusinessOperationsTab } from "./pages/marketplace/BusinessOperationsTab";
 export { PlansRoutes } from "./pages/business-ops/plans";
 export { BusinessOrdersRoutes, StoreProductsRoute } from "./pages/business-ops/store/StoreOpsRoutes";

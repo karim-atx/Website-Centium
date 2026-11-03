@@ -6,6 +6,7 @@
 const CLIENT_PAGES: RegExp[] = [];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
+  /^\/app\/business\/classes\/rules\/?$/, // WB-CS-SC.8 Class rules
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {

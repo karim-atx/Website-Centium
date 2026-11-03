@@ -31,3 +31,11 @@ test("More and Settings open in the secondary layout for business accounts only"
   assert.equal(secondaryLayoutFor("/app/business/more/locations", true), null);
   assert.equal(secondaryLayoutFor("/app/settings", false), null);
 });
+
+test("the adapted business pages fill the content area; everything else keeps the mobile column", async () => {
+  const { webPageFor } = await import("./webPages");
+  assert.equal(webPageFor("/app/business/services", true), true);
+  assert.equal(webPageFor("/app/business/classes/rules", true), true);
+  assert.equal(webPageFor("/app/business/classes", true), false);
+  assert.equal(webPageFor("/app/business/services", false), false);
+});

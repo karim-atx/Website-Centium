@@ -13,30 +13,37 @@ export const WebPageHeader: React.FC<{
   title: string;
   /** The supporting line beside the title (on its baseline). */
   sub?: string;
-  /** Where the back button goes; no back button without it. */
-  back?: { to: string; label: string };
+  /** The caps kicker before the title (13/20 700, 0.08em). */
+  kicker?: string;
+  /** Where the back button goes; no back button without it. "square": r12 with an ink chevron (Class rules). */
+  back?: { to: string; label: string; square?: boolean; onClick?: () => void };
   actions?: React.ReactNode;
-}> = ({ title, sub, back, actions }) => {
+}> = ({ title, sub, kicker, back, actions }) => {
   const navigate = useNavigate();
   const { t } = useApp();
   return (
     <header
       className="shrink-0 flex items-center bg-cream"
-      style={{ height: 64, boxSizing: "border-box", gap: 12, paddingInlineStart: back ? 20 : 32, paddingInlineEnd: 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}
+      style={{ height: 64, boxSizing: "border-box", gap: back?.square ? 8 : 12, paddingInlineStart: back ? (back.square ? 22 : 20) : 32, paddingInlineEnd: 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}
     >
       {back && (
         <button
           type="button"
-          onClick={() => navigate(back.to)}
+          onClick={() => (back.onClick ? back.onClick() : navigate(back.to))}
           title={t(back.label)}
           aria-label={t(back.label)}
-          className="shrink-0 flex items-center justify-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-          style={{ width: 40, height: 40 }}
+          className="shrink-0 flex items-center justify-center hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+          style={{ width: 40, height: 40, borderRadius: back.square ? 12 : 999 }}
         >
-          <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "#5B5349" }} aria-hidden />
+          <ChevronLeft size={20} strokeWidth={back.square ? 2.2 : 2} className="rtl:-scale-x-100" style={{ color: back.square ? "#241F1B" : "#5B5349" }} aria-hidden />
         </button>
       )}
       <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 12 }}>
+        {kicker && (
+          <span className="shrink-0 uppercase" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", color: "#8C8378" }}>
+            {kicker}
+          </span>
+        )}
         <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>
           {title}
         </h1>

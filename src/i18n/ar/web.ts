@@ -20,6 +20,7 @@ export const FILES: string[] = [
   "components/web/WebSecondaryLayout.tsx",
   "components/web/WebPageHeader.tsx",
   "pages/business-ops/appointments/ServicesPage.web.tsx",
+  "pages/business-ops/classes/ClassRulesPage.web.tsx",
 ];
 
 const web: Catalogue = {
@@ -32,6 +33,17 @@ const web: Catalogue = {
 
   // == Services and free slots (pages/business-ops/appointments/ServicesPage.web, WB-ST-AP.3) ==
   Visibility: "الظهور", // note: the Services table column (Visible / Hidden)
+
+  // == Class rules (pages/business-ops/classes/ClassRulesPage.web, WB-CS-SC.8) ==
+  "Turn the waitlist on to set a size": "شغّل قائمة الانتظار لتحديد حجمها",
+  "Create your first class and members can book it on Explore. Until then, every class type uses the rules below.":
+    "أنشئ حصتك الأولى ليتمكن الأعضاء من حجزها في «استكشف». حتى ذلك الحين، تتبع كل أنواع الحصص القواعد أدناه.",
+  "Create your first class and clients can book it on Explore. Until then, every class type uses the rules below.":
+    "أنشئ حصتك الأولى ليتمكن العملاء من حجزها في «استكشف». حتى ذلك الحين، تتبع كل أنواع الحصص القواعد أدناه.",
+  "Cancelling later than the late-cancel time loses the booking. Members see these rules when they book.":
+    "الإلغاء بعد موعد الإلغاء المتأخر يُفقد الحجز. يرى الأعضاء هذه القواعد عند الحجز.",
+  "Cancelling later than the late-cancel time loses the booking. Clients see these rules when they book.":
+    "الإلغاء بعد موعد الإلغاء المتأخر يُفقد الحجز. يرى العملاء هذه القواعد عند الحجز.",
 };
 
 export default web;
