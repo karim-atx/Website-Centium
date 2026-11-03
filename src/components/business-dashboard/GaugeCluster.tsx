@@ -51,6 +51,7 @@ export function GaugeCluster({
   onGaugeTap,
   ready,
   reducedMotion,
+  web = false,
 }: {
   c: DashPalette;
   gauges: ClusterGauge[];
@@ -60,6 +61,8 @@ export function GaugeCluster({
   /** Data has resolved (the start-up plays once, the first time this turns true with data). */
   ready: boolean;
   reducedMotion: boolean;
+  /** Website viewport v1 (WB-HO.4, from 1024px): a mouse hover shows the quick action name (13/20, padding 6 × 12) and the cluster has no bottom margin. Mobile never sets it. */
+  web?: boolean;
 }) {
   const uid = useId().replace(/:/g, "");
   const glowId = `clg-${uid}`;
@@ -95,6 +98,7 @@ export function GaugeCluster({
   const [press, setPress] = useState<string | null>(null);
   const [tip, setTip] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
   const longRef = useRef<{ key: string | null; lp?: number; tipT?: number }>({ key: null });
   useEffect(() => {
     const r = longRef.current;
@@ -106,10 +110,10 @@ export function GaugeCluster({
 
   const { decor, bezels } = clusterChrome(c);
   const geo = controlGeometry(controls.length - 1, `url(#${glowId})`);
-  const tipFor = tip ?? focus;
+  const tipFor = tip ?? focus ?? (web ? hover : null);
 
   return (
-    <div role="group" aria-label={t("At a glance")} style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: 28 }}>
+    <div role="group" aria-label={t("At a glance")} style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: web ? 0 : 28 }}>
       <svg width="100%" height="100%" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" className="qa-shape" style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }} aria-hidden>
         <defs>
           <radialGradient id={glowId} cx="0.5" cy="0.5" r="0.5">
@@ -316,7 +320,9 @@ export function GaugeCluster({
                 longRef.current.tipT = window.setTimeout(() => setTip(null), 1200);
               }
             }}
+            onPointerEnter={web ? (e) => e.pointerType === "mouse" && setHover(ctl.key) : undefined}
             onPointerLeave={() => {
+              if (web) setHover(null);
               window.clearTimeout(longRef.current.lp);
               if (press === ctl.key) setPress(null);
             }}
@@ -382,10 +388,10 @@ export function GaugeCluster({
                 style={{
                   background: c.tipBg,
                   color: c.tipInk,
-                  fontSize: textPx(11.5),
+                  fontSize: web ? 13 : textPx(11.5),
                   fontWeight: 700,
-                  lineHeight: linePx(15),
-                  padding: "6px 10px",
+                  lineHeight: web ? "20px" : linePx(15),
+                  padding: web ? "6px 12px" : "6px 10px",
                   borderRadius: 9,
                   whiteSpace: "nowrap",
                   boxShadow: "0 6px 16px rgba(36,31,27,0.22)",

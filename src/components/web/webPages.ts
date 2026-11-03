@@ -5,6 +5,7 @@
 
 const CLIENT_PAGES: RegExp[] = [];
 const BUSINESS_PAGES: RegExp[] = [
+  /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)
   /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
   /^\/app\/business\/classes\/rules\/?$/, // WB-CS-SC.8 Class rules
 ];

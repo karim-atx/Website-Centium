@@ -21,6 +21,8 @@ export const FILES: string[] = [
   "components/web/WebPageHeader.tsx",
   "pages/business-ops/appointments/ServicesPage.web.tsx",
   "pages/business-ops/classes/ClassRulesPage.web.tsx",
+  "pages/marketplace/BusinessDashboard.web.tsx",
+  "components/business-dashboard/DashboardParts.web.tsx",
 ];
 
 const web: Catalogue = {
@@ -44,6 +46,8 @@ const web: Catalogue = {
     "الإلغاء بعد موعد الإلغاء المتأخر يُفقد الحجز. يرى الأعضاء هذه القواعد عند الحجز.",
   "Cancelling later than the late-cancel time loses the booking. Clients see these rules when they book.":
     "الإلغاء بعد موعد الإلغاء المتأخر يُفقد الحجز. يرى العملاء هذه القواعد عند الحجز.",
+  // == WB-HO Dashboard (pages/marketplace/BusinessDashboard.web, components/business-dashboard/DashboardParts.web) ==
+  "Change venue": "تغيير المكان",
 };
 
 export default web;

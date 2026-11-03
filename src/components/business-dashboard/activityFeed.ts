@@ -155,6 +155,8 @@ export interface WeekTotal {
   n: number;
   prev: number;
   days: number[];
+  /** Last week, Monday to Sunday (the web Recent activity charts draw it dashed). */
+  prevDays: number[];
 }
 
 /**
@@ -173,7 +175,7 @@ export function weekTotals(classBased: boolean, totalsRows: Pick<ActivityRow, "k
     const count = (d: string) => dayOf.filter((x) => x === d).length;
     const days = perDay(week, count);
     const prev = perDay(lastWeek, count);
-    return { type, label, n: days.reduce((a, b) => a + b, 0), prev: prev.reduce((a, b) => a + b, 0), days };
+    return { type, label, n: days.reduce((a, b) => a + b, 0), prev: prev.reduce((a, b) => a + b, 0), days, prevDays: prev };
   };
   const daysOf = (kind: ActivityKind) => totalsRows.filter((r) => r.kind === kind).map((r) => localDayOf(r.at));
   const out: WeekTotal[] = [mk("join", t("Joined"), daysOf("join")), mk("end", t("Ended"), daysOf("end"))];
