@@ -1,0 +1,24 @@
+import type { Catalogue } from "../core";
+
+// Website viewport v1, Arabic: Client · Health at 1024px and wider (area
+// client-health: the Health overview, the metric pages, Records, health
+// checks). Mobile copy is unchanged; the web-only copy says "Click" where the
+// handover lists it (7.3), «انقر» as the workout area already says it. Health
+// wording stays as the app has it: every web string reuses the existing
+// health Arabic where one exists.
+
+// Source files this catalogue covers (paths from src/). The catalogue test
+// checks every t/tn/tk key in them has Arabic here or in another area file,
+// and that no English is left outside t() in their JSX.
+export const FILES: string[] = [
+  "pages/health/web/HealthWebKit.tsx",
+  "pages/health/web/Health.web.tsx",
+];
+
+const webclienthealth: Catalogue = {
+  // == Health overview (pages/health/web/Health.web, WC-HE) ==
+  "Click + to log a drink": "انقر + لتسجيل مشروب", // note: health wording (mobile «اضغط + لتسجيل مشروب», 7.3)
+  "Click to add one": "انقر لإضافة قراءة", // note: health wording (mobile «اضغط لإضافة قراءة», 7.3)
+};
+
+export default webclienthealth;
