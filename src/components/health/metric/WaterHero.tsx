@@ -3,6 +3,8 @@ import { Plus, SlidersHorizontal } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
+import { useIsWeb } from "../../web/useWebLayout";
+import { HeroWebLayout } from "./MetricKit.web";
 import { t } from "../../../i18n/core";
 
 // HE1.1 #8-#21 hero: tint card 358 r22 pad 16 with p0.svg; the bottle (asset
@@ -105,6 +107,9 @@ const chipStyle = (dark: boolean): React.CSSProperties => ({
   border: `0.5px solid ${dark ? "rgb(var(--c-primary-fill) / 0.5)" : "rgb(var(--th-aea1dc) / 0.5)"}`,
 });
 
+/** Web quick-add chip (not in the reference's Water frames, which show no chips): 36 tall, pad 0 14, r999, 13/20 700, the mobile chip's colours. */
+const WEB_CHIP: React.CSSProperties = { height: 36, padding: "0 14px", gap: 6, borderRadius: 9999, fontSize: 13, lineHeight: "20px", fontWeight: 700, border: "0.5px solid rgb(var(--th-aea1dc) / 0.5)" };
+
 export const WaterHero: React.FC<{
   pct: number;
   goalMl: number;
@@ -114,10 +119,78 @@ export const WaterHero: React.FC<{
   onCustom: () => void;
   quickDisabled?: boolean;
   ariaLabel: string;
-}> = ({ pct, goalMl, text, loading, onQuickAdd, onCustom, quickDisabled, ariaLabel }) => {
+}> & { webRole?: "hero" } = ({ pct, goalMl, text, loading, onQuickAdd, onCustom, quickDisabled, ariaLabel }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const ink = metricTextInk("water", dark);
+  const web = useIsWeb();
+  if (web)
+    // Website viewport v1 (WC-HE Health Web v5, Water hero): a 300 × 190 visual,
+    // the bottle drawn 108 × 189 at the start and the value 40/40 800 with its
+    // unit 17 600 and the lines 13/18 600 (max 200) 140 in and 40 down; the
+    // pill, the quick-add chips and the stats in the hero column.
+    return (
+      <div ref={ref}>
+        <MetricHero metric="water" pattern={0} padding="" loading={loading} ariaLabel={ariaLabel}>
+          <HeroWebLayout
+            metric="water"
+            visualWidth={300}
+            pills={[text.pill]}
+            visual={
+              <div className="relative" style={{ height: 190 }}>
+                <div className="absolute" style={{ insetInlineStart: 0, top: 0, width: 108, height: 189 }}>
+                  <div style={{ zoom: 108 / 92 }}>
+                    <WaterBottle pct={pct} goalMl={goalMl} running={running} />
+                  </div>
+                </div>
+                <div className="relative flex flex-col items-start" style={{ paddingTop: 40, paddingInlineStart: 140 }}>
+                  <span className="flex items-baseline whitespace-nowrap" style={{ marginTop: 6, gap: 4 }}>
+                    <span data-hero-value style={{ fontSize: 40, lineHeight: "40px", fontWeight: 800, letterSpacing: -1.4, fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>
+                      {text.value}
+                    </span>
+                    <span style={{ fontSize: 17, fontWeight: 600, color: mc("water", "ink") }}>{text.unit}</span>
+                  </span>
+                  <span className="flex flex-col" style={{ marginTop: 6, maxWidth: 200 }}>
+                    {text.lines.map((l) => (
+                      <span key={l} style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600, color: mc("water", "ink") }}>
+                        {l}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            }
+          >
+            <div className="flex flex-wrap" style={{ gap: 8 }}>
+              {[250, 500].map((ml) => (
+                <button
+                  key={ml}
+                  type="button"
+                  disabled={quickDisabled}
+                  onClick={() => onQuickAdd(ml)}
+                  aria-label={t("Add {n} ml today", { n: ml })}
+                  className="inline-flex items-center bg-th-f0edf9 text-primary-deep-text hover:brightness-95 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                  style={WEB_CHIP}
+                >
+                  <Plus size={14} aria-hidden />
+                  {t("{n} ml", { n: ml })}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={quickDisabled}
+                onClick={onCustom}
+                className="inline-flex items-center bg-th-f0edf9 text-primary-deep-text hover:brightness-95 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                style={WEB_CHIP}
+              >
+                <SlidersHorizontal size={14} aria-hidden />
+                {t("Custom")}
+              </button>
+            </div>
+          </HeroWebLayout>
+        </MetricHero>
+      </div>
+    );
   return (
     <div ref={ref}>
       <MetricHero metric="water" pattern={0} padding="16px" loading={loading} ariaLabel={ariaLabel} style={{ marginTop: 0 }}>
@@ -178,3 +251,5 @@ export const WaterHero: React.FC<{
     </div>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+WaterHero.webRole = "hero";

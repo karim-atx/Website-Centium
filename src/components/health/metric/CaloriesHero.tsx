@@ -3,6 +3,8 @@ import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { useHideNumbers } from "../../../hooks/useHideNumbers";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
+import { useIsWeb } from "../../web/useWebLayout";
+import { HeroWebLayout } from "./MetricKit.web";
 
 // HE1.4 #10-#11 hero: tint card 358 r22 pad 18 16 14 16 with p2.svg. The
 // gauge is not in the layout table; measured from HE1.4-full.png (pt):
@@ -52,8 +54,12 @@ export const CaloriesHero: React.FC<{
   ariaLabel: string;
   /** HE1.4 / HE1.4.d: the day's workout kcal share (0-1 of the goal) and the legend texts; null = no share drawn. */
   workouts?: { pct: number; workoutsLabel: string; restLabel: string } | null;
-}> = ({ pct, value, sub, goalLabel, pills, loading, ariaLabel, workouts }) => {
+}> & { webRole?: "hero" } = ({ pct, value, sub, goalLabel, pills, loading, ariaLabel, workouts }) => {
   const { dark } = useHealthMode();
+  // Website viewport v1 (WC-HE Health Web v5, Calories hero): the 326 gauge
+  // with its 0 / goal labels 13 600, the flame, the value 40/40 800 and the sub
+  // 13/18 600; the pills, the workouts legend and the stats in the hero column.
+  const web = useIsWeb();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const hideNumbers = useHideNumbers();
   const p = Math.max(0, Math.min(1, pct));
@@ -63,9 +69,7 @@ export const CaloriesHero: React.FC<{
   // Recovery-sensitive mode (AJ R4): the page shows its neutral hero instead;
   // this one never draws a kcal figure, whoever renders it.
   if (hideNumbers) return null;
-  return (
-    <div ref={ref}>
-      <MetricHero metric="calories" pattern={2} padding="18px 16px 14px" loading={loading} ariaLabel={ariaLabel}>
+  const gauge = (
         <div className="relative" style={{ height: 166 }}>
           <svg viewBox="0 0 326 166" width="100%" height={166} aria-hidden style={{ display: "block", position: "absolute", inset: 0, overflow: "visible" }}>
             <path d={arcPath(0, 1)} fill="none" stroke={dark ? mc("calories", "main", 0.25) : "#F1DDC2"} strokeWidth={16} strokeLinecap="round" />
@@ -85,10 +89,10 @@ export const CaloriesHero: React.FC<{
               />
             )}
             <line x1={CX + R} x2={CX + R} y1={CY - 18} y2={CY + 16} stroke={mc("calories", "accent")} strokeWidth={2} />
-            <text x={CX - R} y={CY + 30} textAnchor="middle" fontSize={10.5} fontWeight={600} fill={ink}>
+            <text x={CX - R} y={CY + 30} textAnchor="middle" fontSize={web ? 13 : 10.5} fontWeight={600} fill={ink}>
               0
             </text>
-            <text x={CX + R} y={CY + 30} textAnchor="middle" fontSize={10.5} fontWeight={600} fill={ink}>
+            <text x={CX + R} y={CY + 30} textAnchor="middle" fontSize={web ? 13 : 10.5} fontWeight={600} fill={ink}>
               {goalLabel}
             </text>
             <style>{`
@@ -103,7 +107,7 @@ export const CaloriesHero: React.FC<{
               @keyframes he14-d { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(1.1, 1.18); opacity: 0.8; } }
             `}</style>
           </svg>
-          <div className="relative flex flex-col items-center text-center" style={{ paddingTop: 52 }}>
+          <div className="relative flex flex-col items-center text-center" style={{ paddingTop: web ? 48 : 52 }}>
             <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden style={{ overflow: "visible" }}>
               <g className={running ? "he14-flame-w" : undefined} style={{ animationPlayState: play }}>
                 <g className={running ? "he14-flame" : undefined} style={{ animationPlayState: play }}>
@@ -114,10 +118,36 @@ export const CaloriesHero: React.FC<{
                 <path d={INNER} fill={mc("calories", "main")} fillOpacity={0.55} />
               </g>
             </svg>
-            <span data-hero-value style={{ marginTop: 6, fontSize: 36, lineHeight: "36px", fontWeight: 800, letterSpacing: -1.4, color: "rgb(var(--c-charcoal))" }}>{value}</span>
-            <span style={{ marginTop: 6, fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: ink }}>{sub}</span>
+            <span data-hero-value style={{ marginTop: 6, fontSize: web ? 40 : 36, lineHeight: web ? "40px" : "36px", fontWeight: 800, letterSpacing: -1.4, color: "rgb(var(--c-charcoal))" }}>{value}</span>
+            <span style={{ marginTop: 6, fontSize: web ? 13 : textPx(12), lineHeight: web ? "18px" : linePx(18), fontWeight: 600, color: ink }}>{sub}</span>
           </div>
         </div>
+  );
+  if (web)
+    return (
+      <div ref={ref}>
+        <MetricHero metric="calories" pattern={2} padding="" loading={loading} ariaLabel={ariaLabel}>
+          <HeroWebLayout
+            metric="calories"
+            visualWidth={326}
+            visual={gauge}
+            pills={pills}
+            legend={
+              workouts
+                ? [
+                    { color: "#B07A35", label: workouts.workoutsLabel },
+                    { color: "#D9A15B", label: workouts.restLabel },
+                  ]
+                : undefined
+            }
+          />
+        </MetricHero>
+      </div>
+    );
+  return (
+    <div ref={ref}>
+      <MetricHero metric="calories" pattern={2} padding="18px 16px 14px" loading={loading} ariaLabel={ariaLabel}>
+        {gauge}
         <div className="flex justify-center flex-wrap" style={{ marginTop: 8, gap: 6 }}>
           {pills.map((t) => (
             <HeroPill key={t} metric="calories">
@@ -150,3 +180,5 @@ export const CaloriesHero: React.FC<{
  */
 /** A catalogue key: shown through t(). */
 export const ESTIMATED_INCL_WORKOUTS = "Estimated, incl. workouts";
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+CaloriesHero.webRole = "hero";

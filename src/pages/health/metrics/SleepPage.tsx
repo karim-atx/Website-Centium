@@ -466,6 +466,7 @@ export default function SleepPage() {
                 onBarTap={range === "month" ? openDay : undefined}
                 barLabel={(b) => (b.value === null ? t("{date}, nothing recorded", { date: b.key }) : t("{date}, {time} asleep", { date: b.key, time: hm(b.value * 60) }))}
                 plotTop={range === "year" && avgBed !== null ? 42 : undefined}
+                tickLabel={(v) => (v === 0 ? "0" : t("{n}h", { n: v }))}
                 overlay={range === "year" && avgBed !== null ? <YearBedtimeLine months={monthBeds} /> : undefined}
               />
             )}

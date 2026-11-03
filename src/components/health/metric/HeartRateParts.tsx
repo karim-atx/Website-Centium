@@ -79,7 +79,7 @@ export interface HrHeroData {
  * only while on screen and in the foreground (useLoopWhileVisible), static
  * faint trace under Reduce motion.
  */
-export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolean; ariaLabel?: string; empty?: React.ReactNode }> = ({
+export const HeartRateHero: React.FC<{ data: HrHeroData | null; loading?: boolean; ariaLabel?: string; empty?: React.ReactNode }> & { webRole?: "hero" } = ({
   data,
   loading,
   ariaLabel,
@@ -493,3 +493,5 @@ export const HeartRateAlertCard: React.FC<{ event: HrAlertEvent; time: string; o
     </section>
   );
 };
+// Website viewport v1: the web metric page puts the page's stat card and freshness lines inside this hero.
+HeartRateHero.webRole = "hero";
