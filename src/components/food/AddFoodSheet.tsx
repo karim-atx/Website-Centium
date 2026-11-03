@@ -52,6 +52,8 @@ import { searchFoodsOnline } from "../../services/food/onlineSearch";
 import { brandServing, onlineQuery, type OnlineFood, type OnlineSearchOutcome } from "../../services/food/onlineSearchModel";
 import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
 import { t, tn, tk } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
+import { ChipScrollbar } from "./web/ChipScrollbar";
 
 // Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
 // primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
@@ -125,6 +127,10 @@ export const AddFoodSheet: React.FC<{
     nutritionGoal,
   } = useApp();
   const dark = useIsDark();
+  // Website viewport v1 (WC-FO.1.2, FO Add Food Web): from 1024px wide the
+  // browse view takes the web sizes and the chips get a pill scrollbar.
+  const web = useIsWeb();
+  const chipRow = useRef<HTMLDivElement | null>(null);
   // Round D (R3): in recovery-sensitive mode every step shows a food's name
   // and serving only — no kcal on rows, no macro strip, no nutrient breakdown.
   const hide = useHideNumbers();
@@ -1161,16 +1167,16 @@ export const AddFoodSheet: React.FC<{
         </button>
         <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-start" style={{ gap: 10 }}>
           <span className="min-w-0">
-            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: textPx(14), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
+            <span className="flex items-center gap-1.5 truncate" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "rgb(var(--c-charcoal))" } : { fontSize: textPx(14), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
               {r.name}
               {r.star && <Star size={10} className="text-gold fill-gold shrink-0" />}
             </span>
-            <span className="block truncate" style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
+            <span className="block truncate" style={web ? { fontSize: 13, lineHeight: "20px", color: "rgb(var(--c-charcoal-muted))" } : { fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>
               {r.sub}
             </span>
           </span>
           {!hide && (
-            <span className="shrink-0" style={{ fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
+            <span className="shrink-0" style={web ? { fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" } : { fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
               {t("{n} kcal", { n: r.kcal })}
             </span>
           )}
@@ -1248,7 +1254,8 @@ export const AddFoodSheet: React.FC<{
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("Search food, meals or ingredients…")}
-              className="w-full rounded-2xl bg-cream-soft ps-10 pe-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className={web ? "w-full rounded-2xl bg-cream-soft ps-10 pe-4 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20" : "w-full rounded-2xl bg-cream-soft ps-10 pe-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"}
+              style={web ? { paddingBlock: 8, fontSize: 15, lineHeight: "24px" } : undefined}
             />
           </div>
 
@@ -1290,11 +1297,11 @@ export const AddFoodSheet: React.FC<{
               <button
                 key={label}
                 onClick={onClick}
-                className="tap flex flex-col items-center justify-center gap-1.5"
+                className={web ? "tap flex flex-col items-center justify-center gap-1.5 hover:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2" : "tap flex flex-col items-center justify-center gap-1.5"}
                 style={{ height: 64, borderRadius: 14, background: bg, color: "#FFFFFF" }}
               >
                 {icon}
-                <span className="text-[11px] font-semibold">{label}</span>
+                {web ? <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>{label}</span> : <span className="text-[11px] font-semibold">{label}</span>}
                 {/* Round G2: the first tile is AI Voice. */}
                 {tile === 0 && voiceLock.locked && <PremiumLabel className="-mt-1" />}
               </button>
@@ -1329,14 +1336,15 @@ export const AddFoodSheet: React.FC<{
 
           {/* FO7: the filter chips only while searching, as filters on the results. */}
           {query.trim() && (
-          <div className="flex gap-2 scroll-row no-scrollbar pb-1">
+          <>
+          <div ref={chipRow} className="flex gap-2 scroll-row no-scrollbar pb-1">
             {[{ id: null as string | null, label: "All" }, ...addFoodFilterCategories].map((c) => {
               const active = category === c.id;
               return (
                 <button
                   key={c.label}
-                  className="tap transition-colors"
-                  style={{
+                  className={web && !active ? "tap transition-colors hover:!bg-[#F0EDF9] hover:!border-[#AEA1DC]" : "tap transition-colors"}
+                  style={web ? { display: "inline-flex", alignItems: "center", whiteSpace: "nowrap", borderRadius: 8, padding: "6px 14px", fontSize: 15, lineHeight: "24px", border: `1px solid ${active ? "#A092E0" : "#E5E6EB"}`, background: active ? "#A092E0" : "#FAFAFB", color: active ? "#FFFFFF" : "#241F1B", fontWeight: active ? 700 : 500, flex: "none" } : {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 6,
@@ -1358,15 +1366,17 @@ export const AddFoodSheet: React.FC<{
               );
             })}
           </div>
+          {web && <ChipScrollbar target={chipRow} />}
+          </>
           )}
           </div>
 
           {/* The list's own scroll region, starting under the filter chips,
               so rows never travel up behind the pinned block or the band. */}
-          <div className="flex flex-col no-scrollbar" style={{ gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
+          <div className="flex flex-col no-scrollbar" style={web ? { gap: 6, margin: "0 -20px", padding: "12px 20px 0" } : { gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
             {!query.trim() &&
               (suggestions.length === 0 ? (
-                <p className="text-center text-sm text-charcoal-faint py-8">{t("Start typing to search foods")}</p>
+                <p className={web ? "text-center text-charcoal-faint py-8" : "text-center text-sm text-charcoal-faint py-8"} style={web ? { fontSize: 15, lineHeight: "24px" } : undefined}>{t("Start typing to search foods")}</p>
               ) : (
                 <>
                   <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">

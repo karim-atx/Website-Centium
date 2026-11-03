@@ -7,6 +7,7 @@ import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 import { useCameraCodeReader } from "./useCameraCodeReader";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 
 /**
  * The camera barcode scanner (FO3.2, reused by HO2.1's Barcode button): the
@@ -23,6 +24,8 @@ export const BarcodeScanner: React.FC<{
   title?: string;
 }> = ({ open, onClose, onCode, title }) => {
   const dark = useIsDark();
+  // Website viewport v1 (WC-FO.1.2.2 to .6, FO Barcode Web): the web sizes from 1024px wide.
+  const web = useIsWeb();
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState<string | null>(null);
   const onCodeRef = useRef(onCode);
@@ -66,7 +69,7 @@ export const BarcodeScanner: React.FC<{
             />
             <p
               className="absolute inset-x-0 text-center"
-              style={{ bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}
+              style={web ? { bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: 13, lineHeight: "20px", fontWeight: 600 } : { bottom: 10, color: "rgba(255,255,255,0.85)", fontSize: textPx(12), fontWeight: 600 }}
             >
               {camera === "starting" ? t("Starting the camera…") : t("Point the camera at the barcode")}
             </p>
@@ -74,7 +77,7 @@ export const BarcodeScanner: React.FC<{
         ) : (
           <div className="flex items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? FOOD_DARK.box : "#F4F4F6" }}>
             <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))", marginTop: 1 }} />
-            <p style={{ margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
+            <p style={web ? { margin: 0, fontSize: 13, color: "rgb(var(--c-charcoal-soft))", lineHeight: "20px" } : { margin: 0, fontSize: textPx(12.5), color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
               {camera === "denied"
                 ? t("Camera access is off for this site. Allow it in your browser settings, or type the number below.")
                 : t("This browser can't use the camera for scanning. Type the number under the barcode instead.")}
@@ -82,7 +85,7 @@ export const BarcodeScanner: React.FC<{
           </div>
         )}
 
-        <p style={{ margin: "16px 0 6px", fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Or type the number")}</p>
+        <p style={web ? { margin: "16px 0 8px", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" } : { margin: "16px 0 6px", fontSize: textPx(12), fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>{t("Or type the number")}</p>
         <div className="flex" style={{ gap: 8 }}>
           <input
             value={typed}
@@ -95,19 +98,19 @@ export const BarcodeScanner: React.FC<{
             placeholder={t("Enter number manually")}
             aria-label={t("Barcode number")}
             className="flex-1 min-w-0 focus:outline-none"
-            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: textPx(14), color: "rgb(var(--c-charcoal))" }}
+            style={{ height: web ? 44 : 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: web ? 15 : textPx(14), color: "rgb(var(--c-charcoal))" }}
           />
           <button
             onClick={submitTyped}
             disabled={!typed.trim()}
             className="tap flex-none disabled:opacity-50"
-            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: textPx(14), fontWeight: 700 }}
+            style={{ height: web ? 44 : 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: web ? 15 : textPx(14), fontWeight: 700 }}
           >
             {t("Use")}
           </button>
         </div>
         {typedError && (
-          <p className="text-xs font-semibold text-status-high" style={{ marginTop: 8 }}>
+          <p className="text-xs font-semibold text-status-high" style={web ? { marginTop: 8, fontSize: 13, lineHeight: "20px" } : { marginTop: 8 }}>
             {typedError}
           </p>
         )}
