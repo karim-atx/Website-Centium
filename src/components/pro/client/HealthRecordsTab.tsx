@@ -143,7 +143,7 @@ export const HealthRecordsTab: React.FC<{
       const h = r.ok ? r.byClient[clientId] : null;
       setHistory({
         comorbidities: h?.comorbidities ?? [],
-        surgeries: (h?.surgeries ?? []).map((s) => ({ id: s.id, name: s.name, date: s.date })) as Surgery[],
+        surgeries: (h?.surgeries ?? []).map((s) => ({ id: s.id, name: s.name, date: s.date, datePrecision: s.datePrecision })) as Surgery[],
         medications: (h?.medications ?? []) as Medication[],
         error: r.ok ? null : r.message,
       });

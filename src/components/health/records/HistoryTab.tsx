@@ -462,10 +462,11 @@ export function surgeryDate(s: Pick<Surgery, "date" | "datePrecision">): string 
   const p = s.datePrecision ?? "day";
   if (p === "year") return s.date.slice(0, 4);
   if (p === "month") {
-    const loc = appLocale();
+    // The month and the year only (the stored day is the 1st). English used to
+    // cut the day out of "Jan 1, 2019" and kept "1, 2019".
     const [y, m] = s.date.split("-").map(Number);
-    if (loc && y && m) return new Date(y, m - 1, 1).toLocaleDateString(loc, { month: "short", year: "numeric" });
-    return fmtDate(s.date).split(" ").slice(1).join(" ");
+    if (!y || !m || m > 12) return fmtDate(s.date);
+    return new Date(y, m - 1, 1).toLocaleDateString(appLocale("en-US"), { month: "short", year: "numeric" });
   }
   return fmtDate(s.date);
 }
