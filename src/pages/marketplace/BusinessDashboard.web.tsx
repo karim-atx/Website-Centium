@@ -295,7 +295,7 @@ export default function BusinessDashboardWeb() {
               <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: c.faint, whiteSpace: "nowrap" }}>{t("At a glance")}</p>
               <button type="button" onClick={() => go("/app/business/analytics")} style={{ display: "flex", alignItems: "center", gap: 2, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: c.pDark, whiteSpace: "nowrap", background: "none", border: 0, padding: 0, cursor: "pointer" }}>
                 {t("View analytics")}
-                <ChevronRight size={16} aria-hidden className="rtl:-scale-x-100" />
+                <ChevronRight size={16} aria-hidden />
               </button>
             </div>
             <div style={{ display: "flex", justifyContent: "center" }}>

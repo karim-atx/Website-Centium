@@ -34,7 +34,7 @@ export const MoPage: React.FC<{ title: string; sub?: string; action?: React.Reac
             className="shrink-0 grid place-items-center hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
             style={{ width: 36, height: 36, marginInlineStart: -8, borderRadius: 999 }}
           >
-            <ChevronLeft size={20} className="rtl:-scale-x-100" style={{ color: "#5B5349" }} aria-hidden />
+            <ChevronLeft size={20} style={{ color: "#5B5349" }} aria-hidden />
           </button>
         )}
         <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 14 }}>
@@ -96,6 +96,6 @@ export const MoLinkRow: React.FC<{ icon: LucideIcon; label: string; onClick: () 
     <span className="flex-1 min-w-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
       {label}
     </span>
-    <ChevronRight size={16} className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} aria-hidden />
+    <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
   </button>
 );

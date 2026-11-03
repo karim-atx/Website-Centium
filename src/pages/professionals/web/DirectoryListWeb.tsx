@@ -283,7 +283,7 @@ export const LinkedCardWeb: React.FC<{
           </span>
           {detail?.licenceVerified === false && <LicencePendingTag className="mt-0.5" size={13} />}
         </span>
-        <ChevronRight size={16} color="#8C8378" className="rtl:-scale-x-100" aria-hidden style={{ flex: "none" }} />
+        <ChevronRight size={16} color="#8C8378" aria-hidden style={{ flex: "none" }} />
       </button>
 
       {/* The connected professional's profile and CV, for one not in the directory (as on mobile). */}

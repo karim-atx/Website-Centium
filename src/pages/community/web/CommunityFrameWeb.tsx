@@ -43,7 +43,7 @@ export const CommunityFrameWeb: React.FC<{
             className="co-web-back grid place-items-center"
             style={{ width: 36, height: 36, marginInlineStart: -8, borderRadius: 999, flex: "none" }}
           >
-            <ChevronLeft size={20} color="#5B5349" className="rtl:-scale-x-100" aria-hidden />
+            <ChevronLeft size={20} color="#5B5349" aria-hidden />
           </button>
         )}
         <h1 className="whitespace-nowrap truncate" title={title} style={{ margin: 0, minWidth: 0, maxWidth: "60%", fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>

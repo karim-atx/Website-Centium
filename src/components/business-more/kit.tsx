@@ -65,7 +65,7 @@ export const SubHeader: React.FC<{ title: string; sub?: string; kicker?: string;
               className="shrink-0 flex items-center justify-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
               style={{ width: 36, height: 36, marginInlineStart: -8 }}
             >
-              <ChevronLeft size={20} aria-hidden className="rtl:-scale-x-100" style={{ color: "#5B5349" }} />
+              <ChevronLeft size={20} aria-hidden style={{ color: "#5B5349" }} />
             </button>
           ) : undefined
         }
@@ -366,7 +366,7 @@ const PaneRow: React.FC<BizRowProps> = ({
       )}
       {radio && <PaneRadio selected={radio.selected} />}
       {checked && <Check size={16} strokeWidth={2.6} aria-hidden className="shrink-0" style={{ color: "#7D67D9" }} />}
-      {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} />)}
+      {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} />)}
     </>
   );
   if (toggle || valueAction || value2) {

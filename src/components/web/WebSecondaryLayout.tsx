@@ -120,7 +120,7 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
         {item.ext ? (
           <ExternalLink size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />
         ) : (
-          <ChevronRight size={16} strokeWidth={2} className="rtl:-scale-x-100" style={{ color: "#9A94B3" }} aria-hidden />
+          <ChevronRight size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />
         )}
       </span>
     </button>
@@ -182,7 +182,7 @@ const PlanCard: React.FC<{ title: string; line: string; selected: boolean; onCli
           </span>
         </span>
       </span>
-      <ChevronRight size={16} strokeWidth={2} className="shrink-0 rtl:-scale-x-100" style={{ color: "#C8BFE9" }} aria-hidden />
+      <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#C8BFE9" }} aria-hidden />
     </button>
   </div>
 );

@@ -36,7 +36,7 @@ export const MindSectionWeb: React.FC<{
           className="mind-web-back grid place-items-center"
           style={{ width: 36, height: 36, marginInlineStart: -8, borderRadius: 999, flex: "none" }}
         >
-          <ChevronLeft size={20} color="#5B5349" className="rtl:-scale-x-100" aria-hidden />
+          <ChevronLeft size={20} color="#5B5349" aria-hidden />
         </button>
         <div className="flex items-baseline" style={{ flex: 1, minWidth: 0, gap: 14 }}>
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>

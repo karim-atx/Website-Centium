@@ -162,7 +162,7 @@ export default function HomeWeb() {
                     <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#8A5878" }}>{t("Dietitians, trainers, doctors & more")}</span>
                   </span>
                 </span>
-                <ArrowRight size={16} color="#9C4F7C" className="shrink-0 rtl:-scale-x-100" aria-hidden />
+                <ArrowRight size={16} color="#9C4F7C" className="shrink-0" aria-hidden />
               </button>
             </div>
           </div>

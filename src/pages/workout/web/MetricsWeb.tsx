@@ -255,7 +255,7 @@ export default function MetricsWeb() {
               ) : (
                 <button type="button" onClick={() => setOneRmOpen(true)} className="flex items-center" style={{ gap: 3, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#3B7570", whiteSpace: "nowrap" }}>
                   {t("All {n}", { n: lifts.length })}
-                  <ChevronRight size={16} className="rtl:-scale-x-100" />
+                  <ChevronRight size={16} />
                 </button>
               )
             }
@@ -333,7 +333,7 @@ export default function MetricsWeb() {
             <div className="flex justify-end" style={{ paddingTop: 12, borderTop: "1px solid rgba(36,31,27,0.07)" }}>
               <button type="button" onClick={() => setBalanceOpen(true)} className="flex items-center" style={{ gap: 3, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#8F68F6" }}>
                 {t("Full breakdown")}
-                <ChevronRight size={16} className="rtl:-scale-x-100" />
+                <ChevronRight size={16} />
               </button>
             </div>
           )}

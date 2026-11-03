@@ -482,7 +482,7 @@ export function ForumPostWeb({
                 className="co-web-press grid place-items-center shrink-0"
                 style={{ width: 40, height: 40, borderRadius: 12, background: "#9A8CD6", opacity: !draft.trim() || sending ? 0.5 : 1 }}
               >
-                <Send size={16} color="#FFFFFF" className="rtl:-scale-x-100" aria-hidden />
+                <Send size={16} color="#FFFFFF" aria-hidden />
               </button>
             </div>
           </form>

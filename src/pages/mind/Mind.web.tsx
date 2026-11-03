@@ -242,7 +242,7 @@ function MindHubWeb() {
                   )}
                 </span>
               </span>
-              <ChevronRight size={16} color="#8C8378" className="shrink-0 rtl:-scale-x-100" aria-hidden />
+              <ChevronRight size={16} color="#8C8378" className="shrink-0" aria-hidden />
             </button>
           ))}
         </div>
@@ -262,7 +262,7 @@ function MindHubWeb() {
                 style={{ marginInlineStart: "auto", gap: 2, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#7D6BB5", borderRadius: 6 }}
               >
                 {t("View all habits")}
-                <ChevronRight size={16} color="#7D6BB5" className="rtl:-scale-x-100" aria-hidden />
+                <ChevronRight size={16} color="#7D6BB5" aria-hidden />
               </button>
             </div>
             {coachGroups.map((g, gi) => {

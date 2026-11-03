@@ -59,7 +59,7 @@ export default function NutrientSummaryPageWeb() {
             className={clsx("flex-none flex items-center justify-center hover:!bg-[#F5F5F6]", FOCUS)}
             style={{ width: 32, height: 32, marginInlineStart: -6, borderRadius: 999, color: "#5B5349" }}
           >
-            <ChevronLeft size={18} aria-hidden className="rtl:-scale-x-100" />
+            <ChevronLeft size={18} aria-hidden />
           </button>
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>
             {t("Nutrient Summary")}

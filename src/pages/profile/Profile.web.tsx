@@ -397,7 +397,7 @@ function ClientProfileWeb() {
             className="shrink-0 flex items-center justify-center hover:bg-[#FDF3F2] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
             style={{ height: 40, borderRadius: 12, border: "1px solid rgba(180,55,44,0.25)", gap: 8, fontSize: 15, fontWeight: 700, color: "#B4372C", background: "#FFFFFF" }}
           >
-            <LogOut size={17} className="rtl:-scale-x-100" aria-hidden />
+            <LogOut size={17} aria-hidden />
             {t("Sign Out")}
           </button>
         </div>
@@ -435,7 +435,7 @@ function ClientProfileWeb() {
                     </span>
                     {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
-                  <ChevronRight size={16} className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} aria-hidden />
+                  <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
                 </button>
               ))}
               {pros.length > 0 && <SharingYourWinsRow me={authUserId} connectedCount={pros.length} />}
@@ -476,7 +476,7 @@ function ClientProfileWeb() {
                         {s.value}
                       </span>
                     </span>
-                    <ChevronRight size={16} className="shrink-0 rtl:-scale-x-100" style={{ color: "#8C8378" }} aria-hidden />
+                    <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
                   </button>
                 ))}
               </div>

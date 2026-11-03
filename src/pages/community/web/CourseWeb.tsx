@@ -447,7 +447,7 @@ function RateRow({ courseId, initial, onSaved }: { courseId: string; initial: { 
             <Star size={13} color="#D9A441" fill="#D9A441" aria-hidden /> {initial.stars}
           </span>
         )}
-        <ChevronRight size={16} color="#8C8378" className="rtl:-scale-x-100" aria-hidden />
+        <ChevronRight size={16} color="#8C8378" aria-hidden />
       </button>
       <RatePopup key={opening} open={open} onClose={() => setOpen(false)} courseId={courseId} initial={initial} onSaved={onSaved} />
     </>

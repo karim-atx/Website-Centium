@@ -347,7 +347,7 @@ export default function LibraryWeb() {
                                 {e.tags.length > 0 ? e.tags.map((tag) => muscle(EXERCISE_TAG_LABEL[tag])).join(" · ") : t(classificationLabel[e.classification])}
                               </span>
                             </span>
-                            <ChevronRight size={16} className="rtl:-scale-x-100" style={{ color: "#A79E93", flex: "none" }} />
+                            <ChevronRight size={16} style={{ color: "#A79E93", flex: "none" }} />
                           </button>
                         </React.Fragment>
                       ))}

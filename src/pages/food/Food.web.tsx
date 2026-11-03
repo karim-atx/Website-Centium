@@ -645,7 +645,7 @@ export default function FoodWeb() {
                 </div>
               </div>
               <span aria-hidden className="absolute flex" style={{ insetInlineEnd: 16, top: "50%", transform: "translateY(-50%)" }}>
-                <ChevronRight size={16} strokeWidth={2.4} className="rtl:-scale-x-100" color="#FFFFFF" />
+                <ChevronRight size={16} strokeWidth={2.4} color="#FFFFFF" />
               </span>
             </button>
           )
@@ -696,7 +696,7 @@ export default function FoodWeb() {
                   className={clsx("grid place-items-center hover:!bg-[#F5F5F6]", FOCUS)}
                   style={{ width: 24, height: 24, marginInlineStart: -4, borderRadius: 999, color: "#5B5349" }}
                 >
-                  <ChevronLeft size={15} aria-hidden className="rtl:-scale-x-100" />
+                  <ChevronLeft size={15} aria-hidden />
                 </button>
               )}
               <button

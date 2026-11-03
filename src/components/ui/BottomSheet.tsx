@@ -353,7 +353,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
                     style={{ color: "var(--sheet-back)" }}
                     aria-label={t("Back")}
                   >
-                    <ChevronLeft size={17} strokeWidth={2.6} className="rtl:-scale-x-100" />
+                    <ChevronLeft size={17} strokeWidth={2.6} />
                   </button>
                 )}
               </div>

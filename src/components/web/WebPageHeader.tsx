@@ -35,7 +35,7 @@ export const WebPageHeader: React.FC<{
           className="shrink-0 flex items-center justify-center hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
           style={{ width: 40, height: 40, borderRadius: back.square ? 12 : 999 }}
         >
-          <ChevronLeft size={20} strokeWidth={back.square ? 2.2 : 2} className="rtl:-scale-x-100" style={{ color: back.square ? "#241F1B" : "#5B5349" }} aria-hidden />
+          <ChevronLeft size={20} strokeWidth={back.square ? 2.2 : 2} style={{ color: back.square ? "#241F1B" : "#5B5349" }} aria-hidden />
         </button>
       )}
       <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 12 }}>
