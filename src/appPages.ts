@@ -14,6 +14,8 @@ import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
 import MoreMobile from "./pages/profile/More";
 import MoreWeb from "./pages/profile/More.web";
+import ProfileMobile from "./pages/profile/Profile";
+import ProfileWeb from "./pages/profile/Profile.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -78,7 +80,7 @@ export { default as StoreRoutes } from "./pages/store/StoreRoutes";
 export { default as AppointmentRoutes } from "./pages/appointments/AppointmentRoutes";
 export { default as BusinessVenueTab } from "./pages/marketplace/BusinessVenueTab";
 export { default as BusinessCalendarTab } from "./pages/marketplace/BusinessCalendarTab";
-export { default as Profile } from "./pages/profile/Profile";
+export const Profile = withWeb(ProfileMobile, ProfileWeb);
 export { default as MyCv } from "./pages/profile/MyCv";
 export { default as Subscription } from "./pages/subscription/Subscription";
 // Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
