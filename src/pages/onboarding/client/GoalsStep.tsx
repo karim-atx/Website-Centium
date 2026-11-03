@@ -7,6 +7,7 @@ import { ObGoalTiles, ObMenu, ObRowLink, ObScale, ObSectionLabel, ObTip } from "
 import { OB_STRINGS, useOnboardingFlow } from "../shell/flow";
 import { ACTIVITIES, ACTIVITY_SCALE, MAX_GOAL_AREAS, goalAreas, type GoalArea } from "./clientModel";
 import { t, tn } from "../../../i18n/core";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 
 interface Props {
   draft: OnboardingDraft;
@@ -34,6 +35,8 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
   const cap = capHit && picked.length >= MAX_GOAL_AREAS;
   const [refine, setRefine] = useState<GoalArea | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Website viewport v1 (WC-OB.9): the web copy says Click; the menu is 260 wide.
+  const web = useIsWeb();
   const [actsEl, setActsEl] = useState<HTMLButtonElement | null>(null);
 
   const subsOf = (a: GoalArea) => (draft.subGoals[a] ?? []).filter((s) => areas.find((d) => d.key === a)?.subs.includes(s));
@@ -112,7 +115,7 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
         ref={setActsEl}
         icon={Heart}
         title={t("Activities you enjoy")}
-        desc={actLabels.length ? actLabels.join(t(", ")) : t("Tap to choose, optional")}
+        desc={actLabels.length ? actLabels.join(t(", ")) : web ? t("Click to choose, optional") : t("Tap to choose, optional")}
         expanded={menuOpen}
         onClick={() => setMenuOpen(true)}
       />
@@ -120,6 +123,7 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
         <ObMenu
           title={t("Activities you enjoy")}
           anchor={actsEl}
+          width={web ? 260 : undefined}
           options={ACTIVITIES.map((a) => ({ key: a.key, label: t(a.label), on: draft.activities.includes(a.key) }))}
           onToggle={(k) =>
             setDraft((d) => ({ ...d, activities: d.activities.includes(k) ? d.activities.filter((x) => x !== k) : [...d.activities, k] }))
@@ -163,7 +167,7 @@ export const GoalsStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
                     aria-pressed={on}
                     className="ob-chip-b hit"
                     onClick={() => toggleSub(refineDef.key, s)}
-                    style={{ minHeight: 36, padding: "8px 12px", lineHeight: "16px", fontWeight: 600 }}
+                    style={web ? { minHeight: 36, padding: "8px 12px", fontSize: 13, lineHeight: "20px", fontWeight: 600 } : { minHeight: 36, padding: "8px 12px", lineHeight: "16px", fontWeight: 600 }}
                   >
                     {t(s)}
                   </button>

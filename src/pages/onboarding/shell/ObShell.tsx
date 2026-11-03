@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Bookmark, Check, ChevronLeft } from "lucide-react";
 import "./onboarding.css";
+import "./onboarding.web.css";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 import { LeafBackdrop, MarkSvg, Shapes, Wordmark, type Shape } from "./visuals";
 import { OB_STRINGS, useOnboardingFlow } from "./flow";
 import { LANES, laneProgress } from "./lanes";
@@ -13,19 +15,53 @@ import { t } from "../../../i18n/core";
 // <ObFooter>. Values: SharedOnboardingV4 / BizOnboardingV10 (see
 // onboarding.css). APIs listed in design-handover/recon-v6/_COMPONENTS.md.
 
+/**
+ * Website viewport v1 (WC-OB): the web layout a page takes from 1024px wide
+ * (onboarding.web.css, from WC-OB Onboarding Web v4). "intro": the 640 column
+ * with the outline leaf behind it (Sign in / up, Check your email, Forgot
+ * password, account type); "lane": the 736 bordered card (the client lane's
+ * numbered steps); "ready": the form beside the art panel (You're all set).
+ * Unset (the professional and business lanes, no web design yet): the mobile
+ * column, centred. Below 1024px nothing changes.
+ */
+export type ObWebLayout = "intro" | "lane" | "ready";
+
+/** True inside a page drawn in its web layout (1024px and wider). */
+const ObWebContext = createContext(false);
+
+/**
+ * Web only (WC-OB): the part of the body under the header, centred in the
+ * column's height as the reference's data-ob="body" block (its children keep
+ * block layout, so their margins collapse as drawn). Below 1024px, or with
+ * `on` false, the children render as they are, with no wrapper.
+ */
+export const ObWebMid: React.FC<{ on?: boolean; children: React.ReactNode }> = ({ on = true, children }) =>
+  useIsWeb() && on ? <div className="ob-web-mid">{children}</div> : <>{children}</>;
+
 /** The page: `.ob` palette scope, the 430 column, optional intro leaf backdrop. */
-export const ObPage: React.FC<{ backdrop?: boolean; children: React.ReactNode; className?: string }> = ({
-  backdrop,
-  children,
-  className,
-}) => (
-  <div className={`ob${className ? ` ${className}` : ""}`}>
-    <div className="ob-col">
-      {backdrop && <LeafBackdrop />}
-      {children}
-    </div>
-  </div>
-);
+export const ObPage: React.FC<{
+  backdrop?: boolean;
+  children: React.ReactNode;
+  className?: string;
+  /** The web layout from 1024px (WC-OB). */
+  web?: ObWebLayout;
+  /** Web only: a panel beside the column (You're all set's art). */
+  aside?: React.ReactNode;
+}> = ({ backdrop, children, className, web, aside }) => {
+  const isWeb = useIsWeb();
+  const onWeb = !!web && isWeb;
+  return (
+    <ObWebContext.Provider value={onWeb}>
+      <div className={`ob${className ? ` ${className}` : ""}`} data-web={onWeb ? web : undefined}>
+        <div className="ob-col">
+          {backdrop && <LeafBackdrop />}
+          {children}
+        </div>
+        {onWeb && aside}
+      </div>
+    </ObWebContext.Provider>
+  );
+};
 
 /**
  * The 3px bar. "intro": the first `index` segments filled (SharedOnboardingV4).
@@ -50,13 +86,31 @@ export const ObProgress: React.FC<{ count: number; index: number; variant?: "int
 };
 
 /** The 22×22 mark + 78×8.5 wordmark lockup (left to right in every language: the mark is its C). */
-export const ObLockup = React.forwardRef<HTMLSpanElement, { style?: React.CSSProperties }>(({ style }, ref) => (
-  <span ref={ref} className="ob-lockup" dir="ltr" style={style}>
-    <MarkSvg size={22} className="ob-lockup-mark" />
-    <Wordmark width={78} height={8.5} className="ob-lockup-word" />
+export const ObLockup = React.forwardRef<HTMLSpanElement, { style?: React.CSSProperties }>(({ style }, ref) =>
+  useContext(ObWebContext) ? (
+    <ObWebLogo ref={ref} style={style} />
+  ) : (
+    <span ref={ref} className="ob-lockup" dir="ltr" style={style}>
+      <MarkSvg size={22} className="ob-lockup-mark" />
+      <Wordmark width={78} height={8.5} className="ob-lockup-word" />
+    </span>
+  )
+);
+ObLockup.displayName = "ObLockup";
+
+/**
+ * Web (WC-OB Onboarding Web v4): the logo, 28 tall. The board places its logo
+ * PNG; it is drawn here from the repo's own mark and "entium" wordmark
+ * (handover section 8) in the PNG's proportions: the C about 18 tall, the
+ * letters 6.2 in the brand colour, 2.5 apart.
+ */
+export const ObWebLogo = React.forwardRef<HTMLSpanElement, { style?: React.CSSProperties }>(({ style }, ref) => (
+  <span ref={ref} className="ob-weblogo" dir="ltr" role="img" aria-label="Centium" style={style}>
+    <MarkSvg size={18.5} />
+    <Wordmark width={56.6} height={6.2} style={{ color: "var(--ob-brand)" }} />
   </span>
 ));
-ObLockup.displayName = "ObLockup";
+ObWebLogo.displayName = "ObWebLogo";
 
 /**
  * The 44px header row. Back (36×36, 44 hit box) on the left or a 28 gap;
@@ -237,18 +291,20 @@ export const ObStep: React.FC<{
   const p = laneProgress(lane, step);
   const def = LANES[lane];
   return (
-    <ObPage>
+    <ObPage web={lane === "client" ? "lane" : undefined}>
       <div className={`ob-body ${flow?.leaving ? "ob-step-out" : "ob-step-in"}`}>
         {p && <ObProgress count={p.count} index={p.index} variant="lane" />}
         <ObHeader margin={p ? "lane" : "nobar"} onBack={onBack} saveExit={saveExit && !!flow} />
-        <ObTitle
-          variant="lane"
-          chip={def ? { label: chipLabel || t(def.chip), vis: def.vis } : undefined}
-          eyebrow={eyebrow ?? (p ? t("Step {n} of {count}", { n: p.index + 1, count: p.count }) : undefined)}
-          title={title}
-          subtitle={subtitle}
-        />
-        {loading ? <ObSkeleton /> : children}
+        <ObWebMid on={lane === "client"}>
+          <ObTitle
+            variant="lane"
+            chip={def ? { label: chipLabel || t(def.chip), vis: def.vis } : undefined}
+            eyebrow={eyebrow ?? (p ? t("Step {n} of {count}", { n: p.index + 1, count: p.count }) : undefined)}
+            title={title}
+            subtitle={subtitle}
+          />
+          {loading ? <ObSkeleton /> : children}
+        </ObWebMid>
       </div>
       {footer}
     </ObPage>

@@ -7,6 +7,7 @@ import { ObSectionLabel, ObTip, ObTrackRows, type ObTrackRow } from "../shell/Ob
 import { OB_STRINGS, useOnboardingFlow } from "../shell/flow";
 import { recommendedTracking, trackDef, trackGroups } from "./clientModel";
 import { t, tk } from "../../../i18n/core";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 
 interface Props {
   draft: OnboardingDraft;
@@ -31,6 +32,7 @@ export const TrackStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
   const rec = recommendedTracking(flags);
   const groups = trackGroups(flags);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const web = useIsWeb();
 
   // Until the user changes a row, what is on is the recommended set for what
   // they chose on A gentler start.
@@ -96,10 +98,26 @@ export const TrackStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) 
       onBack={onBack}
       footer={<ObFooter error={!flow?.online ? t(OB_STRINGS.offlineStep) : null} errorTone="info" primary={{ label: t("Finish"), onClick: onNext }} />}
     >
-      <ObSectionLabel title={t("Recommended for you")} tag={t("{n} on", { n: rec.filter(on).length })} tagTone="accent" margin="0 2px 10px" />
-      <ObTrackRows rows={recRows} marginBottom={16} />
-      <ObSectionLabel title={t("More to track")} margin="0 2px 10px" />
-      <ObTrackRows rows={groupRows} marginBottom={8} />
+      {web ? (
+        // Website viewport v1 (WC-OB.10): the two lists side by side.
+        <div className="ob-web-track">
+          <div>
+            <ObSectionLabel title={t("Recommended for you")} tag={t("{n} on", { n: rec.filter(on).length })} tagTone="accent" margin="0 2px 10px" />
+            <ObTrackRows rows={recRows} marginBottom={0} />
+          </div>
+          <div>
+            <ObSectionLabel title={t("More to track")} margin="0 2px 10px" />
+            <ObTrackRows rows={groupRows} marginBottom={0} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <ObSectionLabel title={t("Recommended for you")} tag={t("{n} on", { n: rec.filter(on).length })} tagTone="accent" margin="0 2px 10px" />
+          <ObTrackRows rows={recRows} marginBottom={16} />
+          <ObSectionLabel title={t("More to track")} margin="0 2px 10px" />
+          <ObTrackRows rows={groupRows} marginBottom={8} />
+        </>
+      )}
       {tip && (
         <ObTip icon={HeartHandshake} margin="4px 0 0">
           {tip}
