@@ -9,7 +9,7 @@ import { t } from "../../../i18n/core";
 // reference files' literals.
 
 /** Side margin of the page: 32 beside the full sidebar, 24 beside the rail. */
-export function useHealthMargin(): number {
+function useHealthMargin(): number {
   const { rail } = useWebLayout();
   return rail ? 24 : 32;
 }
@@ -146,8 +146,14 @@ export const WebSegmented: React.FC<{ items: { key: string; label: string }[]; a
             onClick={() => onChange(it.key)}
             onKeyDown={(e) => {
               const rtl = document.documentElement.dir === "rtl";
-              if (e.key === "ArrowRight") (e.preventDefault(), move(i + (rtl ? -1 : 1)));
-              if (e.key === "ArrowLeft") (e.preventDefault(), move(i + (rtl ? 1 : -1)));
+              if (e.key === "ArrowRight") {
+                e.preventDefault();
+                move(i + (rtl ? -1 : 1));
+              }
+              if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                move(i + (rtl ? 1 : -1));
+              }
             }}
             className={`flex-1 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7D6BB5] ${on ? "" : "hover:bg-[#ECEBFB]"}`}
             style={{ height: 30, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5B5349" }}
