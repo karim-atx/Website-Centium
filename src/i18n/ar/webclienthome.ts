@@ -12,11 +12,16 @@ export const FILES: string[] = [
   "pages/home/Home.web.tsx",
   "components/dashboard/web/WidgetBoardWeb.tsx",
   "components/dashboard/web/QuickActionsStack.tsx",
+  "pages/mind/Mind.web.tsx",
 ];
 
 const webclienthome: Catalogue = {
   // == WC-HO Home (pages/home/Home.web, components/dashboard/web) ==
   "Add Workout": "إضافة تمرين",
+
+  // == WC-MI Mind hub (pages/mind/Mind.web) ==
+  "Habits done today": "العادات المُنجزة اليوم",
+  "Day streak": "الأيام المتتالية", // note: the caps label over the lead habit's streak card
 };
 
 export default webclienthome;

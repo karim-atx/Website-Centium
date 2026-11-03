@@ -14,6 +14,8 @@ import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
 import HomeMobile from "./pages/home/Home";
 import HomeWeb from "./pages/home/Home.web";
+import MindMobile from "./pages/mind/Mind";
+import MindWeb from "./pages/mind/Mind.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -38,7 +40,8 @@ export { default as BloodPressurePage } from "./pages/health/metrics/BloodPressu
 export { default as WeightPage } from "./pages/health/metrics/WeightPage";
 export { default as Cycle } from "./pages/cycle/Cycle";
 export { default as Contraception } from "./pages/contraception/Contraception";
-export { default as Mind } from "./pages/mind/Mind";
+// Website viewport v1: the Mind hub's web layout from 1024px wide (WC-MI); the sections and the mobile page below.
+export const Mind = withWeb(MindMobile, MindWeb);
 export { default as Professionals } from "./pages/professionals/Professionals";
 export { default as ProfessionalDetail } from "./pages/professionals/ProfessionalDetail";
 export { default as ProfessionalReviews } from "./pages/professionals/ProfessionalReviews";
