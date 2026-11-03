@@ -34,6 +34,10 @@ import ProfileMobile from "./pages/profile/Profile";
 import ProfileWeb from "./pages/profile/Profile.web";
 import SubscriptionMobile from "./pages/subscription/Subscription";
 import SubscriptionWeb from "./pages/subscription/Subscription.web";
+import MessagesMobile from "./pages/messages/Messages";
+import MessagesWeb from "./pages/messages/Messages.web";
+import ClientCalendarTabMobile from "./pages/profile/ClientCalendarTab";
+import ClientCalendarWeb from "./pages/profile/ClientCalendar.web";
 import BusinessOperationsTabMobile from "./pages/marketplace/BusinessOperationsTab";
 import BusinessOperationsTabWeb from "./pages/marketplace/BusinessOperationsTab.web";
 import AnalyticsShellMobile from "./pages/business-analytics/AnalyticsShell";
@@ -75,7 +79,8 @@ export { default as Professionals } from "./pages/professionals/Professionals";
 export { default as ProfessionalDetail } from "./pages/professionals/ProfessionalDetail";
 export { default as ProfessionalReviews } from "./pages/professionals/ProfessionalReviews";
 export { default as ProVerification } from "./pages/professionals/ProVerification";
-export { default as Messages } from "./pages/messages/Messages";
+// Website viewport v1: the client Messages list-detail from 1024px wide (WC-MO.4); businesses and the mobile page below.
+export const Messages = withWeb(MessagesMobile, MessagesWeb);
 export { default as CallLink, LegacyCallLink } from "./components/calls/CallLink";
 export { default as ProRoutes, ProHomeRedirect, ProOnlyRedirect } from "./pages/pro/ProRoutes";
 export { default as ProMoreRoutes } from "./pages/pro/more/MoreRoutes";
@@ -121,7 +126,8 @@ export { default as MyCv } from "./pages/profile/MyCv";
 export const Subscription = withWeb(SubscriptionMobile, SubscriptionWeb);
 // Website viewport v1: the client More column from 1024px wide (decision 4); the mobile page below.
 export const More = withWeb(MoreMobile, MoreWeb);
-export { default as ClientCalendarTab } from "./pages/profile/ClientCalendarTab";
+// Website viewport v1: the client Calendar month and day list from 1024px wide (WC-MO.3); the mobile page below.
+export const ClientCalendarTab = withWeb(ClientCalendarTabMobile, ClientCalendarWeb);
 export { default as Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 export { default as Settings } from "./pages/settings/Settings";
 export { default as NotificationsPage } from "./pages/settings/NotificationsPage";

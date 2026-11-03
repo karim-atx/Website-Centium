@@ -208,7 +208,15 @@ export const ThreadView: React.FC<{
    * programme and session cards. Unset: the chat is exactly as before.
    */
   pro?: ThreadViewPro;
-}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation, pro }) => {
+  /**
+   * Website viewport v1 (WC-MO.4, 1024 and wider only): the chat sits in the
+   * Messages page's thread pane, which scrolls itself. The header and the
+   * composer stick to that pane (no back button: the list stays beside it),
+   * and older messages keep the reader's place in the pane. Unset: the
+   * mobile chat, exactly as before.
+   */
+  web?: { scroller: React.RefObject<HTMLDivElement | null> };
+}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId, onDeleteConversation, pro, web }) => {
   const { authUserId, user } = useApp();
   const proView = user.accountType === "professional" && pro ? pro : null;
   const unread = useUnread();
@@ -281,7 +289,9 @@ export const ThreadView: React.FC<{
   const cv2Icon = cv2 && (bizAvatarKind(thread) === "member" || bizAvatarKind(thread) === "support");
   // Plus --active-bar (the minimised-workout bar's height + gap, Layout; 0
   // without one), so the composer clears that bar as the page padding does.
-  const footerBottom = clientBar
+  const footerBottom = web
+    ? "bottom-0"
+    : clientBar
     ? "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
     : "bottom-[calc(env(safe-area-inset-bottom)+64px)] lg:bottom-0";
   /**
@@ -583,7 +593,8 @@ export const ThreadView: React.FC<{
     const oldest = messages[0];
     const result = await fetchMessagePage(thread.id, { createdAt: oldest.createdAt, id: oldest.id });
     if (result.ok) {
-      keepPlace.current = { height: document.documentElement.scrollHeight, y: window.scrollY };
+      const pane = web?.scroller.current;
+      keepPlace.current = pane ? { height: pane.scrollHeight, y: pane.scrollTop } : { height: document.documentElement.scrollHeight, y: window.scrollY };
       setMessages((prev) => [...result.messages.filter((m) => !prev.some((p) => p.id === m.id)), ...prev]);
       setHasOlder(result.hasOlder);
     }
@@ -594,8 +605,10 @@ export const ThreadView: React.FC<{
     const place = keepPlace.current;
     if (!place) return;
     keepPlace.current = null;
-    window.scrollTo(0, place.y + (document.documentElement.scrollHeight - place.height));
-  }, [messages]);
+    const pane = web?.scroller.current;
+    if (pane) pane.scrollTop = place.y + (pane.scrollHeight - place.height);
+    else window.scrollTo(0, place.y + (document.documentElement.scrollHeight - place.height));
+  }, [messages, web?.scroller]);
 
   useEffect(() => {
     void load();
@@ -1366,7 +1379,7 @@ export const ThreadView: React.FC<{
     // --active-bar (the client's minimised-workout bar, Layout) comes off the
     // height too, or a short thread's composer sits under that bar.
     <div
-      className={`flex flex-col ${
+      className={web ? "flex flex-col min-h-full" : `flex flex-col ${
         clientBar ? "min-h-[calc(100dvh-120px-var(--active-bar,0px))] -mb-4" : "min-h-[calc(100dvh-136px)]"
       }`}
     >
@@ -1484,8 +1497,9 @@ export const ThreadView: React.FC<{
         // more: the layout's banners above keep at least 13 under them) and
         // pads 6, so the avatar lands on 18 and the foot near 69; the first
         // day chip sits 17.5 under it.
-        className={`sticky top-0 z-20 -mx-4 -mt-3 px-4 pt-[max(env(safe-area-inset-top),6px)] pb-3 mb-2 bg-cream border-b border-charcoal/[0.06] flex items-center gap-2.5 ${searchOpen ? "hidden" : ""}`}
+        className={web ? `sticky top-0 z-20 -mx-[18px] px-[18px] h-16 shrink-0 mb-2 bg-white border-b border-charcoal/[0.06] flex items-center gap-3 ${searchOpen ? "hidden" : ""}` : `sticky top-0 z-20 -mx-4 -mt-3 px-4 pt-[max(env(safe-area-inset-top),6px)] pb-3 mb-2 bg-cream border-b border-charcoal/[0.06] flex items-center gap-2.5 ${searchOpen ? "hidden" : ""}`}
       >
+        {!web && (
         <button
           onClick={onBack}
           aria-label={t("Back to conversations")}
@@ -1494,6 +1508,7 @@ export const ThreadView: React.FC<{
           {/* MO1.2.1.3: ChevronLeft 17 on a 32 #F5F5F6 disc at x 16 (measured). OP1-180 row 3: plain 44, 20/2.2 ink. */}
           {cv2 ? <ChevronLeft size={20} strokeWidth={2.2} /> : <ChevronLeft size={17} />}
         </button>
+        )}
         {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
             shared, privacy, block and report. flex-1 min-w-0 so a long name
             ellipses instead of pushing Call and Search off the edge. */}
@@ -2131,7 +2146,7 @@ export const ThreadView: React.FC<{
       {/* BLOCKED: the conversation stays readable, and nothing can be sent. The
           other side's block is stated without saying who did it. */}
       {groupEnded ? (
-        <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+        <div className={web ? "sticky bottom-0 -mx-[18px] px-[14px] py-3 bg-white border-t border-charcoal/[0.06]" : `sticky ${footerBottom} bg-cream pt-2`}>
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center" role="status">
             <p className="text-sm font-semibold text-charcoal">
               {groupEnded === "closed"
@@ -2148,7 +2163,7 @@ export const ThreadView: React.FC<{
           </div>
         </div>
       ) : block.blocked ? (
-        <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+        <div className={web ? "sticky bottom-0 -mx-[18px] px-[14px] py-3 bg-white border-t border-charcoal/[0.06]" : `sticky ${footerBottom} bg-cream pt-2`}>
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center">
             <p className="text-sm font-semibold text-charcoal">
               {block.iBlocked ? t("You blocked {name}", { name: thread.participantName }) : t("You can't message this person")}
@@ -2175,7 +2190,7 @@ export const ThreadView: React.FC<{
       ) : (
       <>
       <div className="flex-1" aria-hidden />
-      <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+      <div className={web ? "sticky bottom-0 -mx-[18px] px-[14px] py-3 bg-white border-t border-charcoal/[0.06]" : `sticky ${footerBottom} bg-cream pt-2`}>
       {/* EDITING (restore round, user, 2026-10-07): the reply banner's look
           (cream-soft r12, the primary rail, 11/600 heading over the 11.5
           text), a Pencil where the reply arrow goes, and a 44 cancel target
