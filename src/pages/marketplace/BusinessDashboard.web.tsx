@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgePercent, ChevronRight, IdCard, MailPlus, ScanLine, Ticket } from "lucide-react";
 import { BusinessDashboardKindWeb } from "./BusinessDashboardKinds.web";
@@ -45,12 +45,6 @@ import { t } from "../../i18n/core";
 
 const POLL_MS = 2 * 60 * 1000;
 const GAP = 24;
-
-const MobileColumn: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div data-web-frame="mobile" className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
-    {children}
-  </div>
-);
 
 export default function BusinessDashboardWeb() {
   const { user, authUserId, profileReady, accessibility } = useApp();
