@@ -14,6 +14,8 @@ import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
 import BusinessOperationsTabMobile from "./pages/marketplace/BusinessOperationsTab";
 import BusinessOperationsTabWeb from "./pages/marketplace/BusinessOperationsTab.web";
+import AnalyticsShellMobile from "./pages/business-analytics/AnalyticsShell";
+import AnalyticsShellWeb from "./pages/business-analytics/AnalyticsShell.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -56,7 +58,8 @@ export { default as OfferDetailPage } from "./pages/marketplace/rewards/OfferDet
 export { default as VoucherPage } from "./pages/marketplace/rewards/VoucherPage";
 export { ClientOnly } from "./pages/marketplace/ClientOnly";
 export { default as ClientNotificationsPage } from "./pages/notifications/ClientNotificationsPage";
-export { default as AnalyticsShell } from "./pages/business-analytics/AnalyticsShell";
+// Website viewport v1: the Analytics web layout from 1024px wide (WB-AN); the mobile shell below.
+export const AnalyticsShell = withWeb(AnalyticsShellMobile, AnalyticsShellWeb);
 export { default as MarketRoutes } from "./pages/business-market/MarketRoutes";
 export { default as RedeemVoucher } from "./pages/business-market/RedeemVoucher";
 export { default as HiringRoutes } from "./pages/business-market/hiring/HiringRoutes";

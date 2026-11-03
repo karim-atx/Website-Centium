@@ -16,6 +16,10 @@ export const FILES: string[] = [
   "pages/business-ops/plans/MembershipsTab.web.tsx",
   "pages/business-ops/plans/coverRows.ts",
   "pages/marketplace/BusinessOperationsTab.web.tsx",
+  "pages/business-analytics/AnalyticsShell.web.tsx",
+  "pages/business-analytics/AnalyticsParts.web.tsx",
+  "pages/business-analytics/overview/OverviewSection.web.tsx",
+  "pages/business-analytics/members/MembersSection.web.tsx",
 ];
 
 const webgym: Catalogue = {
@@ -31,6 +35,9 @@ const webgym: Catalogue = {
   "Sold this month": "المبيع هذا الشهر",
   "Sold today": "المبيع اليوم",
   "New this month": "الجدد هذا الشهر",
+
+  // == Analytics (pages/business-analytics/AnalyticsShell.web, WB-AN) ==
+  "Analytics sections": "أقسام التحليلات", // note: the accessible name of the section tabs
 };
 
 export default webgym;
