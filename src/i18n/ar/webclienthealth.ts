@@ -20,6 +20,7 @@ export const FILES: string[] = [
   "components/health/records/RecordsTabs.web.tsx",
   "components/health/records/MarkerChart.web.tsx",
   "components/health/records/MarkerPage.web.tsx",
+  "components/health-checks/GeneralPlan.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {
