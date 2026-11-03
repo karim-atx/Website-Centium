@@ -25,7 +25,7 @@ export const MindSectionWeb: React.FC<{
   const { rail } = useWebLayout();
   const margin = rail ? 24 : 32;
   return (
-    <div data-web-mind-section className={fill ? "flex flex-col" : undefined} style={fill ? { minHeight: "100dvh" } : undefined}>
+    <div data-web-mind-section className={fill ? "flex flex-col" : undefined} style={fill ? { width: "100%", minHeight: "100dvh" } : undefined}>
       <style href="mind-web-section" precedence="default">{MIND_WEB_CSS}</style>
       <header className="sticky top-0 flex items-center bg-cream" style={{ zIndex: 30, height: 64, flex: "none", boxSizing: "border-box", gap: 12, padding: `0 ${margin}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
         <button

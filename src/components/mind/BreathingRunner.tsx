@@ -5,6 +5,7 @@ import { PinnedCta } from "../ui/PinnedCta";
 import { Toast } from "../ui/Toast";
 import { useApp } from "../../context/AppContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
+import { useIsWeb } from "../web/useWebLayout";
 import { logMeditationSession } from "../../services/meditation";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { breathingSaveRule, formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
@@ -57,6 +58,9 @@ tk("Hold");
 export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: string; kind?: string }> = ({ pattern, contentId, kind }) => {
   const { authUserId, refreshMeditationSummary, refreshAchievements } = useApp();
   const reduced = useReducedMotion();
+  // Website viewport v1 (WC-MI.4): at 1024 and wider the Start / Stop and
+  // Reset row sits under the runner instead of pinned to the mobile column.
+  const web = useIsWeb();
   const [running, setRunning] = useState(false);
   /** What happened to the last session, shown under "Cycle" (K4). */
   const [note, setNote] = useState<string | null>(null);
@@ -376,32 +380,60 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
       )}
 
       {/* #19-#22: Start / Stop filled, Reset to its right. */}
-      <PinnedCta
-        // #19: the row is 44 tall, radius 12; 48 under Larger text (O6,
-        // derived: the same +4 step as the handover's 48 → 52).
-        size="base"
-        primary={{
-          label: running ? t("Stop") : tx("Start", "button"),
-          // #20: the icon is #FFFFFF in light AND dark (V6-144, literal).
-          icon: running ? <Square size={14} style={{ color: "#FFFFFF" }} /> : <Play size={14} style={{ color: "#FFFFFF" }} />,
-          onClick: toggle,
-          // #19: filled #A198DF (--c-fill-cta) / dark #A991FE, 13.5/20.3 700,
-          // icon gap 8. High contrast: the primary fill #5B48B8 (O7).
-          className:
-            "!text-[13.5px] !leading-[20.3px] !gap-2 !bg-[rgb(var(--c-fill-cta))] [.high-contrast_&]:!bg-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
-        }}
-        trailing={{
-          icon: <RotateCcw size={15} />,
-          label: t("Reset"),
-          onClick: reset,
-          width: 44,
-          // #21-#22: #AEA1DC@18% with #7D67D9; dark #A991FE@18% with #9A8CD6
-          // (primary at 18%, primary-accent). High contrast: #5B48B8 with
-          // white (O7).
-          className:
-            "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary/[0.18] [.high-contrast_&]:!bg-primary-fill [.high-contrast_&]:!text-on-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
-        }}
-      />
+      {web ? (
+        // WC-MI Mind Web v5 (meditation): the 44 run button, at least 200 wide,
+        // r12, 15/24 600 white with its 16 icon (Start #9A8CD6, running
+        // #4F7F78), 20 under the runner; Reset (44, the mobile tile colours)
+        // beside it. Same handlers as the pinned row.
+        <div data-breath-web-cta className="flex items-center" style={{ marginTop: 20, gap: 10 }}>
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex items-center justify-center whitespace-nowrap"
+            style={{ height: 44, minWidth: 200, padding: "0 24px", borderRadius: 12, gap: 8, background: running ? "#4F7F78" : "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+          >
+            {running ? <Square size={16} fill="#FFFFFF" color="#FFFFFF" aria-hidden /> : <Play size={16} fill="#FFFFFF" color="#FFFFFF" aria-hidden />}
+            {running ? t("Stop") : tx("Start", "button")}
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            aria-label={t("Reset")}
+            title={t("Reset")}
+            className="grid place-items-center"
+            style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(174,161,220,0.18)", color: "#7D67D9" }}
+          >
+            <RotateCcw size={16} aria-hidden />
+          </button>
+        </div>
+      ) : (
+        <PinnedCta
+          // #19: the row is 44 tall, radius 12; 48 under Larger text (O6,
+          // derived: the same +4 step as the handover's 48 → 52).
+          size="base"
+          primary={{
+            label: running ? t("Stop") : tx("Start", "button"),
+            // #20: the icon is #FFFFFF in light AND dark (V6-144, literal).
+            icon: running ? <Square size={14} style={{ color: "#FFFFFF" }} /> : <Play size={14} style={{ color: "#FFFFFF" }} />,
+            onClick: toggle,
+            // #19: filled #A198DF (--c-fill-cta) / dark #A991FE, 13.5/20.3 700,
+            // icon gap 8. High contrast: the primary fill #5B48B8 (O7).
+            className:
+              "!text-[13.5px] !leading-[20.3px] !gap-2 !bg-[rgb(var(--c-fill-cta))] [.high-contrast_&]:!bg-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
+          }}
+          trailing={{
+            icon: <RotateCcw size={15} />,
+            label: t("Reset"),
+            onClick: reset,
+            width: 44,
+            // #21-#22: #AEA1DC@18% with #7D67D9; dark #A991FE@18% with #9A8CD6
+            // (primary at 18%, primary-accent). High contrast: #5B48B8 with
+            // white (O7).
+            className:
+              "!bg-th-aea1dc/[0.18] !text-primary-accent dark:!bg-primary/[0.18] [.high-contrast_&]:!bg-primary-fill [.high-contrast_&]:!text-on-primary-fill !h-[calc(44px+2*var(--text-boost,0px))]",
+          }}
+        />
+      )}
       <Toast open={!!toast} message={toast ? t(toast) : ""} tone="error" bottom={148} onExpire={() => setToast(null)} />
     </div>
   );

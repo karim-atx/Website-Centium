@@ -19,6 +19,8 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/mind\/?$/, // WC-MI Mind hub
   /^\/app\/mind\/achievements\/?$/, // WC-MI.3 Achievements
   /^\/app\/mind\/habits\/?$/, // WC-MI.1 Habits
+  /^\/app\/mind\/journal\/?$/, // WC-MI.2 Journal
+  /^\/app\/mind\/meditation\/?$/, // WC-MI.4 Meditation
   /^\/app\/professionals\/?$/, // WC-PR Professionals (the list; ?view=map is WC-PR.2 Map)
   /^\/app\/professionals\/(?!(?:verification|calendar|templates|meal-plans|health-metrics)\/?$)[^/]+\/?$/, // WC-PR / WC-PR.1 Professionals with the selected profile
   /^\/app\/professionals\/[^/]+\/reviews\/?$/, // WC-PR.3 Reviews
