@@ -12,7 +12,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
 import { useLocation } from "react-router-dom";
 import { PaneFrame, PaneHeader, PaneRadio, PaneSwitch, PaneWebOff } from "./paneWeb";
-import { usePaneWeb } from "./paneWebScope";
+import { usePaneEligible, usePaneWeb } from "./paneWebScope";
 
 // v6 Batch 3 · the BizMoreV8 kit (business More, Business Profile, Settings,
 // Help and legal; MO1B). Every value is the source's own
@@ -117,7 +117,7 @@ export const BizPage: React.FC<{ title: string; sub?: string; kicker?: string; o
   children,
   offline = true,
 }) => {
-  const paneWeb = usePaneWeb();
+  const paneWeb = usePaneEligible();
   if (paneWeb)
     return (
       <PaneFrame>

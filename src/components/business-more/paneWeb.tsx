@@ -34,12 +34,14 @@ export const PaneFrame: React.FC<{ children: React.ReactNode; label?: string }> 
     >
       {/* Blocks 28 apart, as the design's column gap; a section label sits on
           its own rows (pages that draw the label and the rows as siblings). */}
+      <PaneScope.Provider value="on">
       <div
         className="flex flex-col [&>*+*]:mt-[28px] [&>[data-pane-label]+*]:mt-0"
         style={{ maxWidth: 880, boxSizing: "border-box", padding: `${pad.top}px ${pad.x}px ${pad.bottom}px` }}
       >
         {children}
       </div>
+      </PaneScope.Provider>
     </div>
   );
 };

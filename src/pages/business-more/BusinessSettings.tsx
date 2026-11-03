@@ -22,7 +22,7 @@ import {
   Sun,
 } from "lucide-react";
 import { PaneFrame } from "../../components/business-more/paneWeb";
-import { usePaneWeb } from "../../components/business-more/paneWebScope";
+import { usePaneEligible } from "../../components/business-more/paneWebScope";
 import { REFUND_POLICY_PATH } from "../../marketing/legal/refund";
 import { BizCard, BizLabel, BizRow, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { SettingsRowVariant } from "../../components/ui/settingsRowVariant";
@@ -138,7 +138,7 @@ export default function BusinessSettings() {
   // Website viewport v1 (WB-SE, ST Settings Web): in the Settings pane from
   // 1024px the page fills the pane and the kit draws the pane rows; the five
   // sections stay on one page, the column scrolls to the one picked.
-  const paneWeb = usePaneWeb();
+  const paneWeb = usePaneEligible();
   const Frame = paneWeb ? PaneFrame : "div";
 
   return (
