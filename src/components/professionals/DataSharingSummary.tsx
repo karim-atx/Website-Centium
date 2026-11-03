@@ -3,6 +3,7 @@ import { Card } from "../ui/Card";
 import { BottomSheet } from "../ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { ChevronRight, ShieldCheck } from "lucide-react";
+import { useIsWeb } from "../web/useWebLayout";
 import { PERSON_ICON } from "../../utils/icons";
 import { ConnectedProfessionalDetail } from "./ConnectedProfessionalDetail";
 import { DataSharingSection } from "./DataSharingSection";
@@ -40,6 +41,8 @@ import { t, tn } from "../../i18n/core";
  */
 export const DataSharingSummary: React.FC = () => {
   const { authUserId } = useApp();
+  // Website viewport v1: index.css already mirrors the chevron in Arabic on web.
+  const web = useIsWeb();
   const [professionals, setProfessionals] = useState<LinkedProfessional[]>([]);
   const [grants, setGrants] = useState<Record<string, GrantMap>>({});
   const [unanswered, setUnanswered] = useState<UnansweredMap>({});
@@ -117,7 +120,7 @@ export const DataSharingSummary: React.FC = () => {
                   )}
                 </p>
               </div>
-              <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" />
+              <ChevronRight size={16} className={web ? "text-charcoal-faint shrink-0" : "text-charcoal-faint shrink-0 rtl:-scale-x-100"} />
             </div>
           </Card>
         );
