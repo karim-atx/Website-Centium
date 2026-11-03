@@ -576,7 +576,7 @@ const HealthWidget: React.FC<{ spec: WidgetSpec; rail: boolean; dark: boolean }>
             {w.loading && skeleton}
             {has && (
               <>
-                <span className="flex items-baseline whitespace-nowrap" style={{ gap: 4 }} dir="ltr">
+                <span className="flex items-baseline whitespace-nowrap" style={{ gap: 4 }}>
                   <span style={{ fontSize: 40, lineHeight: "48px", fontWeight: 600, letterSpacing: "-1.2px", fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>{w.value}</span>
                   {w.unit && <span style={{ fontSize: 17, fontWeight: 600, color: ink(w.metric) }}>{w.unit}</span>}
                 </span>
@@ -612,7 +612,7 @@ const HealthWidget: React.FC<{ spec: WidgetSpec; rail: boolean; dark: boolean }>
           </span>
           <span className="flex items-center" style={{ justifySelf: "end", gap: 12 }}>
             {has && (
-              <span className="flex items-baseline whitespace-nowrap" style={{ gap: 4 }} dir="ltr">
+              <span className="flex items-baseline whitespace-nowrap" style={{ gap: 4 }}>
                 <span style={{ fontSize: 26, lineHeight: "28px", fontWeight: 600, letterSpacing: "-0.8px", fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>{w.value}</span>
                 {w.unit && <span style={{ fontSize: 13, fontWeight: 600, color: ink(w.metric) }}>{w.unit}</span>}
               </span>

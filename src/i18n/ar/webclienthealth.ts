@@ -16,6 +16,7 @@ export const FILES: string[] = [
   "components/health/metric/MetricKit.web.tsx",
   "components/health/records/BiomarkersTab.web.tsx",
   "pages/health/web/Records.web.tsx",
+  "pages/health/web/HealthSources.web.tsx",
 ];
 
 const webclienthealth: Catalogue = {

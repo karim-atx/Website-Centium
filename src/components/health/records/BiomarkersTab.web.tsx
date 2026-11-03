@@ -118,7 +118,7 @@ export const BiomarkersWeb: React.FC<{
               </span>
               {!isThreshold(focus) && <StatusWord status={focus.status} size={13} line={20} icon={14} />}
             </div>
-            <p className="flex items-baseline" style={{ margin: 0, gap: 6 }} dir="ltr">
+            <p className="flex items-baseline" style={{ margin: 0, gap: 6 }}>
               <span style={{ fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-1.2px", color: isThreshold(focus) ? "#241F1B" : statusColor(focus.status, false) }}>{focus.value}</span>
               <span style={{ fontSize: 15, fontWeight: 600, color: "#8C8378" }}>{focus.unit}</span>
             </p>

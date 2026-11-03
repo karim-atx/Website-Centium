@@ -14,6 +14,8 @@ import ClassRulesPageMobile from "./pages/business-ops/classes/ClassRulesPage";
 import ClassRulesPageWeb from "./pages/business-ops/classes/ClassRulesPage.web";
 import HealthMobile from "./pages/health/Health";
 import HealthWeb from "./pages/health/web/Health.web";
+import HealthSourcesMobile from "./pages/health/HealthSources";
+import HealthSourcesWeb from "./pages/health/web/HealthSources.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -26,7 +28,8 @@ export { default as Workout } from "./pages/workout/Workout";
 // Website viewport v1: the web layout from 1024px wide (WC-HE); the mobile page below.
 export const Health = withWeb(HealthMobile, HealthWeb);
 export { default as HealthChecks } from "./pages/health/HealthChecks";
-export { default as HealthSources } from "./pages/health/HealthSources";
+// Website viewport v1: the web layout from 1024px wide (WC-HE.G); the mobile page below.
+export const HealthSources = withWeb(HealthSourcesMobile, HealthSourcesWeb);
 export { default as HealthRecords } from "./pages/health/HealthRecords";
 export { default as WaterPage } from "./pages/health/metrics/WaterPage";
 export { default as StepsPage } from "./pages/health/metrics/StepsPage";
