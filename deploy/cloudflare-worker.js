@@ -55,6 +55,11 @@
 //     itself, now from its inline <script type="application/json"
 //     id="atx-posts"> block (the old inline `var POSTS = [...]` is still
 //     understood, so deploy order does not matter).
+//   - 2026-11: /legal serves legal.html (it was the branded 404); /legal/
+//     301s to it. Like every change here, it goes live only when this file
+//     is pasted into the Worker by hand (Workers & Pages -> the Worker bound
+//     to atraxia.org/* -> Edit code -> paste -> Deploy); merging does not
+//     deploy it, and the hub needs no change for it.
 //
 // GH_PAGES_PATH must match the GitHub repo name exactly, since that's the
 // path segment GitHub Pages project sites are served under by default
@@ -115,6 +120,13 @@ const CONTACT_FILE = "/contact.html";
 function isContactAlias(pathname) {
   return pathname === CONTACT_FILE || pathname === `${CONTACT_PATH}/`;
 }
+
+// The Legal page. /legal serves legal.html (people and the Centium app type
+// or link the bare path); /legal/ redirects there (301, query string kept).
+// /legal.html keeps working as it is: it is the page's canonical address and
+// every hub page links to it.
+const LEGAL_PATH = "/legal";
+const LEGAL_FILE = "/legal.html";
 
 // ---------------------------------------------------------------------------
 // Content-Security-Policy. Moved here from the pages' meta tags, which are
@@ -378,6 +390,14 @@ export default {
     }
     if (isContactAlias(url.pathname)) {
       return Response.redirect(`https://${url.host}${CONTACT_PATH}${url.search}`, 301);
+    }
+
+    // Legal: /legal serves legal.html; /legal/ redirects to /legal.
+    if (url.pathname === LEGAL_PATH) {
+      return proxy(GH_PAGES_PATH + LEGAL_FILE, url.search, request);
+    }
+    if (url.pathname === `${LEGAL_PATH}/`) {
+      return Response.redirect(`https://${url.host}${LEGAL_PATH}${url.search}`, 301);
     }
 
     // The pre-pretty-route post URL. Still linked from the listing's cards, so
