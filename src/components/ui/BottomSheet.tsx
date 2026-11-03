@@ -5,6 +5,8 @@ import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
+import { WEB_SHEET_CSS, webSheetPanelStyle } from "../web/webSheet";
 
 type ToneColours = { band: string; border: string; title: string; body: string };
 
@@ -248,6 +250,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
   panelRef,
 }) => {
   const titleId = useId();
+  const web = useIsWeb();
   const dialogProps = {
     ref: panelRef,
     role: "dialog",
@@ -320,6 +323,81 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
 
   const sheetAnim = leaving ? "bottom-sheet-out .35s cubic-bezier(0.22,1,0.36,1) both" : undefined;
   const scrimAnim = leaving ? "bottom-sheet-scrim-out .35s ease both" : undefined;
+
+  // Website viewport v1 (handover section 3): from 1024px wide the sheet is a
+  // right side sheet (the left in Arabic), 440 wide and full height, with the
+  // same header band, title, close button, body and pinned footer. Below 1024
+  // nothing here changes.
+  if (web) {
+    return createPortal(
+      <div className="fixed inset-0 z-50 flex items-stretch justify-end" style={{ pointerEvents: leaving ? "none" : undefined }} aria-hidden={leaving || undefined}>
+        <style>{WEB_SHEET_CSS}</style>
+        <div
+          className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
+          style={{ background: scrimColour, animation: scrimAnim }}
+          onClick={closeOnScrim ? onClose : undefined}
+        />
+        <div
+          {...dialogProps}
+          data-web-sheet
+          className={`web-sheet relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "web-sheet-leaving" : ""}`}
+          style={webSheetPanelStyle(hideHeader ? "rgb(var(--c-cream))" : band, hideHeader ? null : `${borderWidth}px solid ${border}`)}
+        >
+          {!hideHeader && (
+            <div className="shrink-0 flex items-center justify-between" style={{ height: headerHeight, paddingInlineStart: 18, paddingInlineEnd: 18 }}>
+              <div className="flex items-center shrink-0" style={{ width: 26 }}>
+                {onBack && (
+                  <button
+                    onClick={onBack}
+                    className="tap relative w-[26px] h-[26px] rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
+                    style={{ color: "var(--sheet-back)" }}
+                    aria-label={t("Back")}
+                  >
+                    <ChevronLeft size={17} strokeWidth={2.6} className="rtl:-scale-x-100" />
+                  </button>
+                )}
+              </div>
+              {title && (
+                <h2
+                  id={titleId}
+                  className="flex-1 min-w-0 flex items-center justify-center"
+                  style={{ color: titleColor, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", gap: 9 }}
+                >
+                  {titleIcon && <span className="flex shrink-0">{titleIcon}</span>}
+                  <span className={titleWrap ? "min-w-0 text-center" : "min-w-0 truncate"} title={title}>
+                    {title}
+                  </span>
+                </h2>
+              )}
+              <div className="flex items-center justify-end shrink-0" style={{ width: 26, gap: 6 }}>
+                {headerAction && <span className="flex shrink-0">{headerAction}</span>}
+                <button
+                  onClick={onClose}
+                  className="tap relative w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
+                  style={{ border: `${ring}px solid ${border}`, color: border }}
+                  aria-label={t("Close")}
+                >
+                  <X size={xSize} strokeWidth={2.6} />
+                </button>
+              </div>
+            </div>
+          )}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            style={{ background: body, borderRadius: hideHeader ? undefined : "22px 22px 0 0", ...bodyPadding, paddingTop: 24, paddingInline: 24, paddingBottom: footer ? 20 : 24 }}
+          >
+            {children}
+          </div>
+          {footer && (
+            <div className="shrink-0" style={{ background: body, padding: `16px ${footerPadX ?? 24}px 24px`, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
+              {footer}
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    );
+  }
 
   // Portaled to <body>: several call sites render this inside a container
   // carrying `animate-fade-slide-up` (a transform-based animation). Any
