@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { Activity, Eye, FileText, MoreVertical, Pencil, ScanLine, Share2, Trash2 } from "lucide-react";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { useWebLayout } from "../../web/useWebLayout";
@@ -201,8 +201,8 @@ export const ImagingTabWeb: React.FC<{
   onEdit: (r: ImagingRecord) => void;
   onDelete: (r: ImagingRecord) => void;
 }> = ({ records, loading, error, writeError, onRetry, onView, onShare, onEdit, onDelete }) => {
-  const [menuFor, setMenuFor] = useState<ImagingRecord | null>(null);
-  const anchors = useRef(new Map<string, HTMLButtonElement | null>());
+  const [menu, setMenu] = useState<{ r: ImagingRecord; el: HTMLElement } | null>(null);
+  const menuFor = menu?.r ?? null;
   if (loading && records.length === 0)
     return (
       <Grid>
@@ -249,12 +249,9 @@ export const ImagingTabWeb: React.FC<{
                   </span>
                 </span>
                 <CardMenuButton
-                  ref={(el) => {
-                    anchors.current.set(r.id, el);
-                  }}
                   label={t("More options for {name}, {date}", { name: type, date: fmtDate(r.date) })}
                   open={menuFor?.id === r.id}
-                  onClick={() => setMenuFor(r)}
+                  onClick={(e) => setMenu({ r, el: e.currentTarget as HTMLElement })}
                 />
               </div>
             </div>
@@ -264,8 +261,8 @@ export const ImagingTabWeb: React.FC<{
       {writeError && <ErrorLine style={{ marginTop: 8 }}>{writeError}</ErrorLine>}
       <PopupMenu
         open={menuFor !== null}
-        onClose={() => setMenuFor(null)}
-        anchor={menuFor ? anchors.current.get(menuFor.id) ?? null : null}
+        onClose={() => setMenu(null)}
+        anchor={menu?.el ?? null}
         options={[
           ...(menuFor?.filePath ? [{ value: "view", label: t("View file"), icon: <Eye size={16} /> }] : []),
           { value: "share", label: t("Share"), icon: <Share2 size={16} /> },
@@ -274,7 +271,7 @@ export const ImagingTabWeb: React.FC<{
         ]}
         onSelect={(v) => {
           const r = menuFor;
-          setMenuFor(null);
+          setMenu(null);
           if (!r) return;
           if (v === "view") onView(r);
           else if (v === "share") onShare(r);
