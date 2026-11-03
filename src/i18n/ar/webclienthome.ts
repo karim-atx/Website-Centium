@@ -17,6 +17,16 @@ export const FILES: string[] = [
   "pages/mind/web/ChipStrip.tsx",
   "pages/mind/web/AchievementsWeb.tsx",
   "pages/mind/web/HabitsWeb.tsx",
+  "pages/professionals/Professionals.web.tsx",
+  "pages/professionals/web/PrFrameWeb.tsx",
+  "pages/professionals/web/DirectoryListWeb.tsx",
+  "pages/professionals/web/ProfilePaneWeb.tsx",
+  "pages/professionals/web/DataSharingWeb.tsx",
+  "pages/professionals/web/MapViewWeb.tsx",
+  "pages/professionals/web/ReviewsWeb.tsx",
+  "pages/professionals/web/WebParts.tsx",
+  "pages/professionals/web/prWebStyles.ts",
+  "pages/professionals/web/useDirectoryWeb.ts",
 ];
 
 const webclienthome: Catalogue = {
@@ -35,6 +45,18 @@ const webclienthome: Catalogue = {
   "best {n}": "الأفضل {n}", // note: a habit's longest streak in days, after its current one
   "Add a habit to start a streak.": "أضف عادة لتبدأ سلسلة.",
   "Auto streaks count from what you log across the app.": "تُحتسب السلاسل التلقائية مما تسجّله في التطبيق كله.",
+
+  // == WC-PR Professionals (pages/professionals/Professionals.web, pages/professionals/web) ==
+  "Trainers, dietitians, physiotherapists & doctors": "مدرّبون وأخصائيو تغذية علاجية وأخصائيو علاج طبيعي وأطباء", // note: the page header's line
+  "List or map": "قائمة أو خريطة", // note: the List / Map switch, read aloud
+  "Nearest first, measured on this device.": "الأقرب أولًا، والمسافة تُقاس على هذا الجهاز.", // note: the web form of "…on this phone."
+  "Already work with someone?": "هل تعمل مع مختص بالفعل؟",
+  "Ask them for their client code and enter it in Profile to connect and choose what they can see.": "اطلب منه رمز العميل وأدخله في «الملف الشخصي» للتواصل واختيار ما يمكنه رؤيته.",
+  "Reviews: {rating}": "التقييمات: {rating}", // note: the profile's rating chip, read aloud; it opens the Reviews page
+  "Click again to withdraw your review": "انقر مرة أخرى لسحب تقييمك",
+  "Nearest first · {place}": "الأقرب أولًا · {place}",
+  "Share your location once, or pick an area.": "شارك موقعك مرة واحدة، أو اختر منطقة.",
+  "Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it.": "يبقى موقعك على هذا الجهاز: لا يستخدم Centium إلا منطقة تقريبية (نحو 10 كم) لإيجاد من هم بالقرب منك، ولا يحفظها أبدًا.",
 };
 
 export default webclienthome;
