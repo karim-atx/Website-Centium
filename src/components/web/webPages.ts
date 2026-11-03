@@ -18,6 +18,14 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY Dashboard (other types: the mobile dashboard in its own centred column)
   /^\/app\/business\/services\/?$/, // WB-ST-AP.3 Services and free slots
   /^\/app\/business\/classes\/rules\/?$/, // WB-CS-SC.8 Class rules
+  /^\/app\/business\/classes\/?$/, // WB-CS-SC Schedule (List and Week)
+  /^\/app\/business\/classes\/[^/]+\/?$/, // WB-CS-SC.3 Class page · Bookings
+  /^\/app\/business\/orders\/?$/, // WB-ST-OR Orders tabs (list-detail)
+  /^\/app\/business\/orders\/returns\/[^/]+\/?$/, // WB-ST-OR.2 Return detail
+  /^\/app\/business\/orders\/(?!list\/|returns\/)[^/]+\/?$/, // WB-ST-OR.1 Order detail
+  /^\/app\/business\/products\/?$/, // WB-ST-PR Products · Showcase, .3 category See all
+  /^\/app\/business\/appointments\/?$/, // WB-ST-AP Appointments (list-detail)
+  /^\/app\/business\/appointments\/(?!day\/?$)[^/]+\/?$/, // WB-ST-AP.1 Appointment detail
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean): boolean {

@@ -26,6 +26,10 @@ import HealthSourcesMobile from "./pages/health/HealthSources";
 import HealthSourcesWeb from "./pages/health/web/HealthSources.web";
 import MoreMobile from "./pages/profile/More";
 import MoreWeb from "./pages/profile/More.web";
+import SchedulePageMobile from "./pages/business-ops/classes/SchedulePage";
+import SchedulePageWeb from "./pages/business-ops/classes/SchedulePage.web";
+import SessionPageMobile from "./pages/business-ops/classes/SessionPage";
+import SessionPageWeb from "./pages/business-ops/classes/SessionPage.web";
 
 export { MfaChallenge } from "./components/auth/MfaChallenge";
 export { Layout } from "./components/navigation/Layout";
@@ -81,8 +85,10 @@ export { default as BusinessNotificationsPage } from "./pages/notifications/Busi
 export { default as BusinessProfilePage } from "./pages/business-more/profile/BusinessProfilePage";
 export { default as BusinessMoreRoutes } from "./pages/business-more/BusinessMoreRoutes";
 export { default as TeamRoutes } from "./pages/business-team/TeamRoutes";
-export { default as SchedulePage } from "./pages/business-ops/classes/SchedulePage";
-export { default as SessionPage } from "./pages/business-ops/classes/SessionPage";
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC, .1); the mobile page below.
+export const SchedulePage = withWeb(SchedulePageMobile, SchedulePageWeb);
+// Website viewport v1: the web layout from 1024px wide (WB-CS-SC.3); the mobile page below.
+export const SessionPage = withWeb(SessionPageMobile, SessionPageWeb);
 // Website viewport v1: the web layout from 1024px wide (WB-CS-SC.8); the mobile page below.
 export const ClassRulesPage = withWeb(ClassRulesPageMobile, ClassRulesPageWeb);
 export { default as BusinessOperationsTab } from "./pages/marketplace/BusinessOperationsTab";
