@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { CtaButton, type CtaButtonProps } from "./PinnedCta";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useIsWeb } from "../web/useWebLayout";
 
 // Mobile v5.1 handover, Foundations 2.5 "Centred popup": a white card, radius
 // 20, shadow.sheet, padding 24 x 20, at most 342 wide with 16 pt side margins,
@@ -139,12 +140,14 @@ export const CentredPopup: React.FC<{
     };
   }, [open]);
 
+  // Website viewport v1 (section 3): centred popups are 400 wide from 1024px (a wider designed popup keeps its width).
+  const web = useIsWeb();
   if (!open) return null;
 
   const partB = geometry === "partB";
   const blur = scrimBlur ?? !partB;
   const start = align === "start";
-  const cardWidth = maxWidth ?? (partB ? 350 : 342);
+  const cardWidth = web ? Math.max(400, maxWidth ?? 0) : maxWidth ?? (partB ? 350 : 342);
   const cardRadius = partB ? 24 : geometry === "ours" ? 22 : 20;
   // Part B: shadow.sheet in light, off in dark (the tables' "shadow off").
   const shadow = partB && dark ? "none" : "var(--shadow-sheet)";

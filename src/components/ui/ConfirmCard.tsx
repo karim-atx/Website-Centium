@@ -5,6 +5,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 
 /**
  * The shared confirmation. Three layouts:
@@ -142,6 +143,8 @@ export const ConfirmCard: React.FC<{
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, layout, initialFocus]);
+  // Website viewport v1 (section 3): 400 wide from 1024px.
+  const web = useIsWeb();
   if (!open) return null;
 
   const ink = "rgb(var(--c-charcoal))";
@@ -165,7 +168,7 @@ export const ConfirmCard: React.FC<{
           role="alertdialog"
           aria-label={title}
           className="relative w-full max-w-[340px] bg-cream-card animate-pop"
-          style={{ borderRadius: 20, padding: 20, boxShadow: "0 16px 40px rgba(0,0,0,0.2)" }}
+          style={{ borderRadius: 20, padding: 20, boxShadow: "0 16px 40px rgba(0,0,0,0.2)", ...(web ? { maxWidth: 400 } : null) }}
         >
           <div className="flex items-center" style={{ gap: 12 }}>
             <span
@@ -227,7 +230,7 @@ export const ConfirmCard: React.FC<{
         aria-modal="true"
         aria-label={title}
         className="relative w-full max-w-[342px] max-h-full overflow-y-auto bg-cream-card text-center animate-popup-in"
-        style={card}
+        style={web ? { ...card, maxWidth: 400 } : card}
       >
         {!decision && icon && (
           <span
