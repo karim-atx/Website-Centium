@@ -246,8 +246,10 @@ export function PaySheet({
     setError(null);
     const r = retry ? await retryFeaturedWeek(retry.placementId, from) : await requestFeaturedWeek(business.id, placementTarget(item.kind, item.id, business.id), mk.v.featureArea, from);
     setBusy(false);
-    // ATXQ3: this business pays for featured weeks in the Centium app.
-    if (!r.ok && r.code === "ATXQ3") return setInApp(true);
+    // ATXQ3: this business pays for featured weeks in the Centium app. Since the
+    // Database's Round H (20261226390000) such a business books a week from a
+    // credit bought in the app, and ATXQ4 means it has none: the same view.
+    if (!r.ok && (r.code === "ATXQ3" || r.code === "ATXQ4")) return setInApp(true);
     if (!r.ok) return setError(r.message);
     onRequested(t("Request sent. We'll confirm your payment in Messages."));
   };
