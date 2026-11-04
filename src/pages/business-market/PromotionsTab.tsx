@@ -563,6 +563,11 @@ export function PromotionsTab({ layout }: { layout?: (blocks: PromoBlocks) => Re
             setPay({ itemId: item.id, from, price: p, retry: feature.retry });
             setFeature(null);
           }}
+          onBooked={(msg) => {
+            setFeature(null);
+            data.reload();
+            showToast(msg);
+          }}
         />
       )}
       {pay && (

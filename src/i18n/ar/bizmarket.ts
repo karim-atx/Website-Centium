@@ -697,6 +697,22 @@ const bizmarket: Catalogue = {
   "Offered|hire": "عُرض",
   // == EH final: offer picker ==
   "Offer: {name}": "العرض: {name}",
+  // == Round H · a featured week booked with a credit bought in the app ==
+  // note: a featured-week credit is «رصيد أسبوع تمييز», with «أسبوع التمييز» as elsewhere here.
+  "Book with a credit": "الحجز برصيد",
+  "Checking your credits…": "جارٍ التحقق من رصيدك…",
+  "1 featured-week credit": "رصيد أسبوع تمييز واحد",
+  "You have {n} featured-week credits.": {
+    zero: "ليس لديك أي رصيد لأسبوع تمييز.",
+    one: "لديك رصيد أسبوع تمييز واحد.",
+    two: "لديك رصيدان لأسبوعَي تمييز.",
+    few: "لديك {n} أرصدة لأسابيع التمييز.",
+    many: "لديك {n} رصيدًا لأسابيع التمييز.",
+    other: "لديك {n} رصيد لأسابيع التمييز.",
+  },
+  "Featured week booked. It's live now.": "حُجز أسبوع التمييز. إنه ظاهر الآن.",
+  "Featured week booked for {from} to {to}.": "حُجز أسبوع التمييز من {from} إلى {to}.",
+  "Couldn't load your featured-week credits.": "تعذّر تحميل أرصدة أسابيع التمييز.",
 };
 
 export default bizmarket;
