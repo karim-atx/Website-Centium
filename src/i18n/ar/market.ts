@@ -37,6 +37,10 @@ export const FILES: string[] = [
   "components/marketplace/GymReviews.tsx",
   "components/marketplace/MemberTag.tsx",
   "components/marketplace/MembershipPass.tsx",
+  "components/marketplace/EntrySharingCheck.tsx",
+  "components/marketplace/useVenueEntrySystem.ts",
+  "components/marketplace/EntrySharingStatus.tsx",
+  "services/venues/entrySystem.ts",
   "components/marketplace/MembershipStatusBadge.tsx",
   "components/marketplace/PassQr.tsx",
   "components/marketplace/RateClassSheet.tsx",
@@ -499,6 +503,32 @@ const market: Catalogue = {
   "This venue's page will show its colour instead. You can upload a new cover at any time.": "ستُظهر صفحة هذا المكان لونه بدلًا منها. يمكنك رفع غلاف جديد في أي وقت.",
   // Round G clash fix: the same English with another meaning in this area.
   "Listing|pro marketplace": "الظهور في السوق",
+  // == Round H (EU) · a gym's own entry system, for members ==
+  // note: «نظام الدخول الخاص» as in bizops; {gym} and {system} are names.
+  "{gym} uses its own entry system": "يستخدم {gym} نظام دخول خاصًا به",
+  "Get in with {system}. Ask the front desk for yours.": "ادخل باستخدام {system}. اطلب ما يخصك من الاستقبال.",
+  "Ask the front desk how to get in.": "اسأل الاستقبال عن طريقة الدخول.",
+  "Setting up your pass code": "جارٍ إعداد رمز بطاقتك",
+  "This takes a moment. Keep this screen open.": "يستغرق هذا لحظة. أبقِ هذه الشاشة مفتوحة.",
+  "Connect to the internet once to set up your pass code.": "اتصل بالإنترنت مرة واحدة لإعداد رمز بطاقتك.",
+  "This gym also uses its own entry system ({system}).": "يستخدم هذا النادي أيضًا نظام دخول خاصًا به ({system}).",
+  "I agree that {gym} adds my first name, member number and membership dates to its entry system ({system}) so I can get in.":
+    "أوافق على أن يضيف {gym} اسمي الأول ورقم عضويتي وتواريخ عضويتي إلى نظام الدخول الخاص به ({system}) لأتمكن من الدخول.",
+  "Agree to share your membership with the gym's entry system first.": "وافق أولًا على مشاركة عضويتك مع نظام الدخول في النادي.",
+  "Couldn't save your agreement. Try again.": "تعذّر حفظ موافقتك. حاول مرة أخرى.",
+  "That Centium entry method is turned off at this venue.": "طريقة الدخول هذه من Centium متوقفة في هذا المكان.",
+  // == Round H (EU) · agreeing to, or stopping, the sharing (under the pass) ==
+  Agree: "موافقة",
+  "Keep sharing": "متابعة المشاركة",
+  "Stop sharing with {system}?": "إيقاف المشاركة مع {system}؟",
+  "Thanks. The front desk can now add you to {system}.": "شكرًا. يمكن للاستقبال الآن إضافتك إلى {system}.",
+  "You share your first name, member number and membership dates with {system}.": "تشارك اسمك الأول ورقم عضويتك وتواريخ عضويتك مع {system}.",
+  "You've stopped sharing. {gym} will take you off {system}.": "أوقفت المشاركة. سيزيلك {gym} من {system}.",
+  "{gym} needs your agreement to add you to {system}.": "يحتاج {gym} إلى موافقتك لإضافتك إلى {system}.",
+  "{gym} will be told to take you off its entry system, so you may not be able to get in. Ask the front desk how to get in after this.": "سيُطلب من {gym} إزالتك من نظام الدخول الخاص به، فقد لا تتمكن من الدخول. اسأل الاستقبال عن طريقة الدخول بعد ذلك.",
+  "Couldn't load your sharing with the gym's entry system.": "تعذّر تحميل مشاركتك مع نظام الدخول في النادي.",
+  "Couldn't stop sharing. Try again.": "تعذّر إيقاف المشاركة. حاول مرة أخرى.",
+  "Couldn't load this venue's entry system.": "تعذّر تحميل نظام الدخول لهذا المكان.",
 };
 
 export default market;

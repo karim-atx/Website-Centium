@@ -13,6 +13,8 @@ import { DeskHeader, FixedCta, HeaderIconButton, TextTabs, VenueSwitch } from ".
 import { PassesTab } from "./PassesTab";
 import { ScanSheet, type CheckInPreset } from "./ScanSheet";
 import { useFrontDesk } from "./useFrontDesk";
+import { EntrySystemTab } from "./EntrySystemTab";
+import { useVenueEntrySystem } from "../../../components/marketplace/useVenueEntrySystem";
 
 // v6 Batch 4 · Gym › Front desk (V6-54): the gym's navbar tab
 // (/app/business/operations), text tabs Entries · Passes · Memberships.
@@ -27,22 +29,25 @@ import { useFrontDesk } from "./useFrontDesk";
 // day pass sales are that venue's. The Entries tab re-reads every 2 minutes
 // while visible (OP1-013 S6's polling fallback, usePoll).
 
-export type DeskTab = "entries" | "passes" | "memberships";
+export type DeskTab = "entries" | "passes" | "memberships" | "entry";
+// Round H (EU): "Entry system" is listed only while the desk venue keeps its own entry system.
 const TABS: { key: DeskTab; label: string }[] = [
   { key: "entries", label: tk("Entries") },
   { key: "passes", label: tk("Passes") },
   { key: "memberships", label: tk("Memberships") },
+  { key: "entry", label: tk("Entry system") },
 ];
 const TITLE: Record<DeskTab, string> = {
   entries: tk("Front desk"),
   passes: tk("Passes and renewals"),
   memberships: tk("Memberships"),
+  entry: tk("Entry system"),
 };
 
 export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memberships }) => {
   const [params, setParams] = useSearchParams();
   const raw = params.get("tab");
-  const tab: DeskTab = raw === "passes" || raw === "memberships" ? raw : "entries";
+  const asked: DeskTab = raw === "passes" || raw === "memberships" || raw === "entry" ? raw : "entries";
   const setTab = (next: DeskTab) =>
     setParams(
       (p) => {
@@ -57,6 +62,9 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
   const navigate = useNavigate();
   const online = useOnline();
   const data = useFrontDesk();
+  const entrySystem = useVenueEntrySystem(data.deskGymId);
+  const tab: DeskTab = asked === "entry" && !entrySystem ? "entries" : asked;
+  const tabs = TABS.filter((x) => x.key !== "entry" || !!entrySystem);
   const gymIds = useMemo(() => data.venues.map((v) => v.gymId), [data.venues]);
   // A minute clock: the current-hour bar and "Updated {n} min ago" (S6).
   const [clock, setClock] = useState(() => new Date());
@@ -95,7 +103,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
       {deskVenue && data.venues.length > 1 && tab !== "memberships" && (
         <VenueSwitch name={deskVenue.name} open={!!venueMenu} onOpen={setVenueMenu} />
       )}
-      <TextTabs tabs={TABS.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} />
+      <TextTabs tabs={tabs.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} />
       {offlineLine && (
         <p role="status" className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ margin: "-6px 2px 12px" }}>
           {offlineLine}
@@ -119,6 +127,7 @@ export const FrontDeskPage: React.FC<{ memberships: React.ReactNode }> = ({ memb
           />
         )}
         {tab === "memberships" && memberships}
+        {tab === "entry" && entrySystem && data.deskGymId && deskVenue && <EntrySystemTab gymId={data.deskGymId} venueName={deskVenue.name} system={entrySystem} online={online} />}
       </div>
 
       {tab === "entries" && <FixedCta variant="kit" label={t("Check someone in")} onClick={() => setCheckIn({ open: true, preset: null })} />}

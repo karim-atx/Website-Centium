@@ -5,7 +5,7 @@ import { initialsOf } from "../../components/business-more/kind";
 import { FOCUS_CSS } from "../../components/market/usePress";
 import { useOnline } from "../../hooks/useOnline";
 import { fetchFeaturePrice, priceLabel, type FeaturePrice } from "../../services/business-market";
-import { requestFeaturedWeek, retryFeaturedWeek } from "../../services/business-market/featured";
+import { fetchFeaturedWeekCredits, requestFeaturedWeek, retryFeaturedWeek, type FeaturedWeekCredits } from "../../services/business-market/featured";
 import { placementTarget } from "../../services/business-market/promoLogic";
 import type { MarketPalette } from "../../theme/marketTokens";
 import { useMarket } from "./MarketContext";
@@ -16,7 +16,7 @@ import { lastFeatureStart, OWNER_ONLY, type Promotable } from "./promoModel";
 import { BuyInApp } from "../../components/premium/BuyInApp";
 import { usePlanLevel } from "../../components/premium/usePlanLevel";
 import { paysInApp } from "../../services/premium";
-import { t } from "../../i18n/core";
+import { t, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W3 (D-13): Featured placements KEPT and restyled in the
 // handover chrome: MasterBottomSheet (MasterSheet), the grey SheetBox fields
@@ -43,6 +43,13 @@ import { t } from "../../i18n/core";
 // retry_featured_week answering ATXQ3 (a business created under the switch
 // while it is off) lands on the same view. Any other business keeps today's
 // flow.
+//
+// Round H (Database 20261226390000, Karim 2026-11-04): that business may USE
+// featured-week credits it bought in the app here. With a free credit (my_
+// featured_week_credits), Feature for a week keeps its item and start-day
+// fields and books straight from a credit: no price, no payment sheet. The
+// week is live if it starts today, else scheduled. With none free, or ATXQ4
+// on booking, it shows the app-only buy view as before. Buying stays app-only.
 
 /** A placement whose start day passed without a payment (Pick new dates). */
 export interface FeatureRetry {
@@ -60,6 +67,7 @@ export function FeatureSheet({
   initialFrom,
   retry,
   onContinue,
+  onBooked,
 }: {
   open: boolean;
   onClose: () => void;
@@ -69,6 +77,8 @@ export function FeatureSheet({
   /** Pick new dates for an unpaid week: the item is fixed. */
   retry?: FeatureRetry | null;
   onContinue: (item: Promotable, from: string, price: FeaturePrice | null) => void;
+  /** Round H: a week booked with a credit (no payment step); the toast to show. */
+  onBooked?: (toast: string) => void;
 }) {
   const mk = useMarket();
   const { v, business } = mk;
@@ -84,8 +94,38 @@ export function FeatureSheet({
   const price = useFeaturePrice(from);
   const label = price ? priceLabel(price) : null;
   const inApp = paysInApp(usePlanLevel(business?.id ?? null).level);
-
-  if (inApp) return <FeatureInAppSheet open={open} onClose={onClose} />;
+  const credits = useFeaturedWeekCredits(inApp ? business?.id ?? null : null);
+  const online = useOnline();
+  const [booking, setBooking] = useState(false);
+  const [bookError, setBookError] = useState<string | null>(null);
+  const [noCredit, setNoCredit] = useState(false);
+  // Pays in the app: a free credit books here; none (or none known) is the app-only view.
+  const withCredit = inApp && !noCredit && !!credits && credits.free > 0;
+  if (inApp && credits !== undefined && !withCredit) return <FeatureInAppSheet open={open} onClose={onClose} />;
+  const book = async () => {
+    if (!business || !item || booking) return;
+    setBooking(true);
+    setBookError(null);
+    const r = await requestFeaturedWeek(business.id, placementTarget(item.kind, item.id, business.id), mk.v.featureArea, from);
+    setBooking(false);
+    if (!r.ok && r.code === "ATXQ4") return setNoCredit(true);
+    if (!r.ok) return setBookError(t(r.message));
+    onBooked?.(from <= today ? t("Featured week booked. It's live now.") : t("Featured week booked for {from} to {to}.", { from: dayMonth(from), to: dayMonth(to) }));
+  };
+  const footer = inApp ? (
+    <>
+      <PrimaryButton disabled={!withCredit || !item || !mk.isOwner || !online || booking} busy={booking} onClick={() => void book()}>
+        {credits === undefined ? t("Checking your credits…") : t("Book with a credit")}
+      </PrimaryButton>
+      {withCredit && credits && <SoonNote>{tn(credits.free, "You have {n} featured-week credit.", "You have {n} featured-week credits.")}</SoonNote>}
+      {!mk.isOwner && <SoonNote>{t(OWNER_ONLY)}</SoonNote>}
+      {bookError && <SaveError>{bookError}</SaveError>}
+    </>
+  ) : (
+    <PrimaryButton disabled={!item} onClick={() => item && onContinue(item, from, price)}>
+      {label ? t("Continue to payment · {price}", { price: label }) : t("Continue to payment")}
+    </PrimaryButton>
+  );
 
   return (
     <>
@@ -93,11 +133,7 @@ export function FeatureSheet({
         open={open}
         onClose={onClose}
         title={t("Feature for a week")}
-        footer={
-          <PrimaryButton disabled={!item} onClick={() => item && onContinue(item, from, price)}>
-            {label ? t("Continue to payment · {price}", { price: label }) : t("Continue to payment")}
-          </PrimaryButton>
-        }
+        footer={footer}
       >
         <style>{FOCUS_CSS}</style>
         <p style={lead(m)}>{cal ? t("Pick a start day. Your 7 days run from it.") : t("Shown first in your area on Explore for 7 days.")}</p>
@@ -166,10 +202,16 @@ export function FeatureSheet({
           </div>
           <div style={{ height: 34, borderRadius: 12, background: m.card, opacity: 0.6, marginTop: 6 }} />
         </div>
-        {label && (
+        {label && !inApp && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 14 }}>
             <span style={{ fontSize: px(13), fontWeight: 600, color: m.ink2 }}>{t("7 days")}</span>
             <span style={{ fontSize: px(20), fontWeight: 800, fontVariantNumeric: "tabular-nums", color: m.ink }}>{label}</span>
+          </div>
+        )}
+        {inApp && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 14 }}>
+            <span style={{ fontSize: px(13), fontWeight: 600, color: m.ink2 }}>{t("7 days")}</span>
+            <span style={{ fontSize: px(14), fontWeight: 800, color: m.ink }}>{t("1 featured-week credit")}</span>
           </div>
         )}
       </MasterSheet>
@@ -189,6 +231,27 @@ export function FeatureSheet({
       />
     </>
   );
+}
+
+/**
+ * Round H: the business's featured-week credits. undefined while reading (or
+ * not asked: the business doesn't pay in the app), null when unknown (a
+ * database before Round H, or the read failed): the app-only view.
+ */
+function useFeaturedWeekCredits(businessId: string | null): FeaturedWeekCredits | null | undefined {
+  const [got, setGot] = useState<{ id: string; value: FeaturedWeekCredits | null } | null>(null);
+  useEffect(() => {
+    if (!businessId) return;
+    let alive = true;
+    void fetchFeaturedWeekCredits(businessId).then((r) => {
+      if (alive) setGot({ id: businessId, value: r.ok ? r.value : null });
+    });
+    return () => {
+      alive = false;
+    };
+  }, [businessId]);
+  if (!businessId) return null;
+  return got && got.id === businessId ? got.value : undefined;
 }
 
 /** feature_price_for(area, the start day): the price in force that day; null = not on sale (or the table is absent). */
@@ -246,8 +309,10 @@ export function PaySheet({
     setError(null);
     const r = retry ? await retryFeaturedWeek(retry.placementId, from) : await requestFeaturedWeek(business.id, placementTarget(item.kind, item.id, business.id), mk.v.featureArea, from);
     setBusy(false);
-    // ATXQ3: this business pays for featured weeks in the Centium app.
-    if (!r.ok && r.code === "ATXQ3") return setInApp(true);
+    // ATXQ3: this business pays for featured weeks in the Centium app. Since the
+    // Database's Round H (20261226390000) such a business books a week from a
+    // credit bought in the app, and ATXQ4 means it has none: the same view.
+    if (!r.ok && (r.code === "ATXQ3" || r.code === "ATXQ4")) return setInApp(true);
     if (!r.ok) return setError(r.message);
     onRequested(t("Request sent. We'll confirm your payment in Messages."));
   };

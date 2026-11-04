@@ -19,6 +19,10 @@ import { fetchBusinessFamilies, setBusinessFamily, type BusinessFamily, type Bus
 import { CustomRangeSheet } from "../business-analytics/CustomRangeSheet";
 import { dayMonth, isoOf } from "../business-analytics/analyticsRange";
 import { buildExport, exportFileName, presetExportRange, saveCsv, type ExportKind, type ExportRange } from "./exportReports";
+import { fetchLocations } from "../../services/business-more";
+import { exportEntryMembers } from "../../services/front-desk/entrySystem";
+import { entryExportFileName, entryExportRows } from "../../services/front-desk/entryExportModel";
+import { entrySystemDisplay, usesOwnSystem } from "../../services/venues/entrySystem";
 import { t, tk, tn, tx } from "../../i18n/core";
 
 // OURS-MO1B-notifications, -export, -security, -deactivate, -business-terms
@@ -122,13 +126,33 @@ export function BusinessNotificationsPage() {
 // Export reports (OURS-MO1B-export; DI-06: built in the browser from the
 // existing readers, exportReports.ts). Bookings (no bookings list reader) and
 // the PDF summary are not offered.
+// Round H (EU, Karim 2026-11-04): "Entry system members" too, for the owner
+// or a manager, when a venue keeps its own entry system: every active member
+// plus today's changes (export_entry_members, logged by the Database), the
+// same file as Front desk › Entry system. It has no range; a business with
+// several such venues picks one.
 
 export function ExportPage() {
   const { business, kind, laneSettled } = useBusiness();
   const online = useOnline();
   const [toast, showToast] = useBizToast();
   const store = kind === "store";
-  const reports: [ExportKind, string, string][] = store
+  const access = useConsoleAccess();
+  const canEntry = access.isOwner || access.current?.role === "manager";
+  const [entryVenues, setEntryVenues] = useState<{ id: string; name: string; system: string }[]>([]);
+  const [entryVenue, setEntryVenue] = useState(0);
+  useEffect(() => {
+    if (!business || store || !canEntry) return;
+    let alive = true;
+    void fetchLocations(business.id).then((r) => {
+      if (!alive || !r.ok) return;
+      setEntryVenues(r.value.filter((l) => l.kind === "gym" && usesOwnSystem(l.entry.methods)).map((l) => ({ id: l.id, name: l.name, system: entrySystemDisplay(l.entry.methods.system, l.entry.methods.systemName) })));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [business, store, canEntry]);
+  const reports: [ExportKind | "entry", string, string][] = store
     ? [
         ["orders", t("Orders"), t("Every order with products, date and status")],
         ["customers", t("Customers"), t("Join dates and order counts")],
@@ -137,6 +161,7 @@ export function ExportPage() {
     : [
         ["members", t("Members"), t("Plans, join dates and status")],
         ["transactions", t("Transactions"), t("Payments, refunds and methods")],
+        ...(canEntry && entryVenues.length > 0 ? [["entry", t("Entry system members"), t("Every active member and today's changes, for your entry system")] as [ExportKind | "entry", string, string]] : []),
       ];
   const [report, setReport] = useState(0);
   const [range, setRange] = useState(0);
@@ -146,10 +171,24 @@ export function ExportPage() {
   const [failed, setFailed] = useState(false);
   const picked = reports[Math.min(report, reports.length - 1)];
   const chosenRange: ExportRange | null = range === 0 ? presetExportRange("30d") : range === 1 ? presetExportRange("year") : custom;
-  const canDownload = laneSettled && !!business && !!chosenRange && online && !busy;
+  const entry = picked[0] === "entry";
+  const venue = entryVenues[Math.min(entryVenue, entryVenues.length - 1)] ?? null;
+  const canDownload = laneSettled && !!business && (entry ? !!venue : !!chosenRange) && online && !busy;
 
   const download = async () => {
-    if (!canDownload || !business || !chosenRange) return;
+    if (!canDownload || !business) return;
+    if (entry) {
+      if (!venue) return;
+      setBusy(true);
+      setFailed(false);
+      const e = await exportEntryMembers(venue.id);
+      setBusy(false);
+      if (!e.ok) return setFailed(true);
+      const name = entryExportFileName(venue.name, isoOf(new Date()));
+      saveCsv(name, entryExportRows(e.value));
+      return showToast(t("{file} downloaded.", { file: name }));
+    }
+    if (!chosenRange || picked[0] === "entry") return;
     setBusy(true);
     setFailed(false);
     const r = await buildExport(business.id, picked[0], chosenRange);
@@ -179,6 +218,15 @@ export function ExportPage() {
           <RowsSkeleton rows={3} label={t("Loading reports")} />
         </>
       )}
+      {entry && entryVenues.length > 1 && (
+        <BizSection label={t("Venue")}>
+          {entryVenues.map((v, i) => (
+            <BizRow key={v.id} title={v.name} desc={v.system} radio={{ selected: entryVenue === i }} onClick={() => setEntryVenue(i)} />
+          ))}
+        </BizSection>
+      )}
+      {entry && <BizNote>{t("Every active member and today's changes. Each export is recorded.")}</BizNote>}
+      {!entry && (
       <BizSection label={t("Range")}>
         {[tk("Last 30 days"), tk("This year"), tk("Custom range")].map((label, i) => (
           <BizRow
@@ -194,6 +242,7 @@ export function ExportPage() {
           />
         ))}
       </BizSection>
+      )}
       <BizSection label={t("Format")}>
         <BizRow title={t("CSV (Excel, Google Sheets)")} radio={{ selected: true }} />
       </BizSection>

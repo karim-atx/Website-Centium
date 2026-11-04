@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bluetooth, DoorOpen, Nfc, QrCode, User } from "lucide-react";
+import { Bluetooth, DoorOpen, KeyRound, Nfc, QrCode, User } from "lucide-react";
 import { initials } from "../professionals/typeColour";
 import { dayMonthYear, membershipTag } from "../../services/venues/venueLogic";
 import { rotatePassToken, type GymMembership } from "../../services/venues";
@@ -11,7 +11,9 @@ import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
 import { usePassCode } from "./usePassCode";
 import { PassDevicesSheet } from "./PassDevicesSheet";
+import { EntrySharingStatus } from "./EntrySharingStatus";
 import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
+import { entrySystemDisplay } from "../../services/venues/entrySystem";
 import { t, tk } from "../../i18n/core";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
@@ -45,6 +47,15 @@ import { t, tk } from "../../i18n/core";
 // which the desk still accepts (phase one). "Get a new pass code" also
 // revokes every device secret, so the pass gets a new one after; "Your
 // devices" lists them, each removable (PassDevicesSheet).
+//
+// Round H (EU, 20261226380000): the QR code (the static pass_token) and the
+// pass code (the 30-second "pd:" value) are separate switches. Both draw in
+// the QR panel: the live code when the pass code is on and this device has a
+// secret, else the static token when QR is on. With only the pass code on and
+// no secret yet, no token is shown (the desk would refuse it, ATXU0), only
+// "Setting up your pass code". A gym with its own entry system may turn every
+// Centium method off: then no switch, QR, code, devices or Wallet, only the
+// line naming its system (Karim's decision 7).
 
 type Method = "qr" | "tap" | "bluetooth";
 
@@ -85,8 +96,11 @@ export function MembershipPass({
   gymLocation: string | null;
   memberName: string;
 }) {
+  const qrOn = membership.access.qr;
+  const codeOn = membership.access.passCode !== false;
+  const ownSystem = membership.entrySystem && membership.entrySystem !== "none" ? entrySystemDisplay(membership.entrySystem, membership.entrySystemName) : null;
   const methods: { key: Method; label: string; Icon: typeof QrCode }[] = [
-    ...(membership.access.qr ? [{ key: "qr" as const, label: "QR", Icon: QrCode }] : []),
+    ...(qrOn || codeOn ? [{ key: "qr" as const, label: "QR", Icon: QrCode }] : []),
     ...(membership.access.nfc ? [{ key: "tap" as const, label: t("Tap"), Icon: Nfc }] : []),
     ...(membership.access.bluetooth ? [{ key: "bluetooth" as const, label: "Bluetooth", Icon: Bluetooth }] : []),
   ];
@@ -118,7 +132,9 @@ export function MembershipPass({
     live.renew();
     setRotateNote({ text: t("Your pass has a new code. The old one no longer works."), error: false });
   };
-  const qrValue = live.value ?? token;
+  const liveOn = codeOn && !!live.value;
+  const qrValue = liveOn ? live.value : qrOn ? token : null;
+  const noCentium = methods.length === 0;
 
   return (
     <div className="flex flex-col items-center">
@@ -181,8 +197,22 @@ export function MembershipPass({
         </div>
 
         <div className="mt-4 flex flex-col items-center">
-          {method === "qr" &&
-            (live.value ? (
+          {noCentium && (
+            <NativePanel
+              disc={<KeyRound size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-accent" aria-hidden />}
+              title={t("{gym} uses its own entry system", { gym: membership.gymName })}
+              line={ownSystem ? t("Get in with {system}. Ask the front desk for yours.", { system: ownSystem }) : t("Ask the front desk how to get in.")}
+            />
+          )}
+          {!noCentium && method === "qr" && !qrValue && (
+            <NativePanel
+              disc={<QrCode size={64} strokeWidth={1.5} className="text-th-7d67d9 dark:text-primary-accent" aria-hidden />}
+              title={t("Setting up your pass code")}
+              line={online ? t("This takes a moment. Keep this screen open.") : t("Connect to the internet once to set up your pass code.")}
+            />
+          )}
+          {!noCentium && method === "qr" && qrValue &&
+            (liveOn ? (
               // AB5: the same box, its edge replaced by a thin ring that runs
               // down the 30 seconds (2px, primary on the soft edge colour).
               <div className="relative rounded-2xl bg-white p-3">
@@ -217,16 +247,19 @@ export function MembershipPass({
         </div>
       </div>
 
-      <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{t(UNDER[method])}</p>
-      {method === "qr" && live.value && (
+      {!noCentium && <p className="mt-2.5 mb-0 text-center text-[12px] text-charcoal-faint">{t(UNDER[method])}</p>}
+      {!noCentium && ownSystem && (
+        <p className="mt-1 mb-0 text-center text-[12px] text-charcoal-faint max-w-[300px]">{t("This gym also uses its own entry system ({system}).", { system: ownSystem })}</p>
+      )}
+      {!noCentium && method === "qr" && liveOn && (
         <p className="mt-1 mb-0 text-center text-[12px] text-charcoal-faint max-w-[300px]">{t("This code refreshes every 30 seconds. Screenshots won't work at the desk.")}</p>
       )}
-      {method === "qr" && !membership.cachedAt && (
+      {!noCentium && method === "qr" && !membership.cachedAt && (
         <div className="mt-1 flex items-center justify-center gap-4">
           <button type="button" onClick={() => setAsking(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
             {t("Get a new pass code")}
           </button>
-          {online && (
+          {online && codeOn && (
             <button type="button" onClick={() => setDevicesOpen(true)} className="tap text-[12px] font-bold text-primary-dark" style={{ minHeight: 32 }}>
               {t("Your devices")}
             </button>
@@ -249,6 +282,10 @@ export function MembershipPass({
         onCancel={() => setAsking(false)}
         onConfirm={() => void rotate()}
       />
+      {/* Round H: agree to (or stop) sharing with the gym's own entry system. */}
+      {ownSystem && membership.entrySystem && online && !membership.cachedAt && (
+        <EntrySharingStatus gymId={membership.gymId} gymName={membership.gymName} system={{ system: membership.entrySystem, name: membership.entrySystemName ?? null }} />
+      )}
       {/* V6-30: the device's short-lived offline copy is showing. */}
       {membership.cachedAt && (
         <p role="status" className="mt-1 mb-0 text-center text-[12px] font-semibold text-charcoal-faint">
@@ -258,15 +295,17 @@ export function MembershipPass({
 
       {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. Wallet
           passes are native (signed pass files), so it is drawn disabled. */}
-      <button
-        type="button"
-        disabled
-        aria-disabled="true"
-        title={t("Available in the Centium phone app")}
-        className="mt-2.5 w-[201px] h-[46px] rounded-xl bg-black text-white text-[14px] font-semibold disabled:opacity-40"
-      >
-        {isIOS() ? t("Add to Apple Wallet") : t("Add to Google Wallet")}
-      </button>
+      {!noCentium && (
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          title={t("Available in the Centium phone app")}
+          className="mt-2.5 w-[201px] h-[46px] rounded-xl bg-black text-white text-[14px] font-semibold disabled:opacity-40"
+        >
+          {isIOS() ? t("Add to Apple Wallet") : t("Add to Google Wallet")}
+        </button>
+      )}
     </div>
   );
 }

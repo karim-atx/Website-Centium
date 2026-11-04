@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Clock, LocateFixed, MapPin, MapPinOff, Minus, Pencil, Phone, Plus, ScanLine, Search, Store, Trash2 } from "lucide-react";
-import { BizButton, BizButtonSoft, BizConfirm, BizField, BizFieldButton, BizPage, BizRow, BizSection, BizSheet, LoadError, RowsSkeleton, SubHeader, LIST_BG } from "../../components/business-more/kit";
+import { BizButton, BizButtonSoft, BizConfirm, BizDropdown, BizField, BizFieldButton, BizLabel, BizNote, BizPage, BizRow, BizSection, BizSheet, LoadError, RowsSkeleton, SubHeader, LIST_BG } from "../../components/business-more/kit";
 import { useBizToast } from "../../components/business-more/useBizToast";
 import { useBusiness } from "../../components/business-more/useBusiness";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
@@ -27,6 +27,17 @@ import { fetchHoursTable } from "../../services/venues/console";
 import type { GymHoursTableRow } from "../../services/venues/consoleLogic";
 import { VenueHoursSheet } from "../../components/marketplace/VenueHoursSheet";
 import { AREAS } from "../../services/geo/areas";
+import {
+  anyCentiumMethod,
+  ENTRY_SYSTEM_NAME_MAX,
+  ENTRY_SYSTEMS,
+  entryMethodsProblem,
+  entrySystemDisplay,
+  entrySystemLabel,
+  usesOwnSystem,
+  type EntryMethods,
+  type EntrySystem,
+} from "../../services/venues/entrySystem";
 import type { Coords } from "../../services/geo/distance";
 
 import { t, tn } from "../../i18n/core";
@@ -250,17 +261,47 @@ export default function LocationsPage() {
 // B10 venue settings: entry and check-in (OURS sheet; the controls and their
 // words are OB-259's onboarding rows: "Front desk can check people in",
 // "Minimum age" 16 to 21, "Guest passes a month" 0 to 10).
+// Round H (EU, Karim's decision 2): the four Centium entry methods and the
+// gym's own entry system live here too. With an own system every Centium
+// method may be off; without one at least one stays on (the database's
+// access rule, checked here first). One Save writes them all at once.
+
+const ownLine = (m: EntryMethods) =>
+  usesOwnSystem(m)
+    ? anyCentiumMethod(m)
+      ? t("Own entry system: {name}", { name: entrySystemDisplay(m.system, m.systemName) })
+      : t("Own entry system only: {name}", { name: entrySystemDisplay(m.system, m.systemName) })
+    : null;
 
 const entryLine = (e: EntryRules) =>
-  `${t("{age} and over", { age: e.minEntryAge })} · ${tn(e.guestPassesPerMonth, "{n} guest pass a month", "{n} guest passes a month")} · ${e.frontDeskCheckIn ? t("Front desk check-in on") : t("Front desk check-in off")}`;
+  [
+    t("{age} and over", { age: e.minEntryAge }),
+    tn(e.guestPassesPerMonth, "{n} guest pass a month", "{n} guest passes a month"),
+    e.frontDeskCheckIn ? t("Front desk check-in on") : t("Front desk check-in off"),
+    ownLine(e.methods),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+const sameMethods = (a: EntryMethods, b: EntryMethods) =>
+  a.qr === b.qr && a.passCode === b.passCode && a.nfc === b.nfc && a.bluetooth === b.bluetooth && a.system === b.system && (a.systemName ?? "").trim() === (b.systemName ?? "").trim();
 
 function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onClose: () => void; onSaved: () => void }) {
   const online = useOnline();
   const [v, setV] = useState<EntryRules>(location.entry);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const dirty = v.minEntryAge !== location.entry.minEntryAge || v.guestPassesPerMonth !== location.entry.guestPassesPerMonth || v.frontDeskCheckIn !== location.entry.frontDeskCheckIn;
+  const [typeOpen, setTypeOpen] = useState(false);
+  const m = v.methods;
+  const setM = (next: Partial<EntryMethods>) => setV({ ...v, methods: { ...m, ...next } });
+  const problem = entryMethodsProblem(m);
+  const dirty =
+    v.minEntryAge !== location.entry.minEntryAge ||
+    v.guestPassesPerMonth !== location.entry.guestPassesPerMonth ||
+    v.frontDeskCheckIn !== location.entry.frontDeskCheckIn ||
+    !sameMethods(m, location.entry.methods);
   const save = async () => {
+    if (problem) return;
     setBusy(true);
     setError(null);
     const r = await updateEntryRules(location.id, v);
@@ -284,6 +325,10 @@ function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onC
       </span>
     </div>
   );
+  const method = (key: "qr" | "passCode" | "nfc" | "bluetooth", title: string, desc: string) => (
+    <BizRow title={title} desc={desc} toggle={{ checked: m[key], onChange: (on) => setM({ [key]: on }), label: title }} />
+  );
+  const own = usesOwnSystem(m);
   return (
     <BizSheet open onClose={onClose} title={t("Entry and check-in")} lead={t("How people come in at {name}.", { name: location.name })}>
       <div className={`rounded-[18px] ${LIST_BG}`} style={{ padding: "4px 0" }}>
@@ -291,8 +336,56 @@ function EntrySheet({ location, onClose, onSaved }: { location: BizLocation; onC
         {stepper(t("Minimum age"), v.minEntryAge, ENTRY_AGE_MIN, ENTRY_AGE_MAX, (n) => setV({ ...v, minEntryAge: n }))}
         {stepper(t("Guest passes a month"), v.guestPassesPerMonth, 0, GUEST_PASSES_MAX, (n) => setV({ ...v, guestPassesPerMonth: n }))}
       </div>
-      {error && <p className="mt-3 text-[12px] leading-[17px] font-bold text-status-high">{error}</p>}
-      <BizButton label={t("Save")} className="mt-4" onClick={() => void save()} disabled={!dirty || !online || busy} busy={busy} />
+
+      <div style={{ marginTop: 18 }}>
+        <BizLabel>{t("Centium entry methods")}</BizLabel>
+        <div className={`rounded-[18px] ${LIST_BG}`} style={{ padding: "4px 0" }}>
+          {method("qr", t("QR code"), t("Members show their pass's QR code at the desk."))}
+          {method("passCode", t("Pass code"), t("A code on the member's phone that changes every 30 seconds."))}
+          {method("nfc", t("Tap (NFC)"), t("Members tap their phone on a reader. Phone app only."))}
+          {method("bluetooth", t("Bluetooth"), t("The door opens when the phone is near. Phone app only."))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 18 }}>
+        <BizLabel>{t("Your own entry system")}</BizLabel>
+        <BizFieldButton id="entry-system-type" label={t("Entry system")} value={entrySystemLabel(m.system)} icon={ScanLine} expanded={typeOpen} onClick={() => setTypeOpen((o) => !o)} />
+        {typeOpen && (
+          <BizDropdown<EntrySystem>
+            label={t("Entry system")}
+            options={ENTRY_SYSTEMS.map((s) => ({ value: s, label: entrySystemLabel(s) }))}
+            value={m.system}
+            onPick={(s) => {
+              setTypeOpen(false);
+              setM({ system: s });
+            }}
+          />
+        )}
+        {own && (
+          <BizField
+            id="entry-system-name"
+            label={m.system === "other" ? t("Name of the system") : t("Name of the system (optional)")}
+            value={m.systemName ?? ""}
+            onChange={(name) => setM({ systemName: name.replace(/[\r\n]/g, " ") })}
+            maxLength={ENTRY_SYSTEM_NAME_MAX}
+            placeholder={m.system === "other" ? t("For example, DoorLink") : entrySystemLabel(m.system)}
+          />
+        )}
+        {own && (
+          <BizNote>
+            {anyCentiumMethod(m)
+              ? t("The front desk gets an Entry system tab listing who to add to it and who to take off. Members agree to the sharing when they join.")
+              : t("Members won't see a Centium pass here. The front desk gets an Entry system tab listing who to add to it and who to take off, and members agree to the sharing when they join.")}
+          </BizNote>
+        )}
+      </div>
+
+      {(problem || error) && (
+        <p role="alert" className="mt-3 text-[12px] leading-[17px] font-bold text-status-high">
+          {problem ?? error}
+        </p>
+      )}
+      <BizButton label={t("Save")} className="mt-4" onClick={() => void save()} disabled={!dirty || !!problem || !online || busy} busy={busy} />
     </BizSheet>
   );
 }

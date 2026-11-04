@@ -555,6 +555,7 @@ export async function previewMemberCode(
         grantsMembership: row.grants_membership === true,
         minEntryAge: row.min_entry_age == null ? null : Number(row.min_entry_age),
         expiresAt: row.expires_at,
+        gymId: row.gym_id ?? null,
       },
     };
   } catch (e) {

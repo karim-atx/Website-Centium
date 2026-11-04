@@ -32,6 +32,8 @@ import { ScanSheet, type CheckInPreset } from "./ScanSheet";
 import { ErrorCard } from "./frontDeskKit";
 import { expiredRows, expiredSub, type ExpiredRow } from "./expiredRows";
 import { useFrontDesk, type DeskState } from "./useFrontDesk";
+import { EntrySystemTab } from "./EntrySystemTab";
+import { useVenueEntrySystem } from "../../../components/marketplace/useVenueEntrySystem";
 import { INK, INK2, LAV, LIST_BG, MUTED, TINT } from "./deskWebTokens";
 import {
   WebChip,
@@ -67,16 +69,19 @@ import {
 // destinations are the mobile Front desk's, unchanged; the mobile page itself
 // is not touched.
 
-export type DeskTab = "entries" | "passes" | "memberships";
+export type DeskTab = "entries" | "passes" | "memberships" | "entry";
+// Round H (EU): "Entry system" is listed only while the desk venue keeps its own entry system.
 const TABS: { key: DeskTab; label: string }[] = [
   { key: "entries", label: tk("Entries") },
   { key: "passes", label: tk("Passes") },
   { key: "memberships", label: tk("Memberships") },
+  { key: "entry", label: tk("Entry system") },
 ];
 const TITLE: Record<DeskTab, string> = {
   entries: tk("Front desk"),
   passes: tk("Passes and renewals"),
   memberships: tk("Memberships"),
+  entry: tk("Entry system"),
 };
 
 const GAP = 24;
@@ -87,7 +92,7 @@ export const FrontDeskPageWeb: React.FC<{
 }> = ({ memberships }) => {
   const [params, setParams] = useSearchParams();
   const raw = params.get("tab");
-  const tab: DeskTab = raw === "passes" || raw === "memberships" ? raw : "entries";
+  const asked: DeskTab = raw === "passes" || raw === "memberships" || raw === "entry" ? raw : "entries";
   const setTab = (next: DeskTab) =>
     setParams(
       (p) => {
@@ -103,6 +108,9 @@ export const FrontDeskPageWeb: React.FC<{
   const online = useOnline();
   const { rail } = useWebLayout();
   const data = useFrontDesk();
+  const entrySystem = useVenueEntrySystem(data.deskGymId);
+  const tab: DeskTab = asked === "entry" && !entrySystem ? "entries" : asked;
+  const tabs = TABS.filter((x) => x.key !== "entry" || !!entrySystem);
   const gymIds = useMemo(() => data.venues.map((v) => v.gymId), [data.venues]);
   const [clock, setClock] = useState(() => new Date());
   usePoll(() => setClock(new Date()), 60_000);
@@ -161,7 +169,7 @@ export const FrontDeskPageWeb: React.FC<{
 
       <div style={{ flex: "none", height: "calc(100dvh - 64px)", minHeight: 480, boxSizing: "border-box" }}>
         <div style={{ maxWidth: 1280, height: "100%", boxSizing: "border-box", padding: "32px", display: "flex", flexDirection: "column" }}>
-          <WebUnderlineTabs tabs={TABS.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} idPrefix="fd" />
+          <WebUnderlineTabs tabs={tabs.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} idPrefix="fd" />
           {offlineLine && (
             <p role="status" style={{ margin: "-12px 2px 12px", fontSize: 13, lineHeight: "20px", color: MUTED }}>
               {offlineLine}
@@ -187,6 +195,11 @@ export const FrontDeskPageWeb: React.FC<{
               />
             )}
             {tab === "memberships" && memberships((open) => setAddPlan(() => open))}
+            {tab === "entry" && entrySystem && data.deskGymId && deskVenue && (
+              <div style={{ maxWidth: 720, overflowY: "auto" }}>
+                <EntrySystemTab gymId={data.deskGymId} venueName={deskVenue.name} system={entrySystem} online={online} />
+              </div>
+            )}
           </div>
         </div>
       </div>

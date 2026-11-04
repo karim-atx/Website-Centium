@@ -712,6 +712,10 @@ const business: Catalogue = {
   "Invited|section": "المدعوون",
   // == EH final: team seat blocks ==
   "Included seats": "المقاعد المشمولة",
+  // == Round H · Export reports › Entry system members ==
+  "Entry system members": "أعضاء نظام الدخول",
+  "Every active member and today's changes, for your entry system": "كل الأعضاء النشطين وتغييرات اليوم، لنظام الدخول الخاص بك",
+  "Every active member and today's changes. Each export is recorded.": "كل الأعضاء النشطين وتغييرات اليوم. يُسجَّل كل تصدير.",
 };
 
 export default business;

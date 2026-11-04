@@ -99,8 +99,8 @@ export const ScanSheet: React.FC<{
         }
         if (!isMissingDesk(r)) {
           setBusy(false);
-          // ATXE6 (desk check-in off) and ATX03 say why; anything else is C4.
-          const why = r.code === "ATXE6" || r.code === "ATX03" ? r.message : null;
+          // ATXE6 (desk check-in off), ATXU0 (Round H: that pass method is off) and ATX03 say why; anything else is C4.
+          const why = r.code === "ATXE6" || r.code === "ATXU0" || r.code === "ATX03" ? r.message : null;
           setResult({ view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: t("Scan again") } : VERIFY_FAILED_VIEW, check: null, ci: null });
           return;
         }
