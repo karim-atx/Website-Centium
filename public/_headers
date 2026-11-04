@@ -1,0 +1,12 @@
+# Cloudflare Pages response headers for centium.atraxia.org.
+#
+# Everything not listed keeps Pages' default (public, max-age=14400,
+# must-revalidate).
+#
+# /email/* is the logo the Database's emails load (_shared/email-layout.ts,
+# LOGO_URL). Its address is fixed and baked into every email already sent, so
+# it is cached for a year and never revalidated. NEVER replace the bytes at
+# the same address: a new logo gets a new file name, and the Database points
+# LOGO_URL at it.
+/email/*
+  Cache-Control: public, max-age=31536000, immutable
