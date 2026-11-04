@@ -7,6 +7,7 @@ import App from './App.tsx'
 import { preloadAppPages } from './appPagesLazy'
 import { installDigitNormaliser } from "./i18n/digitInput"
 import { ErrorBoundary } from './components/navigation/ErrorBoundary'
+import { isNative } from './platform'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //
@@ -24,12 +25,18 @@ import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 //
 // immediate: the worker calls clients.claim(), so it controls this page as
 // soon as it activates instead of from the next navigation.
-registerSW({
-  immediate: true,
-  onRegisterError(error) {
-    console.error('[pwa] Service worker registration failed:', error)
-  },
-})
+//
+// NOT IN THE PHONE APP. There the shell ships inside the app binary and push
+// arrives through APNs / FCM, so a worker would only cache a second copy of
+// files that are already local (mobile round Z, src/platform).
+if (!isNative()) {
+  registerSW({
+    immediate: true,
+    onRegisterError(error) {
+      console.error('[pwa] Service worker registration failed:', error)
+    },
+  })
+}
 
 // The web app's pages are their own chunk (appPagesLazy.ts): on an app
 // address its download starts now, alongside the session check.
