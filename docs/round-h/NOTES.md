@@ -51,17 +51,17 @@ Checked through the read-only proxy with no fixtures: the screens and pass are u
 
 ## Added before release (Karim, 2026-11-04)
 
-- **Change an enrolled member's ID:** Front desk › Entry system › Enrolled ().
-  - It lists  50 at a time, up to 200, searchable by first name, member number or ID.
+- **Change an enrolled member's ID:** Front desk › Entry system › Enrolled (`EntryEnrolledSection.tsx`).
+  - It lists `desk_entry_enrolled` 50 at a time, up to 200, searchable by first name, member number or ID.
   - The ID is masked on the list.
-  - "Change ID" opens a sheet with the ID in full. An empty field removes the ID (), and Save stays disabled until the value changes.
+  - "Change ID" opens a sheet with the ID in full. An empty field removes the ID (`set_entry_external_id`), and Save stays disabled until the value changes.
 - **The export on Export reports too:** "Entry system members", for the owner or a manager, when a venue keeps its own system.
   - It has no range; with several such venues, a venue picker.
-  - It writes the same file as the desk tab ().
+  - It writes the same file as the desk tab (`AppPages.tsx`).
   - The Export reports page exists only for business accounts. A professional who owns a gym exports from the desk tab.
-- **Names in the export history:** from , "by {name}", or "by a team member" when the name is unknown.
-- **Featured weeks with existing credits** (, ):
-  - a business that pays in the app with a free credit () keeps the item and start-day fields and books with "Book with a credit" (, owner only), with no price and no payment step;
+- **Names in the export history:** from `entry_exports.exported_by_first_name`, "by {name}", or "by a team member" when the name is unknown.
+- **Featured weeks with existing credits** (`FeatureSheets.tsx`, `featured.ts`):
+  - a business that pays in the app with a free credit (`my_featured_week_credits`) keeps the item and start-day fields and books with "Book with a credit" (`request_featured_week`, owner only), with no price and no payment step;
   - the toast says the week is live now, or the dates it runs;
   - ATXQ4 (none free, which another tab may have used) or no credit shows the app-only buy view. Buying stays in the app.
 
