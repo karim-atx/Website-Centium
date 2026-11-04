@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -b && vite build",
     "lint": "oxlint",
     "gen:themes": "node scripts/themes/generate.mjs",
     "test": "node --import ./scripts/register-test-hooks.mjs --test \"src/**/*.test.ts\"",
