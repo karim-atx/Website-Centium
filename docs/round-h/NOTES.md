@@ -49,8 +49,22 @@ Every read falls back to today's behaviour:
 
 Checked through the read-only proxy with no fixtures: the screens and pass are unchanged.
 
+## Added before release (Karim, 2026-11-04)
+
+- **Change an enrolled member's ID:** Front desk › Entry system › Enrolled ().
+  - It lists  50 at a time, up to 200, searchable by first name, member number or ID.
+  - The ID is masked on the list.
+  - "Change ID" opens a sheet with the ID in full. An empty field removes the ID (), and Save stays disabled until the value changes.
+- **The export on Export reports too:** "Entry system members", for the owner or a manager, when a venue keeps its own system.
+  - It has no range; with several such venues, a venue picker.
+  - It writes the same file as the desk tab ().
+  - The Export reports page exists only for business accounts. A professional who owns a gym exports from the desk tab.
+- **Names in the export history:** from , "by {name}", or "by a team member" when the name is unknown.
+- **Featured weeks with existing credits** (, ):
+  - a business that pays in the app with a free credit () keeps the item and start-day fields and books with "Book with a credit" (, owner only), with no price and no payment step;
+  - the toast says the week is live now, or the dates it runs;
+  - ATXQ4 (none free, which another tab may have used) or no credit shows the app-only buy view. Buying stays in the app.
+
 ## Not done
 
-- `set_entry_external_id` (changing an enrolled member's ID) has a service function but no screen. Enrolled members aren't listed anywhere.
-- The Export reports page doesn't offer the entry system export. It lives in the front desk tab, next to the lists it summarises.
-- The person who exported isn't resolved to a name.
+- Nothing left from Karim's list.
