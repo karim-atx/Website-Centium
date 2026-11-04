@@ -17,6 +17,7 @@ export const FILES: string[] = [
   "pages/business-ops/frontdesk/useFrontDesk.ts",
   "services/front-desk/entrySystem.ts",
   "pages/business-ops/frontdesk/EntrySystemTab.tsx",
+  "pages/business-ops/frontdesk/EntryEnrolledSection.tsx",
   "pages/business-ops/useActivityRefresh.ts",
   "pages/business-ops/appointments/AppointmentsRoutes.tsx",
   "pages/business-ops/classes/useCentium.ts",
@@ -1022,8 +1023,6 @@ const bizops: Catalogue = {
     many: "{n} صفًا",
     other: "{n} صف",
   },
-  "by you": "بواسطتك",
-  "by a manager": "بواسطة مدير",
   "{name} marked enrolled.": "سُجّلت إضافة {name}.",
   "{name} marked removed.": "سُجّلت إزالة {name}.",
   "Undone.": "تم التراجع.",
@@ -1036,6 +1035,23 @@ const bizops: Catalogue = {
   "weeks|repeat interval": "أسابيع",
   "sessions|count unit": "جلسات",
   "Steady|busyness": "معتدل",
+  // == Round H · the export history names who exported ==
+  "by {name}": "بواسطة {name}",
+  "by a team member": "بواسطة أحد أعضاء الفريق",
+  // == Round H · Entry system › Enrolled (search and Change ID) ==
+  "Enrolled|entry system": "المضافون إلى النظام",
+  "Change ID": "تغيير المعرّف",
+  "Change it here once you've changed it in your entry system. Leave it empty to remove it.": "غيّره هنا بعد تغييره في نظام الدخول الخاص بك. اتركه فارغًا لإزالته.",
+  "Change {name}'s ID": "تغيير معرّف {name}",
+  "Couldn't load the enrolled members.": "تعذّر تحميل الأعضاء المضافين.",
+  "First name, member number or ID": "الاسم الأول أو رقم العضوية أو المعرّف",
+  "No ID": "بلا معرّف",
+  "No enrolled member matches that.": "لا يوجد عضو مضاف يطابق ذلك.",
+  "Nobody is enrolled yet.": "لم يُضَف أحد بعد.",
+  "Search enrolled members": "البحث في الأعضاء المضافين",
+  "Search to find more": "ابحث للعثور على المزيد",
+  "{name}'s ID changed.": "تم تغيير معرّف {name}.",
+  "{name}'s ID removed.": "تمت إزالة معرّف {name}.",
 };
 
 export default bizops;

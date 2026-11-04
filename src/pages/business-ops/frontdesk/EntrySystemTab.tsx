@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Download, KeyRound, UserMinus, UserPlus } from "lucide-react";
-import { useApp } from "../../../context/AppContext";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { BizButton, BizField, BizSheet } from "../../../components/business-more/kit";
 import { Toast } from "../../../components/ui/Toast";
@@ -25,6 +24,7 @@ import { dayMonthYear } from "../../../services/venues/venueLogic";
 import { clock12 } from "../../../utils/time12";
 import { todayLocal } from "../../../utils/date";
 import { t, tn } from "../../../i18n/core";
+import { EntryEnrolledSection } from "./EntryEnrolledSection";
 import { ChipButton, DeskLabel, DeskRow, ErrorCard, ListCard, ListLine, NumberBoxes, NumberBoxesSkeleton, RowsSkeleton } from "./frontDeskKit";
 
 // Round H (EU, Karim's decisions 3, 4 and 6) · Front desk › Entry system: the
@@ -35,6 +35,8 @@ import { ChipButton, DeskLabel, DeskRow, ErrorCard, ListCard, ListLine, NumberBo
 //   with an optional external ID (the card or fob number, up to 64
 //   characters), prefilled with a renewal's previous ID.
 // - Memberships ending: desk_entry_ending. "Mark removed" clears the ID.
+// - Enrolled (EntryEnrolledSection): everyone already in the system, with
+//   search and "Change ID" (set_entry_external_id).
 // - Both marks can be undone for 10 minutes (the toast's Undo; ATXU6 after).
 // - Lists show only first names (Centium stores no surname) and the ID masked
 //   to its last 4; the enrol sheet and the export show it in full. Members who
@@ -69,7 +71,6 @@ function endingSub(r: Ending): string {
 }
 
 export const EntrySystemTab: React.FC<{ gymId: string; venueName: string; system: VenueEntrySystem; online: boolean }> = ({ gymId, venueName, system, online }) => {
-  const { authUserId } = useApp();
   const access = useConsoleAccess();
   const canExport = access.isOwner || access.current?.role === "manager";
   const [lists, setLists] = useState<{ gymId: string; value: EntryLists } | null>(null);
@@ -221,6 +222,8 @@ export const EntrySystemTab: React.FC<{ gymId: string; venueName: string; system
         </>
       )}
 
+      {current && <EntryEnrolledSection gymId={gymId} online={online} tick={tick} onSaved={(msg) => show(msg, null)} />}
+
       {canExport && (
         <>
           <DeskLabel>{t("Export")}</DeskLabel>
@@ -251,7 +254,7 @@ export const EntrySystemTab: React.FC<{ gymId: string; venueName: string; system
                       date: shortDay(e.exportedAt) ?? "",
                       time: clock12(e.exportedAt),
                       rows: tn(e.rowCount, "{n} row", "{n} rows"),
-                      who: e.exportedBy && e.exportedBy === authUserId ? t("by you") : t("by a manager"),
+                      who: e.exportedByName ? t("by {name}", { name: e.exportedByName }) : t("by a team member"),
                     })}
                   </li>
                 ))}

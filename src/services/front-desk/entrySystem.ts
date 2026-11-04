@@ -169,6 +169,63 @@ export async function fetchEntryLists(gymId: string): Promise<Result<EntryLists>
 }
 
 // ---------------------------------------------------------------------------
+// Enrolled members (desk_entry_enrolled, STABLE, front_desk): current, paid,
+// agreed, enrolled and not removed; the place to change an ID (a lost card).
+// p_search matches the first name or the external ID (contains, any case) or
+// the member number (digits or #digits); p_limit is clamped to 1–200.
+
+export interface EnrolledRow {
+  membership_id: string;
+  member_id: string;
+  member_number: string | number | null;
+  member_first_name: string | null;
+  plan_name: string | null;
+  starts_on: string | null;
+  expires_on: string | null;
+  external_id: string | null;
+  enrolled_at: string | null;
+  total_count: number | string | null;
+}
+
+export interface Enrolled {
+  membershipId: string;
+  memberNumber: string | null;
+  firstName: string;
+  planName: string | null;
+  startsOn: string | null;
+  expiresOn: string | null;
+  externalId: string | null;
+  enrolledAt: string | null;
+}
+
+export async function fetchEnrolled(gymId: string, search: string, limit = 50, offset = 0): Promise<Result<{ rows: Enrolled[]; total: number }>> {
+  const q = search.trim();
+  const { data, error } = await rpc<EnrolledRow[]>("desk_entry_enrolled", { p_gym_id: gymId, p_search: q || null, p_limit: limit, p_offset: offset });
+  if (error) {
+    if (isMissing(error)) return { ok: true, value: { rows: [], total: 0 } };
+    console.error("[entry system] Could not read the enrolled members:", error.message);
+    return fail(error, t("Couldn't load the enrolled members."));
+  }
+  const rows = data ?? [];
+  return {
+    ok: true,
+    value: {
+      total: Number(rows[0]?.total_count ?? rows.length),
+      rows: rows.map((r) => ({
+        membershipId: r.membership_id,
+        memberNumber: numberOf(r.member_number),
+        firstName: nameOf(r.member_first_name),
+        planName: r.plan_name?.trim() || null,
+        startsOn: r.starts_on,
+        expiresOn: r.expires_on,
+        externalId: r.external_id?.trim() || null,
+        enrolledAt: r.enrolled_at,
+      })),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // The marks (and their undo, within 10 minutes: ATXU6 after that)
 
 async function write(fn: string, args: Record<string, unknown>, fallback: string): Promise<Result<null>> {
@@ -213,14 +270,19 @@ export interface EntryExportLog {
   exportId: string;
   exportedAt: string;
   exportedBy: string | null;
+  /** entry_exports.exported_by_first_name; null when unknown. */
+  exportedByName: string | null;
   rowCount: number;
 }
 
 export async function fetchEntryExports(gymId: string, limit = 50): Promise<Result<EntryExportLog[]>> {
-  const { data, error } = await rpc<{ export_id: string; exported_at: string; exported_by: string | null; row_count: number }[]>("entry_exports", { p_gym_id: gymId, p_limit: limit });
+  const { data, error } = await rpc<{ export_id: string; exported_at: string; exported_by: string | null; exported_by_first_name?: string | null; row_count: number }[]>("entry_exports", { p_gym_id: gymId, p_limit: limit });
   if (error) {
     if (isMissing(error)) return { ok: true, value: [] };
     return fail(error, t("Couldn't load the export history."));
   }
-  return { ok: true, value: (data ?? []).map((r) => ({ exportId: r.export_id, exportedAt: r.exported_at, exportedBy: r.exported_by, rowCount: Number(r.row_count ?? 0) })) };
+  return {
+    ok: true,
+    value: (data ?? []).map((r) => ({ exportId: r.export_id, exportedAt: r.exported_at, exportedBy: r.exported_by, exportedByName: r.exported_by_first_name?.trim() || null, rowCount: Number(r.row_count ?? 0) })),
+  };
 }
