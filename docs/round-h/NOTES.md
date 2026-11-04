@@ -1,6 +1,6 @@
 # Round H (EU): gyms that keep their own entry system
 
-Built against the Database's Round H, migration `20261226380000`, "Round H · Gyms keep their own entry systems" in its `docs/HANDOVER_API.md`. The names below are the ones the Database session sent on 2026-11-04. EW (the email logo) shipped separately in #75.
+Built against the Database's Round H (Database-Atraxia PR #64), migration `20261226380000`, "Round H · Gyms keep their own entry systems" in its `docs/HANDOVER_API.md`. The names below are the ones the Database session sent on 2026-11-04. EW (the email logo) shipped separately in #75.
 
 ## Where each part lives
 
@@ -36,7 +36,10 @@ Built against the Database's Round H, migration `20261226380000`, "Round H · Gy
    - The member has to tick it before Confirm or Join.
    - The agreement is recorded first (`agree_to_gym_entry_sharing`, wording key `gym_entry_sharing_v1`), then the purchase or redemption runs.
 6. **External ID:** optional, trimmed, one line of up to 64 characters (ATXU4 otherwise).
-7. **With every Centium method off,** the pass shows "{gym} uses its own entry system" and its type, with no switch, QR, code, devices or Wallet.
+7. **Asking and withdrawing on the pass:** a member who joined before the gym set its own system is `needed` in `my_gym_entry_sharing`. Their pass asks for the same checkbox and an Agree button, and until then the desk sees them only as a count. Once they agree, the pass shows what is shared and "Stop sharing" (`withdraw_gym_entry_sharing`, behind a confirm), which puts them on Memberships ending.
+8. **At the desk,** scanning a pass whose method the gym turned off shows ATXU0 in words.
+9. **The enrol sheet** says the ID is never biometric data, as the handover requires.
+10. **With every Centium method off,** the pass shows "{gym} uses its own entry system" and its type, with no switch, QR, code, devices or Wallet.
 
 ## Before the Database is live
 
