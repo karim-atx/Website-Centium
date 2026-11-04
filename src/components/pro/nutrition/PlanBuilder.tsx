@@ -228,7 +228,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       )}
 
       {/* Day tabs (r6b tabsScroll6, h 34) */}
-      <div role="tablist" aria-label={t("Day")} className="flex items-center overflow-x-auto no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
+      <div role="tablist" aria-label={t("Day")} className="flex items-center scroll-row no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
         {days.map((d) => {
           const on = d.dayIndex === current;
           return (

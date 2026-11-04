@@ -19,7 +19,7 @@ export const Who: React.FC<{ r: SectionVals }> = ({ r }) => (
           {t("Built for people who show up.")}
         </h2>
       </div>
-      <div id="who-cards" style={{ margin: r.fourM, display: "grid", gridTemplateColumns: r.four, gridAutoFlow: r.fourFlow, gridAutoColumns: r.fourAuto, gap: "16px", overflowX: r.fourOv, scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y", scrollPadding: "0 20px", padding: r.fourP, scrollbarWidth: "none" }}>
+      <div id="who-cards" style={{ margin: r.fourM, display: "grid", gridTemplateColumns: r.four, gridAutoFlow: r.fourFlow, gridAutoColumns: r.fourAuto, gap: "16px", overflowX: r.fourOv, overflowY: r.fourOv === "auto" ? "hidden" : undefined, scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y", scrollPadding: "0 20px", padding: r.fourP, scrollbarWidth: "none" }}>
         <div data-inst="0" style={{ scrollSnapAlign: "start", padding: "24px", borderRadius: "18px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.14)", boxShadow: "0 1px 2px rgba(72,58,130,.05),0 10px 24px rgba(72,58,130,.05)", display: r.instDisp, flexDirection: "column-reverse", justifyContent: "flex-end", gridTemplateColumns: r.instCols, gap: "18px", alignItems: r.instAlignI, textAlign: r.instAlign }}>
           <div style={{ position: "relative", width: r.instS, height: r.instS, margin: "0 auto" }}>
             <svg viewBox="0 0 120 120" style={{ width: "100%", height: "100%" }}>

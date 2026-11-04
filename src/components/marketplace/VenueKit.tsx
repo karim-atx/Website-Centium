@@ -410,7 +410,7 @@ export const VEmptyCard: React.FC<{ icon: LucideIcon; title: string; body?: Reac
 /** K14 · Text tabs: gap 20, tab padding 8 0 10, 13.5 (active 800 ink), 2px #AEA1DC · #A991FE underline. */
 export function VTextTabs<V extends string>({ tabs, value, onChange, label }: { tabs: { value: V; label: string }[]; value: V; onChange: (v: V) => void; label: string }) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-[20px] border-b border-th-ebeaf6 dark:border-th-aea1dc/[0.16] mb-[16px] overflow-x-auto no-scrollbar">
+    <div role="tablist" aria-label={label} className="flex gap-[20px] border-b border-th-ebeaf6 dark:border-th-aea1dc/[0.16] mb-[16px] scroll-row no-scrollbar">
       {tabs.map((t) => {
         const on = t.value === value;
         return (

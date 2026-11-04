@@ -100,7 +100,7 @@ export function ExploreTabs<T extends string>({ items, active, onChange }: { ite
 /** chipRow10: scrolling, gap 8; chips r10 pad 7 13, 12, 1px 11% border (active fill, onFill 700; else card, text.soft 600). */
 export function ChipRow<T extends string>({ items, active, onChange }: { items: { key: T; label: string }[]; active: T; onChange: (k: T) => void }) {
   return (
-    <div className="scroll-row no-scrollbar flex" style={{ gap: 8, marginBottom: 12, overflowX: "auto" }}>
+    <div className="scroll-row no-scrollbar flex" style={{ gap: 8, marginBottom: 12 }}>
       {items.map((c) => {
         const on = c.key === active;
         return (

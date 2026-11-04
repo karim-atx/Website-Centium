@@ -76,7 +76,7 @@ export function HeroGallery({ photos }: { photos: string[] }) {
     <>
       <div
         data-hero-gallery=""
-        className="absolute inset-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="absolute inset-0 flex scroll-row snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         onScroll={(e) => {
           const el = e.currentTarget;
           const i = el.clientWidth ? Math.round(inlineScrolled(el) / el.clientWidth) : 0;

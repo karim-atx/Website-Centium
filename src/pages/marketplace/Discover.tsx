@@ -436,7 +436,7 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
     ref.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [chosen]);
   return (
-    <div ref={ref} role="group" aria-label={t("Day")} className="no-scrollbar" style={{ margin: "12px -16px 0", padding: "0 16px", display: "flex", gap: 8, overflowX: "auto", scrollbarWidth: "none" }}>
+    <div ref={ref} role="group" aria-label={t("Day")} className="scroll-row no-scrollbar" style={{ margin: "12px -16px 0", padding: "0 16px", display: "flex", gap: 8, scrollbarWidth: "none" }}>
       {days.map((d) => {
         const on = d === chosen;
         const date = atNoon(d);

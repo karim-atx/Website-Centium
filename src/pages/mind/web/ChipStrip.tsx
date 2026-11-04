@@ -58,7 +58,7 @@ export function ChipStrip<K extends string>({ items, active, onChange, label }: 
   const cw = m.w.toFixed(2);
   return (
     <div className="flex flex-col" style={{ flex: "none", gap: 8 }}>
-      <div ref={rowRef} role="tablist" aria-label={label} onScroll={measure} className="mind-web-noscroll flex" style={{ flexWrap: "nowrap", gap: 6, overflowX: "auto" }}>
+      <div ref={rowRef} role="tablist" aria-label={label} onScroll={measure} className="scroll-row mind-web-noscroll flex" style={{ flexWrap: "nowrap", gap: 6 }}>
         {items.map((c) => {
           const on = c.key === active;
           return (
