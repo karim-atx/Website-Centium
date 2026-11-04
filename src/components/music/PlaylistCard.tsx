@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Music2, Play } from "lucide-react";
 import { textPx, linePx } from "../../theme/textSize";
 import { lookupPlaylist, type PlaylistMeta } from "../../services/music/lookup";
@@ -18,6 +18,10 @@ import { t } from "../../i18n/core";
 // "{Service} playlist". "Play in {Service}" is a plain link to the playlist:
 // on a phone with the app installed, the service's universal link opens the
 // app; otherwise the browser. No sign-in and nothing read from any account.
+//
+// Round I (EY): the lookup is a request to the service (Spotify's oEmbed and
+// its cover image), so it waits until the card is near the screen: opening a
+// page whose card is never scrolled to asks the service nothing.
 
 const INK = "rgb(var(--c-charcoal))";
 const INK_SOFT = "rgb(var(--c-charcoal-soft))";
@@ -39,6 +43,20 @@ export const MusicTile: React.FC<{ size: number }> = ({ size }) => (
     <Music2 size={Math.round(size * 0.44)} color="#FFFFFF" strokeWidth={2.2} />
   </span>
 );
+
+/** True once the element has come within 200 px of the screen (and stays true). */
+function useNearScreen(ref: React.RefObject<Element | null>): boolean {
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (near || !el) return;
+    if (typeof IntersectionObserver === "undefined") return setNear(true);
+    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setNear(true), { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref, near]);
+  return near;
+}
 
 function usePlaylistMeta(url: string | null): PlaylistMeta | null {
   const [meta, setMeta] = useState<PlaylistMeta | null>(null);
@@ -105,12 +123,15 @@ export const PlaylistCard: React.FC<{
   style?: React.CSSProperties;
 }> = ({ url, heading, className, style }) => {
   const service = playlistServiceOf(url);
-  const meta = usePlaylistMeta(service ? url : null);
+  const ref = useRef<HTMLElement>(null);
+  const near = useNearScreen(ref);
+  const meta = usePlaylistMeta(service && near ? url : null);
   if (!service) return null;
   const kind = isAlbum(url) ? "album" : "playlist";
   const title = meta?.title ?? (kind === "album" ? t("{service} album", { service: SERVICE_LABEL[service] }) : t("{service} playlist", { service: SERVICE_LABEL[service] }));
   return (
     <section
+      ref={ref}
       aria-label={heading ? `${heading}: ${title}` : title}
       className={className}
       style={{ borderRadius: 14, padding: 12, background: "rgb(var(--c-cream-card))", border: `0.5px solid ${HAIRLINE}`, ...style }}
