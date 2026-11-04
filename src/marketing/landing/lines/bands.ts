@@ -157,10 +157,63 @@ interface BandLine extends BaseLine {
   lag: number;
 }
 
+/** Round 6 (F3, handoff-landing-fix SPEC F3 rule 2): the band's soft top and
+ *  bottom, drawn into the canvas (transparent at 0 and 100% of its height,
+ *  opaque from 30% to 70%) instead of a CSS mask, which some browsers did not
+ *  apply to the canvas. */
+const FADE = 0.3;
+
 export class Band extends Base<BandOptions, BandLine> {
+  private dprMq: MediaQueryList | null = null;
+  private onDpr = () => {
+    this.armDpr();
+    this.resize();
+  };
+
   constructor(cv: HTMLCanvasElement, opt: Partial<BandOptions>) {
     super(cv, opt, { n: 7, alpha: 0.55, seed: 2026 });
     this.resize();
+    this.armDpr();
+  }
+
+  /** Re-size when the device pixel ratio changes (browser zoom, another
+   *  screen): a resolution query for the current ratio, re-armed each time. */
+  private armDpr() {
+    this.dprMq?.removeEventListener("change", this.onDpr);
+    this.dprMq = null;
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    this.dprMq = window.matchMedia("(resolution: " + (window.devicePixelRatio || 1) + "dppx)");
+    this.dprMq.addEventListener("change", this.onDpr);
+  }
+
+  /** A fresh 2D context (after a lost or dropped surface). */
+  context() {
+    this.ctx = this.cv.getContext("2d") ?? this.ctx;
+    return this.ctx;
+  }
+
+  lost(): boolean {
+    const c = this.ctx as CanvasRenderingContext2D & { isContextLost?: () => boolean };
+    return !!c.isContextLost?.();
+  }
+
+  dispose() {
+    this.dprMq?.removeEventListener("change", this.onDpr);
+    this.dprMq = null;
+  }
+
+  private fade(W: number, H: number) {
+    const c = this.ctx;
+    c.save();
+    c.globalCompositeOperation = "destination-in";
+    const g = c.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(FADE, "#000");
+    g.addColorStop(1 - FADE, "#000");
+    g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g;
+    c.fillRect(-2, -2, W + 4, H + 4);
+    c.restore();
   }
 
   resize() {
@@ -198,6 +251,7 @@ export class Band extends Base<BandOptions, BandLine> {
     hk?.begin(W, H, p);
     if (p <= 0.002) {
       hk?.end(W, H, p);
+      this.fade(W, H);
       return;
     }
     c.lineJoin = "round";
@@ -221,6 +275,7 @@ export class Band extends Base<BandOptions, BandLine> {
       this.line(l, pts, tt);
     }
     hk?.end(W, H, p);
+    this.fade(W, H);
   }
 }
 

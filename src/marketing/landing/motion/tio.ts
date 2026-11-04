@@ -262,6 +262,17 @@ export class Tio implements BandHooks {
       }
     }
     if (!this.on) op = 0;
+    // Round 6 (handoff-landing-fix SPEC F3 rule 4): his box stays inside the
+    // canvas (canvas y 0 to H; y here is canvas y - 120), allowing for the
+    // tilt about the surfer's 50% 92% origin.
+    if (H > 0) {
+      const a = (Math.abs(rot) * Math.PI) / 180,
+        oy = this.kind === "surf" ? 0.92 : 0.5,
+        side = (w / 2) * Math.sin(a),
+        up = Math.max(0, side - oy * h * (1 - Math.cos(a))),
+        down = Math.max(0, side - (1 - oy) * h * (1 - Math.cos(a)));
+      y = Math.min(H - 120 - h - down, Math.max(-120 + up, y));
+    }
     this.state.x = x;
     this.state.y = y;
     this.state.rot = rot;
