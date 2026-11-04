@@ -314,6 +314,9 @@ function EnrolSheet({ row, system, online, onClose, onDone }: { row: ToEnrol; sy
         placeholder={t("For example, 0042117")}
         error={id === false ? t("Use one line of up to {n} characters for the ID.", { n: EXTERNAL_ID_MAX }) : error}
       />
+      <p className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ margin: "-4px 2px 12px" }}>
+        {t("Only a card, fob or member number. Never fingerprints, face data or any other biometric data.")}
+      </p>
       <BizButton label={t("Mark enrolled")} onClick={() => void save()} disabled={!online || busy || id === false} busy={busy} />
     </BizSheet>
   );

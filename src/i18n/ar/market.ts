@@ -39,6 +39,7 @@ export const FILES: string[] = [
   "components/marketplace/MembershipPass.tsx",
   "components/marketplace/EntrySharingCheck.tsx",
   "components/marketplace/useVenueEntrySystem.ts",
+  "components/marketplace/EntrySharingStatus.tsx",
   "services/venues/entrySystem.ts",
   "components/marketplace/MembershipStatusBadge.tsx",
   "components/marketplace/PassQr.tsx",
@@ -516,6 +517,17 @@ const market: Catalogue = {
   "Agree to share your membership with the gym's entry system first.": "وافق أولًا على مشاركة عضويتك مع نظام الدخول في النادي.",
   "Couldn't save your agreement. Try again.": "تعذّر حفظ موافقتك. حاول مرة أخرى.",
   "That Centium entry method is turned off at this venue.": "طريقة الدخول هذه من Centium متوقفة في هذا المكان.",
+  // == Round H (EU) · agreeing to, or stopping, the sharing (under the pass) ==
+  Agree: "موافقة",
+  "Keep sharing": "متابعة المشاركة",
+  "Stop sharing with {system}?": "إيقاف المشاركة مع {system}؟",
+  "Thanks. The front desk can now add you to {system}.": "شكرًا. يمكن للاستقبال الآن إضافتك إلى {system}.",
+  "You share your first name, member number and membership dates with {system}.": "تشارك اسمك الأول ورقم عضويتك وتواريخ عضويتك مع {system}.",
+  "You've stopped sharing. {gym} will take you off {system}.": "أوقفت المشاركة. سيزيلك {gym} من {system}.",
+  "{gym} needs your agreement to add you to {system}.": "يحتاج {gym} إلى موافقتك لإضافتك إلى {system}.",
+  "{gym} will be told to take you off its entry system, so you may not be able to get in. Ask the front desk how to get in after this.": "سيُطلب من {gym} إزالتك من نظام الدخول الخاص به، فقد لا تتمكن من الدخول. اسأل الاستقبال عن طريقة الدخول بعد ذلك.",
+  "Couldn't load your sharing with the gym's entry system.": "تعذّر تحميل مشاركتك مع نظام الدخول في النادي.",
+  "Couldn't stop sharing. Try again.": "تعذّر إيقاف المشاركة. حاول مرة أخرى.",
   "Couldn't load this venue's entry system.": "تعذّر تحميل نظام الدخول لهذا المكان.",
 };
 

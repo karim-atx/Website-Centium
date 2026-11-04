@@ -717,6 +717,9 @@ export function deskMessage(code: string | undefined, fallback: string): string 
   switch (code) {
     case "ATXE6":
       return t("Check-in at the desk is turned off for this venue.");
+    // Round H: the pass's method (the static QR or the 30-second code) is off here.
+    case "ATXU0":
+      return t("That Centium entry method is turned off at this venue.");
     case "ATXE7":
       return t("They're under this venue's minimum entry age.");
     case "ATXC4":

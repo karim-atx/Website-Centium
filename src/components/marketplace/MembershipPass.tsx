@@ -11,6 +11,7 @@ import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
 import { usePassCode } from "./usePassCode";
 import { PassDevicesSheet } from "./PassDevicesSheet";
+import { EntrySharingStatus } from "./EntrySharingStatus";
 import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
 import { entrySystemDisplay } from "../../services/venues/entrySystem";
 import { t, tk } from "../../i18n/core";
@@ -281,6 +282,10 @@ export function MembershipPass({
         onCancel={() => setAsking(false)}
         onConfirm={() => void rotate()}
       />
+      {/* Round H: agree to (or stop) sharing with the gym's own entry system. */}
+      {ownSystem && membership.entrySystem && online && !membership.cachedAt && (
+        <EntrySharingStatus gymId={membership.gymId} gymName={membership.gymName} system={{ system: membership.entrySystem, name: membership.entrySystemName ?? null }} />
+      )}
       {/* V6-30: the device's short-lived offline copy is showing. */}
       {membership.cachedAt && (
         <p role="status" className="mt-1 mb-0 text-center text-[12px] font-semibold text-charcoal-faint">

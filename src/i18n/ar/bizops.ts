@@ -1029,6 +1029,7 @@ const bizops: Catalogue = {
   "Undone.": "تم التراجع.",
   "Once they're added to {system}.": "بعد الإضافة إلى {system}.",
   "Card, fob or user ID (optional)": "رقم البطاقة أو المفتاح أو المستخدم (اختياري)",
+  "Only a card, fob or member number. Never fingerprints, face data or any other biometric data.": "رقم بطاقة أو مفتاح أو عضوية فقط. لا تُدخل أبدًا بصمات الأصابع أو بيانات الوجه أو أي بيانات بيومترية أخرى.",
   "For example, 0042117": "مثلًا، 0042117",
   // Round G clash fix: the same English with another meaning in this area.
   "End membership|business": "إنهاء العضوية",

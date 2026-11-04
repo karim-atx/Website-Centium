@@ -544,6 +544,36 @@ export async function agreeToGymEntrySharing(gymId: string): Promise<Result<stri
   return { ok: true, value: data ?? null };
 }
 
+/** my_gym_entry_sharing(): one row per gym where the member holds a current membership or a consent. */
+export interface EntrySharing {
+  gymId: string;
+  agreed: boolean;
+  agreedAt: string | null;
+  /** The gym has its own system, the member holds a current membership there and hasn't agreed: ask. */
+  needed: boolean;
+}
+
+export async function fetchMyEntrySharing(): Promise<Result<EntrySharing[]>> {
+  const { data, error } = await rpc<{ gym_id: string; agreed: boolean | null; agreed_at: string | null; needed: boolean | null }[]>("my_gym_entry_sharing");
+  if (error) {
+    // A database before Round H: nothing to ask or withdraw.
+    if (error.code === "PGRST202" || error.code === "42883") return { ok: true, value: [] };
+    console.error("[venues] Could not read the entry system sharing:", error.message);
+    return { ok: false, code: error.code, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't load your sharing with the gym's entry system.") };
+  }
+  return { ok: true, value: (data ?? []).map((r) => ({ gymId: r.gym_id, agreed: r.agreed === true, agreedAt: r.agreed_at, needed: r.needed === true })) };
+}
+
+/** withdraw_gym_entry_sharing(gym): the gym's desk is then told to take the member off its system. */
+export async function withdrawGymEntrySharing(gymId: string): Promise<Result<boolean>> {
+  const { data, error } = await rpc<boolean>("withdraw_gym_entry_sharing", { p_gym_id: gymId });
+  if (error) {
+    console.error("[venues] Could not withdraw the entry system sharing:", error.message);
+    return { ok: false, code: error.code, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't stop sharing. Try again.") };
+  }
+  return { ok: true, value: data === true };
+}
+
 // ---------------------------------------------------------------------------
 // Stage A4: opening hours and "open now" (MO1.4.2.1 #8-9). Both functions are
 // public (anon + authenticated) and raise no ATX code; gym_hours_for()
