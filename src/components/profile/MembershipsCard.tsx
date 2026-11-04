@@ -25,7 +25,9 @@ import {
 import { useOnline } from "../../hooks/useOnline";
 import { useNavigate } from "react-router-dom";
 import { MemberTag } from "../marketplace/MemberTag";
-import { endMyGymMembership, fetchGymBusinessIds, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { agreeToGymEntrySharing, endMyGymMembership, fetchGymBusinessIds, fetchMembershipTerms, fetchMyGymMemberships, type GymMembership } from "../../services/venues";
+import { EntrySharingCheck } from "../marketplace/EntrySharingCheck";
+import { useVenueEntrySystem } from "../marketplace/useVenueEntrySystem";
 import { NameSharingCard } from "./NameSharingCard";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { commitmentLines, dayMonthYear, membershipTag, validRange } from "../../services/venues/venueLogic";
@@ -136,6 +138,10 @@ export const MembershipsCard: React.FC = () => {
   /** The last preview, for the code it was read for (null value: the code can't be used). */
   const [preview, setPreview] = useState<{ code: string; value: CodePreview | null } | null>(null);
   const current = preview && preview.code === code.trim() ? preview : null;
+  // Round H (EU): a code for a gym with its own entry system needs the member's tick first (ATXU1).
+  const codeGymId = current?.value?.grantsMembership ? current.value.gymId ?? null : null;
+  const codeEntrySystem = useVenueEntrySystem(codeGymId);
+  const [shareAgreed, setShareAgreed] = useState(false);
   /** A refusal (kept beside the code box) or the success line (shown above the list). */
   const [redeemNote, setRedeemNote] = useState<{ text: string; ok: boolean } | null>(null);
   const [tick, setTick] = useState(0);
@@ -228,6 +234,7 @@ export const MembershipsCard: React.FC = () => {
     const r = await previewMemberCode(asked);
     setChecking(false);
     if (!r.ok) return setRedeemNote({ text: r.message, ok: false });
+    setShareAgreed(false);
     setPreview({ code: asked, value: r.value });
   };
 
@@ -240,6 +247,18 @@ export const MembershipsCard: React.FC = () => {
     const before = gymMemberships;
     // The previewed business, in case the membership list can't be re-read.
     const previewed = current?.value?.businessName ?? null;
+    if (codeEntrySystem && codeGymId) {
+      if (!shareAgreed) {
+        setRedeeming(false);
+        return;
+      }
+      const a = await agreeToGymEntrySharing(codeGymId);
+      if (!a.ok) {
+        setRedeeming(false);
+        setRedeemNote({ text: a.message, ok: false });
+        return;
+      }
+    }
     const result = await redeemMemberCode(code);
     if (!result.ok) {
       setRedeeming(false);
@@ -286,7 +305,12 @@ export const MembershipsCard: React.FC = () => {
               {l}
             </p>
           ))}
-          <Button className="mt-3" fullWidth onClick={() => void redeem()} disabled={redeeming}>
+          {codeEntrySystem && (
+            <div className="mt-2">
+              <EntrySharingCheck gymName={current.value.gymName ?? current.value.businessName} system={codeEntrySystem} checked={shareAgreed} onChange={setShareAgreed} />
+            </div>
+          )}
+          <Button className="mt-3" fullWidth onClick={() => void redeem()} disabled={redeeming || (!!codeEntrySystem && !shareAgreed)}>
             {redeeming ? t("Joining…") : t("Join")}
           </Button>
         </div>

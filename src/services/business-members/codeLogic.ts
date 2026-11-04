@@ -1,4 +1,5 @@
 import type { PlanKind } from "../membership-plans/types";
+import { entryCodeMessage } from "../venues/entrySystem";
 import { KIND_LABEL } from "../../pages/business-ops/plans/planModel";
 import { shortDay } from "../../pages/business-team/teamLogic";
 
@@ -90,6 +91,8 @@ export function describeRedeemRefusal(serverMessage: string | null | undefined):
  */
 export function describeRedeemError(error: Err, offline: boolean): string {
   if (offline) return OFFLINE_LINE;
+  // Round H: the gym keeps its own entry system and the sharing wasn't agreed (the card asks first).
+  if (error.code === "ATXU1") return entryCodeMessage(error.code)!;
   if (error.code === "ATX02") return `Too many tries. Wait ${waitPhrase(error.message).replace(/^in /, "")} and try again.`;
   if (error.code === "ATXAB" || /ATXAB/.test(error.message ?? "")) {
     if (/paused/i.test(error.message ?? "")) return "This business is paused and isn't taking new members right now. Try again later.";
@@ -136,6 +139,8 @@ export interface CodePreview {
   grantsMembership: boolean;
   minEntryAge: number | null;
   expiresAt: string;
+  /** Round H: the gym the granted membership is at (null for a plain member code). */
+  gymId?: string | null;
 }
 
 /**

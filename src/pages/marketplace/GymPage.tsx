@@ -14,6 +14,8 @@ import { PopupMenu } from "../../components/ui/PopupMenu";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { Toast } from "../../components/ui/Toast";
 import { MembershipPass } from "../../components/marketplace/MembershipPass";
+import { EntrySharingCheck } from "../../components/marketplace/EntrySharingCheck";
+import { useVenueEntrySystem } from "../../components/marketplace/useVenueEntrySystem";
 import { MemberTag } from "../../components/marketplace/MemberTag";
 import { GymReviews } from "../../components/marketplace/GymReviews";
 import { ClassCard } from "../../components/marketplace/ClassCard";
@@ -32,6 +34,7 @@ import {
   fetchVenue,
   fetchVenueOpenNow,
   fetchVenuePhotos,
+  agreeToGymEntrySharing,
   purchaseGymMembership,
   type GymMembership,
   type ReviewSummary,
@@ -153,6 +156,9 @@ export function GymPage({ gymId }: { gymId: string }) {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  // Round H (EU): the gym's own entry system, and the member's tick for sharing with it.
+  const entrySystem = useVenueEntrySystem(gym?.id);
+  const [shareAgreed, setShareAgreed] = useState(false);
   // memberDone: what was bought, until Done.
   const [done, setDone] = useState<{ planName: string; until: string; price: string } | null>(null);
   const [passOpen, setPassOpen] = useState(false);
@@ -474,13 +480,24 @@ export function GymPage({ gymId }: { gymId: string }) {
     if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: p.id });
     setPlanId(p.id);
     setCheckoutError(null);
+    setShareAgreed(false);
     setCheckoutOpen(true);
   };
 
   const confirm = async () => {
     if (busy || !plan || !online) return;
+    if (entrySystem && !shareAgreed) return;
     setBusy(true);
     setCheckoutError(null);
+    // Round H: the agreement is recorded first; the purchase is refused without it (ATXU1).
+    if (entrySystem) {
+      const a = await agreeToGymEntrySharing(gym.id);
+      if (!a.ok) {
+        setBusy(false);
+        setCheckoutError(a.message);
+        return;
+      }
+    }
     const r = await purchaseGymMembership(gym.id, plan.id);
     if (!r.ok) {
       setBusy(false);
@@ -799,10 +816,11 @@ export function GymPage({ gymId }: { gymId: string }) {
         cashHint={t("Pay at the front desk on your first visit")}
         ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : t("Confirm")}
         busy={busy}
-        disabled={!online}
+        disabled={!online || (!!entrySystem && !shareAgreed)}
         error={checkoutError}
         note={
           <>
+            {entrySystem && <EntrySharingCheck gymName={gym.name} system={entrySystem} checked={shareAgreed} onChange={setShareAgreed} />}
             <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>{t("Your pass works once the gym marks it paid.")}</p>
             {!online && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
           </>

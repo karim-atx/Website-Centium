@@ -1,9 +1,11 @@
 import { supabase } from "../../../lib/supabase/client";
+import { ENTRY_SHARING_WORDING_KEY, entryCodeMessage, toEntrySystem, type EntrySystem } from "./entrySystem";
 import { directoryCall, directoryErrorText } from "../directory/eg";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import { hostedImageUrl, stage4Message, storagePath, type Billing, type GymMembershipStatus, type PassState, type PlanLite } from "./venueLogic";
 import type { HoursRow } from "./hours";
-import { isOffline } from "../network-error";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 import { CLOSED_BUY_MEMBERSHIP, closureMessage, isBusinessClosedError } from "../business-closure/logic";
 import { readPassCache, writePassCache } from "./passCache";
 import type { PlanKind } from "../membership-plans/types";
@@ -101,7 +103,14 @@ export interface GymMembership {
   /** The database's single derived truth: active AND paid AND unexpired. */
   passValid: boolean;
   passState: PassState;
-  access: { qr: boolean; nfc: boolean; bluetooth: boolean };
+  /**
+   * The venue's Centium methods. Round H: passCode (gyms.access_pass_code) is
+   * absent on an older reader or device copy, which reads as on.
+   */
+  access: { qr: boolean; nfc: boolean; bluetooth: boolean; passCode?: boolean };
+  /** Round H: the venue's own entry system ('none' when absent). */
+  entrySystem?: EntrySystem;
+  entrySystemName?: string | null;
   /** V6-30: set when this row is the device's offline copy (ISO time it was saved). */
   cachedAt?: string;
   /** Set to end when the period runs out (end_gym_membership at period end): "Ends {date}". */
@@ -159,6 +168,10 @@ type MembershipRow = {
   /** CN (20261203000000): appended last. Null-safe for an older stack. */
   granted?: boolean | null;
   plan_type?: PlanKind | null;
+  /** Round H (20261226380000): appended last. Null-safe for an older stack. */
+  access_pass_code?: boolean | null;
+  entry_system?: string | null;
+  entry_system_name?: string | null;
 };
 
 const VENUE_COLUMNS =
@@ -394,7 +407,9 @@ export async function fetchMyGymMemberships(): Promise<Result<GymMembership[]>> 
     passToken: r.pass_token,
     passValid: r.pass_valid,
     passState: r.pass_state,
-    access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth },
+    access: { qr: r.access_qr, nfc: r.access_nfc, bluetooth: r.access_bluetooth, passCode: r.access_pass_code !== false },
+    entrySystem: toEntrySystem(r.entry_system),
+    entrySystemName: r.entry_system_name?.trim() || null,
     cancelAtPeriodEnd: r.cancel_at_period_end === true,
     granted: r.granted === true,
     planType: r.plan_type ?? null,
@@ -505,9 +520,28 @@ export async function purchaseGymMembership(gymId: string, planId: string): Prom
   if (error || !data) {
     console.error("[venues] Could not create the membership:", error?.message);
     if (error && isBusinessClosedError(error)) return { ok: false, code: error.code, message: closureMessage(CLOSED_BUY_MEMBERSHIP, error.message) };
+    // Round H: ATXU1, the gym keeps its own entry system and the sharing wasn't agreed.
+    if (error?.code === "ATXU1") return { ok: false, code: error.code, message: entryCodeMessage(error.code)! };
     return error ? fail(error, "Couldn't book that membership. Try again.") : { ok: false, message: "Couldn't book that membership. Try again." };
   }
   return { ok: true, value: data };
+}
+
+// ---------------------------------------------------------------------------
+// Round H (EU): a gym that keeps its own entry system adds its members to it,
+// so buying there (purchase_gym_membership) or redeeming a code for it needs
+// the member's agreement first (ATXU1 otherwise). agree_to_gym_entry_sharing
+// records which wording was shown; agreeing again keeps the first time. A
+// renewal needs nothing new. ATXU5: the gym has no own system (nothing to agree to).
+
+export async function agreeToGymEntrySharing(gymId: string): Promise<Result<string | null>> {
+  const { data, error } = await rpc<string>("agree_to_gym_entry_sharing", { p_gym_id: gymId, p_wording_key: ENTRY_SHARING_WORDING_KEY });
+  if (error) {
+    console.error("[venues] Could not record the entry system agreement:", error.message);
+    if (error.code === "ATXU5") return { ok: true, value: null };
+    return { ok: false, code: error.code, message: isOffline(error) ? OFFLINE_MESSAGE : entryCodeMessage(error.code) ?? t("Couldn't save your agreement. Try again.") };
+  }
+  return { ok: true, value: data ?? null };
 }
 
 // ---------------------------------------------------------------------------

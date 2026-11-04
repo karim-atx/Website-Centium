@@ -12,6 +12,7 @@ import { premiumCodeMessage } from "../premium/model";
 import type { HoursRow } from "../venues/hours";
 import type { BusinessTypeValue, StoreSettings } from "./types";
 import { t, tk } from "../../i18n/core";
+import { systemNameForSave, toEntrySystem, type EntryMethods } from "../venues/entrySystem";
 import { contactRefusal, moderationRefusal } from "../moderation/text";
 
 export type { BusinessTypeValue, StoreSettings } from "./types";
@@ -489,23 +490,32 @@ export interface BizLocation {
   entry: EntryRules;
 }
 
-/** B10 "Venue settings": gyms.min_entry_age (16 to 21), guest_passes_per_month (0 to 10), front_desk_checkin. */
+/**
+ * B10 "Venue settings": gyms.min_entry_age (16 to 21), guest_passes_per_month
+ * (0 to 10), front_desk_checkin; Round H (EU): the four Centium entry methods
+ * and the gym's own entry system (services/venues/entrySystem.ts).
+ */
 export interface EntryRules {
   minEntryAge: number;
   guestPassesPerMonth: number;
   frontDeskCheckIn: boolean;
+  methods: EntryMethods;
 }
 
 export const ENTRY_AGE_MIN = 16;
 export const ENTRY_AGE_MAX = 21;
 export const GUEST_PASSES_MAX = 10;
 
+const LOCATION_COLUMNS =
+  "id, name, location, lat, lng, public_phones, venue_kind, default_cancellation_hours, timezone, min_entry_age, guest_passes_per_month, front_desk_checkin, access_qr, access_nfc, access_bluetooth, created_at";
+// Round H (20261226380000). A database without them (42703) reads as the pass
+// code on and no own system, the state every venue had before.
+const ROUND_H_COLUMNS = ", access_pass_code, entry_system, entry_system_name";
+
 export async function fetchLocations(businessId: string): Promise<Result<BizLocation[]>> {
-  const { data, error } = await db
-    .from("gyms")
-    .select("id, name, location, lat, lng, public_phones, venue_kind, default_cancellation_hours, timezone, min_entry_age, guest_passes_per_month, front_desk_checkin, created_at")
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: true });
+  const read = (cols: string) => db.from("gyms").select(cols).eq("business_id", businessId).order("created_at", { ascending: true });
+  let { data, error } = await read(LOCATION_COLUMNS + ROUND_H_COLUMNS);
+  if (error?.code === "42703") ({ data, error } = await read(LOCATION_COLUMNS));
   if (error) return fail(error, t("Couldn't load your locations."));
   const rows = (data ?? []) as Record<string, unknown>[];
   const hours = await Promise.all(rows.map((r) => fetchGymHours(r.id as string)));
@@ -526,6 +536,14 @@ export async function fetchLocations(businessId: string): Promise<Result<BizLoca
         minEntryAge: Number(r.min_entry_age ?? ENTRY_AGE_MIN),
         guestPassesPerMonth: Number(r.guest_passes_per_month ?? 2),
         frontDeskCheckIn: r.front_desk_checkin !== false,
+        methods: {
+          qr: r.access_qr !== false,
+          passCode: r.access_pass_code !== false,
+          nfc: r.access_nfc === true,
+          bluetooth: r.access_bluetooth === true,
+          system: toEntrySystem(r.entry_system),
+          systemName: (r.entry_system_name as string | null) ?? null,
+        },
       },
     })),
   };
@@ -589,15 +607,42 @@ export async function updateLocation(gymId: string, d: LocationDraft, originalPh
  * gyms_guest_passes_range 0 to 10), the same clamp onboarding uses.
  */
 export async function updateEntryRules(gymId: string, v: EntryRules): Promise<Result<EntryRules>> {
+  const m = v.methods;
   const row = {
     min_entry_age: Math.min(ENTRY_AGE_MAX, Math.max(ENTRY_AGE_MIN, Math.round(v.minEntryAge))),
     guest_passes_per_month: Math.min(GUEST_PASSES_MAX, Math.max(0, Math.round(v.guestPassesPerMonth))),
     front_desk_checkin: v.frontDeskCheckIn,
+    // Round H: one update, so the access rule (a Centium method or an own
+    // system) is checked against the whole new state, never half of it.
+    access_qr: m.qr,
+    access_pass_code: m.passCode,
+    access_nfc: m.nfc,
+    access_bluetooth: m.bluetooth,
+    entry_system: m.system,
+    entry_system_name: systemNameForSave(m),
   };
-  const { data, error } = await db.from("gyms").update(row).eq("id", gymId).select("id");
-  if (error) return fail(error, t("Couldn't save the entry rules. Try again."));
+  let { data, error } = await db.from("gyms").update(row).eq("id", gymId).select("id");
+  // A database before Round H has no access_pass_code / entry_system columns:
+  // save the rest when the new settings are still the old defaults.
+  if (error && (error.code === "PGRST204" || error.code === "42703") && m.passCode && m.system === "none") {
+    const { access_pass_code: _p, entry_system: _s, entry_system_name: _n, ...older } = row;
+    ({ data, error } = await db.from("gyms").update(older).eq("id", gymId).select("id"));
+  }
+  if (error) {
+    // 23514: gyms_access_method_check or the name's checks (the sheet checks first; a race lands here).
+    if (error.code === "23514") return { ok: false, code: error.code, message: t("Keep at least one Centium method on, or choose your own entry system.") };
+    return fail(error, t("Couldn't save the entry rules. Try again."));
+  }
   if (!data || data.length === 0) return { ok: false, code: "42501", message: t("You need the Venues permission to change this. Ask the owner.") };
-  return { ok: true, value: { minEntryAge: row.min_entry_age, guestPassesPerMonth: row.guest_passes_per_month, frontDeskCheckIn: row.front_desk_checkin } };
+  return {
+    ok: true,
+    value: {
+      minEntryAge: row.min_entry_age,
+      guestPassesPerMonth: row.guest_passes_per_month,
+      frontDeskCheckIn: row.front_desk_checkin,
+      methods: { ...m, systemName: row.entry_system_name },
+    },
+  };
 }
 
 /** Upcoming classes at a venue in the next 30 days (the remove guard). */
