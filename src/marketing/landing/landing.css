@@ -13,6 +13,15 @@ html.centium-site-html body {
   overflow-x: clip;
 }
 
+/* A desktop pinned stage is one screen tall and fitted as one block
+   (motion/fitPin.ts, handoff-landing-fix SPEC F2 rule 4): its children and
+   their children never shrink, or 06's 500px slide area shrank under its
+   cards' indicator. */
+.centium-site [data-fitpin] > *,
+.centium-site [data-fitpin] > * > * {
+  flex-shrink: 0 !important;
+}
+
 .centium-site summary::-webkit-details-marker {
   display: none;
 }

@@ -1,5 +1,5 @@
-import React, { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import React, { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigationType } from "react-router-dom";
 import { useSEO } from "../useSEO";
 import { t } from "../../i18n/core";
 import { Intro } from "../landing/sections/Intro";
@@ -15,6 +15,7 @@ import type { EngineSection } from "../landing/engine/scrollEngine";
 import { ANCHOR_OFFSET, anchorTarget, useMarketingNav } from "../landing/navigation";
 import { SectionHostContext, type SectionHost } from "../landing/sectionHost";
 import type { LandingMotion } from "../landing/motion";
+import { audienceOf, landOnAudience, type AUDIENCE_CLICK } from "../landing/audience";
 
 // Centium landing v29 (handover handoff-centium, prototype "Centium Site
 // v29.dc.html"). This page is the eager landing shell: the markup of the
@@ -49,8 +50,36 @@ export const Home: React.FC = () => {
   // A mid-page reload (entry.at) is kept the same way (B4 QA): its first
   // scroll (MarketingLayout) runs before the lazy sections exist, so the page
   // was too short and the position was lost (2494 instead of 6000 at 390,
-  // the page end at 1440).
-  const pendingAt = useRef<number | null>(entry.at);
+  // the page end at 1440). A reload at /#business or /#professionals lands on
+  // section 06 instead (the audience effect below).
+  const pendingAt = useRef<number | null>(audienceOf(location.hash) ? null : entry.at);
+
+  // The footer's audience links (handoff-landing-fix SPEC F5,
+  // landing/audience.ts): a click on this page lands smoothly at once; any
+  // other arrival at /#professionals or /#business (a shared link, a reload,
+  // another page, back / forward) waits for the loader and section 06, lands
+  // instantly, and aims again 700 ms later, after late layout.
+  const navType = useNavigationType();
+  useEffect(() => {
+    const aud = audienceOf(location.hash);
+    if (!aud) return;
+    const timers: number[] = [];
+    const clicked = navType === "PUSH" && !!(location.state as Partial<typeof AUDIENCE_CLICK> | null)?.audienceClick;
+    if (clicked) timers.push(landOnAudience(aud, false));
+    else {
+      let n = 0;
+      const poll = () => {
+        if (landingState.get().loaded && document.getElementById("eco-track")) {
+          timers.push(landOnAudience(aud, true));
+          timers.push(window.setTimeout(() => timers.push(landOnAudience(aud, true)), 700));
+        } else if (++n < 300) timers.push(window.setTimeout(poll, 100));
+      };
+      poll();
+    }
+    return () => timers.forEach((id) => window.clearTimeout(id));
+    // Once per history entry.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
 
   // The lazy sections reach the scroll engine through this host; sections
   // that mount before the motion chunk has arrived wait in `queued`.

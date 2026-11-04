@@ -5,8 +5,9 @@
 // Businesses toggle switches between two sets of five slides; both sets stay
 // mounted (the hidden one display:none), as in the prototype. Desktop: a
 // 300vh track pins the stage and scrolling (or the arrows, the arrow keys, or
-// a drag) moves the carousel; mobile: a swipe carousel of equal cards (432px,
-// 400px under 380px) with the slide's mobile copy and graphic.
+// a drag) moves the carousel; mobile: a swipe carousel of equal cards (as
+// tall as the tallest one's content, fitted to the screen: motion/fitPin.ts)
+// with the slide's mobile copy and graphic.
 // Motion: motion/eco.ts, registered with the page's scroll engine.
 // Landing update: switching the toggle starts again at the first box (C10,
 // both languages). Right to left (C9, C10): the first option is on the right
@@ -23,6 +24,8 @@ import { ecoSets } from "./eco/data";
 import type { SectionVals } from "./sectionVals";
 import { SectionHostContext } from "../sectionHost";
 import { EcoMotion } from "../motion/eco";
+import { fitEcoPhone, fitStage, useFit } from "../motion/fitPin";
+import { audienceToggle } from "../audience";
 import { isRtl, t, tk } from "../../../i18n/core";
 import { dirSign } from "../engine/env";
 import { tablistKeys, useIndicator } from "./segmented";
@@ -40,7 +43,8 @@ const CLAMP2: React.CSSProperties = { display: "-webkit-box", WebkitLineClamp: 2
 
 export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => {
   const host = useContext(SectionHostContext);
-  const [seg, setSeg] = useState(0);
+  // A footer audience link may have asked for one before this mounted.
+  const [seg, setSeg] = useState(() => audienceToggle.peek() ?? 0);
   const motion = useRef<EcoMotion | null>(null);
   // Pro 04 shows two chat bubbles where three would push the call card out of
   // the graphic: under 400px (prototype: under 380px; at 390 its third bubble
@@ -58,6 +62,28 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
       motion.current = null;
     };
   }, [host]);
+
+  // The footer's audience links (handoff-landing-fix SPEC F5, landing/audience.ts).
+  useEffect(() => {
+    audienceToggle.clear();
+    return audienceToggle.subscribe((i) => setSeg(i));
+  }, []);
+
+  // Rounds 6 and 7 (SPEC F2, F4, motion/fitPin.ts): desktop, the stage is one
+  // screen tall and scaled to fit when needed, its 500px slide area never
+  // shrinking under the indicator; phones, every card one height, so the
+  // toggle, a card and the indicator fit below the navbar together.
+  const track = useRef<HTMLDivElement>(null),
+    stage = useRef<HTMLDivElement>(null);
+  useFit(
+    () => {
+      if (!track.current || !stage.current) return;
+      fitEcoPhone(track.current);
+      fitStage(stage.current);
+    },
+    () => [stage.current?.firstElementChild ?? null, ...Array.from(track.current?.querySelectorAll("[data-mobg]") ?? [])],
+    [r, sets, seg],
+  );
 
   // Prototype: setState({ seg }, () => this.measure()).
   const first = useRef(true);
@@ -89,14 +115,17 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
   const segRef = useRef<HTMLDivElement>(null);
   const ind = useIndicator(segRef, seg, SEGS.length);
   // Mobile card height: the prototype's fitEco sets every card to
-  // padding * 2 + text area + 16 + graphic area = 432px (400px under 380px).
+  // padding * 2 + text area + 16 + graphic area = 432px (400px under 380px),
+  // the first render's height: fitEcoPhone then sets the measured one.
   const cardH = r.lg ? r.slH : vw < 380 ? "400px" : "432px";
 
   return (
-    <div id="eco-track" data-screen-label="EC1 v6 Beyond the individual" style={{ position: "relative", zIndex: "2", height: r.ecoH }}>
+    <div ref={track} id="eco-track" data-screen-label="EC1 v6 Beyond the individual" style={{ position: "relative", zIndex: "2", height: r.ecoH }}>
       <div
+        ref={stage}
         id="everyone"
-        style={{ position: r.pinPos, top: "0", minHeight: r.pinMin, padding: `${r.pinPad} 0`, display: "flex", flexDirection: "column", justifyContent: "center", overflow: "hidden" }}
+        data-fitpin={r.lg ? "" : undefined}
+        style={{ position: r.pinPos, top: "0", height: r.pinH, minHeight: r.pinMin, padding: `${r.pinPad} 0`, display: "flex", flexDirection: "column", justifyContent: "center", overflow: "hidden" }}
       >
         <div style={{ maxWidth: "1240px", margin: "0 auto", width: "100%", padding: `0 ${r.px}`, textAlign: "center" }}>
           <ChapterMark n="06" t={t("Beyond the individual")} size={r.chEy} />

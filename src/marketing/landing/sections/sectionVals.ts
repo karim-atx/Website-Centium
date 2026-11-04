@@ -26,7 +26,11 @@ export function sectionVals(vw: number, vh: number) {
     chEy: lg ? "clamp(15px,1.55vw,22px)" : vw < 380 ? "12px" : "13px",
     chEyD: lg ? "clamp(14px,1.35vw,19px)" : "11px",
     pinPos: (pin ? "sticky" : "relative") as "sticky" | "relative",
-    pinMin: lg ? VH : "0",
+    // Round 6 (handoff-landing-fix SPEC F2 rule 1): a pinned stage (03, 04,
+    // 06) is exactly one screen tall, its content fitted inside it
+    // (motion/fitPin.ts); it used to be min-height 100svh and grew past it.
+    pinH: lg ? VH : "auto",
+    pinMin: "0",
     pinPad: lg ? "88px" : "56px",
     dotsDisp: lg ? "none" : "flex",
     eF8: lg ? "8px" : "12px",
