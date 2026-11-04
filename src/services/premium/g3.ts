@@ -20,6 +20,7 @@
 import { t, tk, tn } from "../../i18n/core";
 import { isMissingFunction } from "./g2";
 import type { MyPremium } from "./model";
+import { surgeryDate, type DatePrecision } from "../../utils/recordDates";
 
 type Row = Record<string, unknown>;
 type Err = { code?: string | null; message?: string | null; details?: string | null; status?: number | null } | null | undefined;
@@ -666,7 +667,7 @@ export interface DoctorSummary {
   medications: { name: string; dose: string | null; route: string | null; times: string | null; notes: string | null }[];
   allergies: { allergen: string; severity: string | null; note: string | null }[];
   conditions: string[];
-  surgeries: { name: string; date: string | null }[];
+  surgeries: { name: string; date: string | null; datePrecision: DatePrecision }[];
   bloodPressure: {
     readings: number;
     averageSystolic: number | null;
@@ -718,7 +719,10 @@ export function parseDoctorSummary(data: unknown): DoctorSummary | null {
     conditions: strList(r.conditions),
     surgeries: rowsOf(r.surgeries).flatMap((s) => {
       const name = str(s.name);
-      return name ? [{ name, date: ymd(s.date) }] : [];
+      // date_precision (Database #62): "day" when missing or unknown, so a
+      // summary from before it was added still prints its full date.
+      const datePrecision: DatePrecision = s.date_precision === "month" || s.date_precision === "year" ? s.date_precision : "day";
+      return name ? [{ name, date: ymd(s.date), datePrecision }] : [];
     }),
     bloodPressure: bp
       ? {
@@ -790,7 +794,7 @@ export function summarySections(s: DoctorSummary, formatDay: (ymd: string) => st
   out.push({ key: "allergies", title: t("Allergies"), lines: s.allergies.map((a) => join([a.allergen, a.severity, a.note])), empty: t("No allergies recorded.") });
   // note: health wording
   out.push({ key: "conditions", title: t("Conditions"), lines: [...s.conditions], empty: t("No conditions recorded.") });
-  out.push({ key: "surgeries", title: t("Surgeries"), lines: s.surgeries.map((x) => join([x.name, day(x.date)])), empty: t("No surgeries recorded.") });
+  out.push({ key: "surgeries", title: t("Surgeries"), lines: s.surgeries.map((x) => join([x.name, x.date ? surgeryDate({ date: x.date, datePrecision: x.datePrecision }, formatDay) : null])), empty: t("No surgeries recorded.") });
   const bp = s.bloodPressure;
   const bpLines: string[] = [];
   if (bp && bp.readings > 0) {

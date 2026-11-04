@@ -50,6 +50,8 @@ import {
   trendLocked,
   trendResults,
 } from "./g3.ts";
+import { setActiveLanguage } from "../../i18n/core.ts";
+import { surgeryDate } from "../../utils/recordDates.ts";
 
 const ON = { premiumOn: true, premium: false };
 const PREMIUM = { premiumOn: true, premium: true };
@@ -319,6 +321,49 @@ test("the doctor summary's sections: every part in order, weight only when given
   const empty = summarySections(parseDoctorSummary({ period: {}, person: null, medications: [], allergies: [], conditions: [], surgeries: [], blood_pressure: { readings: 0 }, weight: null, lab_results: [] })!);
   assert.ok(empty.every((x) => x.lines.length === 0 && !!x.empty));
   assert.equal(parseDoctorSummary(null), null);
+});
+
+test("the summary's surgeries print each date at its precision (Database #62's date_precision)", () => {
+  const day = (ymd: string) => `day(${ymd})`; // stands in for the page's full-date format
+  const s = parseDoctorSummary({
+    ...SUMMARY,
+    surgeries: [
+      { name: "Tonsillectomy", date: "2001-01-01", date_precision: "year" },
+      { name: "Appendectomy", date: "2019-06-14", date_precision: "day" },
+      { name: "Knee arthroscopy", date: "2025-03-01", date_precision: "month" },
+      { name: "Bunion", date: "2020-02-02" }, // no date_precision: a summary from before #62
+      { name: "Wisdom teeth", date: "2018-05-05", date_precision: "decade" }, // unknown: full date
+    ],
+  })!;
+  assert.deepEqual(s.surgeries.map((x) => x.datePrecision), ["year", "day", "month", "day", "day"]);
+  const lines = summarySections(s, day).find((x) => x.key === "surgeries")!.lines;
+  assert.equal(lines[0], "Tonsillectomy · 2001");
+  // A full date is the page's day format, exactly as before.
+  assert.equal(lines[1], "Appendectomy · day(2019-06-14)");
+  assert.equal(lines[2], "Knee arthroscopy · Mar 2025");
+  assert.equal(lines[3], "Bunion · day(2020-02-02)");
+  assert.equal(lines[4], "Wisdom teeth · day(2018-05-05)");
+});
+
+test("a month-only surgery is the month and year in Arabic too, as the History tab shows it", () => {
+  setActiveLanguage("ar");
+  try {
+    const s = parseDoctorSummary({ ...SUMMARY, surgeries: [{ name: "Knee", date: "2025-03-01", date_precision: "month" }] })!;
+    const line = summarySections(s).find((x) => x.key === "surgeries")!.lines[0];
+    const historyTab = surgeryDate({ date: "2025-03-01", datePrecision: "month" });
+    assert.equal(line, `Knee · ${historyTab}`);
+    assert.match(historyTab, /2025/);
+    assert.doesNotMatch(historyTab, /Mar/);
+  } finally {
+    setActiveLanguage("en");
+  }
+});
+
+test("surgeryDate, moved to utils/recordDates, gives the History tab the same dates as before", () => {
+  assert.equal(surgeryDate({ date: "2026-07-14", datePrecision: "day" }), "Jul 14, 2026");
+  assert.equal(surgeryDate({ date: "2026-07-14" }), "Jul 14, 2026");
+  assert.equal(surgeryDate({ date: "2026-07-01", datePrecision: "month" }), "Jul 2026");
+  assert.equal(surgeryDate({ date: "2026-01-01", datePrecision: "year" }), "2026");
 });
 
 test("the summary's period, file name and lines", () => {

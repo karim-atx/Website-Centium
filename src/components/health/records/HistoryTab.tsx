@@ -39,7 +39,7 @@ import {
   INK_FAINT,
 } from "./kit";
 import { t, tk } from "../../../i18n/core";
-import { appLocale } from "../../../i18n/format";
+import { surgeryDate } from "../../../utils/recordDates";
 
 // HE1.9.c · History tab (the repo's Medical history and Medications tabs in
 // one): Conditions as chips (saved on tap, "Add another" → our Condition
@@ -457,19 +457,7 @@ const OwnHistoryWeb: React.FC<{
   );
 };
 
-/** B2 surgeries.date_precision: "14 Jul 2026" / "Jul 2026" / "2026". */
-export function surgeryDate(s: Pick<Surgery, "date" | "datePrecision">): string {
-  const p = s.datePrecision ?? "day";
-  if (p === "year") return s.date.slice(0, 4);
-  if (p === "month") {
-    // The month and the year only (the stored day is the 1st). English used to
-    // cut the day out of "Jan 1, 2019" and kept "1, 2019".
-    const [y, m] = s.date.split("-").map(Number);
-    if (!y || !m || m > 12) return fmtDate(s.date);
-    return new Date(y, m - 1, 1).toLocaleDateString(appLocale("en-US"), { month: "short", year: "numeric" });
-  }
-  return fmtDate(s.date);
-}
+// surgeryDate (B2 surgeries.date_precision) lives in utils/recordDates, shared with the doctor summary.
 
 // ---------------------------------------------------------------------------
 // OURS-history-forms

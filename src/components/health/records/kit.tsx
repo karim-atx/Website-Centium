@@ -4,7 +4,6 @@ import { CentredPopup } from "../../ui/CentredPopup";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useHealthMode, hairline } from "../metric/MetricKit";
 import { t, tk } from "../../../i18n/core";
-import { appLocale } from "../../../i18n/format";
 
 // Shared pieces of the Biomarkers & imaging page (HE1.9 family,
 // docs/health-b-handover.md lines 614-2863). Every value is the handover's
@@ -13,16 +12,8 @@ import { appLocale } from "../../../i18n/format";
 
 export { useHealthMode, hairline };
 
-/** "Sep 14, 2026" from yyyy-mm-dd (no time zone shift). */
-export function fmtDate(iso: string | null | undefined): string {
-  if (!iso) return "–";
-  const [y, m, d] = iso.split("-").map(Number);
-  if (!y || !m || !d) return "–";
-  const loc = appLocale();
-  if (loc) return new Date(y, m - 1, d).toLocaleDateString(loc, { month: "short", day: "numeric", year: "numeric" });
-  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1];
-  return `${month} ${d}, ${y}`;
-}
+/** "Sep 14, 2026" from yyyy-mm-dd (no time zone shift); lives in utils/recordDates, shared with the doctor summary. */
+export { fmtDate } from "../../../utils/recordDates";
 
 /** "30 to 100" / "under 3.0" / "above 30" / "–" (HE1.9 #22, no unit). */
 export function rangeText(low: number | null | undefined, high: number | null | undefined): string {
