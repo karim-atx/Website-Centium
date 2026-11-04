@@ -184,7 +184,10 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       setError(result.message);
       setBusy(false);
     }
-    // On success the browser is already leaving; `busy` stays set.
+    // The phone app's chooser was closed: back to the form, nothing to say.
+    if (result.status === "cancelled") setBusy(false);
+    // On success the browser is already leaving (web), or the session has
+    // arrived and the effect above moves on (the phone app); `busy` stays set.
   };
 
   const handleSignIn = async () => {

@@ -5,6 +5,8 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { HealthChecksProvider } from "./context/HealthChecksContext";
 import { Button } from "./components/ui/Button";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
+import { NativeAppGate } from "./components/native/NativeAppGate";
+import { isNative } from "./platform";
 import { hasReturnedAuthError } from "./services/auth";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -643,6 +645,8 @@ export default function App() {
       </HealthChecksProvider>
       {/* Above everything: another tab changed the account (tabIdentity.ts). */}
       <TabIdentityNotice />
+      {/* The phone app's version gate (app_config); nothing on the web. */}
+      {isNative() && <NativeAppGate />}
     </AppProvider>
   );
 }

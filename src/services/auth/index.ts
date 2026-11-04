@@ -7,6 +7,8 @@ import {
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
 import { getLanguage, tk } from "../../i18n/core";
+import { isNative } from "../../platform";
+import { CentiumNative } from "../../platform/native";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
@@ -236,7 +238,11 @@ export async function signInWithEmail(email: string, password: string, captchaTo
   return { status: "signed_in" };
 }
 
-export type OAuthResult = { status: "redirecting" } | { status: "error"; message: string };
+export type OAuthResult =
+  | { status: "redirecting" }
+  | { status: "signed_in" }
+  | { status: "cancelled" }
+  | { status: "error"; message: string };
 
 /**
  * Google needs no email-confirmation step — Google itself is the
@@ -267,6 +273,7 @@ export type OAuthResult = { status: "redirecting" } | { status: "error"; message
  * are shared with.
  */
 export async function signInWithGoogle(): Promise<OAuthResult> {
+  if (isNative()) return signInWithGoogleNative();
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -277,6 +284,47 @@ export async function signInWithGoogle(): Promise<OAuthResult> {
 
   if (error) return { status: "error", message: describeAuthError(error) };
   return { status: "redirecting" };
+}
+
+/** A random nonce and its SHA-256, both hex: Google gets the hash, Supabase the raw value. */
+export async function makeNonce(): Promise<{ raw: string; hashed: string }> {
+  const hex = (bytes: ArrayBuffer | Uint8Array) =>
+    Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+  const raw = hex(crypto.getRandomValues(new Uint8Array(32)));
+  const hashed = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw)));
+  return { raw, hashed };
+}
+
+/**
+ * IN THE PHONE APP Google refuses its sign-in page inside a WebView, so the
+ * app asks the phone's own Google sign-in (Credential Manager on Android) for
+ * an ID token and gives it to Supabase (mobile round Z, Z1.3). No redirect,
+ * so no redirect URL; no CAPTCHA, which Supabase doesn't ask of an ID token.
+ *
+ * The chooser shows every time, for the same reason as `prompt` above. The
+ * nonce check stays on (the Database's auth steps, section 2): Google signs
+ * the hash into the token and Supabase checks it against the raw value.
+ */
+async function signInWithGoogleNative(): Promise<OAuthResult> {
+  const serverClientId = import.meta.env.NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim();
+  if (!serverClientId) {
+    console.error("[auth] NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID is not set for this build.");
+    return { status: "error", message: tk("Google sign-in isn't available in this version of the app.") };
+  }
+  const nonce = await makeNonce();
+  let idToken: string;
+  try {
+    ({ idToken } = await CentiumNative.googleSignIn({ serverClientId, nonce: nonce.hashed }));
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "cancelled") return { status: "cancelled" };
+    console.error("[auth] native Google sign-in:", code, (e as Error).message);
+    if (code === "no_account") return { status: "error", message: tk("Add a Google account to this phone first, then try again.") };
+    return { status: "error", message: tk("Google sign-in didn't work. Try again, or use your email.") };
+  }
+  const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: idToken, nonce: nonce.raw });
+  if (error) return { status: "error", message: describeAuthError(error) };
+  return { status: "signed_in" };
 }
 
 /**

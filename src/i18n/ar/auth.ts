@@ -1167,6 +1167,11 @@ const auth: Catalogue = {
   "You've signed out in another tab.": "سجّلت الخروج في علامة تبويب أخرى.",
   "Continue as {account}": "المتابعة باسم {account}",
   "Nothing more is saved from this tab until it reloads.": "لن يُحفظ شيء آخر من علامة التبويب هذه حتى تُعاد تحميلها.",
+  "Update Centium": "حدّث Centium",
+  "This version of Centium is no longer supported. Update the app to keep using it.": "لم يعد هذا الإصدار من Centium مدعوماً. حدّث التطبيق لمواصلة استخدامه.",
+  "Update": "تحديث",
+  "A new version of Centium is available.": "يتوفر إصدار جديد من Centium.",
+  "Not now": "ليس الآن",
 };
 
 export default auth;

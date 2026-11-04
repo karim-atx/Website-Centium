@@ -385,6 +385,9 @@ const services: Catalogue = {
   "Plans can't be offered to someone under 18.": "لا يمكن عرض الخطط على من هم دون 18 عامًا.",
   "Plans can't be sent here. A card holds at most five plans, and none can go in a venue conversation.": "لا يمكن إرسال الخطط هنا. تتسع البطاقة لخمس خطط على الأكثر، ولا يمكن إرسالها في محادثة مع مكان.",
   "Couldn't send your plans. Try again.": "تعذّر إرسال خططك. حاول مرة أخرى.",
+  "Google sign-in isn't available in this version of the app.": "تسجيل الدخول باستخدام Google غير متاح في هذا الإصدار من التطبيق.",
+  "Add a Google account to this phone first, then try again.": "أضف حساب Google إلى هذا الهاتف أولاً، ثم حاول مرة أخرى.",
+  "Google sign-in didn't work. Try again, or use your email.": "لم ينجح تسجيل الدخول باستخدام Google. حاول مرة أخرى، أو استخدم بريدك الإلكتروني.",
 };
 
 export default services;

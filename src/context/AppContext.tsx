@@ -126,6 +126,7 @@ import { readAccountLanguage, settleLanguage, writeAccountLanguage } from "../se
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
+import { reportInstallOnce } from "../platform/installReport";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { unsubscribeFromPush } from "../services/push";
@@ -1635,6 +1636,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // reported flag is what says which case this is.
         void ensureProfileRow(next.user.id, next.user.email ?? null).then(({ profileEnsured }) => {
           if (!profileEnsured) return;
+          // The phone app's install, once per session (report_app_install
+          // references profiles(id) too). Nothing in a browser.
+          reportInstallOnce(next.access_token);
           return ensureAutoStreaks(next.user.id);
         });
       }
