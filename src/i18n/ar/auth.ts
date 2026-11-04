@@ -230,7 +230,7 @@ const auth: Catalogue = {
   "Continue as business": "المتابعة بحساب نشاط تجاري",
   "Choose another": "اختيار نوع آخر",
   "Your professional's code": "رمز مختصك",
-  "e.g. SOHA-XXXX": "مثال: SOHA-XXXX",
+  "e.g. MAYA-4F2K": "مثال: MAYA-4F2K",
   "You'll connect with {name}": "ستتواصل مع {name}",
   "Personal trainer": "مدرّب شخصي",
   Physiotherapist: "أخصائي العلاج الفيزيائي",
