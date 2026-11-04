@@ -365,7 +365,7 @@ const ClientCodeField: React.FC<{
         id="ob-client-code"
         value={draft.professionalUserIdCode}
         onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
-        placeholder={t("e.g. SOHA-XXXX")}
+        placeholder={t("e.g. MAYA-4F2K")}
         autoCapitalize="characters"
         autoComplete="off"
         aria-invalid={error ? true : undefined}
