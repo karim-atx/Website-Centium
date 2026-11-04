@@ -5,9 +5,13 @@
 // - ONE passive scroll listener and ONE requestAnimationFrame loop. Each
 //   frame the loop runs every section's scroll pass when scrollY changed (or
 //   something asked for a pass), then every section's time tick (line flow).
-// - Measurements (getBoundingClientRect, offsetHeight, ...) happen only in
-//   measure(): on start, when the fonts are ready and when the page asks
-//   (viewport resize), never inside the scroll pass.
+// - Measurements (getBoundingClientRect, offsetHeight, ...) happen in
+//   measure(): on start, when the fonts are ready, when the page asks
+//   (viewport resize), and (round 8, handoff-landing-fix SPEC F8 rule 3)
+//   whenever the document changes size (a ResizeObserver on <body>, 90 ms
+//   debounce) and 250 ms after resize and pageshow, so no section keeps
+//   geometry from before late layout. The exceptions are the chapter marks
+//   and the bands, which read their live position every pass (F6, F8).
 // - Every story state is a pure function of scroll progress; sections write
 //   transforms and opacity only (plus canvases).
 // - Reduced motion: no loop. A scroll schedules one frame that runs the
@@ -91,6 +95,30 @@ export class ScrollEngine {
   }
 
   start() {
+    if (typeof ResizeObserver !== "undefined") {
+      let q = 0;
+      const ro = new ResizeObserver(() => {
+        window.clearTimeout(q);
+        q = window.setTimeout(() => this.measure(), 90);
+      });
+      ro.observe(document.body);
+      this.cleanups.push(() => {
+        window.clearTimeout(q);
+        ro.disconnect();
+      });
+    }
+    let settle = 0;
+    const later = () => {
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => this.measure(), 250);
+    };
+    window.addEventListener("resize", later);
+    window.addEventListener("pageshow", later);
+    this.cleanups.push(() => {
+      window.clearTimeout(settle);
+      window.removeEventListener("resize", later);
+      window.removeEventListener("pageshow", later);
+    });
     const onScroll = () => {
       if (!this.ctx.rm) {
         this.dirty = true;
