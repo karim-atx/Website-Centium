@@ -18,6 +18,7 @@ import { todayLocal } from "../../../utils/date";
 import { range12, time12 } from "../../../utils/time12";
 import { appLocale } from "../../../i18n/format";
 import { t, tx } from "../../../i18n/core";
+import { mailtoHref, telHref } from "../../../utils/safeHref";
 
 /**
  * Release 3 · a business's page (/app/more/businesses/:id; MO13, gen/r13.js
@@ -71,8 +72,9 @@ export default function BusinessDetail() {
     onClick: () => navigate(`/app/pro/calendar?day=${c.date}`),
   }));
   const contact: ListRow[] = [
-    ...(facts?.email ? [{ key: "email", icon: Mail, title: facts.email, meta: t("Email"), onClick: () => window.open(`mailto:${facts.email}`, "_self") }] : []),
-    ...(facts?.phone ? [{ key: "phone", icon: Phone, title: facts.phone, meta: t("Phone"), onClick: () => window.open(`tel:${facts.phone}`, "_self") }] : []),
+    // Round I, FB: one plain address and the phone's digits only, so stored text can't add mail headers.
+    ...(facts?.email ? [{ key: "email", icon: Mail, title: facts.email, meta: t("Email"), onClick: () => { const h = mailtoHref(facts.email!); if (h) window.open(h, "_self"); } }] : []),
+    ...(facts?.phone ? [{ key: "phone", icon: Phone, title: facts.phone, meta: t("Phone"), onClick: () => { const h = telHref(facts.phone!); if (h) window.open(h, "_self"); } }] : []),
     ...(facts?.location ? [{ key: "address", icon: MapPin, title: facts.location, meta: t("Address") }] : []),
   ];
 

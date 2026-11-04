@@ -24,6 +24,14 @@ test("other notifications keep a same-origin path and nothing else", () => {
   assert.equal(notificationTarget({ url: "/app/contraception" }, "/app"), "/app/contraception");
   assert.equal(notificationTarget({ url: "//evil.example/x" }, "/app"), "/app");
   assert.equal(notificationTarget({ url: "https://evil.example" }, "/app"), "/app");
+  // Round I, FB: a backslash or a tab after the slash also leaves the origin.
+  assert.equal(notificationTarget({ url: "/\\evil.example" }, "/app"), "/app");
+  assert.equal(notificationTarget({ url: "/\\/evil.example/x" }, "/app"), "/app");
+  assert.equal(notificationTarget({ url: "/\t/evil.example" }, "/app"), "/app");
+  assert.equal(notificationTarget({ url: "/\n/evil.example" }, "/app"), "/app");
+  assert.equal(notificationTarget({ url: "javascript:alert(1)" }, "/app"), "/app");
+  // A same-origin path keeps its query and hash.
+  assert.equal(notificationTarget({ url: "/app/messages?tab=all#x" }, "/app"), "/app/messages?tab=all#x");
 });
 
 test("a call notification opens /app/calls/{callId}, not send-push's /calls path", () => {

@@ -6,6 +6,7 @@ import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
+import { safeHref } from "../../utils/safeHref";
 
 /**
  * A product found on Open Food Facts (step 2 of the barcode lookup order),
@@ -49,7 +50,7 @@ export const OffProductCard: React.FC<{
       <p style={{ margin: "10px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
         {product.attribution.notice}{" "}
         <a
-          href={product.attribution.url}
+          href={safeHref(product.attribution.url) ?? undefined}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center"

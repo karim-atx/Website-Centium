@@ -7,6 +7,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { Recipe, RecipeItem, Food, ServingUnit } from "../../types";
 import { t } from "../../i18n/core";
+import { filterId } from "../postgrestFilter";
 
 // Recipe DEFINITIONS. Mirrors src/services/custom-meals/index.ts exactly —
 // same "this file is the opposite of ../food's snapshot rule" doctrine
@@ -168,7 +169,7 @@ export async function getRecipes(userId: string): Promise<RecipesResult> {
   const { data, error } = await db
     .from("recipes")
     .select(`id, title, servings, steps, playlist_url, scoped_to_client_id, recipe_items(${ITEM_SELECT})`)
-    .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
+    .or(`owner_id.eq.${filterId(userId)},scoped_to_client_id.eq.${filterId(userId)}`)
     .order("created_at", { ascending: false });
 
   if (error) {
