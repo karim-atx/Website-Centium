@@ -4,6 +4,7 @@ import { isAdminAccount } from "../admin";
 import { ageFromDateOfBirth } from "../../utils/date";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeDobError } from "./dobErrors";
+import { describeNameError, singleLineName } from "./nameRules";
 import type {
   AccountType,
   ActivityLevel,
@@ -364,7 +365,8 @@ export async function updateProfileFromOnboarding(
 ): Promise<{ ok: boolean; message?: string }> {
   const patch: TablesUpdate<"profiles"> = {
     email: data.email || null,
-    first_name: data.firstName,
+    // Round I (FB): one line, as the server's check requires (nameRules).
+    first_name: singleLineName(data.firstName),
     date_of_birth: data.dateOfBirth || null,
     sex: data.sex,
     height_cm: data.heightCm,
@@ -385,7 +387,7 @@ export async function updateProfileFromOnboarding(
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
     return {
       ok: false,
-      message: describeDobError(error.code) ?? "Couldn't finish setting up your account. Try again.",
+      message: describeDobError(error.code) ?? describeNameError(error) ?? "Couldn't finish setting up your account. Try again.",
     };
   }
   return { ok: true };
