@@ -26,6 +26,10 @@ interface ImportMetaEnv {
   // it at runtime and renders an unavailable state rather than a dead widget,
   // so a missing key is a degraded page and not a blank one.
   readonly NEXT_PUBLIC_TURNSTILE_SITEKEY?: string
+  // The Google OAuth WEB client id (the one in Supabase's Google provider).
+  // Only the phone app reads it: native Google sign-in asks for an ID token
+  // for this client (src/services/auth). A client id is public, not a secret.
+  readonly NEXT_PUBLIC_GOOGLE_WEB_CLIENT_ID?: string
 }
 
 interface ImportMeta {

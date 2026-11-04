@@ -14,6 +14,7 @@
     "audit:grants": "node scripts/audit-grants.ts"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.2",
     "@capacitor/core": "8.5.3",
     "@livekit/components-react": "^2.9.24",
     "@supabase/ssr": "^0.12.6",
