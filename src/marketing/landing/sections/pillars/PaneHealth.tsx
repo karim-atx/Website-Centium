@@ -13,6 +13,93 @@ import { ARABIC_LOCALE } from "../../../../i18n/format";
 const weekInitial = (en: string, i: number) =>
   getLanguage() === "ar" ? new Intl.DateTimeFormat(ARABIC_LOCALE, { weekday: "narrow", timeZone: "UTC" }).format(new Date(Date.UTC(2024, 0, 1 + i, 12))) : en;
 
+/** Desktop: the records timeline as five columns on a horizontal rail. */
+const RecordsGrid: React.FC = () => (
+  <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+      <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
+        {t("RECORDS TIMELINE")}
+      </span>
+      <span style={{ fontSize: "11px", fontWeight: "700", color: "#4E3894" }}>
+        {t("5 documents")}
+      </span>
+    </div>
+    <div style={{ position: "relative", marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: "8px" }}>
+      <span style={{ position: "absolute", left: "4%", right: "4%", top: "6px", height: "2px", background: "#EFEAFB" }} />
+      <span data-w="0.05 0.5" data-sx="" style={{ position: "absolute", left: "4%", right: "4%", top: "6px", height: "2px", background: "#B9A9EE", transformOrigin: "left", transform: "scaleX(0)" }} />
+      {D.recTimeline.map((rt, rtI) => (
+        <div key={rtI} data-w={rt.w} data-ty="10" data-op="" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", opacity: "0" }}>
+          <span style={{ width: "14px", height: "14px", borderRadius: "99px", background: rt.dot, border: "3px solid #fff", boxShadow: "0 0 0 1px #D9D2EE" }} />
+          <div style={{ width: "100%", padding: "7px 8px", borderRadius: "10px", border: `1px solid ${rt.bd}`, background: rt.bg, textAlign: "start" }}>
+            <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#756D63" }}>
+              {t(rt.d)}
+            </div>
+            <div style={{ fontSize: "11.5px", fontWeight: "800", lineHeight: "1.25" }}>
+              {t(rt.t)}
+            </div>
+            <div style={{ fontSize: "9.5px", fontWeight: "600", color: "#5B5349" }}>
+              {t(rt.m)}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/** Phones (round 6, handoff-landing-fix SPEC F1): the records timeline as a
+ *  vertical list on a vertical rail whose fill grows downwards (data-sy, the
+ *  same progress window as the desktop rail's data-sx). Labels 12px and up,
+ *  12px gaps, nothing shortened. Each row is [data-rec]: on short phones the
+ *  pillars fit (Pillars.tsx, SPEC F7) shows the 3 most recent. */
+const RecordsList: React.FC = () => (
+  <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "12px 14px" }}>
+    <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: "4px 12px" }}>
+      <span style={{ fontSize: "12px", lineHeight: "1.35", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
+        {t("RECORDS TIMELINE")}
+      </span>
+      <span style={{ fontSize: "12px", lineHeight: "1.35", fontWeight: "700", color: "#4E3894" }}>
+        {t("5 documents")}
+      </span>
+    </div>
+    <div style={{ position: "relative", marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      <span style={{ position: "absolute", insetInlineStart: "6px", top: "12px", bottom: "12px", width: "2px", background: "#EFEAFB" }} />
+      <span data-w="0.05 0.5" data-sy="" style={{ position: "absolute", insetInlineStart: "6px", top: "12px", bottom: "12px", width: "2px", background: "#B9A9EE", transformOrigin: "50% 0", transform: "scaleY(0)" }} />
+      {D.recTimeline.map((rt, rtI) => (
+        <div key={rtI} data-rec="" data-w={rt.w} data-ty="10" data-op="" style={{ position: "relative", display: "flex", flexDirection: "row", alignItems: "flex-start", gap: "12px", opacity: "0" }}>
+          <span style={{ position: "relative", zIndex: "1", flex: "0 0 14px", width: "14px", height: "14px", marginTop: "11px", borderRadius: "99px", background: rt.dot, border: "3px solid #fff", boxShadow: "0 0 0 1px #D9D2EE" }} />
+          <div
+            style={{
+              flex: "1",
+              minWidth: "0",
+              padding: "9px 12px",
+              borderRadius: "10px",
+              border: `1px solid ${rt.bd}`,
+              background: rt.bg,
+              textAlign: "start",
+              display: "grid",
+              gridTemplateColumns: "minmax(48px, max-content) minmax(0, 1fr)",
+              columnGap: "12px",
+              rowGap: "2px",
+              alignItems: "baseline",
+            }}
+          >
+            <div style={{ gridColumn: "1", gridRow: "1 / 3", fontSize: "12px", fontWeight: "700", lineHeight: "1.35", color: "#756D63", whiteSpace: "nowrap" }}>
+              {t(rt.d)}
+            </div>
+            <div style={{ gridColumn: "2", gridRow: "1", fontSize: "13px", fontWeight: "800", lineHeight: "1.35", overflowWrap: "anywhere" }}>
+              {t(rt.t)}
+            </div>
+            <div style={{ gridColumn: "2", gridRow: "2", fontSize: "12px", fontWeight: "600", lineHeight: "1.4", color: "#5B5349", overflowWrap: "anywhere" }}>
+              {t(rt.m)}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
   <div data-pls="2" style={{ zoom: r.plZoom, maxHeight: r.plMaxH, position: r.plPanePos, left: "0", top: "0", right: "0", bottom: "0", flex: `0 0 ${r.plPaneW}`, scrollSnapAlign: "center", opacity: r.plPaneOp, borderRadius: "22px", background: "#FFFFFF", border: "1px solid rgba(125,103,217,.16)", boxShadow: r.plSh, overflow: "hidden", display: "flex", flexDirection: "column", textAlign: "start" }}>
     <div style={{ height: "36px", flexShrink: "0", display: "flex", alignItems: "center", gap: "7px", padding: "0 14px", background: "#FAF9FE", borderBottom: "1px solid rgba(125,103,217,.1)" }}>
@@ -33,36 +120,7 @@ export const PaneHealth: React.FC<{ r: SectionVals }> = ({ r }) => (
           {t("Updated today")}
         </span>
       </div>
-      <div style={{ gridColumn: "1 / -1", borderRadius: "16px", border: "1px solid rgba(125,103,217,.14)", background: "#FFFFFF", padding: "10px 14px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>
-            {t("RECORDS TIMELINE")}
-          </span>
-          <span style={{ fontSize: "11px", fontWeight: "700", color: "#4E3894" }}>
-            {t("5 documents")}
-          </span>
-        </div>
-        <div style={{ position: "relative", marginTop: "10px", display: "grid", gridTemplateColumns: "repeat(5,minmax(0,1fr))", gap: "8px" }}>
-          <span style={{ position: "absolute", left: "4%", right: "4%", top: "6px", height: "2px", background: "#EFEAFB" }} />
-          <span data-w="0.05 0.5" data-sx="" style={{ position: "absolute", left: "4%", right: "4%", top: "6px", height: "2px", background: "#B9A9EE", transformOrigin: "left", transform: "scaleX(0)" }} />
-          {D.recTimeline.map((rt, rtI) => (
-            <div key={rtI} data-w={rt.w} data-ty="10" data-op="" style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", gap: "6px", opacity: "0" }}>
-              <span style={{ width: "14px", height: "14px", borderRadius: "99px", background: rt.dot, border: "3px solid #fff", boxShadow: "0 0 0 1px #D9D2EE" }} />
-              <div style={{ width: "100%", padding: "7px 8px", borderRadius: "10px", border: `1px solid ${rt.bd}`, background: rt.bg, textAlign: "start" }}>
-                <div style={{ fontSize: "9.5px", fontWeight: "700", color: "#756D63" }}>
-                  {t(rt.d)}
-                </div>
-                <div style={{ fontSize: "11.5px", fontWeight: "800", lineHeight: "1.25" }}>
-                  {t(rt.t)}
-                </div>
-                <div style={{ fontSize: "9.5px", fontWeight: "600", color: "#5B5349" }}>
-                  {t(rt.m)}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      {r.lg ? <RecordsGrid /> : <RecordsList />}
       <div style={{ borderRadius: "16px", border: "1px solid rgba(94,158,149,.18)", background: "#FFFFFF", padding: "10px 14px", flexDirection: "column", gap: "6px", display: r.mhFlex }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontSize: "10.5px", fontWeight: "800", letterSpacing: ".12em", color: "#756D63" }}>

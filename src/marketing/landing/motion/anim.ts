@@ -9,8 +9,9 @@
 //   data-rot (rotate), data-flip (rotateY 80 to 0), data-sweep / data-sweepy
 //   (travel, visible only mid-way), data-spring (drop in with a spring),
 //   data-op (fade in, plus an 8px rise for HTML), data-out (fade out).
-// Reduced motion: each element jumps to its end once U passes the middle of
-// its window.
+// Reduced motion: every element is in its final state at any U (round 8,
+// handoff-landing-fix SPEC F8 rule 6; it used to switch on only once U passed
+// the middle of its window, so it stayed hidden below it).
 
 import { clamp, eo } from "../engine/math";
 import { appLocale } from "../../../i18n/format";
@@ -37,7 +38,7 @@ export function collect(root: Element | null): AnimItem[] {
 export function anim(list: AnimItem[], U: number, rm: boolean) {
   for (const it of list) {
     let u = clamp((U - it.a) / (it.b - it.a || 1));
-    if (rm) u = U >= (it.a + it.b) / 2 ? 1 : 0;
+    if (rm) u = 1;
     u = eo(u);
     if (Math.abs(u - it.last) < 0.0005) continue;
     it.last = u;

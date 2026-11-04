@@ -13,7 +13,11 @@ import { t } from "../../../../i18n/core";
 const tOpt = (s: string | undefined) => (s === undefined ? s : t(s));
 
 export const MobileGraphic: React.FC<{ sl: Slide; r: SectionVals }> = ({ sl, r }) => (
-  <div data-mobg="" style={{ display: r.mobFlex, height: r.mgH, borderRadius: "12px", background: "#F7F5FC", padding: "14px", flexDirection: "column", justifyContent: "space-evenly", gap: "8px", overflow: "hidden" }}>
+  // Round 7 (handoff-landing-fix SPEC F2 / F4): at least its designed height,
+  // and as tall as its content (it clipped 6 to 13px of it at 430, 375 and
+  // 360); motion/fitPin.ts fitEcoPhone gives every card one height and zooms
+  // the graphic when the card would not fit the screen.
+  <div data-mobg="" style={{ display: r.mobFlex, minHeight: r.mgH, borderRadius: "12px", background: "#F7F5FC", padding: "14px", flexDirection: "column", justifyContent: "space-evenly", gap: "8px", overflow: "hidden" }}>
     {sl.mRoster ? (
       <>
         {/* Pro 01. Karim's decision (binding): at every mobile width its

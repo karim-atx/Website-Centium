@@ -4,6 +4,7 @@ import { CentiumLockup } from "../../components/icons/CentiumMark";
 import { LG, reducedMotion } from "../landing/engine/env";
 import { usePageLink, useMarketingNav, useSectionLink } from "../landing/navigation";
 import { WASH_BG, WEDGE_312, WEDGE_48 } from "../landing/wash";
+import { useAudienceLink, type Audience } from "../landing/audience";
 import { LanguageToggle } from "./LanguageSwitch";
 import { isRtl, t, tk } from "../../i18n/core";
 
@@ -22,7 +23,9 @@ import { isRtl, t, tk } from "../../i18n/core";
 // prototype's traced one, sized so the mark draws at the prototype's size
 // (prototype: viewBox 700 wide x 1.00331; lockup: 687 wide).
 
-const COLUMNS: { t: string; l: { t: string; section?: string; app?: boolean }[] }[] = [
+// FOR TEAMS (FT1 v4, handoff-landing-fix SPEC F5): each opens section 06 with
+// its own audience selected (/#professionals, /#business; landing/audience.ts).
+const COLUMNS: { t: string; l: { t: string; section?: string; aud?: Audience; app?: boolean }[] }[] = [
   {
     t: tk("PRODUCT"),
     l: [
@@ -34,8 +37,8 @@ const COLUMNS: { t: string; l: { t: string; section?: string; app?: boolean }[] 
   {
     t: tk("FOR TEAMS"),
     l: [
-      { t: tk("Professionals"), section: "everyone" },
-      { t: tk("Businesses"), section: "everyone" },
+      { t: tk("Professionals"), aud: "professionals" },
+      { t: tk("Businesses"), aud: "business" },
     ],
   },
   {
@@ -96,6 +99,7 @@ export const Footer: React.FC = () => {
   const { pathname } = useLocation();
   const go = useMarketingNav();
   const sectionLink = useSectionLink();
+  const audienceLink = useAudienceLink();
   const pageLink = usePageLink();
   const logoW = (lg ? 88 : 76) * (687 / 700) * 1.00331; // r.ftLogoW, mark-matched
 
@@ -233,6 +237,10 @@ export const Footer: React.FC = () => {
                     <Link key={ln.t} to="/app" className="cl-hc cl-uline" style={style}>
                       {t(ln.t)}
                     </Link>
+                  ) : ln.aud ? (
+                    <a key={ln.t} href={"/#" + ln.aud} onClick={audienceLink(ln.aud)} className="cl-hc cl-uline" style={style}>
+                      {t(ln.t)}
+                    </a>
                   ) : (
                     <a key={ln.t} href={"/#" + ln.section} onClick={sectionLink(ln.section!)} className="cl-hc cl-uline" style={style}>
                       {t(ln.t)}

@@ -1,7 +1,16 @@
 // Centium landing v29: a WK1 v23 band between chapters (02_pages/07-WK1),
 // the prototype markup with its exact inline styles: a full-width canvas
-// 120px taller than its box at both ends, faded in and out by a CSS mask so
-// no line is cut off. motion/bands.ts draws it (lines/bands.ts Band).
+// 120px taller than its box at both ends, so no line is cut off.
+// motion/bands.ts draws it (lines/bands.ts Band).
+// Round 6 (F3, handoff-landing-fix SPEC F3): the soft top and bottom are
+// drawn into the canvas (lines/bands.ts), not a CSS mask, and the section
+// clips only horizontally (clip-path inset -200px top and bottom; the bowl
+// enters from off-screen), never vertically: a browser that clipped both axes
+// for overflow-x: clip, or skipped the mask, cut the waves at the section
+// edge at about 70% strength on phones.
+// Round 7 (F6): the band's still image with Tio ([data-band-still], no source
+// until motion/bands.ts finds the canvas cannot draw), with the canvas's
+// geometry, mirrored in Arabic except the symmetric meditating one.
 //
 // Landing update (WK1 v2 / v6, C17, centium/WK1-tio-dividers.md): Tio sits on
 // each band, above its canvas: surfing on the first (#wk-a), meditating on
@@ -18,9 +27,9 @@ import type { SectionVals } from "./sectionVals";
 import { isRtl } from "../../../i18n/core";
 import { BOWL_LAYERS, type TioKind } from "../tioLayers";
 
-const MASK = "linear-gradient(to bottom,transparent 0,#000 30%,#000 70%,transparent 100%)";
-
 const TIO: Record<"wk-a" | "wk-m" | "wk-b", TioKind> = { "wk-a": "surf", "wk-m": "meditate", "wk-b": "bowl" };
+/** The still's file name (assets/dividers/<name>-{desktop,phone}.{webp,png}). */
+const STILL: Record<"wk-a" | "wk-m" | "wk-b", string> = { "wk-a": "divider-1-surf", "wk-m": "divider-2-meditate", "wk-b": "divider-3-bowl" };
 
 const IMG: React.CSSProperties = { position: "absolute", inset: "0", width: "100%", height: "100%", maxWidth: "none", display: "block", pointerEvents: "none", userSelect: "none" };
 
@@ -36,7 +45,7 @@ const TioImage: React.FC<{ name: string; style?: React.CSSProperties }> = ({ nam
 export const Band: React.FC<{ id: "wk-a" | "wk-m" | "wk-b"; r: SectionVals }> = ({ id, r }) => {
   const kind = TIO[id];
   return (
-    <section id={id} data-screen-label="WK1 v23 Band" aria-hidden="true" style={{ position: "relative", zIndex: "2", overflowX: "clip", padding: r.wkPad }}>
+    <section id={id} data-screen-label="WK1 v23 Band" aria-hidden="true" style={{ position: "relative", zIndex: "2", overflow: "visible", clipPath: "inset(-200px 0px -200px 0px)", padding: r.wkPad }}>
       <div style={{ position: "relative", height: r.wkH }}>
         <canvas
           data-band={id}
@@ -48,9 +57,28 @@ export const Band: React.FC<{ id: "wk-a" | "wk-m" | "wk-b"; r: SectionVals }> = 
             height: "calc(100% + 240px)",
             display: "block",
             pointerEvents: "none",
-            WebkitMaskImage: MASK,
-            maskImage: MASK,
             transform: isRtl() ? "scaleX(-1)" : undefined,
+          }}
+        />
+        <img
+          data-band-still={STILL[id]}
+          alt=""
+          draggable={false}
+          decoding="async"
+          style={{
+            position: "absolute",
+            left: "0",
+            top: "-120px",
+            width: "100%",
+            height: "calc(100% + 240px)",
+            maxWidth: "none",
+            objectFit: "fill",
+            pointerEvents: "none",
+            userSelect: "none",
+            zIndex: "0",
+            opacity: "0",
+            transition: "opacity .3s ease",
+            transform: isRtl() && kind !== "meditate" ? "scaleX(-1)" : undefined,
           }}
         />
         <span
