@@ -71,6 +71,10 @@ npm run build
 ```
 
 Type-checks with `tsc -b`, then builds a static bundle to `dist/` via Vite.
+The type check runs with a 4 GB heap (`--max-old-space-size=4096`): a clean
+`tsc -b` peaks at about 2.6 GB and fails under a heap of 1.75 GB, and Node's
+default heap can be about 2 GB on a smaller build machine. The flag is given to
+`node` directly so the script works the same on Windows.
 The build emits relative asset paths (`base: './'` in `vite.config.ts`) and
 picks the right `<base>` at runtime instead of hardcoding one at build
 time — see [Deployment](#deployment) below for why. The dev server stays
