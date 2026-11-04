@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { encodeKey } from "./encode";
+import { isNative } from "../../platform";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
@@ -98,6 +99,9 @@ function vapidKeyBytes(base64url: string): Uint8Array<ArrayBuffer> {
  */
 export function pushSupported(): boolean {
   return (
+    // The phone app receives push through APNs / FCM instead (mobile round Z,
+    // Phase 2), and registers no service worker (main.tsx).
+    !isNative() &&
     typeof navigator !== "undefined" &&
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
