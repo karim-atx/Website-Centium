@@ -20,6 +20,7 @@ import {
   Smartphone,
   Star,
   Sun,
+  UserRound,
 } from "lucide-react";
 import { PaneFrame } from "../../components/business-more/paneWeb";
 import { usePaneEligible } from "../../components/business-more/paneWebScope";
@@ -262,6 +263,8 @@ export default function BusinessSettings() {
       <BizLabel>{t("Data & account")}</BizLabel>
       <SettingsRowVariant.Provider value="business">
         <BizCard>
+          {/* Round J · FI: the owner's first name and sign-in email (/app/settings/account). */}
+          <BizRow icon={UserRound} title={t("Account")} desc={t("Your first name and sign-in email")} onClick={() => navigate("/app/settings/account")} />
           <BizRow icon={KeyRound} title={t("Change password")} onClick={() => setPwOpen(true)} />
           <BizRow icon={Smartphone} title={t("Active sessions")} desc={t("Where you're signed in")} onClick={() => navigate("/app/business/more/security")} />
           <StorageUsageRow />

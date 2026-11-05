@@ -323,7 +323,7 @@ export const NameSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
         if (!authUserId) return t("You're signed out. Sign in again.");
         const r = await saveFirstName(authUserId, v);
         if (!r.ok) return r.message;
-        updateProfile({ firstName: v.trim() });
+        updateProfile({ firstName: r.name });
         return null;
       }}
     />

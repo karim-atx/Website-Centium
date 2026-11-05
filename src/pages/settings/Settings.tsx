@@ -39,6 +39,7 @@ import {
   Music2,
   CreditCard,
   ScrollText,
+  UserRound,
 } from "lucide-react";
 import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
@@ -102,8 +103,12 @@ function SettingsHub() {
     language,
     t,
     user,
+    session,
   } = useApp();
   const navigate = useNavigate();
+  // Account's row (Round J · FI): the name, and the email the person signs in
+  // with (the session's, not the profile's copy).
+  const accountLine = [user.firstName?.trim(), session?.user.email].filter(Boolean).join(" · ") || undefined;
 
   // Cycle tracking is not on this page: components/profile/CycleTrackingRow
   // sits on the Profile (pages/profile/Profile.tsx) and, for a business, on
@@ -325,6 +330,8 @@ function SettingsHub() {
           so Security keeps one row and no divider. This section's glyphs take
           #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
       <SettingsSection label={t("Data & account")}>
+        {/* Round J · FI: first name and email (/app/settings/account). */}
+        <SettingsRow icon={UserRound} iconTone="dark" title={t("Account")} subtitle={accountLine} onClick={() => navigate("/app/settings/account")} />
         {/* Task J. */}
         <SettingsRow icon={KeyRound} iconTone="dark" title={t("Change password")} onClick={() => setChangePasswordOpen(true)} />
         <StorageUsageRow />

@@ -25,6 +25,8 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
+import { checkFirstName, describeNameError } from "../profile/nameRules";
+import { tk } from "../../i18n/core";
 import { detailDate } from "../../utils/date";
 import type { Read, Write } from "./clients";
 import type { ProfessionalSubtype } from "../../types";
@@ -372,14 +374,20 @@ export async function fetchEmployments(): Promise<Read<Employment[]>> {
 // Profile name and phone (MO26 Personal), profiles columns in the UPDATE grant
 // ---------------------------------------------------------------------------
 
-export async function saveFirstName(me: string, name: string): Promise<Write> {
-  const v = name.trim();
-  if (v.length < 1) return { ok: false, message: "Add your name." };
-  if (v.length > 60) return { ok: false, message: "Keep your name to 60 characters or fewer." };
+/**
+ * Also Settings › Account's (Round J · FI). The shared rule first (one line,
+ * 1–60 characters); `name` is the name as saved, for the caller's state.
+ */
+export async function saveFirstName(me: string, raw: string): Promise<{ ok: true; name: string } | { ok: false; message: string }> {
+  const checked = checkFirstName(raw);
+  if (!checked.ok) return checked;
   try {
-    const { error } = await from("profiles").update({ first_name: v } as never).eq("id", me);
-    return error ? failed(error, "Couldn't save your name. Try again.") : { ok: true };
+    const { error } = await from("profiles").update({ first_name: checked.name } as never).eq("id", me);
+    if (!error) return { ok: true, name: checked.name };
+    return { ok: false, message: describeNameError(error) ?? nameFailed(error) };
   } catch (e) {
-    return failed(e, "Couldn't save your name. Try again.");
+    return { ok: false, message: nameFailed(e) };
   }
 }
+
+const nameFailed = (error: unknown): string => (isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't save your name. Try again."));

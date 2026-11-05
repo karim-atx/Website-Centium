@@ -35,7 +35,7 @@ const {
   AppointmentRoutes, BusinessVenueTab, BusinessCalendarTab, Profile, MyCv, Subscription,
   More, ClientCalendarTab, Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage,
   ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage, Settings, NotificationsPage,
-  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, HelpPage, TwoFactorPage,
+  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, AccountPage, YourMusicPage, BillingHelpPage, HelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
   CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage, DoctorSummaryPage,
@@ -613,6 +613,7 @@ function AppRoutes() {
         <Route path="/app/settings/privacy" element={<PrivacyPage />} />
         <Route path="/app/settings/terms" element={<TermsPage />} />
         <Route path="/app/settings/language" element={<LanguagePage />} />
+        <Route path="/app/settings/account" element={<AccountPage />} />
         <Route path="/app/settings/music" element={<YourMusicPage />} />
         {/* Round F (DN, F5): Billing and refunds for clients and professionals. */}
         <Route path="/app/settings/help/billing-and-refunds" element={<BillingHelpPage />} />

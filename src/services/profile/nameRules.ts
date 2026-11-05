@@ -7,6 +7,8 @@
  * Persian names use them. Pure, so it is tested without a server.
  */
 
+import { tk } from "../../i18n/core";
+
 const NOT_IN_A_NAME = /[\p{Cc}‪-‮⁦-⁩]+/gu;
 
 /** The name as the server will take it: each run of refused characters becomes one space, trimmed. */
@@ -15,6 +17,20 @@ export function singleLineName(raw: string): string {
 }
 
 export const NAME_CHARACTERS = "Use letters, spaces and punctuation only.";
+
+export const NAME_MISSING = tk("Add your name.");
+export const NAME_TOO_LONG = tk("Keep your name to 60 characters or fewer.");
+
+/**
+ * Round J · FI: one rule for every place a first name is changed (Settings ›
+ * Account, the professional's Name sheet): one line, 1–60 characters.
+ */
+export function checkFirstName(raw: string): { ok: true; name: string } | { ok: false; message: string } {
+  const name = singleLineName(raw);
+  if (name.length < 1) return { ok: false, message: NAME_MISSING };
+  if ([...name].length > 60) return { ok: false, message: NAME_TOO_LONG };
+  return { ok: true, name };
+}
 
 /** The sentence for the server's single-line refusal, or null for any other error. */
 export function describeNameError(error: { code?: string; message?: string } | null | undefined): string | null {

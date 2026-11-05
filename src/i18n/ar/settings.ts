@@ -5,6 +5,10 @@ import type { Catalogue } from "../core";
 // checks every t/tn/tk key in them has Arabic here or in another area file,
 // and that no English is left outside t() in their JSX.
 export const FILES: string[] = [
+  // Round J · FI: Settings › Account (first name, email change).
+  "pages/settings/AccountPage.tsx",
+  "services/account/emailChangeLogic.ts",
+  "services/profile/nameRules.ts",
   // Round I · FH: Help for members and professionals, and the support chat's row.
   "pages/settings/HelpPage.tsx",
   "services/help/index.ts",
@@ -775,6 +779,39 @@ const settings: Catalogue = {
   "Chat with support": "دردشة مع الدعم",
   "Your account is being reviewed, so you can't do this yet. Your own logging, settings and the support chat still work.": "حسابك قيد المراجعة، لذا لا يمكنك القيام بهذا بعد. تسجيلاتك وإعداداتك ودردشة الدعم لا تزال تعمل.",
   "Sending…": "جارٍ الإرسال…",
+
+  // Round J · FI: Settings › Account.
+  "Your first name and sign-in email": "اسمك الأول وبريد تسجيل الدخول",
+  "This is the name Centium uses for you.": "هذا هو الاسم الذي يستخدمه Centium لك.",
+  "Name saved": "تم حفظ الاسم",
+  "Save name": "حفظ الاسم",
+  "Current email": "البريد الإلكتروني الحالي",
+  "Your email comes from your Google account, so it's changed there, not in Centium.": "يأتي بريدك الإلكتروني من حسابك في Google، لذا يُغيَّر هناك وليس في Centium.",
+  "Your email is now {email}. Use it to sign in from now on.": "بريدك الإلكتروني الآن {email}. استخدمه لتسجيل الدخول من الآن فصاعدًا.",
+  "One more link to open": "بقي رابط واحد لفتحه",
+  "Check your inbox": "تحقّق من بريدك الوارد",
+  "That link worked. Now open the one we sent to the other address to finish changing to {new}.": "نجح هذا الرابط. افتح الآن الرابط الذي أرسلناه إلى العنوان الآخر لإكمال التغيير إلى {new}.",
+  "We sent a link to {new} and to {current}. Open both to finish.": "أرسلنا رابطًا إلى {new} وإلى {current}. افتح الرابطين لإكمال التغيير.",
+  "Until then, you keep signing in with {current}.": "حتى ذلك الحين، تواصل تسجيل الدخول باستخدام {current}.",
+  "Sent again. Check your inbox and spam folder.": "أُرسل مجددًا. تحقّق من بريدك الوارد ومجلد الرسائل غير المرغوب فيها.",
+  "Send again in {time}": "أرسل مجددًا بعد {time}",
+  "Send the links again": "أرسل الرابطين مجددًا",
+  "Use a different address": "استخدم عنوانًا آخر",
+  "Change email": "تغيير البريد الإلكتروني",
+  "New email": "البريد الإلكتروني الجديد",
+  "We'll send a link to the new address and to {current}. Your email changes once you've opened both.": "سنرسل رابطًا إلى العنوان الجديد وإلى {current}. يتغيّر بريدك الإلكتروني بعد أن تفتح الرابطين.",
+  "Send the links": "أرسل الرابطين",
+  "Two-factor is on. Enter the code from your authenticator app to change your email.": "المصادقة الثنائية مفعّلة. أدخل الرمز من تطبيق المصادقة لتغيير بريدك الإلكتروني.",
+  "Six-digit code from your authenticator app": "الرمز المكوّن من ستة أرقام من تطبيق المصادقة",
+  "That link has expired or was already used. Send a new one below.": "انتهت صلاحية هذا الرابط أو استُخدم من قبل. أرسل رابطًا جديدًا أدناه.",
+  "That link didn't work. Send a new one below.": "لم يعمل هذا الرابط. أرسل رابطًا جديدًا أدناه.",
+  "Enter a full email address, like name@example.com.": "أدخل عنوان بريد إلكتروني كاملًا، مثل name@example.com.",
+  "That's already your email.": "هذا هو بريدك الإلكتروني بالفعل.",
+  "That email belongs to another account. Use a different one.": "هذا البريد الإلكتروني مرتبط بحساب آخر. استخدم بريدًا مختلفًا.",
+  "Your session has expired. Sign in again, then change your email.": "انتهت جلستك. سجّل الدخول مجددًا، ثم غيّر بريدك الإلكتروني.",
+  "Keep your name to 60 characters or fewer.": "اجعل اسمك 60 حرفًا أو أقل.",
+  "Couldn't save your name. Try again.": "تعذّر حفظ اسمك. حاول مرة أخرى.",
+  "Couldn't change your email. Try again.": "تعذّر تغيير بريدك الإلكتروني. حاول مرة أخرى.",
 };
 
 export default settings;
