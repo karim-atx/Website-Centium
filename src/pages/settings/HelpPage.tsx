@@ -19,7 +19,8 @@ import { getLanguage, t, tn } from "../../i18n/core";
 // chat. The business Help centre (business-more/help) is unchanged.
 //
 // Designed here (no handover frame), in Settings' own sections and rows.
-// Support hours and reply times aren't shown: their values are still open.
+// Support hours and reply times (decision 9, Karim 2026-11-05) sit above the
+// two options; the same for every plan.
 
 export default function HelpPage() {
   const { user } = useApp();
@@ -126,6 +127,9 @@ export default function HelpPage() {
         )}
       </SettingsBody>
       <SettingsSection label={t("Still need help?")} className="mt-8">
+        <p className="pb-2 text-[12px] leading-[17px] text-charcoal-soft">
+          {t("We're here Monday to Friday, 9:00–18:00 Beirut time, and reply within 1 working day, in English or Arabic.")}
+        </p>
         <SettingsRow icon={MessageCircle} title={t("Live chat")} subtitle={t("Chat with the Centium team")} value={chatBusy ? t("Opening…") : undefined} onClick={() => void openChat()} />
         {chatError && (
           <p role="alert" className="ps-[50px] pb-2 -mt-1 text-[12px] font-semibold text-status-high">

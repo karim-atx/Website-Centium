@@ -754,6 +754,7 @@ const settings: Catalogue = {
   "Loading Help…": "جارٍ تحميل المساعدة…",
   "Couldn't load Help. Try again.": "تعذّر تحميل المساعدة. حاول مجددًا.",
   "Write to us with the contact form": "راسلنا عبر نموذج التواصل",
+  "We're here Monday to Friday, 9:00–18:00 Beirut time, and reply within 1 working day, in English or Arabic.": "نحن متاحون من الاثنين إلى الجمعة، من 9:00 إلى 18:00 بتوقيت بيروت، ونردّ خلال يوم عمل واحد، بالعربية أو الإنجليزية.",
   "You've opened the chat from Help many times today. Try again tomorrow, or email us.": "فتحت الدردشة من المساعدة مرات كثيرة اليوم. حاول مجددًا غدًا، أو راسلنا عبر البريد الإلكتروني.",
   // The support chat row and its refusals, which showed in English in Arabic.
   "Start a chat": "ابدأ محادثة",
