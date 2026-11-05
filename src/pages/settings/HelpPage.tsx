@@ -20,7 +20,9 @@ import { getLanguage, t, tn } from "../../i18n/core";
 //
 // Designed here (no handover frame), in Settings' own sections and rows.
 // Support hours and reply times (decision 9, Karim 2026-11-05) sit above the
-// two options; the same for every plan.
+// two options; the same for every plan. The text is help_center()'s
+// support_hours.text (Database 20261226500000); the same words here stand in
+// while Help loads, if it can't, or from a database before that.
 
 export default function HelpPage() {
   const { user } = useApp();
@@ -128,7 +130,7 @@ export default function HelpPage() {
       </SettingsBody>
       <SettingsSection label={t("Still need help?")} className="mt-8">
         <p className="pb-2 text-[12px] leading-[17px] text-charcoal-soft">
-          {t("We're here Monday to Friday, 9:00–18:00 Beirut time, and reply within 1 working day, in English or Arabic.")}
+          {center?.supportHoursText ?? t("Our team is here Monday to Friday, 9:00–18:00 Beirut time, and replies within 1 working day.")}
         </p>
         <SettingsRow icon={MessageCircle} title={t("Live chat")} subtitle={t("Chat with the Centium team")} value={chatBusy ? t("Opening…") : undefined} onClick={() => void openChat()} />
         {chatError && (

@@ -19,6 +19,8 @@ export interface HelpCenter {
   language: string;
   audience: string;
   topics: HelpTopic[];
+  /** support_hours.text (Database 20261226500000), in the language asked for; null from an older database. */
+  supportHoursText: string | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
@@ -46,7 +48,8 @@ export function parseHelpCenter(data: unknown): HelpCenter | null {
     }
     if (questions.length) topics.push({ id, key, title, questions });
   }
-  return { language: str(d.language) ?? "en", audience: str(d.audience) ?? "member", topics };
+  const hours = (d.support_hours ?? {}) as Record<string, unknown>;
+  return { language: str(d.language) ?? "en", audience: str(d.audience) ?? "member", topics, supportHoursText: str(hours.text) };
 }
 
 /**

@@ -29,6 +29,13 @@ test("parseHelpCenter keeps whole topics and questions, in order", () => {
   assert.equal(parseHelpCenter({ topics: "x" }), null);
 });
 
+test("the support hours text is read when the database sends it", () => {
+  assert.equal(parseHelpCenter(center)!.supportHoursText, null);
+  const text = "Our team is here Monday to Friday, 9:00–18:00 Beirut time, and replies within 1 working day.";
+  assert.equal(parseHelpCenter({ ...center, support_hours: { days: [1, 2, 3, 4, 5], opens: "09:00", closes: "18:00", text } })!.supportHoursText, text);
+  assert.equal(parseHelpCenter({ ...center, support_hours: { text: "  " } })!.supportHoursText, null);
+});
+
 test("search finds every typed word in a question or its answer", () => {
   const topics = parseHelpCenter(center)!.topics;
   assert.deepEqual(searchHelp(topics, "water").map((r) => r.question.id), ["q3"]);
