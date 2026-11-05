@@ -5,11 +5,17 @@ import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import { t, tk } from "../../i18n/core";
 import type { Pose } from "./PoseSequence";
+import { sessions, useLockedSession } from "../../platform/sessions";
 
 // The Stretching / Yoga sequence: its timer, the session clock and the one
 // meditation_sessions write when it finishes (the rules are written out above
 // PoseSequence). Shared by the mobile PoseSequence and the web Meditation page
 // (website viewport v1, WC-MI.4); moved here unchanged from PoseSequence.
+//
+// In the app a timed (Stretching) run is kept going by the phone with the
+// screen locked, a soft cue at each pose and the pose on the lock screen
+// (App-Centium ROUND_J.md §7). The phone's clock decides the pose and the
+// time left; the sequence is still logged here, once, when it finishes.
 
 const SAVE_FAILED = tk("Couldn't save. Try again.");
 
@@ -30,6 +36,14 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
   const runRef = useRef<{ atMs: number; leftMs: number } | null>(null);
   const [running, setRunning] = useState(false);
   const [started, setStarted] = useState(false);
+  // In the app, and only for the timed sequence: the phone's clock.
+  const locked = useLockedSession(`poses:${kind}`);
+  const native = timed && locked.native;
+  const lockedState = timed ? locked.state : null;
+  const lockedRef = useRef(lockedState);
+  useEffect(() => {
+    lockedRef.current = lockedState;
+  });
 
   // --- the session clock -----------------------------------------------------
   // Mount time, then the first timer start replaces it for Stretching.
@@ -54,6 +68,7 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
     runRef.current = null;
     setRunning(false);
     setRemainingMs(left);
+    if (native) void sessions.pause();
   };
 
   const finish = () => {
@@ -93,6 +108,7 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
     const full = poses[i].seconds * 1000;
     setRemainingMs(full);
     if (runRef.current) runRef.current = { atMs: Date.now(), leftMs: full };
+    if (native && lockedRef.current?.active && lockedRef.current.phaseIndex !== i) void sessions.jumpTo(i);
   };
 
   const finishRef = useRef(finish);
@@ -108,6 +124,17 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
   useEffect(() => {
     if (!running) return;
     const id = window.setInterval(() => {
+      // In the app the phone's clock says which pose and how long is left
+      // (right after a locked screen too); it also ends the sequence.
+      const s = lockedRef.current;
+      if (s?.active) {
+        if (s.phaseIndex !== idxRef.current && s.phaseIndex < poses.length) {
+          idxRef.current = s.phaseIndex;
+          setIdx(s.phaseIndex);
+        }
+        if (s.phaseEndsAt !== null) setRemainingMs(Math.max(0, s.phaseEndsAt - Date.now()));
+        return;
+      }
       const run = runRef.current;
       if (!run) return;
       const left = run.leftMs - (Date.now() - run.atMs);
@@ -126,9 +153,10 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
     return () => window.clearInterval(id);
   }, [running, poses]);
 
-  // Pauses when the page is hidden (S6).
+  // Pauses when the page is hidden (S6). Not in the app, where the phone keeps
+  // the run going with the screen locked (that is the point of it).
   useEffect(() => {
-    if (!running) return;
+    if (!running || native) return;
     const onHide = () => {
       if (document.visibilityState === "hidden") {
         const run = runRef.current;
@@ -140,21 +168,69 @@ export function usePoseSequence(poses: Pose[], kind: "stretching" | "yoga") {
     };
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [running]);
+  }, [running, native]);
 
   const toggleTimer = () => {
     if (running) {
       pause();
       return;
     }
-    if (!clockRef.current?.fromTimer) clockRef.current = { startMs: Date.now(), fromTimer: true };
+    const fresh = !clockRef.current?.fromTimer;
+    if (fresh) clockRef.current = { startMs: Date.now(), fromTimer: true };
     runRef.current = { atMs: Date.now(), leftMs: remainingMs };
     setStarted(true);
     setRunning(true);
+    if (!native) return;
+    if (fresh || !lockedRef.current?.active) {
+      const at = idxRef.current;
+      void sessions
+        .start({
+          kind: meditationKind(kind),
+          title: t(kind === "stretching" ? "Stretching" : "Yoga"),
+          phases: poses.map((p) => ({ label: p.name, seconds: p.seconds, cue: "hold" as const })),
+          repeat: 1,
+          resultKey: `poses:${kind}`,
+        })
+        .then(() => (at > 0 ? sessions.jumpTo(at) : undefined));
+    } else {
+      void sessions.resume();
+    }
   };
+
+  /** The phone's run ends with this one (in a browser there is none). */
+  const stopLocked = () => {
+    if (native && lockedRef.current?.active) void sessions.stop().then(() => sessions.clear());
+  };
+
+  // The phone's side (in the app only): the sequence finished, or was paused or
+  // stopped, on the lock screen.
+  useEffect(() => {
+    if (!lockedState) return;
+    if (lockedState.active) {
+      if (!clockRef.current?.fromTimer) clockRef.current = { startMs: lockedState.startedAt, fromTimer: true };
+      setStarted(true);
+      setRunning(!lockedState.paused);
+      runRef.current = lockedState.paused ? null : { atMs: Date.now(), leftMs: Math.max(0, (lockedState.phaseEndsAt ?? Date.now()) - Date.now()) };
+      return;
+    }
+    if (lockedState.completed) finishRef.current();
+    else {
+      runRef.current = null;
+      setRunning(false);
+    }
+    void sessions.clear();
+  }, [lockedState]);
+  // Leaving the page ends the phone's run too (the sequence isn't logged unfinished).
+  useEffect(
+    () => () => {
+      if (lockedRef.current?.active) void sessions.stop().then(() => sessions.clear());
+    },
+    []
+  );
 
   /** Back to pose 1, timer idle, a fresh session clock (OURS restart row). */
   const restart = () => {
+    stopLocked();
     setComplete(null);
     setStarted(false);
     runRef.current = null;

@@ -69,7 +69,7 @@ function SessionView({ s }: { s: LibrarySession }) {
               <BreathingRunner pattern={pattern} contentId={s.contentId} kind={libraryKind(s.slug)} />
             </>
           ) : s.script ? (
-            <ScriptRunner slug={s.slug} contentId={s.contentId} script={s.script} minutes={s.minutes} />
+            <ScriptRunner slug={s.slug} contentId={s.contentId} title={s.title} script={s.script} minutes={s.minutes} />
           ) : null}
         </>
       )}

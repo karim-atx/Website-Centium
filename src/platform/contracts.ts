@@ -118,33 +118,43 @@ export interface CalendarModule {
 
 export type SessionCue = "inhale" | "exhale" | "hold" | "run" | "walk" | "rest" | "bell" | "none";
 
+export type SessionPhase = {
+  /** Shown on the lock screen, already translated. */
+  label: string;
+  /** Null for an open phase (a distance rep): it ends on "Next". */
+  seconds: number | null;
+  cue: SessionCue;
+};
+
 export type SessionTimeline = {
-  /** The website's kind, e.g. "box_breathing", "yoga_sequence", "run_intervals". */
+  /** The website's kind, e.g. "box_breathing", "stretching_sequence", "run_intervals". */
   kind: string;
+  /** The lock screen's title, already translated. */
   title: string;
-  phases: { label: string; seconds: number; cue: SessionCue }[];
-  /** How many times the phases run. */
+  phases: SessionPhase[];
+  /** How many times the phases run; 0 is until stopped (breathing). */
   repeat: number;
-  /** The website's own key for saving the result (e.g. a routine exercise id). */
+  /** The website's own key for the screen that started it, e.g. "breathing:box". */
   resultKey: string;
 };
 
+/** Where a session is. Times are epoch ms, so a countdown is right after the phone slept. */
 export type SessionState = {
-  running: boolean;
+  active: boolean;
   paused: boolean;
-  phaseIndex: number;
-  round: number;
-  /** Epoch ms when the current phase ends (for a countdown that is right after a lock). */
-  phaseEndsAt: number;
-  elapsedMs: number;
-};
-
-export type FinishedSession = {
-  resultKey: string;
   kind: string;
-  startedAt: string;
-  durationSec: number;
-  rounds: number;
+  resultKey: string;
+  phaseIndex: number;
+  /** Rounds finished so far. */
+  round: number;
+  startedAt: number;
+  phaseStartedAt: number;
+  /** When the current phase ends; null while paused, for an open phase, or once ended. */
+  phaseEndsAt: number | null;
+  pausedAt: number | null;
+  pausedTotalMs: number;
+  endedAt: number | null;
+  /** True when it ran to its end; false when it was stopped. */
   completed: boolean;
 };
 
@@ -153,8 +163,14 @@ export interface SessionsModule {
   start(timeline: SessionTimeline): Promise<void>;
   pause(): Promise<void>;
   resume(): Promise<void>;
+  /** Ends the current phase now (an open phase, or skipping ahead). */
+  next(): Promise<void>;
+  /** Jumps to a phase of the current round (a pose picked from the list). */
+  jumpTo(index: number): Promise<void>;
   stop(): Promise<void>;
+  /** The running session, or an ended one whose result the website hasn't taken yet. */
+  current(): Promise<SessionState | null>;
+  /** The result is saved: forget the ended session. */
+  clear(): Promise<void>;
   onState(listener: (state: SessionState) => void): Unsubscribe;
-  /** Results finished while the website wasn't looking, each handed over once. */
-  takeFinished(): Promise<FinishedSession[]>;
 }
