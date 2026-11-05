@@ -56,6 +56,9 @@ export interface CentiumNativePlugin {
    */
   signedOut(): Promise<void>;
 
+  /** The phone's notification settings for Centium (its channels, and the switch the person turned off). */
+  openNotificationSettings(): Promise<void>;
+
   /** A widget, shortcut or notification opened a path while the app was already running. */
   addListener(eventName: "openPath", listener: (event: { path: string }) => void): Promise<PluginListenerHandle>;
 }

@@ -49,6 +49,7 @@ import {
 import {
   enablePush,
   isThisDeviceRegistered,
+  pushPermissionNow,
   pushSupported,
   unsubscribeFromPush,
 } from "../../services/push";
@@ -404,7 +405,7 @@ export default function NotificationsPage() {
     };
   }, [pushAvailable]);
 
-  const permission = pushAvailable ? Notification.permission : "denied";
+  const permission = pushAvailable ? pushPermissionNow() : "denied";
   const deviceOn = pushAvailable && permission === "granted" && registered === true;
   const allow = prefs?.allow ?? null;
   // The lead switch: the account's master AND (where push exists) this device.
@@ -477,7 +478,7 @@ export default function NotificationsPage() {
     // permission; without a subscription here nothing can arrive on it. As
     // the old Notifications sheet did, unchanged; the lead card then
     // reflects it.
-    if (key === "professionalMessages" && value && pushSupported() && Notification.permission !== "granted") {
+    if (key === "professionalMessages" && value && pushSupported() && pushPermissionNow() !== "granted") {
       const r = await enablePush(authUserId);
       if (r.status !== "ok") setNote(group, `${t(r.message)} ${t("You'll still see new messages in the app.")}`);
       setRegistered(await isThisDeviceRegistered());

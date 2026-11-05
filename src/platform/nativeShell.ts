@@ -3,6 +3,7 @@
 // ever hold up a language change or a sign-out.
 import { isNative } from "./index";
 import { CentiumNative } from "./native";
+import { refreshNativePushLocale } from "./push";
 
 let mirrored: "en" | "ar" | null = null;
 
@@ -17,6 +18,8 @@ export function mirrorLanguage(language: "en" | "ar"): void {
   CentiumNative.setLanguage({ language }).catch(() => {
     mirrored = null;
   });
+  // The push row's locale: the Database writes notification text in it.
+  refreshNativePushLocale();
 }
 
 const SIGN_OUT_WAIT_MS = 2000;

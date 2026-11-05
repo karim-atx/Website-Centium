@@ -9,6 +9,7 @@ import { installDigitNormaliser } from "./i18n/digitInput"
 import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 import { isNative } from './platform'
 import { startAppConfig } from './platform/appConfig'
+import { primeNativePush } from './platform/push'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //
@@ -42,6 +43,7 @@ if (!isNative()) {
 // The phone app only (nothing in a browser): the version gate and kill
 // switches (app_config). Mobile round Z, Z1.5.
 startAppConfig()
+primeNativePush()
 
 // The web app's pages are their own chunk (appPagesLazy.ts): on an app
 // address its download starts now, alongside the session check.

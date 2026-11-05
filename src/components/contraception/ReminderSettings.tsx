@@ -3,7 +3,7 @@ import { Bell, BellOff, CalendarClock, Clock } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contraception";
 import type { NotificationDetail } from "../../services/cycle/types";
-import { enablePush, permissionTriState, pushSupported } from "../../services/push";
+import { enablePush, permissionTriState, pushPermissionNow, pushSupported } from "../../services/push";
 import * as G from "../../services/contraception/guidance";
 import { time12 } from "../../utils/time12";
 import { TimeWheel } from "../health/log/LogSheetParts";
@@ -45,7 +45,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
   const [draftTime, setDraftTime] = useState(() => parseTime(plan.reminderTime));
 
   const [supported] = useState(pushSupported);
-  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() => (pushSupported() ? permissionTriState(Notification.permission) : null));
+  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() => (pushSupported() ? permissionTriState(pushPermissionNow()) : null));
   const [pushError, setPushError] = useState<string | null>(null);
 
   // No settings row yet means nothing to switch.
@@ -81,7 +81,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
       return;
     }
     if (result.status === "denied") setPushAllowed(false);
-    else setPushAllowed(permissionTriState(Notification.permission));
+    else setPushAllowed(permissionTriState(pushPermissionNow()));
     setPushError(result.message);
   };
 

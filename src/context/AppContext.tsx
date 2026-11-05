@@ -128,6 +128,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
 import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { startNativePush } from "../platform/push";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { unsubscribeFromPush } from "../services/push";
@@ -1644,6 +1645,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // The phone app's install, once per session (report_app_install
           // references profiles(id) too). Nothing in a browser.
           reportInstallOnce(next.access_token);
+          // Native push registers this install the same way (push_devices
+          // references profiles(id)), only if permission was already given.
+          startNativePush();
           return ensureAutoStreaks(next.user.id);
         });
       }
