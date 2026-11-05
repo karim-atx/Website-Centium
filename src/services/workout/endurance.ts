@@ -5,7 +5,7 @@ import type {
   EnduranceTarget,
 } from "../../types";
 import { formatStep } from "./prescription";
-import { t, tk } from "../../i18n/core";
+import { t, tk, tx } from "../../i18n/core";
 
 // Building and checking an endurance plan, client-side.
 //
@@ -38,6 +38,9 @@ export const emptyPlan = (): EndurancePlan => ({
 const isPositiveInt = (n: unknown): n is number =>
   typeof n === "number" && Number.isFinite(n) && Number.isInteger(n) && n > 0;
 
+/** A step's name. A run's "Recovery" is the easy interval between reps, not recovery as in the app's mode. */
+const stepName = (where: string) => (where === "Recovery" ? tx("Recovery", "run interval") : t(where));
+
 /** Mirrors valid_endurance_target(). Returns the problem, or null. */
 export function checkTarget(target: EnduranceTarget, where: string): string | null {
   switch (target.kind) {
@@ -46,20 +49,20 @@ export function checkTarget(target: EnduranceTarget, where: string): string | nu
     case "hr_zone":
       return isPositiveInt(target.zone) && target.zone <= 5
         ? null
-        : t("{step}: pick a heart-rate zone from 1 to 5.", { step: t(where) });
+        : t("{step}: pick a heart-rate zone from 1 to 5.", { step: stepName(where) });
     case "rpe":
       return isPositiveInt(target.value) && target.value <= 10
         ? null
-        : t("{step}: effort runs from 1 to 10.", { step: t(where) });
+        : t("{step}: effort runs from 1 to 10.", { step: stepName(where) });
     case "pace": {
       if (!isPositiveInt(target.min_sec_per_km) || !isPositiveInt(target.max_sec_per_km)) {
-        return t("{step}: enter both ends of the pace range.", { step: t(where) });
+        return t("{step}: enter both ends of the pace range.", { step: stepName(where) });
       }
       // The SQL says min <= max. Said here as "the faster end first", which is
       // what the two fields mean to somebody writing a session.
       return target.min_sec_per_km <= target.max_sec_per_km
         ? null
-        : t("{step}: the faster pace goes first.", { step: t(where) });
+        : t("{step}: the faster pace goes first.", { step: stepName(where) });
     }
   }
 }
@@ -67,9 +70,9 @@ export function checkTarget(target: EnduranceTarget, where: string): string | nu
 /** Mirrors valid_endurance_step(). */
 export function checkStep(step: EnduranceStep, where: string): string | null {
   if (step.measure === "time") {
-    if (!isPositiveInt(step.seconds)) return t("{step}: set a time longer than zero.", { step: t(where) });
+    if (!isPositiveInt(step.seconds)) return t("{step}: set a time longer than zero.", { step: stepName(where) });
   } else {
-    if (!isPositiveInt(step.meters)) return t("{step}: set a distance longer than zero.", { step: t(where) });
+    if (!isPositiveInt(step.meters)) return t("{step}: set a distance longer than zero.", { step: stepName(where) });
   }
   return checkTarget(step.target, where);
 }
@@ -202,7 +205,7 @@ export function planRows(plan: EndurancePlan): Row[] {
       // The last recovery is left off: nobody jogs a recovery lap after the
       // final rep of a session that has a cool-down of its own.
       if (i < repeats - 1) {
-        rows.push({ key: `rec-${i}`, label: t("Recovery"), detail: formatStep(recovery as EnduranceStep) });
+        rows.push({ key: `rec-${i}`, label: tx("Recovery", "run interval"), detail: formatStep(recovery as EnduranceStep) });
       }
     }
   }
