@@ -42,7 +42,7 @@ import { shiftDate } from "../../../utils/date";
 import { HeartRateChart, HeartRateHero, hrLegend, hrStats, hrUnits, type HrHeroData } from "../../../components/health/metric/HeartRateParts";
 import { MeasuredOnPopup } from "../../../components/health/log/LogSheetParts";
 import { REVIEWED } from "../../../services/health-metrics/clinicalCopy";
-import { activityByDay, useActivityDaily, useMetricRows } from "../../../services/health-metrics/b1";
+import { activityByDay, useActivityDaily, useHeartRateHours, useMetricRows } from "../../../services/health-metrics/b1";
 import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove";
 import { Toast } from "../../../components/ui/Toast";
 import { t, tk, tn } from "../../../i18n/core";
@@ -94,11 +94,26 @@ export default function HeartRatePage() {
     for (const x of samples) if (x.context === "rest") out[x.day] = x.value;
     return out;
   }, [samples]);
+  // Round J (Database DB-Z4): synced heart rate is hourly (min, average and
+  // max from one source, my_activity_hours), never raw samples; each synced
+  // hour adds its min and max to the day's low to high.
+  const hrHours = useHeartRateHours(from0, p0.end).data;
   const samplesByDay = useMemo(() => {
     const out: Record<string, number[]> = {};
     for (const x of samples) (out[x.day] ??= []).push(x.value);
+    for (const h of hrHours) (out[h.day] ??= []).push(h.min, h.max);
     return out;
-  }, [samples]);
+  }, [samples, hrHours]);
+  /** A synced day's value: the average of its hourly averages. */
+  const syncedDayAvg = useMemo(() => {
+    const sums: Record<string, { n: number; total: number }> = {};
+    for (const h of hrHours) {
+      const s = (sums[h.day] ??= { n: 0, total: 0 });
+      s.n += 1;
+      s.total += h.avg;
+    }
+    return Object.fromEntries(Object.entries(sums).map(([d, v]) => [d, Math.round(v.total / v.n)]));
+  }, [hrHours]);
   const activity = activityByDay(useActivityDaily(from0, p0.end).data);
   const restingOn = (d: string): number | null => activity[d]?.restingBpm ?? restingByDay[d] ?? null;
   const samplesOn = (d: string) => samplesByDay[d] ?? [];
@@ -114,9 +129,11 @@ export default function HeartRatePage() {
 
   const byDay = useMemo(() => {
     const out: Record<string, number> = {};
+    // A day with only synced heart rate takes its hourly average (DB-Z4).
+    for (const [d, v] of Object.entries(syncedDayAvg)) out[d] = v;
     for (const p of healthSeries.heartRate.history) out[p.date] = p.value;
     return out;
-  }, [healthSeries.heartRate.history]);
+  }, [healthSeries.heartRate.history, syncedDayAvg]);
   const allDays = Object.keys(byDay).sort();
   const hasAny = allDays.length > 0;
   const { loading, retry: retryMetrics } = useMetricsLoad();

@@ -9,7 +9,7 @@ import type {
 } from "../../types";
 import { clockToSeconds, emptyStep, secondsToClock } from "../../services/workout/endurance";
 import { textPx } from "../../theme/textSize";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 
 // The structured cardio prescription, as a form.
 //
@@ -184,7 +184,7 @@ const StepEditor: React.FC<{
 
       {withMode && (
         <div>
-          <span style={labelStyle}>{t("Recovery")}</span>
+          <span style={labelStyle}>{tx("Recovery", "run interval")}</span>
           <Segmented
             ariaLabel={t("{step} mode", { step: idPrefix })}
             value={step.mode ?? "jog"}
@@ -372,12 +372,12 @@ export const EndurancePlanBuilder: React.FC<{
                 />
               </div>
               <div style={innerBoxStyle}>
-                <span style={labelStyle}>{t("Recovery")}</span>
+                <span style={labelStyle}>{tx("Recovery", "run interval")}</span>
                 <StepEditor
                   step={main.recovery}
                   onChange={(recovery) => onChange({ ...plan, main: { ...main, recovery } })}
                   withMode
-                  idPrefix={t("Recovery")}
+                  idPrefix={tx("Recovery", "run interval")}
                 />
               </div>
             </div>

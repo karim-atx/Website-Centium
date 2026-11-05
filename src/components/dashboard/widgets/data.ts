@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../../lib/supabase/client";
 import { useApp } from "../../../context/AppContext";
+import { readActivityDays, readActivityHours } from "../../../services/health-metrics/readers";
+import { hourSamples } from "../../../services/health-metrics/readersModel";
 
 // v6 Batch 2 · Home: the reads the HO1 widgets need that AppContext does not
 // hold. Owner-only rows (RLS), read-only; nothing here writes.
@@ -35,10 +37,11 @@ export interface HeartRateDay {
 }
 
 /**
- * HO1.W7 "54 to 128 today": every heart_rate sample of the selected local day
- * (health_metrics keeps samples; AppContext reduces them to one per day).
- * Resting heart rate has no source yet (V6-21, Database B1 activity_daily):
- * the widget shows the latest sample labelled "Latest".
+ * HO1.W7 "54 to 128 today": the selected local day's heart rate, oldest first.
+ * Readings logged by hand stay in health_metrics; synced heart rate is hourly
+ * (Database DB-Z4: my_activity_hours' min, average and max, no raw samples),
+ * so each synced hour adds its min and max (for the day's range) and then its
+ * average (so "Latest" is the last hour's average).
  */
 export function useHeartRateDay(day: string, reloadKey: unknown): HeartRateDay {
   const { authUserId } = useApp();
@@ -48,19 +51,23 @@ export function useHeartRateDay(day: string, reloadKey: unknown): HeartRateDay {
     let cancelled = false;
     const [from, to] = dayWindow(day);
     setState((s) => ({ ...s, loading: true }));
-    void supabase
-      .from("health_metrics")
-      .select("value, recorded_at")
-      .eq("user_id", authUserId)
-      .eq("metric_type", "heart_rate")
-      .gte("recorded_at", from)
-      .lt("recorded_at", to)
-      .order("recorded_at", { ascending: true })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) setState((s) => ({ ...s, loading: false, error: true }));
-        else setState({ samples: (data ?? []).map((r) => Number(r.value)), loading: false, error: false });
-      });
+    void Promise.all([
+      supabase
+        .from("health_metrics")
+        .select("value, recorded_at")
+        .eq("user_id", authUserId)
+        .eq("metric_type", "heart_rate")
+        .eq("source", "manual")
+        .gte("recorded_at", from)
+        .lt("recorded_at", to)
+        .order("recorded_at", { ascending: true }),
+      readActivityHours(day, day),
+    ]).then(([manual, hours]) => {
+      if (cancelled) return;
+      if (manual.error && !hours.ok) return setState((s) => ({ ...s, loading: false, error: true }));
+      const logged = (manual.data ?? []).map((r) => ({ at: r.recorded_at as string, value: Number(r.value) }));
+      setState({ samples: hourSamples(logged, hours.ok ? hours.rows : []), loading: false, error: false });
+    });
     return () => {
       cancelled = true;
     };
@@ -168,21 +175,26 @@ export function useStepsGoalOn(day: string): number | null {
 }
 
 /**
- * B1 `activity_daily.resting_bpm` for the local day ("while inactive", HA-08).
- * Two sources may report a day; the lowest reported value is not invented,
- * the first non-null one is used. Null: show the latest sample as "Latest" (V6-21).
+ * The day's resting heart rate ("while inactive", HA-08), from my_activity_days:
+ * one source per day, chosen by priority (Database DB-Z4). Null: show the
+ * latest sample as "Latest" (V6-21).
  */
 export function useRestingBpm(day: string): number | null {
   return useRead(
-    (uid) =>
-      loose
-        .from("activity_daily")
-        .select("resting_bpm, source")
-        .eq("user_id", uid)
-        .eq("local_date", day)
-        .not("resting_bpm", "is", null)
-        .then(({ data, error }: { data: any; error: unknown }) => (error || !data?.length ? null : Number(data[0].resting_bpm))),
+    () => readActivityDays(day, day).then((r) => (r.ok ? (r.rows.find((d) => d.day === day)?.restingBpm ?? null) : null)),
     [day]
+  );
+}
+
+/**
+ * The day's synced steps (Round J, Database DB-Z4): synced steps land in
+ * activity_daily, never in health_metrics, so Home reads them from
+ * my_activity_days (one source per day, by priority). Null when none.
+ */
+export function useActivityStepsOn(day: string, reloadKey: unknown): number | null {
+  return useRead(
+    () => readActivityDays(day, day).then((r) => (r.ok ? (r.rows.find((d) => d.day === day)?.steps ?? null) : null)),
+    [day, reloadKey]
   );
 }
 

@@ -110,7 +110,7 @@ export default function CaloriesPage() {
   // HA-01 (B1): the connected source as the header tag and its freshness line; none on the web.
   const metricSource = useMetricSource();
   // HA-12 (B1 hidden_synced_readings): Delete on a synced day ("Remove from Centium?").
-  const syncedRemove = useSyncedRemove("calories_burned", stepAnchor("month", today, -1), today, setToast);
+  const syncedRemove = useSyncedRemove("calories", stepAnchor("month", today, -1), today, setToast);
   const goal = KCAL_GOAL;
   const p = periodOf(range, anchor);
   const current = isCurrentPeriod(p, today);

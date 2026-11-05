@@ -32,6 +32,8 @@ export interface BloodPressureInput {
 
 export interface BloodPressureReading extends BloodPressureInput {
   id: string;
+  /** manual, or the phone source it was synced from (Database DB-Z4: a synced reading is removed, never edited). */
+  source?: string;
   /** ISO timestamp of the measurement itself, not of the row. */
   recordedAt: string;
 }

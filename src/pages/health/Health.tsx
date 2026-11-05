@@ -31,7 +31,7 @@ import { clock12, rangeClock12 } from "../../utils/time12";
 import { fetchLinkedProfessionals } from "../../services/consent";
 import { getMyCarePlan, type MyCarePlan } from "../../services/care-plan";
 import { fromLine, shortDay } from "../../services/care-plan/logic";
-import { activityByDay, localDay, syncState, useActivityDaily, useHealthSources, useDrinks, useMetricRows, useSleepSessions, whenText } from "../../services/health-metrics/b1";
+import { activityByDay, localDay, syncState, useActivityDaily, useActivityHourly, useHealthSources, useDrinks, useMetricRows, useSleepSessions, whenText } from "../../services/health-metrics/b1";
 import { OFFLINE_CACHED, hairline, useHealthMode, useMetricsLoad } from "../../components/health/metric/MetricKit";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
@@ -215,7 +215,10 @@ export default function Health() {
   const resting = restingToday ?? restSample;
   const hr = resting ?? metricValues.heartRate;
   const hrWord = resting !== null ? t("resting") : t("latest");
-  const hrVals = hrSamples.map((r) => r.value);
+  // Round J (DB-Z4): synced heart rate is hourly (min, average, max), not samples;
+  // each synced hour adds its min and max to the day's range.
+  const hrHours = useActivityHourly(today).data;
+  const hrVals = [...hrSamples.map((r) => r.value), ...hrHours.flatMap((h) => (h.hrAvg === null ? [] : [h.hrMin ?? h.hrAvg, h.hrMax ?? h.hrAvg]))];
   const hrRange = hrVals.length > 1 ? t("{low} to {high}", { low: Math.round(Math.min(...hrVals)), high: Math.round(Math.max(...hrVals)) }) : null;
 
   // --- Blood pressure (#55-#64) and the safety card (K1-K3, K8).
