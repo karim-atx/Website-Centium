@@ -54,6 +54,8 @@ import { CheckFlagChip } from "../../../components/health-checks/CheckFlag";
 import { useCheckFlags } from "../../../components/health-checks/useCheckFlags";
 import { usePregnancyFlags } from "../../../components/pregnancy/usePregnancyFlags";
 import { deleteBloodPressure, type BloodPressureReading } from "../../../services/blood-pressure";
+import { isSynced } from "../../../services/health-metrics/readersModel";
+import { sourceName } from "../../../services/health-metrics/b1";
 import { averageReading, categoryCounts, classifyBloodPressure, isSevere, splitByTimeOfDay } from "../../../services/blood-pressure/classify";
 import { bpCategoryWord, BP_NO_READINGS } from "../../../services/blood-pressure/guidance";
 import { t, tk, tn, tx } from "../../../i18n/core";
@@ -219,11 +221,14 @@ export default function BloodPressurePage() {
           {cFlag && <CheckFlagChip flag={cFlag} />}
         </span>
       ),
-      onEdit: () => {
-        if (offline) return setToast(OFFLINE_ACTION);
-        setEditing(r);
-        setSheetOpen(true);
-      },
+      // A synced reading is removed, never edited (Database DB-Z4).
+      onEdit: isSynced(r.source)
+        ? undefined
+        : () => {
+            if (offline) return setToast(OFFLINE_ACTION);
+            setEditing(r);
+            setSheetOpen(true);
+          },
       onDelete: () => (offline ? setToast(OFFLINE_ACTION) : setDeleting(r)),
     };
   });
@@ -242,7 +247,7 @@ export default function BloodPressurePage() {
     const r = deleting;
     setDeleting(null);
     if (!r) return;
-    const res = await deleteBloodPressure(r.id);
+    const res = await deleteBloodPressure(r.id, r.source);
     if (!res.ok) return setToast(SAVE_FAILED);
     reloadBloodPressure();
   };
@@ -314,11 +319,15 @@ export default function BloodPressurePage() {
         open={!!deleting}
         onClose={() => setDeleting(null)}
         tile={{ background: "#FCEDEC", darkBackground: "#3C2A30", icon: <Trash2 size={18} style={{ color: dark ? "#F09A8E" : "#B4372C" }} /> }}
-        title={tx("Delete this entry?", "health")}
+        title={deleting && isSynced(deleting.source) ? t("Remove from Centium?") : tx("Delete this entry?", "health")}
         meta={deleting ? `${t("{sys}/{dia} mmHg", { sys: deleting.systolic, dia: deleting.diastolic })} · ${relativeDayTitle(localDayOf(deleting.recordedAt), today)} ${clock12(deleting.recordedAt)}` : undefined}
-        body={t("This removes it from your history and totals.")}
+        body={
+          deleting && isSynced(deleting.source)
+            ? t("It stays in {source}. Centium won't import it again.", { source: sourceName(deleting.source) })
+            : t("This removes it from your history and totals.")
+        }
         secondary={{ label: t("Cancel"), onClick: () => setDeleting(null) }}
-        primary={{ label: t("Delete"), tone: "destructive", onClick: () => void confirmDelete() }}
+        primary={{ label: deleting && isSynced(deleting.source) ? t("Remove") : t("Delete"), tone: "destructive", onClick: () => void confirmDelete() }}
       />
       <MeasuredOnPopup
         open={goToOpen}

@@ -53,7 +53,7 @@ import {
   type BedNight,
 } from "../../../components/health/metric/SleepBedChart";
 import { SyncedNoDevice } from "../../../components/health/metric/StepsNoDevice";
-import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove";
+import { useSyncedSleepRemove } from "../../../components/health/metric/SyncedRemove";
 import { useSleepSessions } from "../../../services/health-metrics/b1";
 import { clock12, hourLabel12, rangeClock12 } from "../../../utils/time12";
 import { Toast } from "../../../components/ui/Toast";
@@ -152,7 +152,7 @@ export default function SleepPage() {
   // HA-01 (B1): the connected source as the header tag and its freshness line; none on the web.
   const metricSource = useMetricSource();
   // HA-12 (B1 hidden_synced_readings): Delete on a synced night ("Remove from Centium?").
-  const syncedRemove = useSyncedRemove("sleep", stepAnchor("month", today, -1), today, setToast);
+  const syncedRemove = useSyncedSleepRemove(stepAnchor("month", today, -1), today, setToast);
 
   const p = periodOf(range, anchor);
   const current = isCurrentPeriod(p, today);

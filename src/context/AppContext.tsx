@@ -5442,14 +5442,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
     let cancelled = false;
-    void getSleepDetails(authUserId, metricWindowStart).then((result) => {
+    void getSleepDetails(metricWindowStart, today).then((result) => {
       if (cancelled || !result.ok) return;
       setSleepNights(result.nights);
     });
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, metricWindowStart]);
+  }, [authUserId, profileReady, metricWindowStart, today]);
   const sleepDetail = latestNight(sleepNights);
 
   // --- the cycle tracker ---------------------------------------------------

@@ -310,6 +310,7 @@ const workout: Catalogue = {
   "Interval repeats": "عدد مرات الفترات",
   Work: "فترة الجهد",
   "Cool-down": "التهدئة",
+  "Recovery|run interval": "استشفاء", // note: the easy interval between a run's reps (Karim, 2026-11-05); «التعافي» stays for recovery-sensitive mode
 
   // note: health-related (heart-rate zone).
   "{step}: pick a heart-rate zone from 1 to 5.": "{step}: اختر نطاق نبض من 1 إلى 5.",

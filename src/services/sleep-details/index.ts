@@ -1,7 +1,9 @@
-import { supabase } from "../../../lib/supabase/client";
-import type { PostgrestError } from "@supabase/supabase-js";
+import { readSleepNights } from "../health-metrics/readers";
 
-// One night's sleep breakdown, from public.sleep_details.
+// One night's sleep breakdown, from public.sleep_details, read through
+// my_sleep_nights since Round J (Database DB-Z4): one main night per date,
+// chosen by source priority (manual first), so a night synced from two
+// sources is never counted twice. Naps aren't in it.
 //
 // THE TABLE WAS ALWAYS THERE AND NOTHING EVER READ IT. Its columns are score,
 // rem_min, deep_min, light_min, awake_min and summary — which is precisely,
@@ -44,7 +46,7 @@ export type SleepDetailsResult =
   | { ok: true; nights: SleepDetail[] }
   | { ok: false; message: string };
 
-function describe(error: PostgrestError): string {
+function describe(error: { code?: string; message?: string }): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
     return "Your session expired. Sign in again to see your sleep detail.";
@@ -66,32 +68,22 @@ function describe(error: PostgrestError): string {
  * and multiplying its four stages by a sine wave, so "this week's sleep" was
  * seven scalings of the same invented night.
  */
-export async function getSleepDetails(
-  userId: string,
-  sinceDay: string
-): Promise<SleepDetailsResult> {
-  const { data, error } = await supabase
-    .from("sleep_details")
-    .select("sleep_date, score, rem_min, deep_min, light_min, awake_min, summary")
-    .eq("user_id", userId)
-    .gte("sleep_date", sinceDay)
-    .order("sleep_date", { ascending: true });
+export async function getSleepDetails(sinceDay: string, toDay: string): Promise<SleepDetailsResult> {
+  const read = await readSleepNights(sinceDay, toDay);
 
-  if (error) {
-    console.error("[sleep-details] Could not load sleep detail:", error.message);
-    return { ok: false, message: describe(error) };
+  if (!read.ok) {
+    const error = read.error as { code?: string; message?: string };
+    console.error("[sleep-details] Could not load sleep detail:", error?.message);
+    return { ok: false, message: describe(error ?? {}) };
   }
 
-  const nights = (data ?? []).map((row) => {
-    const { rem_min, deep_min, light_min, awake_min } = row;
-    const complete =
-      rem_min !== null && deep_min !== null && light_min !== null && awake_min !== null;
+  const nights = read.rows.map((row) => {
+    const { remMin, deepMin, lightMin, awakeMin } = row;
+    const complete = remMin !== null && deepMin !== null && lightMin !== null && awakeMin !== null;
     return {
-      date: row.sleep_date,
-      score: row.score === null ? null : Number(row.score),
-      stages: complete
-        ? { remMin: rem_min, deepMin: deep_min, lightMin: light_min, awakeMin: awake_min }
-        : null,
+      date: row.day,
+      score: row.score,
+      stages: complete ? { remMin, deepMin, lightMin, awakeMin } : null,
       summary: row.summary,
     };
   });
