@@ -1,5 +1,5 @@
 import React from "react";
-import { Minus, Plus, SlidersHorizontal } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
@@ -192,8 +192,7 @@ export const WaterHero: React.FC<{
                     className="inline-flex items-center bg-th-f0edf9 text-primary-deep-text hover:brightness-95 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
                     style={WEB_CHIP}
                   >
-                    <Minus size={14} aria-hidden />
-                    {t("{n} ml", { n: ml })}
+                    {t("−{n} ml", { n: ml })}
                   </button>
                 ))}
               <button
@@ -280,8 +279,7 @@ export const WaterHero: React.FC<{
                 className="tap relative inline-flex items-center bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text disabled:opacity-40 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']"
                 style={chipStyle(dark)}
               >
-                <Minus size={13} aria-hidden />
-                {t("{n} ml", { n: ml })}
+                {t("−{n} ml", { n: ml })}
               </button>
             ))}
           </div>

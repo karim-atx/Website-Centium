@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { Toast } from "../../ui/Toast";
+import { OFFLINE_ACTION } from "../metric/MetricKit";
 import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
@@ -26,7 +27,7 @@ import { t, tx } from "../../../i18n/core";
 // LIMIT (V6-16): the app's 5 L day clamp stays; a drink that would pass it is
 // refused here with the handover's line rather than silently trimmed.
 //
-// TAKING WATER BACK (Round I · FA): − 250 ml / − 500 ml beside the adds, and
+// TAKING WATER BACK (Round I · FA): −250 ml / −500 ml beside the adds (Help's wording), and
 // Custom's Add / Remove switch. A removal is unlog_water for the When day:
 // only hand-logged water, never below 0, today or the 7 days before it. The
 // toast shows what the server removed. Offline it waits in the outbox.
@@ -51,7 +52,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
   const [when, setWhen] = useState<Date>(() => new Date());
   const [whenOpen, setWhenOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
 
   const [wasOpen, setWasOpen] = useState(false);
   if (open && !wasOpen) {
@@ -81,7 +82,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     const requestId = newQueueId();
     const queue = () => {
       enqueueLog(authUserId, { kind: "water_remove", ml: amount, day }, requestId);
-      setToast(t(QUEUED_COPY));
+      setToast({ message: t(QUEUED_COPY) });
       onClose();
     };
     if (browserOffline()) return queue();
@@ -90,11 +91,11 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     setSaving(false);
     if (!r.ok) {
       if (isOfflineFailure(r)) return queue();
-      setToast(t(r.message));
+      setToast({ message: t(r.message) });
       return;
     }
     const m = removedMessage(amount, r.removedMl);
-    setToast(t(m.key, { n: m.n }));
+    setToast({ message: t(m.key, { n: m.n }) });
     onSaved?.();
     onClose();
   };
@@ -107,7 +108,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     const requestId = newQueueId();
     const queue = () => {
       enqueueLog(authUserId, { kind: "water", ml: amount, day, loggedAt: when.toISOString() }, requestId);
-      setToast(t(QUEUED_COPY));
+      setToast({ message: t(QUEUED_COPY) });
       onClose();
     };
     if (browserOffline()) return queue();
@@ -116,9 +117,24 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     setSaving(false);
     if (!drink.ok) {
       if (isOfflineFailure(drink)) return queue();
-      setToast(t(drink.message));
+      setToast({ message: t(drink.message) });
       return;
     }
+    // Help: "tap Undo right after logging", as on the Water page. Undo takes
+    // the same amount back off that day (unlog_water, newest first, so the
+    // drink just logged), online only like the Water page's Undo.
+    const ml = amount;
+    setToast({
+      message: t("{n} ml added", { n: ml }),
+      // A day past the 7-day window can't be taken back (unlog_water's 22023): no Undo.
+      undo: !canChangeWaterDay(day, today) ? undefined : () => {
+        if (browserOffline()) return setToast({ message: t(OFFLINE_ACTION) });
+        void unlogWaterDrinks(ml, day, newQueueId()).then((back) => {
+          if (back.ok) onSaved?.();
+          else setToast({ message: t(back.message) });
+        });
+      },
+    });
     onSaved?.();
     onClose();
   };
@@ -202,7 +218,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
                   className={`tap ${on ? "bg-seg-active" : "bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text"}`}
                   style={chip(on)}
                 >
-                  {t("− {n} ml", { n: ml })}
+                  {t("−{n} ml", { n: ml })}
                 </button>
               );
             })}
@@ -246,7 +262,19 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
         </div>
       </BottomSheet>
       <MeasuredOnPopup open={whenOpen} onClose={() => setWhenOpen(false)} value={when} today={today} onDone={setWhen} />
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast
+        open={!!toast}
+        message={toast?.message ?? ""}
+        onUndo={
+          toast?.undo
+            ? () => {
+                toast.undo?.();
+                setToast(null);
+              }
+            : undefined
+        }
+        onExpire={() => setToast(null)}
+      />
     </>
   );
 };

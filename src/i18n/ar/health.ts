@@ -504,7 +504,7 @@ const health: Catalogue = {
   "Water units": "وحدات الماء",
   "{n} ml added": "تمت إضافة {n} مل",
   // Round I · FA: taking water back.
-  "− {n} ml": "− {n} مل",
+  "−{n} ml": "−{n} مل",
   "Remove {n} ml": "إزالة {n} مل",
   "Remove {n} ml from today": "إزالة {n} مل من اليوم",
   "Remove water": "إزالة ماء",
