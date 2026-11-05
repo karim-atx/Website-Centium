@@ -193,7 +193,10 @@ const settings: Catalogue = {
   "Weekly summary": "الملخص الأسبوعي",
   "A recap of your week every Monday": "خلاصة أسبوعك كل يوم اثنين",
   "Replies to my posts": "الردود على منشوراتي",
-  "When someone replies to your forum posts": "عندما يردّ أحد على منشوراتك في المنتدى",
+  // Round I · FD: replies now include answers to your comments, and a daily likes summary.
+  "When someone comments on your posts or replies to your comments": "عندما يعلّق أحد على منشوراتك أو يردّ على تعليقاتك",
+  "Likes on my posts": "الإعجابات بمنشوراتي",
+  "Once a day, when your posts and comments get likes": "مرة في اليوم، عندما تحصل منشوراتك وتعليقاتك على إعجابات",
   Mentions: "الإشارات",
   "When someone mentions you in the forum": "عندما يشير إليك أحد في المنتدى",
   "“New message from …” when someone writes to you. Never the message itself.":

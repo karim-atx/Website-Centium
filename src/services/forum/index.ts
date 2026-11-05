@@ -72,6 +72,8 @@ export interface ForumReply {
   withdrawn: boolean;
   /** Likes on the reply (MO1.3.3, A21). */
   reactionCount: number;
+  /** Round I · FD: the comment this answers (one level), or null for a comment on the post. */
+  parentReplyId: string | null;
 }
 
 /** The label a post shows when the resolver gave no row (a deleted or unknown author). */
@@ -85,7 +87,7 @@ export const UNKNOWN_AUTHOR: Author = {
 
 const THREAD_COLUMNS =
   "id, category_key, identity, title, body, photo_path, status, pinned, locked, edited_at, created_at, withdrawn, reaction_count, reply_count";
-const REPLY_COLUMNS = "id, thread_id, identity, body, status, edited_at, created_at, withdrawn, reaction_count";
+const REPLY_COLUMNS = "id, thread_id, identity, body, status, edited_at, created_at, withdrawn, reaction_count, parent_reply_id";
 
 type ThreadRow = {
   id: string;
@@ -133,6 +135,7 @@ type ReplyRow = {
   created_at: string;
   withdrawn: boolean;
   reaction_count: number | null;
+  parent_reply_id: string | null;
 };
 
 function toReply(r: ReplyRow): ForumReply {
@@ -146,6 +149,7 @@ function toReply(r: ReplyRow): ForumReply {
     createdAt: r.created_at,
     withdrawn: r.withdrawn,
     reactionCount: Number(r.reaction_count) || 0,
+    parentReplyId: r.parent_reply_id ?? null,
   };
 }
 
@@ -239,7 +243,8 @@ export async function fetchReplies(threadId: string): Promise<Result<ForumReply[
     .order("created_at", { ascending: true })
     .limit(500);
   if (error) return fail(error, "read");
-  return { ok: true, value: ((data ?? []) as ReplyRow[]).map(toReply) };
+  // parent_reply_id (Round I · FD, Database 20261226470000) is newer than database.types.ts.
+  return { ok: true, value: ((data ?? []) as unknown as ReplyRow[]).map(toReply) };
 }
 
 /** Labels for a set of posts, keyed by post id. A post with no row has no visible author (blocked or gone). */
@@ -370,21 +375,32 @@ export async function createReply(input: {
   threadId: string;
   identity: Identity;
   body: string;
+  /** Round I · FD: answering a comment (one level). */
+  parentReplyId?: string | null;
 }): Promise<Result<ForumReply>> {
   // Round C Release 2: contact details belong in messages, said at save time.
   const contact = contactRefusal(input.body);
   if (contact) return { ok: false, message: contact };
   const { data, error } = await supabase
     .from("forum_replies")
-    .insert({ author_id: input.userId, thread_id: input.threadId, identity: input.identity, body: input.body.trim() })
-    .select("id, thread_id, identity, body, status, edited_at, created_at")
+    .insert({
+      author_id: input.userId,
+      thread_id: input.threadId,
+      identity: input.identity,
+      body: input.body.trim(),
+      ...(input.parentReplyId ? { parent_reply_id: input.parentReplyId } : {}),
+      // parent_reply_id (Round I · FD) is newer than database.types.ts.
+    } as never)
+    .select("id, thread_id, identity, body, status, edited_at, created_at, parent_reply_id")
     .single();
   if (error) {
     // The insert policy refuses a reply to a locked, removed or withdrawn thread.
     if (error.code === "42501") return { ok: false, message: "This post isn't taking new replies.", code: error.code };
+    // Round I · FD: the comment being answered is no longer a published comment on this post.
+    if (error.code === "22023" && input.parentReplyId) return { ok: false, message: t("That comment can't take replies any more."), code: error.code };
     return fail(error, "reply");
   }
-  return { ok: true, value: toReply({ ...(data as Omit<ReplyRow, "withdrawn">), withdrawn: false }) };
+  return { ok: true, value: toReply({ ...(data as unknown as Omit<ReplyRow, "withdrawn">), withdrawn: false }) };
 }
 
 export type PostRef = { threadId: string } | { replyId: string };

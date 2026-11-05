@@ -141,8 +141,8 @@ test("targets: the documented subject per client kind; other kinds open nothing 
   assert.equal(clientNotificationTarget({ kind: "x", subjectType: "offer", subjectId: O }), null);
 });
 
-test("kinds: the enum in order; the client's are a member's twenty, never an owner's or a professional's own", () => {
-  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 34);
+test("kinds: the enum in order; the client's are a member's twenty-four, never an owner's or a professional's own", () => {
+  assert.equal(MEMBER_NOTIFICATION_KINDS.length, 38);
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(0, 4), [...RELEASE1_KINDS]);
   // Release B appends the ambassador decision (20261217000000), to the applicant.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(18, 20), ["ambassador_application_approved", "ambassador_application_declined"]);
@@ -157,11 +157,14 @@ test("kinds: the enum in order; the client's are a member's twenty, never an own
   assert.equal(MEMBER_NOTIFICATION_KINDS[30], "course_removed");
   // Round G1 appends the Premium pass notices (20261226170000), to the member.
   assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(31, 34), ["premium_pass_started", "premium_pass_ending", "premium_pass_ended"]);
+  // Round I · FD appends the forum notices (20261226460000), to the member.
+  assert.deepEqual(MEMBER_NOTIFICATION_KINDS.slice(34, 38), ["forum_reply", "forum_comment_reply", "forum_mention", "forum_likes"]);
   assert.deepEqual([...CLIENT_KINDS], [
     "voucher_issued", "points_expiring", "class_cancelled", "review_prompt", "ambassador_application_approved", "ambassador_application_declined",
     "forum_nickname_reset", "support_resources", "image_approved", "image_rejected", "food_submission_reviewed", "workout_log_reply", "course_published",
     "no_show_warning", "booking_paused", "booking_pause_lifted", "course_removed",
     "premium_pass_started", "premium_pass_ending", "premium_pass_ended",
+    "forum_reply", "forum_comment_reply", "forum_mention", "forum_likes",
   ]);
   for (const k of CLIENT_KINDS) assert.ok((MEMBER_NOTIFICATION_KINDS as readonly string[]).includes(k), k);
   const notMine = [
@@ -579,4 +582,26 @@ test("Round G1: the pass notices are asked for only with the Premium switch on",
   for (const k of PREMIUM_PASS_KINDS) assert.ok(!off.includes(k), k);
   assert.equal(off.length, CLIENT_KINDS.length - 3);
   assert.equal(clientKinds(false), clientKinds(false), "the same array each time, so effects don't re-run");
+});
+
+test("Round I · FD: the forum notices name the comment's label, the post and its count, and open the post", () => {
+  const thread = "6f1c2a4e-1b2c-4d3e-8f90-0123456789ab";
+  const fill = (kind: string, payload: Record<string, unknown>) => {
+    const base = CLIENT_COPY[kind];
+    return { ...base, ...CLIENT_FILLS[kind]!(payload) };
+  };
+  assert.equal(fill("forum_reply", { thread_id: thread, title: "Morning runs", label: "RunnerNour", reply_id: thread }).title, "RunnerNour commented on “Morning runs”");
+  assert.equal(fill("forum_comment_reply", { thread_id: thread, title: "Morning runs", label: "Sam", parent_reply_id: thread }).title, "Sam replied to your comment on “Morning runs”");
+  assert.equal(fill("forum_mention", { thread_id: thread, title: "Morning runs", label: "Sam" }).title, "Sam mentioned you in “Morning runs”");
+  // No label: the line without a name. No title: the plain line.
+  assert.equal(fill("forum_mention", { thread_id: thread, title: "Morning runs" }).title, "You were mentioned in “Morning runs”");
+  assert.equal(fill("forum_reply", { thread_id: thread }).title, "New comment on your post");
+  assert.equal(fill("forum_likes", { thread_id: thread, title: "Morning runs", count: 1 }).title, "1 like on “Morning runs” today");
+  assert.equal(fill("forum_likes", { thread_id: thread, title: "Morning runs", count: "12" }).title, "12 likes on “Morning runs” today");
+  assert.equal(fill("forum_likes", { thread_id: thread, title: "Morning runs", count: 0 }).title, "New likes on your post today");
+  for (const kind of ["forum_reply", "forum_comment_reply", "forum_mention", "forum_likes"]) {
+    assert.equal(clientNotificationTarget({ kind: kind as never, subjectType: "forum_post", subjectId: thread, payload: { thread_id: thread } }), `/app/forum/post/${thread}`);
+    assert.equal(clientNotificationTarget({ kind: kind as never, subjectType: "forum_post", subjectId: thread }), `/app/forum/post/${thread}`);
+    assert.equal(clientNotificationTarget({ kind: kind as never, subjectType: "forum_post", subjectId: null, payload: { thread_id: "../settings" } }), "/app/forum");
+  }
 });

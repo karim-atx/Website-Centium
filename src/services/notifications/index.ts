@@ -7,7 +7,7 @@
 import { t } from "../../i18n/core";
 import { marketRpc, type MarketResult } from "../market/rpc";
 import { supabase } from "../../../lib/supabase/client";
-import { businessIdsToName, parseMarkedCount, parseMemberNotifications, parseUnreadCount, withBusinessNames, type MemberNotification, type NotificationCursor } from "./notificationsModel";
+import { businessIdsToName, FORUM_NOTIFICATION_KINDS, parseMarkedCount, parseMemberNotifications, parseUnreadCount, withBusinessNames, type MemberNotification, type NotificationCursor } from "./notificationsModel";
 
 export * from "./notificationsModel";
 
@@ -24,6 +24,17 @@ const SERVER_MAX = 200;
 const kindsArg = (kinds: readonly string[] | null | undefined): string[] | null => (kinds ? [...kinds] : null);
 
 /**
+ * Round I · FD: a database before Round I has no forum kinds, and one unknown
+ * label in p_kinds refuses the whole call (22P02). Then the call is made again
+ * without them, so the inbox works whichever side is deployed first.
+ */
+async function withKnownKinds<T>(kinds: readonly string[] | null | undefined, call: (k: readonly string[] | null | undefined) => Promise<MarketResult<T>>): Promise<MarketResult<T>> {
+  const r = await call(kinds);
+  if (r.ok || r.code !== "22P02" || !kinds?.some((k) => (FORUM_NOTIFICATION_KINDS as readonly string[]).includes(k))) return r;
+  return call(kinds.filter((k) => !(FORUM_NOTIFICATION_KINDS as readonly string[]).includes(k)));
+}
+
+/**
  * The caller's inbox, newest first, `limit` at a time:
  * my_notifications(p_before, p_limit, p_before_id, p_kinds). `cursor` is
  * notificationCursor() of the rows already shown (null for the first page);
@@ -32,11 +43,13 @@ const kindsArg = (kinds: readonly string[] | null | undefined): string[] | null 
  */
 export async function fetchMyNotifications(cursor: NotificationCursor | null = null, limit = 30, kinds?: readonly string[] | null): Promise<MarketResult<NotificationPage>> {
   const take = Math.max(1, Math.min(SERVER_MAX - 1, limit));
-  const r = await marketRpc(
-    "my_notifications",
-    { p_before: cursor?.before ?? null, p_limit: take + 1, p_before_id: cursor?.beforeId ?? null, p_kinds: kindsArg(kinds) },
-    t("Couldn't load your notifications."),
-    parseMemberNotifications
+  const r = await withKnownKinds(kinds, (k) =>
+    marketRpc(
+      "my_notifications",
+      { p_before: cursor?.before ?? null, p_limit: take + 1, p_before_id: cursor?.beforeId ?? null, p_kinds: kindsArg(k) },
+      t("Couldn't load your notifications."),
+      parseMemberNotifications
+    )
   );
   if (!r.ok) return r;
   const items = await namedBusinesses(r.value.slice(0, take));
@@ -69,11 +82,13 @@ async function namedBusinesses(items: MemberNotification[]): Promise<MemberNotif
  * screen's rows. The value is the count that moved.
  */
 export function markNotificationsRead(ids: readonly string[] | null, kinds?: readonly string[] | null): Promise<MarketResult<number>> {
-  return marketRpc(
-    "mark_notifications_read",
-    { p_ids: ids ? [...ids] : null, p_kinds: kindsArg(kinds) },
-    ids ? t("Couldn't update this notification.") : t("Couldn't mark your notifications as read."),
-    parseMarkedCount
+  return withKnownKinds(kinds, (k) =>
+    marketRpc(
+      "mark_notifications_read",
+      { p_ids: ids ? [...ids] : null, p_kinds: kindsArg(k) },
+      ids ? t("Couldn't update this notification.") : t("Couldn't mark your notifications as read."),
+      parseMarkedCount
+    )
   );
 }
 
@@ -83,5 +98,5 @@ export function markNotificationsRead(ids: readonly string[] | null, kinds?: rea
  * shows "99+" there).
  */
 export function fetchUnreadNotificationCount(kinds?: readonly string[] | null): Promise<MarketResult<number>> {
-  return marketRpc("my_unread_notification_count", { p_kinds: kindsArg(kinds) }, t("Couldn't check your notifications."), parseUnreadCount);
+  return withKnownKinds(kinds, (k) => marketRpc("my_unread_notification_count", { p_kinds: kindsArg(k) }, t("Couldn't check your notifications."), parseUnreadCount));
 }

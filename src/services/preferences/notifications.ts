@@ -22,6 +22,8 @@ export type NotificationPrefs = {
   weeklySummary: boolean;
   forumReplies: boolean;
   mentions: boolean;
+  /** Round I · FD: the daily likes summary (inbox entry and push). Database 20261226470000. */
+  forumLikes: boolean;
   professionalMessages: boolean;
   calendarEvents: boolean;
   memberships: boolean;
@@ -63,6 +65,7 @@ export const NOTIFICATION_COLUMNS = {
   weeklySummary: "notification_weekly_summary",
   forumReplies: "notification_forum_replies",
   mentions: "notification_mentions",
+  forumLikes: "notification_forum_likes",
   professionalMessages: "notification_professional_messages",
   calendarEvents: "notification_calendar_events",
   memberships: "notification_memberships",

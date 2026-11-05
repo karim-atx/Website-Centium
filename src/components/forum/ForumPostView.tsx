@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { canAnswer, threadReplies } from "../../services/forum/threading";
 import { Link } from "react-router-dom";
 import { useBack } from "../../hooks/useBack";
-import { ArrowLeft, Ban, ChevronDown, EllipsisVertical, Flag, MessageCircle, Pencil, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Ban, ChevronDown, EllipsisVertical, Flag, MessageCircle, Pencil, Send, Trash2, X } from "lucide-react";
 import {
   createReply,
   editPost,
@@ -86,6 +87,8 @@ export function ForumPostView({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
+  // Round I · FD: the comment being answered (one level), and its label.
+  const [answering, setAnswering] = useState<{ id: string; label: string } | null>(null);
   // The ⋮ dropdown (MO1.3.3 #2) and the sheet one of its rows opens.
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [sheet, setSheet] = useState<{ mode: "withdraw" | "report" | "block"; ref: PostRef; kind: "post" | "reply"; label: string } | null>(null);
@@ -157,13 +160,14 @@ export function ForumPostView({
     if (!thread || !body || sending) return;
     setSending(true);
     setReplyError(null);
-    const r = await createReply({ userId, threadId: thread.id, identity: isProfessional ? "real_name" : replyAs, body });
+    const r = await createReply({ userId, threadId: thread.id, identity: isProfessional ? "real_name" : replyAs, body, parentReplyId: answering?.id ?? null });
     setSending(false);
     if (!r.ok) {
       setReplyError(r.message);
       return;
     }
     setDraft("");
+    setAnswering(null);
     const a = await fetchAuthors([], [r.value.id]);
     setAuthors((prev) => new Map([...prev, ...a]));
     setReplies((prev) => [...prev, r.value]);
@@ -336,7 +340,8 @@ export function ForumPostView({
   }
 
   const author = authors.get(thread.id) ?? UNKNOWN_AUTHOR;
-  const visibleReplies = replies;
+  // Round I · FD: each comment followed by its answers (one level).
+  const visibleReplies = threadReplies(replies);
   const canReply = thread.status === "published" && !thread.locked;
   const postColours = categoryColours(thread.categoryKey, dark);
 
@@ -459,24 +464,34 @@ export function ForumPostView({
 
       {/* First reply's avatar 12 under the action row (frame check; was 16). */}
       <div className="pt-3 flex flex-col gap-[18px] grow">
-        {visibleReplies.map((r) =>
-          r.status === "removed" ? (
-            <RemovedNote key={r.id} kind="reply" radius={12} />
-          ) : (
-            <ReplyRow
-              key={r.id}
-              reply={r}
-              author={authors.get(r.id) ?? UNKNOWN_AUTHOR}
-              onMenu={(anchor, mine, label) =>
-                setMenu({ anchor, ref: { replyId: r.id }, kind: "reply", mine, createdAt: r.createdAt, label })
-              }
-              liked={likedReplies.has(r.id)}
-              onLike={() => void toggleReplyLike(r)}
-              onReply={canReply ? () => replyInput.current?.focus() : undefined}
-              editor={editing && "replyId" in editing.ref && editing.ref.replyId === r.id ? editFields("reply") : null}
-            />
-          )
-        )}
+        {visibleReplies.map(({ reply: r, depth }) => (
+          // Round I · FD: an answer sits under its comment, indented.
+          <div key={r.id} style={depth ? { marginInlineStart: 44 } : undefined}>
+            {r.status === "removed" ? (
+              <RemovedNote kind="reply" radius={12} />
+            ) : (
+              <ReplyRow
+                reply={r}
+                author={authors.get(r.id) ?? UNKNOWN_AUTHOR}
+                onMenu={(anchor, mine, label) =>
+                  setMenu({ anchor, ref: { replyId: r.id }, kind: "reply", mine, createdAt: r.createdAt, label })
+                }
+                liked={likedReplies.has(r.id)}
+                onLike={() => void toggleReplyLike(r)}
+                // Round I · FD: Reply answers this comment; an answer can't be answered (one level).
+                onReply={
+                  canReply && canAnswer(r) && r.status === "published"
+                    ? () => {
+                        setAnswering({ id: r.id, label: (authors.get(r.id) ?? UNKNOWN_AUTHOR).label });
+                        replyInput.current?.focus();
+                      }
+                    : undefined
+                }
+                editor={editing && "replyId" in editing.ref && editing.ref.replyId === r.id ? editFields("reply") : null}
+              />
+            )}
+          </div>
+        ))}
       </div>
 
       {canReply ? (
@@ -507,6 +522,21 @@ export function ForumPostView({
               >
                 {replyAs === "nickname" ? nickname : firstName}
                 <ChevronDown size={12} />
+              </button>
+            </span>
+          )}
+          {/* Round I · FD: answering a comment, with the way back to replying to the post. */}
+          {answering && (
+            <span className="ps-1.5 flex items-center gap-1.5 text-[11.5px]" style={{ color: fv("muted") }}>
+              <span className="min-w-0 truncate">{t("Replying to {name}", { name: answering.label })}</span>
+              <button
+                type="button"
+                onClick={() => setAnswering(null)}
+                aria-label={t("Cancel reply to {name}", { name: answering.label })}
+                className="tap h-[22px] w-[22px] rounded-full flex items-center justify-center shrink-0"
+                style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
+              >
+                <X size={12} aria-hidden />
               </button>
             </span>
           )}
