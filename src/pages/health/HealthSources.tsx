@@ -5,6 +5,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { fetchClinicalSources, groupSources, type SourceGroup } from "../../services/sources";
 import { t } from "../../i18n/core";
+import { safeHref } from "../../utils/safeHref";
 
 /**
  * Sources and guidelines (/app/health/sources): every source in the
@@ -50,7 +51,7 @@ export default function HealthSources() {
               {g.sources.map((s, i) => (
                 <li key={s.key} className={i > 0 ? "border-t border-charcoal/[0.06]" : ""}>
                   <a
-                    href={s.url}
+                    href={safeHref(s.url) ?? undefined}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="tap flex items-start justify-between gap-3 px-4 py-3"

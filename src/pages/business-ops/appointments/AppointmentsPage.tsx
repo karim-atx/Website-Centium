@@ -216,7 +216,7 @@ export function AppointmentsDayPage() {
   return (
     <div>
       <OpsHeader back kicker={t("Appointments")} title={dayDate(day)} />
-      <div role="tablist" aria-label={t("Day")} className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8, marginBottom: 16 }}>
+      <div role="tablist" aria-label={t("Day")} className="flex scroll-row [scrollbar-width:none]" style={{ gap: 8, marginBottom: 16 }}>
         {strip.map((x) => {
           const v = isoDate(x);
           const on = v === date;

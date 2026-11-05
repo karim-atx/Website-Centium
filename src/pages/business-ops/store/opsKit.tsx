@@ -69,7 +69,7 @@ export const OpsHeader: React.FC<{ kicker: string; title: string; sub?: string |
 
 export function TextTabs<K extends string>({ tabs, active, onChange, label }: { tabs: { key: K; label: string }[]; active: K; onChange: (k: K) => void; label: string }) {
   return (
-    <div role="tablist" aria-label={label} className="flex overflow-x-auto [scrollbar-width:none] border-b border-th-ebeaf6 dark:border-th-aea1dc/[0.16]" style={{ gap: 20, margin: "0 0 16px" }}>
+    <div role="tablist" aria-label={label} className="flex scroll-row [scrollbar-width:none] border-b border-th-ebeaf6 dark:border-th-aea1dc/[0.16]" style={{ gap: 20, margin: "0 0 16px" }}>
       {tabs.map((tab) => {
         const on = tab.key === active;
         return (

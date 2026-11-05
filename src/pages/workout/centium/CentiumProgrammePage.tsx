@@ -202,7 +202,7 @@ function ProgrammeView({ programme: p }: { programme: CentiumProgramme }) {
       {p.progression.length > 0 && (
         <>
           {caps(t("How it progresses"))}
-          <div className="overflow-x-auto">
+          <div className="scroll-row">
             <table className="w-full" style={{ fontSize: textPx(12.5), borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ color: coachColor("faint", dark), textAlign: "start" }}>

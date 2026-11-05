@@ -146,7 +146,7 @@ export function CoursesWeb({ userId }: { userId: string }) {
           </label>
         )}
         {data ? (
-          <div role="group" aria-label={t("Course categories")} className="flex co-web-noscroll" style={{ gap: 5, padding: 5, borderRadius: 14, background: "#F4F3F9", overflowX: "auto", maxWidth: certificates ? undefined : "70%", flex: certificates ? 1 : "none" }}>
+          <div role="group" aria-label={t("Course categories")} className="flex scroll-row co-web-noscroll" style={{ gap: 5, padding: 5, borderRadius: 14, background: "#F4F3F9", maxWidth: certificates ? undefined : "70%", flex: certificates ? 1 : "none" }}>
             {chipItems.map((c) => {
               const on = activeChip === c.key;
               return (

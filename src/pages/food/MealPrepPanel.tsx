@@ -246,11 +246,12 @@ export default function MealPrepPanel({ sub: subProp }: { sub?: SubTab } = {}) {
       {subProp === undefined && <MealPrepSubTabs sub={sub} onChange={setSub} />}
 
       <div className="flex flex-col" style={{ gap: 8, marginTop: subProp === undefined ? 12 : 0, paddingBottom: 72 }}>
-        {/* Round E: cooking's "Play your music" (the member's cooking
-            favourite, or their music app), above the recipes. */}
+        {/* Round E: the member's cooking playlist, above the recipes. Round I
+            (EY): only a real playlist here; no "Play your music" or "Choose
+            your music app" row on a page about food. */}
         {/* Round G4: the member's own meal planner (Premium; nothing while the switch is off). */}
         <MealPlannerEntry className="mb-1" />
-        {sub === "recipes" && <MusicSection moment="cooking" style={{ marginBottom: 4 }} />}
+        {sub === "recipes" && <MusicSection moment="cooking" playlistsOnly style={{ marginBottom: 4 }} />}
         {error ? (
           <p style={{ margin: 0, fontSize: textPx(13), color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
         ) : rows.length === 0 ? (

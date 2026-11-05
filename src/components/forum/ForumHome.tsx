@@ -267,7 +267,7 @@ export function ForumHome({
   // right edge under a 44 fade to the page.
   const proStrip = (
     <div className="relative -me-4">
-      <div className="flex overflow-x-auto no-scrollbar pe-4" style={{ gap: 6 }} role="group" aria-label={t("Categories")} data-forum-strip="">
+      <div className="flex scroll-row no-scrollbar pe-4" style={{ gap: 6 }} role="group" aria-label={t("Categories")} data-forum-strip="">
         {[{ key: null as string | null, name: t("All") }, ...chips].map((c) => {
           const on = activeFilter === c.key;
           return (
@@ -310,7 +310,7 @@ export function ForumHome({
     </div>
   ) : (
     <div
-      className="flex gap-1 overflow-x-auto no-scrollbar -me-4 p-1 pe-4 bg-th-f4f3f9 dark:bg-cream-soft"
+      className="flex gap-1 scroll-row no-scrollbar -me-4 p-1 pe-4 bg-th-f4f3f9 dark:bg-cream-soft"
       style={{ borderRadius: isRtl() ? "0 12px 12px 0" : "12px 0 0 12px" }}
       role="group"
       aria-label={t("Categories")}

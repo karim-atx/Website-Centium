@@ -18,9 +18,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * opens its conversation either way. Read from `callId` (a uuid only), so a
  * payload still carrying the old url lands right.
  *
- * Anything else uses the payload's `url` when it is a same-origin path (a
- * leading single slash only: "//evil.example" is protocol-relative and would
- * leave the origin), and otherwise the fallback.
+ * Anything else uses the payload's `url` when it is a same-origin path, and
+ * otherwise the fallback. "Same origin" is decided by the URL parser itself,
+ * not by the leading characters (Round I, FB): "//evil.example" is
+ * protocol-relative, and "/evil.example" or "/	/evil.example" leave the
+ * origin too, because the parser reads a backslash as a slash and drops tabs
+ * and newlines. Only the path, query and hash of a same-origin result are
+ * kept.
  */
 export function notificationTarget(raw: Record<string, unknown>, fallback: string): string {
   const extra = typeof raw.data === "object" && raw.data !== null ? (raw.data as Record<string, unknown>) : {};
@@ -29,7 +33,22 @@ export function notificationTarget(raw: Record<string, unknown>, fallback: strin
   const callId = typeof raw.callId === "string" ? raw.callId.trim() : "";
   if (raw.type === "incoming_call" && UUID.test(callId)) return `/app/calls/${callId}`;
   const url = typeof raw.url === "string" ? raw.url.trim() : "";
-  return url.startsWith("/") && !url.startsWith("//") ? url : fallback;
+  return sameOriginPath(url) ?? fallback;
+}
+
+// Any origin works as the base: only whether the result stays on it matters.
+const BASE = "https://centium.invalid";
+
+/** `url` as a path on our own origin, or null when it would leave it (or isn't a path). */
+export function sameOriginPath(url: string): string | null {
+  if (!url.startsWith("/")) return null;
+  let u: URL;
+  try {
+    u = new URL(url, BASE);
+  } catch {
+    return null;
+  }
+  return u.origin === BASE ? u.pathname + u.search + u.hash : null;
 }
 
 /** CallLink's next step: whether to ring, and the conversation to open (null: not found, or not theirs). */

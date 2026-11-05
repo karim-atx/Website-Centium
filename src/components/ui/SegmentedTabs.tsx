@@ -124,16 +124,18 @@ export const SegmentedTabs: React.FC<{
   const partB = darkTone === "partB";
   const trackRef = useRef<HTMLDivElement | null>(null);
   // A scrolling track brings the active tab into view (a new folder, or one
-  // just moved, can sit past the right edge).
+  // just moved, can sit past the end). Round I (EZ): measured on screen, so it
+  // works right to left too (scrollLeft runs negative there; scrollBy's
+  // direction is the same in both).
   useEffect(() => {
     if (!scroll) return;
     const track = trackRef.current;
     const tab = track?.querySelector<HTMLElement>('[aria-selected="true"]');
     if (!track || !tab) return;
-    const left = tab.offsetLeft - track.offsetLeft;
-    if (left < track.scrollLeft) track.scrollTo({ left: left - 6, behavior: "smooth" });
-    else if (left + tab.offsetWidth > track.scrollLeft + track.clientWidth)
-      track.scrollTo({ left: left + tab.offsetWidth - track.clientWidth + 6, behavior: "smooth" });
+    const box = track.getBoundingClientRect();
+    const at = tab.getBoundingClientRect();
+    if (at.left < box.left) track.scrollBy({ left: at.left - box.left - 6, behavior: "smooth" });
+    else if (at.right > box.right) track.scrollBy({ left: at.right - box.right + 6, behavior: "smooth" });
   }, [scroll, activeKey, items.length]);
 
   // Track: fill.segmentedTrack #F3F3FD (dark #242730, V6-93); the Part B main
@@ -161,7 +163,7 @@ export const SegmentedTabs: React.FC<{
   return (
     <div
       ref={trackRef}
-      className={`flex items-center ${scroll ? "overflow-x-auto no-scrollbar" : ""} ${className ?? ""}`}
+      className={`flex items-center ${scroll ? "scroll-row no-scrollbar" : ""} ${className ?? ""}`}
       style={{
         background: trackFill,
         ...(teal ? { borderRadius: 12, padding: 4, gap: 4 } : { borderRadius: 16, padding: 6, gap: 5 }),

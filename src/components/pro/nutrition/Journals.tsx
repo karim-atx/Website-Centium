@@ -233,7 +233,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
         </div>
       )}
       {days.length > 1 && (
-        <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, padding: "5px 0", margin: "-5px 0 7px" }} role="tablist" aria-label={t("Day")}>
+        <div className="flex scroll-row no-scrollbar" style={{ gap: 6, padding: "5px 0", margin: "-5px 0 7px" }} role="tablist" aria-label={t("Day")}>
           {days.map((d) => {
             const on = d === current;
             return (

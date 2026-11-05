@@ -106,7 +106,7 @@ export const ImagingCaptureFlow: React.FC<{
         footer={<CtaButton label={editing ? t("Save changes") : t("Save")} onClick={() => void save()} loading={saving} disabled={!type || !date} />}
       >
         <FieldLabel>{t("Type")}</FieldLabel>
-        <div role="radiogroup" aria-label={t("Type")} className="flex overflow-x-auto no-scrollbar -mx-5 px-5" style={{ gap: 6 }}>
+        <div role="radiogroup" aria-label={t("Type")} className="flex scroll-row no-scrollbar -mx-5 px-5" style={{ gap: 6 }}>
           {options.map((opt) => {
             const on = type === opt;
             return (

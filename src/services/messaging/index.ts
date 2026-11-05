@@ -10,6 +10,7 @@ import { parseRecommendation, type RecommendationCard } from "./recommendation";
 import { parseMessagePopup, type MessagePopup } from "./popupModel";
 import { loadConsoleAccess } from "../business-console";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+import { filterId, filterTimestamp } from "../postgrestFilter";
 
 // Two-party messaging, against the real tables.
 //
@@ -895,7 +896,9 @@ export async function fetchMessagePage(
     if (before) {
       // Quoted: a timestamp carries ':' and '+', which PostgREST's or() grammar
       // would otherwise read as syntax.
-      q = q.or(`created_at.lt."${before.createdAt}",and(created_at.eq."${before.createdAt}",id.lt.${before.id})`);
+      // Round I, FB: only a timestamp and an id of the server's own shape go in (postgrestFilter).
+      const at = filterTimestamp(before.createdAt);
+      q = q.or(`created_at.lt."${at}",and(created_at.eq."${at}",id.lt.${filterId(before.id)})`);
     }
     return q;
   };

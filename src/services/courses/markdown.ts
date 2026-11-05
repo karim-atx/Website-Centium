@@ -16,6 +16,7 @@
 // javascript: link, a relative path) shows its words without a link.
 
 import { tk } from "../../i18n/core";
+import { safeHref } from "../../utils/safeHref";
 
 export type Inline =
   | { t: "text"; v: string }
@@ -33,17 +34,8 @@ export type Block =
 /** The short help line the editors show under a lesson's text box. */
 export const FORMATTING_HELP = tk("You can use # Heading, **bold**, *italic*, - lists, 1. numbered lists and [links](https://…). HTML isn't allowed.");
 
-/** An http or https address, normalised; null for anything else. */
-export function safeHref(raw: string): string | null {
-  const s = raw.trim();
-  if (!/^https?:\/\//i.test(s)) return null;
-  try {
-    const u = new URL(s);
-    return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
-  } catch {
-    return null;
-  }
-}
+// Links: http and https only (utils/safeHref, shared with every stored link).
+export { safeHref };
 
 const ESCAPABLE = "\\`*_[]()#+-.!>";
 const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}]/u.test(ch);

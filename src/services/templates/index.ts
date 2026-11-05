@@ -14,6 +14,7 @@ import {
 import { resolveExerciseRef, type ExerciseLookup } from "../routines";
 import { setTypesColumn } from "./setTypes";
 import { prescribedSetCount, readSetTargets, setTargetsColumn } from "../workout/setTargets";
+import { filterId } from "../postgrestFilter";
 import type {
   BlockKind,
   EndurancePlan,
@@ -330,7 +331,7 @@ export async function getTemplates(userId: string): Promise<TemplatesResult> {
   const { data, error } = await supabase
     .from("workout_templates")
     .select(TEMPLATE_SELECT)
-    .or(`owner_id.eq.${userId},is_public.is.true`)
+    .or(`owner_id.eq.${filterId(userId)},is_public.is.true`)
     .order("created_at", { ascending: true });
 
   if (error) {

@@ -205,6 +205,8 @@ export const Ecosystem: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) =
                 display: seg === esI ? (r.lg ? "block" : "flex") : "none",
                 gap: "14px",
                 overflowX: r.esOver,
+                // Round I (EZ): the carousel scrolls sideways only.
+                overflowY: r.esOver === "auto" ? "hidden" : undefined,
                 scrollSnapType: "x mandatory",
                 overscrollBehaviorX: "contain",
                 touchAction: "pan-x pan-y",

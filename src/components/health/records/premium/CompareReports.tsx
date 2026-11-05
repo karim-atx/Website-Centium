@@ -113,7 +113,7 @@ function CompareSheet({ panels, onClose }: { panels: LabPanel[]; onClose: () => 
         )}
         {rows && rows.length === 0 && <p className="mt-4 text-[12.5px] text-charcoal-faint">{t("These reports have no markers to compare.")}</p>}
         {rows && rows.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 scroll-row">
             <table className="w-full text-[12px]" style={{ borderCollapse: "collapse" }}>
               <thead>
                 <tr className="text-charcoal-faint">

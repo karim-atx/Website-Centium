@@ -192,7 +192,7 @@ export default function BookAppointmentPage() {
 
           {service && (
             <Section label={t("Day")}>
-              <div role="radiogroup" aria-label={t("Day")} className="flex overflow-x-auto [scrollbar-width:none]" style={{ gap: 8 }}>
+              <div role="radiogroup" aria-label={t("Day")} className="flex scroll-row [scrollbar-width:none]" style={{ gap: 8 }}>
                 {days.map((x) => {
                   const v = isoDate(x);
                   const on = v === date;

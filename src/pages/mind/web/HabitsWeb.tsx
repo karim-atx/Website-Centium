@@ -324,7 +324,7 @@ export default function HabitsWeb() {
                   <X size={16} color="#8C8378" aria-hidden />
                 </button>
               </div>
-              <div className="mind-web-noscroll flex" style={{ gap: 8, overflowX: "auto", padding: 2, margin: -2 }}>
+              <div className="scroll-row mind-web-noscroll flex" style={{ gap: 8, padding: 2, margin: -2 }}>
                 {habitIconOptions.map((opt) => {
                   const Icon = habitIcon[opt.key];
                   const sel = newIcon === opt.key;
@@ -345,7 +345,7 @@ export default function HabitsWeb() {
                 })}
               </div>
               {panel.mode === "add" && suggestions.length > 0 && (
-                <div className="mind-web-noscroll flex" style={{ gap: 8, overflowX: "auto" }}>
+                <div className="scroll-row mind-web-noscroll flex" style={{ gap: 8 }}>
                   {suggestions.map((s) => {
                     const Icon = habitIcon[s.icon];
                     return (

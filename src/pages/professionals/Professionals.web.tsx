@@ -131,7 +131,7 @@ function DirectoryPageWeb({ selected }: { selected: string | null }) {
           );
         })}
       </div>
-      <div role="tablist" aria-label={t("Categories")} data-pr-cats className="pr-web-noscroll flex" style={{ flex: "none", gap: 5, padding: 5, borderRadius: 14, background: "#F4F3F9", overflowX: "auto" }}>
+      <div role="tablist" aria-label={t("Categories")} data-pr-cats className="pr-web-noscroll flex" style={{ flex: "none", gap: 5, padding: 5, borderRadius: 14, background: "#F4F3F9", overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y pinch-zoom" }}>
         {cats.map(({ k, label }) => {
           const on = type === k;
           return (

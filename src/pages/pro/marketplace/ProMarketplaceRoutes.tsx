@@ -100,7 +100,7 @@ function ProMarketplacePage() {
           <p style={{ fontSize: textPx(13), fontWeight: 500, color: m.faint, marginTop: 4, lineHeight: linePx(19) }}>{t("How clients and gyms find you")}</p>
         </div>
       </div>
-      <div role="tablist" aria-label={t("Marketplace")} style={{ margin: "16px 0 18px", display: "flex", gap: 3, padding: 4, borderRadius: 16, background: m.segtrack, overflowX: "auto", scrollbarWidth: "none" }}>
+      <div role="tablist" aria-label={t("Marketplace")} style={{ margin: "16px 0 18px", display: "flex", gap: 3, padding: 4, borderRadius: 16, background: m.segtrack, overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y pinch-zoom", scrollbarWidth: "none" }}>
         {PRO_MARKET_TABS.map((tb, i) => {
           const on = tb.key === tab;
           return (

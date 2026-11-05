@@ -23,6 +23,9 @@ import { useProPlanInApp, useSwitches } from "../../../services/premium/hooks";
 import { premiumOn, proPlanBoughtLine, proPlanPath } from "../../../services/premium/model";
 import { BuyInApp } from "../../../components/premium/BuyInApp";
 
+/** A box's horizontal middle on screen. */
+const centreX = (r: DOMRect) => r.left + r.width / 2;
+
 // Release 3 W6 · MO24 v3 Subscription (source/gen r16.js subscription16,
 // tierCard16, tierGlyph16; COPY MO24). The real professional tiers from
 // subscription_tiers (useSubscriptionTiers), the plan in force from
@@ -174,19 +177,19 @@ export default function ProSubscription() {
     if (!el || tiers.length === 0 || planLoading || centred !== null) return;
     const start = recIdx >= 0 ? recIdx : Math.max(0, curIdx);
     const card = el.children[start] as HTMLElement | undefined;
-    if (card) el.scrollLeft = card.offsetLeft - (el.clientWidth - card.offsetWidth) / 2;
+    // Measured on screen, so it centres right to left too (Round I, EZ).
+    if (card) el.scrollLeft += centreX(card.getBoundingClientRect()) - centreX(el.getBoundingClientRect());
     setCentred(start);
   }, [tiers.length, recIdx, curIdx, centred, planLoading]);
 
   const onScroll = () => {
     const el = track.current;
     if (!el) return;
-    const mid = el.scrollLeft + el.clientWidth / 2;
+    const mid = centreX(el.getBoundingClientRect());
     let best = 0;
     let dist = Infinity;
     Array.from(el.children).forEach((c, i) => {
-      const h = c as HTMLElement;
-      const d = Math.abs(h.offsetLeft + h.offsetWidth / 2 - mid);
+      const d = Math.abs(centreX(c.getBoundingClientRect()) - mid);
       if (d < dist) {
         dist = d;
         best = i;
@@ -345,7 +348,7 @@ export default function ProSubscription() {
             <div
               ref={track}
               onScroll={onScroll}
-              className="flex overflow-x-auto no-scrollbar"
+              className="flex scroll-row no-scrollbar"
               style={{ gap: 10, padding: "12px 16px 4px", scrollSnapType: "x mandatory", scrollPaddingInline: 16 }}
             >
               {tiers.map((t, i) => (

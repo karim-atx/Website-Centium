@@ -20,6 +20,7 @@ import {
 } from "../../services/food/onlineSearchModel";
 import type { FoodSearchResult } from "../../services/food";
 import { t } from "../../i18n/core";
+import { safeHref } from "../../utils/safeHref";
 
 // Round D · DP (PLAN D-S17 / D-S18): the online results inside Add Food, and
 // the card a result is checked on before anything is saved. In
@@ -292,11 +293,11 @@ export const FoundFoodCard: React.FC<{
 
       <p style={{ margin: "10px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
         {food.source === "open_food_facts" ? food.attribution.notice ?? sourceLine(food.source) : sourceLine(food.source)}
-        {food.source === "open_food_facts" && food.attribution.url && (
+        {food.source === "open_food_facts" && food.attribution.url && safeHref(food.attribution.url) && (
           <>
             {" "}
             <a
-              href={food.attribution.url}
+              href={safeHref(food.attribution.url)!}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center"
