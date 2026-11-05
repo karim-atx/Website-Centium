@@ -15,6 +15,7 @@ import {
   type ReferralSummaryRow,
 } from "./referralLogic";
 import { tk } from "../../i18n/core";
+import { ACCOUNT_HELD } from "../account-standing/model";
 
 export type { PreviewReferralOutcome, RedeemReferralOutcome, ReferralSummary } from "./referralLogic";
 
@@ -180,6 +181,8 @@ const referralRpc = (): LooseRpc => (supabase as unknown as { rpc: (...a: unknow
 
 function describeReferralError(error: { code?: string; message: string }, fallback: string): string {
   if (isOffline(error)) return OFFLINE_MESSAGE;
+  // Round I · FG: ATXR1, the account is under review (any action it guards).
+  if (error.code === "ATXR1") return ACCOUNT_HELD;
   // ATX08: my_referral_code() found no profile to take the prefix from.
   if (error.code === "ATX08") return tk("Your profile isn't set up yet, so a code can't be made. Try again later.");
   // ATX01 (no session), ATX02 (5 tries per 15 minutes, its message carries the

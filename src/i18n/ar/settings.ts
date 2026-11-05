@@ -9,6 +9,9 @@ export const FILES: string[] = [
   "pages/settings/HelpPage.tsx",
   "services/help/index.ts",
   "services/support/chat.ts",
+  // Round I · FG: the account standing notice and the held-account sentence.
+  "components/navigation/AccountStandingNotice.tsx",
+  "services/account-standing/model.ts",
   "components/navigation/BottomNav.tsx",
   "components/navigation/Sidebar.tsx",
   "components/navigation/Layout.tsx",
@@ -760,6 +763,17 @@ const settings: Catalogue = {
   "This account is Centium support, so it can't open a support chat with itself.": "هذا الحساب هو دعم Centium، لذا لا يمكنه فتح دردشة دعم مع نفسه.",
   "Live chat isn't available right now. Email us instead.": "الدردشة المباشرة غير متاحة الآن. راسلنا عبر البريد الإلكتروني بدلًا من ذلك.",
   "Couldn't open the chat. Try again, or email us.": "تعذّر فتح الدردشة. حاول مجددًا، أو راسلنا عبر البريد الإلكتروني.",
+  // Round I · FG: the account standing (step-up and review).
+  "Verify your email to unlock rewards": "أكّد بريدك الإلكتروني لفتح المكافآت",
+  "Open the link we emailed you. Until then, referral rewards wait for you and vouchers aren't offered. Everything else works as usual.": "افتح الرابط الذي أرسلناه إليك بالبريد الإلكتروني. حتى ذلك الحين، تنتظرك مكافآت الإحالة ولا تُعرض القسائم. كل ما عدا ذلك يعمل كالمعتاد.",
+  "Sent. Check your inbox and spam folder.": "تم الإرسال. تحقّق من بريدك الوارد ومجلد الرسائل غير المرغوب فيها.",
+  "Couldn't send it. Try again in a minute.": "تعذّر الإرسال. حاول مجددًا بعد دقيقة.",
+  "Send the email again": "أرسل البريد مجددًا",
+  "Your account is being reviewed": "حسابك قيد المراجعة",
+  "While we check it, you can't message new people, post in the forum, write reviews, use a referral code or invite clients. Your own logging, settings and the support chat work as usual.": "أثناء مراجعتنا له، لا يمكنك مراسلة أشخاص جدد أو النشر في المنتدى أو كتابة تقييمات أو استخدام رمز إحالة أو دعوة عملاء. تسجيلاتك وإعداداتك ودردشة الدعم تعمل كالمعتاد.",
+  "Chat with support": "دردشة مع الدعم",
+  "Your account is being reviewed, so you can't do this yet. Your own logging, settings and the support chat still work.": "حسابك قيد المراجعة، لذا لا يمكنك القيام بهذا بعد. تسجيلاتك وإعداداتك ودردشة الدعم لا تزال تعمل.",
+  "Sending…": "جارٍ الإرسال…",
 };
 
 export default settings;

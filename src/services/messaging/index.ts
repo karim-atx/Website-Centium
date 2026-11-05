@@ -10,6 +10,7 @@ import { parseRecommendation, type RecommendationCard } from "./recommendation";
 import { parseMessagePopup, type MessagePopup } from "./popupModel";
 import { loadConsoleAccess } from "../business-console";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+import { accountHeldLine } from "../account-standing/model";
 
 // Two-party messaging, against the real tables.
 //
@@ -390,6 +391,9 @@ function describe(error: PostgrestError): string {
  * their target is there and reacting — so the app does not name it either.
  */
 export function describeRefusal(error: { code?: string; message?: string; details?: string | null }): string | null {
+  // Round I · FG: ATXR1, the account is under review (any action it guards).
+  const held = accountHeldLine(error);
+  if (held) return t(held);
   switch (error.code ?? "") {
     // Round F (AB8): start_message_thread / start_venue_thread past the day's
     // allowance of new people (10 in 24 hours, 3 for an account under 7 days
