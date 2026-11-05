@@ -24,5 +24,7 @@ test("outbox: what is waiting, in words", () => {
   const items: Item[] = [{ id: "1", kind: "water" }, { id: "2", kind: "message" }, { id: "3", kind: "message" }, habit("h", "d", true)];
   assert.equal(describeQueued(items), "1 water entry, 1 habit tick and 2 messages");
   assert.equal(describeQueued([items[0]]), "1 water entry");
+  // Round I · FA: water taken back is a water entry too.
+  assert.equal(describeQueued([{ id: "4", kind: "water_remove" }, { id: "5", kind: "water_clear" }, items[0]]), "3 water entries");
   assert.equal(describeQueued([]), "");
 });

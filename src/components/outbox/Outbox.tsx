@@ -38,6 +38,8 @@ export function useOutbox(): QueuedLog[] {
 
 const ROW_WORD: Record<QueuedLog["kind"], string> = {
   water: tk("Water"),
+  water_remove: tk("Water"),
+  water_clear: tk("Water"),
   weight: tk("Weight"),
   bp: tk("Blood pressure"),
   food: tk("Food"),
@@ -60,6 +62,11 @@ function rowLine(q: QueuedLog): string {
       return q.done ? t("Ticked") : t("Unticked");
     case "goal":
       return q.metric === "water" ? t("Water goal") : t("Steps goal");
+    // Round I · FA: water taken back, and a day's water deleted.
+    case "water_remove":
+      return t("Water taken back");
+    case "water_clear":
+      return t("Day deleted");
     default:
       return tx("Logged", "outbox entry");
   }

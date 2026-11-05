@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, SlidersHorizontal } from "lucide-react";
+import { Minus, Plus, SlidersHorizontal } from "lucide-react";
 import { textPx, linePx } from "../../../theme/textSize";
 import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { HeroPill, MetricHero, mc, metricTextInk, useHealthMode } from "./MetricKit";
@@ -116,10 +116,14 @@ export const WaterHero: React.FC<{
   text: WaterHeroText;
   loading?: boolean;
   onQuickAdd: (ml: number) => void;
+  /** Round I · FA: the same amounts taken back from today (unlog_water). Omitted: no minus chips. */
+  onQuickRemove?: (ml: number) => void;
+  /** No hand-logged water today to take back. */
+  removeDisabled?: boolean;
   onCustom: () => void;
   quickDisabled?: boolean;
   ariaLabel: string;
-}> & { webRole?: "hero" } = ({ pct, goalMl, text, loading, onQuickAdd, onCustom, quickDisabled, ariaLabel }) => {
+}> & { webRole?: "hero" } = ({ pct, goalMl, text, loading, onQuickAdd, onQuickRemove, removeDisabled, onCustom, quickDisabled, ariaLabel }) => {
   const { dark } = useHealthMode();
   const [ref, running] = useLoopWhileVisible<HTMLDivElement>();
   const ink = metricTextInk("water", dark);
@@ -176,6 +180,22 @@ export const WaterHero: React.FC<{
                   {t("{n} ml", { n: ml })}
                 </button>
               ))}
+              {/* Round I · FA: the same amounts, taken back from today. */}
+              {onQuickRemove &&
+                [250, 500].map((ml) => (
+                  <button
+                    key={`-${ml}`}
+                    type="button"
+                    disabled={quickDisabled || removeDisabled}
+                    onClick={() => onQuickRemove(ml)}
+                    aria-label={t("Remove {n} ml from today", { n: ml })}
+                    className="inline-flex items-center bg-th-f0edf9 text-primary-deep-text hover:brightness-95 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                    style={WEB_CHIP}
+                  >
+                    <Minus size={14} aria-hidden />
+                    {t("{n} ml", { n: ml })}
+                  </button>
+                ))}
               <button
                 type="button"
                 disabled={quickDisabled}
@@ -247,6 +267,25 @@ export const WaterHero: React.FC<{
             {t("Custom")}
           </button>
         </div>
+        {/* Round I · FA: the same amounts, taken back from today, on their own row under the adds. */}
+        {onQuickRemove && (
+          <div className="flex justify-center flex-wrap" style={{ marginTop: 8, gap: 8 }}>
+            {[250, 500].map((ml) => (
+              <button
+                key={ml}
+                type="button"
+                disabled={quickDisabled || removeDisabled}
+                onClick={() => onQuickRemove(ml)}
+                aria-label={t("Remove {n} ml from today", { n: ml })}
+                className="tap relative inline-flex items-center bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text disabled:opacity-40 before:absolute before:-inset-y-[5px] before:inset-x-0 before:content-['']"
+                style={chipStyle(dark)}
+              >
+                <Minus size={13} aria-hidden />
+                {t("{n} ml", { n: ml })}
+              </button>
+            ))}
+          </div>
+        )}
       </MetricHero>
     </div>
   );

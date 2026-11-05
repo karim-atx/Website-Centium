@@ -5,7 +5,8 @@ import { useOnline } from "../../../hooks/useOnline";
 import { Toast } from "../../../components/ui/Toast";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import { LogWaterSheet } from "../../../components/health/log/LogWaterSheet";
-import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../../services/health-log/offlineQueue";
+import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, queuedLogs, SAVED_ON_DEVICE } from "../../../services/health-log/offlineQueue";
+import { canChangeWaterDay, DAY_CLEARED, removableWaterMl, removedMessage } from "../../../services/health-log/waterRemove";
 import { removeDrink, sourceName, updateDrink, useDrinks, type Drink } from "../../../services/health-metrics/b1";
 import { clock12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
@@ -73,7 +74,12 @@ import {
 // rows (B1) are a pre-B1 day total, never a drink. Until B16 the
 // health_metrics day total is still kept: a new drink writes both in one
 // log_water call (logWaterDrink); an edit or delete adjusts it (addWater).
-// A day with no intakes rows falls back to that total. Goals: B1
+// A day with no intakes rows falls back to that total.
+// Round I · FA: water is taken back with unlog_water (the same amounts as the
+// quick adds, and Custom's Remove), and "Delete day" deletes the day's
+// hand-logged drinks with clear_water_day. Both write the day total on the
+// server; nothing writes a total after them. Offline they wait in the outbox
+// with their request id. Goals: B1
 // metric_goals through AppContext (setWaterGoal, metricGoalOn). Units: the
 // shared B3 preference.
 
@@ -82,7 +88,7 @@ const DAY_LIMIT_ML = 5000;
 const pctOf = (ml: number, goal: number) => Math.round((ml / goal) * 100);
 
 export default function WaterPage() {
-  const { waterByDate, waterGoalMl, setWaterGoal, addWater, logWaterDrink, metricsError, authUserId, metricGoalOn } = useApp();
+  const { waterByDate, waterGoalMl, setWaterGoal, addWater, logWaterDrink, unlogWaterDrinks, clearWaterDayDrinks, metricsError, authUserId, metricGoalOn } = useApp();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("day");
   const online = useOnline();
   const web = useIsWeb();
@@ -213,6 +219,63 @@ export default function WaterPage() {
     if (!online) return setToast({ message: OFFLINE_ACTION });
     if (!(await removeDrink(k.id))) return setToast({ message: SAVE_FAILED });
     await write(-k.ml, k.day);
+  };
+  // Round I · FA: what today still has to take back (hand-logged drinks and
+  // those waiting in the outbox, less removals waiting); 0 disables Remove.
+  const removableToday = removableWaterMl(today, drinks, authUserId ? queuedLogs(authUserId) : []);
+  // Taking water back: unlog_water, today. Offline it waits in the outbox
+  // with its request id (no Undo then, as a queued drink has none).
+  const quickRemove = async (ml: number) => {
+    if (!authUserId || removableToday <= 0) return;
+    const requestId = newQueueId();
+    const queue = () => {
+      enqueueLog(authUserId, { kind: "water_remove", ml, day: today }, requestId);
+      setToast({ message: SAVED_ON_DEVICE });
+    };
+    if (!online) return queue();
+    const r = await unlogWaterDrinks(ml, today, requestId);
+    if (!r.ok) {
+      if (isOfflineFailure(r)) return queue();
+      return setToast({ message: r.message });
+    }
+    drinksRead.reload();
+    // The server's removed_ml, which is less than asked when there was less.
+    const m = removedMessage(ml, r.removedMl);
+    setToast({
+      message: t(m.key, { n: m.n }),
+      // Undo puts the water back as a drink (online, like Undo after adding).
+      undo:
+        r.removedMl > 0
+          ? () => {
+              if (browserOffline()) return setToast({ message: OFFLINE_ACTION });
+              void logWaterDrink(r.removedMl, new Date(), newQueueId()).then((back) => {
+                if (back.ok) drinksRead.reload();
+                else setToast({ message: SAVE_FAILED });
+              });
+            }
+          : undefined,
+    });
+  };
+  // "Delete day" (Round I · FA): the day's hand-logged drinks go with it
+  // (clear_water_day); it used to write a 0 total and leave the drinks. A day
+  // past the 7-day window keeps the old day-total write (a pre-B1 total with
+  // no drinks to delete).
+  const clearDay = async (day: string) => {
+    if (!authUserId) return;
+    if (!canChangeWaterDay(day, today)) return void write(-(byDay[day] ?? 0), day);
+    const requestId = newQueueId();
+    const queue = () => {
+      enqueueLog(authUserId, { kind: "water_clear", day }, requestId);
+      setToast({ message: SAVED_ON_DEVICE });
+    };
+    if (!online) return queue();
+    const r = await clearWaterDayDrinks(day, requestId);
+    if (!r.ok) {
+      if (isOfflineFailure(r)) return queue();
+      return setToast({ message: r.message });
+    }
+    drinksRead.reload();
+    setToast({ message: DAY_CLEARED });
   };
 
   // ---- hero ---------------------------------------------------------------
@@ -464,6 +527,8 @@ export default function WaterPage() {
         text={hero.text}
         loading={loading}
         onQuickAdd={quickAdd}
+        onQuickRemove={(ml) => void quickRemove(ml)}
+        removeDisabled={removableToday <= 0}
         onCustom={() => setCustomOpen(true)}
         ariaLabel={`${hero.text.value} ${unit === "l" ? t("litres") : hero.text.unit}, ${hero.text.lines.join(", ")}, ${hero.text.pill}`}
       />
@@ -534,6 +599,11 @@ export default function WaterPage() {
           setCustomOpen(false);
           quickAdd(ml);
         }}
+        onRemove={(ml) => {
+          setCustomOpen(false);
+          void quickRemove(ml);
+        }}
+        removeDisabled={removableToday <= 0}
       />
       <WaterEditPopup
         open={editDay !== null}
@@ -574,7 +644,7 @@ export default function WaterPage() {
         onDelete={() => {
           const d = deleteDay!;
           setDeleteDay(null);
-          void write(-(byDay[d] ?? 0), d);
+          void clearDay(d);
         }}
       />
       <WaterGoalSheet

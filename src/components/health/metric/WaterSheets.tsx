@@ -51,30 +51,68 @@ const DRINK_OPTIONS = amountOptions(50, 3000, (v) => v.toLocaleString(appLocale(
 const TOTAL_OPTIONS = amountOptions(0, 5000, (v) => v.toLocaleString(appLocale("en-GB")));
 const GOAL_OPTIONS = amountOptions(500, 6000, (v) => (v / 1000).toFixed(2));
 
+/** Round I · FA: Add / Remove, for a custom amount of water (the popup and the Log water sheet). */
+export const AddRemoveSwitch: React.FC<{ value: "add" | "remove"; onChange: (v: "add" | "remove") => void; removeDisabled?: boolean; style?: React.CSSProperties }> = ({ value, onChange, removeDisabled, style }) => (
+  <div role="radiogroup" aria-label={t("Add or remove")} className="flex" style={{ gap: 4, padding: 4, marginTop: 14, borderRadius: 12, background: "rgb(var(--c-seg-track))", ...style }}>
+    {(["add", "remove"] as const).map((m) => {
+      const on = value === m;
+      return (
+        <button
+          key={m}
+          type="button"
+          role="radio"
+          aria-checked={on}
+          disabled={m === "remove" && removeDisabled}
+          onClick={() => onChange(m)}
+          className={`tap flex-1 disabled:opacity-40 ${on ? "bg-seg-active" : "text-primary-deep-text"}`}
+          style={{ height: 34, borderRadius: 9, fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: on ? "rgb(var(--c-on-primary-fill))" : undefined }}
+        >
+          {m === "add" ? t("Add") : t("Remove")}
+        </button>
+      );
+    })}
+  </div>
+);
+
 const tile = (dark: boolean) => ({
   background: mc("water", "tint"),
   darkBackground: mc("water", "tint"),
   icon: <Droplet size={18} strokeWidth={1.5} style={{ color: metricIconInk("water", dark) }} />,
 });
 
-/** OURS-health-water-custom-popup: "Add a drink", 50 ml wheel 50 to 3,000 (starts at 300), Cancel / Add. */
-export const WaterCustomPopup: React.FC<{ open: boolean; onClose: () => void; onAdd: (ml: number) => void }> = ({ open, onClose, onAdd }) => {
+/**
+ * OURS-health-water-custom-popup: "Add a drink", 50 ml wheel 50 to 3,000
+ * (starts at 300), Cancel / Add. Round I · FA: with `onRemove`, an Add /
+ * Remove switch above the wheel takes the same amount back from today.
+ */
+export const WaterCustomPopup: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onAdd: (ml: number) => void;
+  onRemove?: (ml: number) => void;
+  /** No hand-logged water today to take back: Remove can't be chosen. */
+  removeDisabled?: boolean;
+}> = ({ open, onClose, onAdd, onRemove, removeDisabled }) => {
   const { dark } = useHealthMode();
   const [ml, setMl] = useState(300);
+  const [mode, setMode] = useState<"add" | "remove">("add");
   const [wasOpen, setWasOpen] = useState(false);
   if (open && !wasOpen) {
     setWasOpen(true);
     setMl(300);
+    setMode("add");
   } else if (!open && wasOpen) setWasOpen(false);
+  const removing = mode === "remove" && !!onRemove;
   return (
     <HealthPopup
       open={open}
       onClose={onClose}
       tile={{ ...tile(dark), icon: <SlidersHorizontal size={18} strokeWidth={1.5} style={{ color: metricIconInk("water", dark) }} /> }}
-      title={t("Add a drink")}
+      title={removing ? t("Remove water") : t("Add a drink")}
       secondary={{ label: t("Cancel"), onClick: onClose }}
-      primary={{ label: t("Add"), onClick: () => onAdd(ml) }}
+      primary={removing ? { label: t("Remove"), onClick: () => onRemove!(ml) } : { label: t("Add"), onClick: () => onAdd(ml) }}
     >
+      {onRemove && <AddRemoveSwitch value={mode} onChange={setMode} removeDisabled={removeDisabled} />}
       <div style={{ marginTop: 14 }}>
         <WheelPicker variant="partB" columns={[{ label: t("Amount in ml"), options: DRINK_OPTIONS, value: ml, bandWidth: 120, unit: t("ml"), onChange: (v) => setMl(Number(v)) }]} />
       </div>

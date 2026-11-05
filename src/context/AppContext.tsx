@@ -241,7 +241,7 @@ import {
 } from "../services/medical-history";
 import { GOAL_DEFAULT, fetchGoalHistory, goalOnFrom, normaliseGoal, saveGoal, upsertGoalRow, type GoalRow } from "../services/health-metrics/goals";
 import { clearQueue, enqueueLog, isOfflineFailure, newQueueId, removeQueued, type QueuedLog } from "../services/health-log/offlineQueue";
-import { logWater, type WaterResult } from "../services/health-log/waterIntakes";
+import { clearWaterDay, logWater, unlogWater, type WaterRemoveResult, type WaterResult } from "../services/health-log/waterIntakes";
 import { mergePausedSessions } from "../services/workout/pausedMerge";
 import { OFFLINE_MESSAGE } from "../services/network-error";
 import { fetchFoodConflicts } from "../services/nutrition/client";
@@ -666,6 +666,10 @@ interface AppState {
   addWater: (ml: number, day?: string) => Promise<{ ok: boolean; message?: string }>;
   /** Round D: one new drink, one log_water call; the server's day total becomes the device's. `requestId` defaults to a fresh uuid; the outbox passes its item's (null for an older item). */
   logWaterDrink: (ml: number, loggedAt: Date, requestId?: string | null) => Promise<WaterResult>;
+  /** Round I · FA: takes `ml` off `day`'s hand-logged drinks (unlog_water); the server's removed_ml and day total come back, and the day total becomes the device's. */
+  unlogWaterDrinks: (ml: number, day: string, requestId: string) => Promise<WaterRemoveResult>;
+  /** Round I · FA: "Delete day": every hand-logged drink of `day` (clear_water_day); imported water stays. */
+  clearWaterDayDrinks: (day: string, requestId: string) => Promise<WaterRemoveResult>;
   setWaterAmount: (ml: number) => Promise<{ ok: boolean; message?: string }>;
   waterGoalMl: number;
   setWaterGoal: (ml: number) => void;
@@ -4949,6 +4953,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (r.ok) setWaterByDate((prev) => ({ ...prev, [r.day]: r.dayTotalMl }));
     return r;
   };
+  // Round I · FA: the server rewrites the day's total with the removal; no
+  // health_metrics write follows (that would race it).
+  const unlogWaterDrinks: AppState["unlogWaterDrinks"] = async (ml, day, requestId) => {
+    const r = await unlogWater(ml, day, requestId);
+    if (r.ok) setWaterByDate((prev) => ({ ...prev, [r.day]: r.dayTotalMl }));
+    return r;
+  };
+  const clearWaterDayDrinks: AppState["clearWaterDayDrinks"] = async (day, requestId) => {
+    const r = await clearWaterDay(day, requestId);
+    if (r.ok) setWaterByDate((prev) => ({ ...prev, [r.day]: r.dayTotalMl }));
+    return r;
+  };
   const setWaterAmount: AppState["setWaterAmount"] = (ml) => writeWater(ml);
   // B1 metric_goals (V6-59): the goal is stored with the day it applies from;
   // the local copy is the cache the screens read synchronously.
@@ -6647,6 +6663,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       waterByDate,
       addWater,
       logWaterDrink,
+      unlogWaterDrinks,
+      clearWaterDayDrinks,
       setWaterAmount,
       waterGoalMl,
       setWaterGoal,

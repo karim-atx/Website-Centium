@@ -4,7 +4,11 @@
 
 import { getLanguage, t, tn } from "../../i18n/core";
 
-export type OutboxKind = "water" | "weight" | "bp" | "food" | "habit" | "workout" | "message" | "goal";
+export type OutboxKind = "water" | "water_remove" | "water_clear" | "weight" | "bp" | "food" | "habit" | "workout" | "message" | "goal";
+
+/** The kinds counted in words: water taken back counts as a water entry (Round I · FA). */
+type CountedKind = Exclude<OutboxKind, "water_remove" | "water_clear">;
+const counted = (k: OutboxKind): CountedKind => (k === "water_remove" || k === "water_clear" ? "water" : k);
 
 /** The fields the rules read; every queued entry has at least these. */
 export type OutboxItem = { id: string; kind: OutboxKind; habitId?: string; day?: string; metric?: string };
@@ -16,7 +20,7 @@ export function withQueued<T extends OutboxItem>(items: readonly T[], item: T): 
   return [...items, item];
 }
 
-const KIND_WORDS: Record<OutboxKind, [string, string]> = {
+const KIND_WORDS: Record<CountedKind, [string, string]> = {
   water: ["water entry", "water entries"],
   weight: ["weight entry", "weight entries"],
   bp: ["blood pressure reading", "blood pressure readings"],
@@ -29,9 +33,9 @@ const KIND_WORDS: Record<OutboxKind, [string, string]> = {
 
 /** "2 food entries and 1 workout": what is waiting, in words, for the sign-out warning and the sheet. */
 export function describeQueued(items: readonly { kind: OutboxKind }[]): string {
-  const counts = new Map<OutboxKind, number>();
-  for (const q of items) counts.set(q.kind, (counts.get(q.kind) ?? 0) + 1);
-  const parts = (Object.keys(KIND_WORDS) as OutboxKind[])
+  const counts = new Map<CountedKind, number>();
+  for (const q of items) counts.set(counted(q.kind), (counts.get(counted(q.kind)) ?? 0) + 1);
+  const parts = (Object.keys(KIND_WORDS) as CountedKind[])
     .filter((k) => counts.has(k))
     .map((k) => countWords(k, counts.get(k)!));
   if (parts.length <= 1) return parts[0] ?? "";
@@ -40,7 +44,7 @@ export function describeQueued(items: readonly { kind: OutboxKind }[]): string {
 }
 
 /** "2 food entries", in the app's language (KIND_WORDS is the English). */
-function countWords(k: OutboxKind, n: number): string {
+function countWords(k: CountedKind, n: number): string {
   switch (k) {
     case "water":
       return tn(n, "{n} water entry", "{n} water entries");
