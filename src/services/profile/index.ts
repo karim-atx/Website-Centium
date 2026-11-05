@@ -4,7 +4,8 @@ import { isAdminAccount } from "../admin";
 import { ageFromDateOfBirth } from "../../utils/date";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeDobError } from "./dobErrors";
-import { describeNameError, singleLineName } from "./nameRules";
+import { describeNameError } from "./nameRules";
+import { setMyFirstName } from "./firstName";
 import type {
   AccountType,
   ActivityLevel,
@@ -363,10 +364,15 @@ export async function updateProfileFromOnboarding(
   userId: string,
   data: OnboardingProfileData
 ): Promise<{ ok: boolean; message?: string }> {
+  // Round J · FI: the name first, through set_my_first_name (its checks; the
+  // first one set isn't counted as a change), so a refused name never leaves
+  // the row marked onboarded without one. The email isn't sent any more:
+  // profiles.email follows the sign-in email on the server (Database
+  // 20261226520000), and members' UPDATE(email) is revoked after this ships.
+  const named = await setMyFirstName(data.firstName);
+  if (!named.ok) return { ok: false, message: named.message };
+
   const patch: TablesUpdate<"profiles"> = {
-    email: data.email || null,
-    // Round I (FB): one line, as the server's check requires (nameRules).
-    first_name: singleLineName(data.firstName),
     date_of_birth: data.dateOfBirth || null,
     sex: data.sex,
     height_cm: data.heightCm,

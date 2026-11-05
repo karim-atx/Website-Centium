@@ -19,7 +19,8 @@ export function singleLineName(raw: string): string {
 export const NAME_CHARACTERS = "Use letters, spaces and punctuation only.";
 
 export const NAME_MISSING = tk("Add your name.");
-export const NAME_TOO_LONG = tk("Keep your name to 60 characters or fewer.");
+// The Database's own wording for its 22023 (set_my_first_name, Round J).
+export const NAME_TOO_LONG = tk("Your name can be 1 to 60 characters.");
 
 /**
  * Round J · FI: one rule for every place a first name is changed (Settings ›

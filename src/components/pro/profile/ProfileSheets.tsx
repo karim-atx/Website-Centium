@@ -10,7 +10,7 @@ import { AVATAR_ACCEPT, removeAvatar, submitAvatar } from "../../../services/ava
 import { ImageApprovalBadge, ImageApprovalNote, useOwnImage } from "../../moderation/ImageApproval";
 import { requestTypeChange, setMyHandle } from "../../../services/pro/profile";
 import { updatePhone } from "../../../services/profile";
-import { saveFirstName } from "../../../services/pro/profile";
+import { setMyFirstName } from "../../../services/profile/firstName";
 import { textPx } from "../../../theme/textSize";
 import type { ProfessionalSubtype } from "../../../types";
 import { INK } from "../proInk";
@@ -321,7 +321,7 @@ export const NameSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
       initial={user.firstName ?? ""}
       save={async (v) => {
         if (!authUserId) return t("You're signed out. Sign in again.");
-        const r = await saveFirstName(authUserId, v);
+        const r = await setMyFirstName(v);
         if (!r.ok) return r.message;
         updateProfile({ firstName: r.name });
         return null;

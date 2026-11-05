@@ -9,6 +9,7 @@ export const FILES: string[] = [
   "pages/settings/AccountPage.tsx",
   "services/account/emailChangeLogic.ts",
   "services/profile/nameRules.ts",
+  "services/profile/firstNameErrors.ts",
   // Round I · FH: Help for members and professionals, and the support chat's row.
   "pages/settings/HelpPage.tsx",
   "services/help/index.ts",
@@ -809,7 +810,11 @@ const settings: Catalogue = {
   "That's already your email.": "هذا هو بريدك الإلكتروني بالفعل.",
   "That email belongs to another account. Use a different one.": "هذا البريد الإلكتروني مرتبط بحساب آخر. استخدم بريدًا مختلفًا.",
   "Your session has expired. Sign in again, then change your email.": "انتهت جلستك. سجّل الدخول مجددًا، ثم غيّر بريدك الإلكتروني.",
-  "Keep your name to 60 characters or fewer.": "اجعل اسمك 60 حرفًا أو أقل.",
+  "Your name can be 1 to 60 characters.": "يمكن أن يتكوّن اسمك من حرف واحد إلى 60 حرفًا.",
+  "A name can't contain contact details.": "لا يمكن أن يحتوي الاسم على معلومات تواصل.",
+  "That name isn't allowed.": "هذا الاسم غير مسموح به.",
+  "You can change your name again on {date}.": "يمكنك تغيير اسمك مجددًا في {date}.",
+  "You've changed your name five times in 30 days. Try again later.": "غيّرت اسمك خمس مرات خلال 30 يومًا. حاول مجددًا لاحقًا.",
   "Couldn't save your name. Try again.": "تعذّر حفظ اسمك. حاول مرة أخرى.",
   "Couldn't change your email. Try again.": "تعذّر تغيير بريدك الإلكتروني. حاول مرة أخرى.",
 };
