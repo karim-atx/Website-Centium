@@ -149,6 +149,7 @@ export { default as AccessibilityPage } from "./pages/settings/AccessibilityPage
 export { default as PrivacyPage } from "./pages/settings/PrivacyPage";
 export { default as TermsPage } from "./pages/settings/TermsPage";
 export { default as LanguagePage } from "./pages/settings/LanguagePage";
+export { default as AccountPage } from "./pages/settings/AccountPage";
 export { default as YourMusicPage } from "./pages/settings/YourMusicPage";
 export { default as BillingHelpPage } from "./pages/settings/BillingHelpPage";
 // Round I · FH: Help for members and professionals, from the database.

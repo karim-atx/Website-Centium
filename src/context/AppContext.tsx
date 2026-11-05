@@ -1638,7 +1638,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // gets no profiles row (see ensureProfileRow), so seeding streaks for
         // one would fail that foreign key on every single auth event. The
         // reported flag is what says which case this is.
-        void ensureProfileRow(next.user.id, next.user.email ?? null).then(({ profileEnsured }) => {
+        void ensureProfileRow(next.user.id).then(({ profileEnsured }) => {
           if (!profileEnsured) return;
           // The phone app's install, once per session (report_app_install
           // references profiles(id) too). Nothing in a browser.

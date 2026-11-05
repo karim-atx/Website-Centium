@@ -369,17 +369,6 @@ export async function fetchEmployments(): Promise<Read<Employment[]>> {
 }
 
 // ---------------------------------------------------------------------------
-// Profile name and phone (MO26 Personal), profiles columns in the UPDATE grant
+// Profile phone (MO26 Personal), a profiles column in the UPDATE grant. The
+// name goes through set_my_first_name (services/profile/firstName.ts, Round J).
 // ---------------------------------------------------------------------------
-
-export async function saveFirstName(me: string, name: string): Promise<Write> {
-  const v = name.trim();
-  if (v.length < 1) return { ok: false, message: "Add your name." };
-  if (v.length > 60) return { ok: false, message: "Keep your name to 60 characters or fewer." };
-  try {
-    const { error } = await from("profiles").update({ first_name: v } as never).eq("id", me);
-    return error ? failed(error, "Couldn't save your name. Try again.") : { ok: true };
-  } catch (e) {
-    return failed(e, "Couldn't save your name. Try again.");
-  }
-}
