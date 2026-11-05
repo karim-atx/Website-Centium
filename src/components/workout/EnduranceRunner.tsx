@@ -16,7 +16,7 @@ import {
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 import { sessions, useLockedSession } from "../../platform/sessions";
 import type { SessionCue, SessionPhase } from "../../platform/contracts";
 
@@ -64,7 +64,7 @@ function runPhases(plan: EndurancePlan): SessionPhase[] {
     const { repeats, work, recovery } = plan.main;
     for (let i = 0; i < repeats; i++) {
       out.push(phase(t("Rep {n} of {total}", { n: i + 1, total: repeats }), work, "run"));
-      if (i < repeats - 1) out.push(phase(t("Recovery"), recovery, "rest"));
+      if (i < repeats - 1) out.push(phase(tx("Recovery", "run interval"), recovery, "rest"));
     }
   }
   if (plan.cooldown) out.push(phase(t("Cool-down"), plan.cooldown, "walk"));
