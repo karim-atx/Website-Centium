@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Banknote, CameraOff, CircleCheck, RotateCcw, ScanLine, UserCheck, WifiOff, XCircle } from "lucide-react";
+import { Banknote, Camera, CameraOff, CircleCheck, RotateCcw, ScanLine, UserCheck, WifiOff, XCircle } from "lucide-react";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { useCameraCodeReader } from "../../../components/food/useCameraCodeReader";
@@ -20,6 +20,8 @@ import {
 import { textPx } from "../../../theme/textSize";
 import { t } from "../../../i18n/core";
 import { EmptyCard, StatusChip } from "./frontDeskKit";
+import { camera as phoneCamera, useNativeCamera } from "../../../platform/camera";
+import type { ScanFeedback } from "../../../platform/contracts";
 
 // OURS-OP1-front-desk-scan: the camera (zxing-wasm / BarcodeDetector, QR
 // format) and a hardware scanner both feed check_in_with_pass(desk venue,
@@ -30,8 +32,25 @@ import { EmptyCard, StatusChip } from "./frontDeskKit";
 // the same pass is checked in again. THE PENDING RULE: on a database without
 // B10 the scan falls back to verify_gym_pass(), which records nothing, so a
 // valid pass reads "{name}'s pass is valid" (R2).
+//
+// IN THE APP (App-Centium ROUND_J.md §4.1) the phone's own full-screen
+// scanner reads pass after pass and shows each result on the camera, so the
+// door keeps moving. A result that needs the desk (Mark as paid, Sell a day
+// pass, Check someone in) closes it and opens this pop-up as usual; "Scan
+// next" opens the scanner again. Its "Check someone in" is the footer's.
 
 const SAME_TOKEN_MS = 10_000;
+
+type Outcome = { view: ScanResultView; check: PassCheck | null; ci: CheckIn | null };
+
+/** A result the scanner can't act on: it needs the pop-up's buttons. */
+const needsDesk = (v: ScanResultView) => v.primary === "mark-paid" || v.secondary === "sell-day-pass" || v.secondary === "check-in";
+
+/** A result as the phone's scanner shows it. */
+function feedbackOf(v: ScanResultView): ScanFeedback {
+  const tone = v.tone === "good" ? "ok" : v.tone === "high" ? "error" : "warn";
+  return { tone, title: v.title, detail: v.minor ? `${t("Under 18")} · ${v.body}` : v.body };
+}
 
 const ICON: Record<ResultIcon, React.ReactNode> = {
   check: <CircleCheck size={20} strokeWidth={2.2} />,
@@ -67,7 +86,7 @@ export const ScanSheet: React.FC<{
   /** An entry was recorded or a pass marked paid: the desk reloads. */
   onChanged: () => void;
 }> = ({ open, onClose, online, gymId, live, sellsDayPass, onCheckInByName, onChanged }) => {
-  const [result, setResult] = useState<{ view: ScanResultView; check: PassCheck | null; ci: CheckIn | null } | null>(null);
+  const [result, setResult] = useState<Outcome | null>(null);
   const [busy, setBusy] = useState(false);
   const [payError, setPayError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
@@ -79,10 +98,9 @@ export const ScanSheet: React.FC<{
     paused.current = !!result || busy;
   }, [result, busy]);
 
-  const check = useCallback(
-    async (token: string) => {
-      setBusy(true);
-      setPayError(false);
+  /** Checks a pass in (or only looks, without B10) and says what to show. */
+  const evaluate = useCallback(
+    async (token: string): Promise<Outcome> => {
       if (live !== false && gymId) {
         const r = await checkInWithPass(gymId, token, "qr");
         if (r.ok) {
@@ -93,28 +111,31 @@ export const ScanSheet: React.FC<{
             const e = await fetchDeskEntries(gymId);
             alreadyAt = e.ok ? e.value.find((x) => x.id === c.checkInId)?.at ?? null : null;
           } else onChanged();
-          setBusy(false);
-          setResult({ view: checkInView(c, { sellsDayPass, alreadyAt }), check: null, ci: c });
-          return;
+          return { view: checkInView(c, { sellsDayPass, alreadyAt }), check: null, ci: c };
         }
         if (!isMissingDesk(r)) {
-          setBusy(false);
           // ATXE6 (desk check-in off), ATXU0 (Round H: that pass method is off) and ATX03 say why; anything else is C4.
           const why = r.code === "ATXE6" || r.code === "ATXU0" || r.code === "ATX03" ? r.message : null;
-          setResult({ view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: t("Scan again") } : VERIFY_FAILED_VIEW, check: null, ci: null });
-          return;
+          return { view: why ? { ...VERIFY_FAILED_VIEW, body: why, primaryLabel: t("Scan again") } : VERIFY_FAILED_VIEW, check: null, ci: null };
         }
       }
       // The pending rule: no B10 on this database, look only.
       const r = await verifyPass(token);
-      setBusy(false);
-      if (!r.ok) {
-        setResult({ view: VERIFY_FAILED_VIEW, check: null, ci: null });
-        return;
-      }
-      setResult({ view: scanResultView(r.value, { checkInsLive: false, sellsDayPass: false }), check: r.value, ci: null });
+      if (!r.ok) return { view: VERIFY_FAILED_VIEW, check: null, ci: null };
+      return { view: scanResultView(r.value, { checkInsLive: false, sellsDayPass: false }), check: r.value, ci: null };
     },
     [gymId, live, sellsDayPass, onChanged]
+  );
+
+  const check = useCallback(
+    async (token: string) => {
+      setBusy(true);
+      setPayError(false);
+      const r = await evaluate(token);
+      setBusy(false);
+      setResult(r);
+    },
+    [evaluate]
   );
 
   /** A read from the camera or the hardware scanner; true when it was taken. */
@@ -132,10 +153,81 @@ export const ScanSheet: React.FC<{
   );
 
   const cameraOn = open && online;
-  const { video, camera, resume } = useCameraCodeReader({ active: cameraOn, kind: "qr", accept: take });
+  // In the app: null while the phone answers, so the website's camera doesn't start meanwhile.
+  const phone = useNativeCamera();
+  const native = phone?.scan === true;
+  const { video, camera, resume } = useCameraCodeReader({ active: cameraOn && phone !== null && !native, kind: "qr", accept: take });
+
+  // The phone's scanner: open, closed (a button opens it again), or why it can't run.
+  const [nativeState, setNativeState] = useState<"open" | "idle" | "denied" | "unavailable">("idle");
+  const scanner = useRef<{ stop: () => Promise<void> } | null>(null);
+  const scannerOpen = useRef(false);
+  /** Closing it to show the pop-up (or with the sheet), not because staff closed it. */
+  const handingOver = useRef(false);
+  const latest = useRef({ evaluate, onClose, onCheckInByName });
   useEffect(() => {
-    resumeRef.current = resume;
-  }, [resume]);
+    latest.current = { evaluate, onClose, onCheckInByName };
+  }, [evaluate, onClose, onCheckInByName]);
+
+  const openScanner = useCallback(async () => {
+    if (scannerOpen.current) return;
+    scannerOpen.current = true;
+    handingOver.current = false;
+    setNativeState("open");
+    scanner.current = await phoneCamera
+      .scanContinuous({
+        prompt: t("Point the camera at the member's pass."),
+        alt: t("Check someone in"),
+        onCode: async ({ code }) => {
+          const token = normalizePassToken(code);
+          if (!token) return { tone: "error", title: t("Pass not recognised"), detail: t("This isn't a pass for your gym. Check them in by name instead.") };
+          last.current = { token, at: Date.now() };
+          const r = await latest.current.evaluate(token);
+          if (needsDesk(r.view)) {
+            handingOver.current = true;
+            setPayError(false);
+            setResult(r);
+            void scanner.current?.stop();
+          }
+          return feedbackOf(r.view);
+        },
+        onClosed: (reason) => {
+          scanner.current = null;
+          scannerOpen.current = false;
+          if (handingOver.current) return setNativeState("idle");
+          if (reason === "denied" || reason === "unavailable") return setNativeState(reason);
+          setNativeState(reason === "failed" ? "unavailable" : "idle");
+          if (reason === "alt") latest.current.onCheckInByName(null);
+          else if (reason === "closed") latest.current.onClose();
+        },
+      })
+      .catch(() => {
+        scannerOpen.current = false;
+        setNativeState("unavailable");
+        return null;
+      });
+  }, []);
+
+  useEffect(() => {
+    resumeRef.current = native ? () => void openScanner() : resume;
+  }, [native, resume, openScanner]);
+
+  // Opening the sheet opens the scanner; closing it (or going offline) closes the scanner.
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!open || !online || !native) {
+      if (!open) opened.current = false;
+      if (scanner.current) {
+        handingOver.current = true;
+        void scanner.current.stop();
+      }
+      return;
+    }
+    if (!opened.current) {
+      opened.current = true;
+      void openScanner();
+    }
+  }, [open, online, native, openScanner]);
 
   // W4: keep the screen on at the door while the sheet is open.
   useEffect(() => {
@@ -252,6 +344,35 @@ export const ScanSheet: React.FC<{
               {t("Retry")}
             </button>
           </EmptyCard>
+        ) : native ? (
+          nativeState === "denied" ? (
+            <EmptyCard icon={CameraOff} title={t("Camera is blocked")} body={t("Allow camera access for Centium in your phone's settings, or check them in by name.")}>
+              <button
+                type="button"
+                onClick={() => {
+                  setNativeState("idle");
+                  void phoneCamera.openSettings();
+                }}
+                className="tap text-[12px] font-bold text-primary-dark"
+                style={{ minHeight: 44, marginTop: 4 }}
+              >
+                {t("Open phone settings")}
+              </button>
+            </EmptyCard>
+          ) : nativeState === "unavailable" ? (
+            <EmptyCard icon={CameraOff} title={t("No camera available")} body={t("This device can't scan passes. Check them in by name instead.")} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => void openScanner()}
+              disabled={busy || nativeState === "open"}
+              className="tap w-full flex items-center justify-center rounded-xl bg-primary-fill text-on-primary-fill disabled:opacity-60"
+              style={{ minHeight: 48, gap: 8, fontSize: textPx(14), fontWeight: 700 }}
+            >
+              <Camera size={18} aria-hidden />
+              {busy ? t("Checking the pass…") : t("Scan passes")}
+            </button>
+          )
         ) : showCamera ? (
           <div className="relative w-full overflow-hidden" style={{ aspectRatio: "1 / 1", borderRadius: 18, background: "#121317" }}>
             <video ref={video} playsInline muted aria-hidden className="absolute inset-0 w-full h-full" style={{ objectFit: "cover" }} />

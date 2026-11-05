@@ -9,7 +9,9 @@ export type NativeFeature =
   | "live_activities"
   | "siri"
   | "calendar_sync"
-  | "voip_calls";
+  | "voip_calls"
+  | "home_widgets"
+  | "native_camera";
 
 export interface AppConfig {
   /** The app's own version, as sent (package.json's version on both platforms). */

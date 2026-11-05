@@ -529,6 +529,11 @@ const market: Catalogue = {
   "Couldn't load your sharing with the gym's entry system.": "تعذّر تحميل مشاركتك مع نظام الدخول في النادي.",
   "Couldn't stop sharing. Try again.": "تعذّر إيقاف المشاركة. حاول مرة أخرى.",
   "Couldn't load this venue's entry system.": "تعذّر تحميل نظام الدخول لهذا المكان.",
+  // == Round J · the phone's camera (App-Centium ROUND_J.md §4) ==
+  "Open phone settings": "فتح إعدادات الهاتف",
+  "Scan a voucher": "مسح قسيمة",
+  "Allow camera access for Centium in your phone's settings, or enter the code under the client's QR code.": "اسمح لـCentium باستخدام الكاميرا من إعدادات الهاتف، أو أدخل الرمز المكتوب تحت رمز QR الخاص بالعميل.",
+  "Allow camera access for Centium in your phone's settings, or enter the code under the member's QR code.": "اسمح لـCentium باستخدام الكاميرا من إعدادات الهاتف، أو أدخل الرمز المكتوب تحت رمز QR الخاص بالعضو.",
 };
 
 export default market;

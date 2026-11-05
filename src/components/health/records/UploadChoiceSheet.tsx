@@ -7,12 +7,17 @@ import { acceptFor } from "../../../services/storage";
 import { useHealthMode, rowRule, tileFill, deepInk, HelpLine, INK, INK_FAINT } from "./kit";
 import { t } from "../../../i18n/core";
 import { PremiumLabel } from "../../premium/PremiumAskHost";
+import { camera as phoneCamera, useNativeCamera } from "../../../platform/camera";
 
 // OURS-upload-choice: "camera or files" for Labs "Upload a report", Imaging
 // "Add imaging", the web "Scan a report" (HE1.9.2 is NATIVE: the live camera
 // becomes the OS camera input) and Replace. "Type it in" keeps the manual
 // add (no file). Bucket limits shown and enforced at pick time (V6-82:
 // lab-reports 10 MB, medical-imaging 25 MB).
+//
+// IN THE APP (App-Centium ROUND_J.md §4.2) "Take a photo" is Centium's own
+// camera screen: the photo stays in the app (never the phone's gallery) and
+// carries no EXIF; it then goes where a picked file goes.
 
 const LIMIT_MB: Record<"lab-reports" | "medical-imaging", number> = { "lab-reports": 10, "medical-imaging": 25 };
 const TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -36,10 +41,23 @@ export const UploadChoiceSheet: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const mb = LIMIT_MB[bucket];
 
+  const phone = useNativeCamera();
   const take = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (file) accept(file);
+  };
+  const photoOnPhone = async () => {
+    const r = await phoneCamera.capturePhoto({ purpose: "report" }).catch(() => null);
+    if (!r) return setError(t("The camera couldn't start. Choose a file instead."));
+    if ("cancelled" in r) {
+      if (r.reason === "denied") setError(t("Camera access is off for Centium. Allow it in your phone's settings."));
+      else if (r.reason !== "closed") setError(t("The camera couldn't start. Choose a file instead."));
+      return;
+    }
+    accept(r.file);
+  };
+  const accept = (file: File) => {
     if (!TYPES.includes(file.type)) return setError(t("That type isn't supported. Use PDF, JPG or PNG."));
     if (file.size > mb * 1024 * 1024) return setError(t("That file is too big. The limit is {mb} MB.", { mb }));
     if (file.size === 0) return setError(t("That type isn't supported. Use PDF, JPG or PNG."));
@@ -50,7 +68,19 @@ export const UploadChoiceSheet: React.FC<{
   const locked = premiumScan?.locked === true;
   const askPremiumScan = () => premiumScan?.ask();
   const rows: { key: string; icon: React.ComponentType<{ size?: number; style?: React.CSSProperties }>; title: string; sub: string; onClick: () => void; premium?: boolean }[] = [
-    { key: "photo", icon: Camera, title: t("Take a photo"), sub: t("Use your camera"), onClick: () => (locked ? askPremiumScan() : camera.current?.click()), premium: locked },
+    {
+      key: "photo",
+      icon: Camera,
+      title: t("Take a photo"),
+      sub: t("Use your camera"),
+      onClick: () => {
+        if (locked) return askPremiumScan();
+        setError(null);
+        if (phone?.capture) void photoOnPhone();
+        else camera.current?.click();
+      },
+      premium: locked,
+    },
     { key: "file", icon: FileText, title: t("Choose a file"), sub: t("PDF, JPG or PNG"), onClick: () => (locked ? askPremiumScan() : picker.current?.click()), premium: locked },
   ];
   if (onTypeIt) rows.push({ key: "type", icon: PenLine, title: t("Type it in"), sub: t("No file, just the details"), onClick: onTypeIt });

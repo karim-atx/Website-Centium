@@ -156,6 +156,10 @@ const premium4: Catalogue = {
   "Phase insights": "معلومات المرحلة",
   "{phase} · day {n}": "{phase} · اليوم {n}",
   "Day {n} of your cycle": "اليوم {n} من دورتك",
+  // == Round J · the phone's camera (App-Centium ROUND_J.md §4) ==
+  "The camera couldn't start. Choose a photo from your gallery instead.": "تعذّر تشغيل الكاميرا. اختر صورة من معرض الصور بدلًا من ذلك.",
+  "Camera access is off for Centium. Allow it in your phone's settings.": "الوصول إلى الكاميرا متوقف لـCentium. اسمح به من إعدادات الهاتف.",
+  "Choose from gallery": "الاختيار من معرض الصور",
 };
 
 export default premium4;

@@ -54,19 +54,52 @@ export interface PushModule {
 
 // ---- Camera (§4) ----
 
-export type ScanResult = { code: string; format: string } | { cancelled: true };
+/**
+ * Why a camera screen closed without a result: the person closed it, chose
+ * the screen's way out (`alt`, e.g. "Type it instead"), the camera permission
+ * is off ("denied": say where to allow it, openSettings), or there is no
+ * usable camera.
+ */
+export type CameraCancel = { cancelled: true; reason: "closed" | "alt" | "denied" | "unavailable" | "failed" };
+
+export type ScanCode = { code: string; format: string };
+export type ScanResult = ScanCode | CameraCancel;
+
+/** The scanner's full-screen words, already translated. */
+export type ScanWords = {
+  /** What to point at, e.g. "Point the camera at the barcode". */
+  prompt: string;
+  /** The way out shown as a button, e.g. "Type it instead"; none when omitted. */
+  alt?: string;
+};
+
+/** A pass's result, shown on the scanner for a moment before the next. */
+export type ScanFeedback = { tone: "ok" | "warn" | "error"; title: string; detail?: string };
 
 export interface CameraModule {
   available(): Promise<{ scan: boolean; readText: boolean; capture: boolean }>;
-  scan(opts: { kind: "food" | "pass" }): Promise<ScanResult>;
-  /** The front desk: scans pass after pass until `stop`. */
-  scanContinuous(onCode: (r: { code: string; format: string }) => void): Promise<{ stop: () => Promise<void> }>;
-  /** On-device text reading (Latin script). Pages in reading order, lines joined with "\n". */
-  readText(src: { from: "camera" } | { from: "file"; file: Blob }): Promise<{ pages: string[] } | { cancelled: true }>;
-  /** A photo taken inside Centium, never saved to the gallery, without EXIF. */
-  capturePhoto(opts: { purpose: "progress" }): Promise<{ file: Blob } | { cancelled: true }>;
+  /** One code. "food": EAN-13/8, UPC-A/E. "pass": a QR code (a member pass, a voucher). */
+  scan(opts: { kind: "food" | "pass" } & ScanWords): Promise<ScanResult>;
+  /**
+   * The front desk: QR pass after pass until closed. Each read waits for
+   * `onCode`'s answer, shown on the scanner; `onClosed` says why it closed.
+   */
+  scanContinuous(opts: ScanWords & {
+    onCode: (r: ScanCode) => Promise<ScanFeedback>;
+    onClosed: (reason: CameraCancel["reason"]) => void;
+  }): Promise<{ stop: () => Promise<void> }>;
+  /**
+   * On-device text reading (Latin script). One entry per page (a PDF's first
+   * six), lines joined with "\n" and kept whole across a table's columns.
+   * `pages` limits a PDF to those pages (0-based); the others come back empty.
+   */
+  readText(file: Blob, opts?: { pages?: number[] }): Promise<{ pages: string[] }>;
+  /** A photo taken inside Centium: never saved to the gallery, without EXIF. */
+  capturePhoto(opts: { purpose: "progress" | "report" }): Promise<{ file: File } | CameraCancel>;
   /** Blocks screenshots and the Recents preview while a progress-photo screen is open. */
   protectScreen(on: boolean): Promise<void>;
+  /** Centium's page in the phone's settings, to allow the camera after "Don't allow". */
+  openSettings(): Promise<void>;
 }
 
 // ---- Widgets and shortcuts (§5) ----

@@ -15,7 +15,14 @@
  * A PDF with a text layer (most lab PDFs are generated, not scanned) is read
  * straight from that layer, which is exact; a scanned PDF's pages are drawn
  * and read like a photo. At most MAX_PAGES pages are read.
+ *
+ * IN THE APP (App-Centium ROUND_J.md §4.2) the phone reads photos and
+ * scanned pages itself (ML Kit, on the phone, a few hundred ms a page), with
+ * the same rules: the text layer first, the same page cap, and nothing sent
+ * anywhere. tesseract.js isn't loaded there.
  */
+
+import { camera } from "../../platform/camera";
 
 declare const __OCR_BASE__: string;
 
@@ -111,9 +118,55 @@ function linesOf(items: TextItem[]): string {
     .join("\n");
 }
 
+/** A PDF's text layer per page (MAX_PAGES at most); null for a page that has none (scanned). */
+async function pdfTextLayer(file: File, signal?: AbortSignal): Promise<(string | null)[] | null> {
+  const lib = await loadPdfJs();
+  const doc = await lib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+  try {
+    const out: (string | null)[] = [];
+    const count = Math.min(doc.numPages, MAX_PAGES);
+    for (let n = 1; n <= count; n++) {
+      if (signal?.aborted) return null;
+      const content = await (await doc.getPage(n)).getTextContent();
+      const text = linesOf(content.items as TextItem[]);
+      out.push(text.replace(/\s/g, "").length >= 40 ? text : null);
+    }
+    return out;
+  } finally {
+    await doc.destroy();
+  }
+}
+
+/** The app's way: the text layer where there is one, the phone's reader for the rest. */
+async function readOnPhone(file: File, progress: (f: number) => void, signal?: AbortSignal): Promise<ReadOutcome> {
+  try {
+    progress(0.05);
+    let texts: string[];
+    if (file.type === "application/pdf") {
+      const layer = await pdfTextLayer(file, signal);
+      if (!layer) return { ok: false, reason: "cancelled" };
+      const scanned = layer.flatMap((p, i) => (p === null ? [i] : []));
+      progress(0.3);
+      const read = scanned.length ? (await camera.readText(file, { pages: scanned })).pages : [];
+      texts = layer.map((p, i) => p ?? read[i] ?? "");
+    } else {
+      texts = (await camera.readText(file)).pages;
+    }
+    if (signal?.aborted) return { ok: false, reason: "cancelled" };
+    progress(1);
+    const text = texts.join("\n");
+    return text.replace(/\s/g, "").length < 10 ? { ok: false, reason: "unreadable" } : { ok: true, text };
+  } catch (e) {
+    if (signal?.aborted) return { ok: false, reason: "cancelled" };
+    console.error("[labs] The phone's reader failed:", e);
+    return { ok: false, reason: "failed" };
+  }
+}
+
 /** Reads a report photo or PDF into text, on this device. */
 export async function readReport(file: File, { onProgress, signal }: ReadOptions = {}): Promise<ReadOutcome> {
   const progress = (f: number) => onProgress?.(Math.max(0, Math.min(1, f)));
+  if ((await camera.available().catch(() => null))?.readText) return readOnPhone(file, progress, signal);
   let worker: OcrWorker | null = null;
   const stop = () => void worker?.terminate();
   signal?.addEventListener("abort", stop, { once: true });
