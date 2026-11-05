@@ -308,6 +308,8 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
             gridTemplateColumns: "repeat(" + n + ",minmax(0,1fr))",
             gap: "14px",
             overflowX: r.pcOver,
+            // Round I (EZ): the carousel scrolls sideways only.
+            overflowY: r.pcOver === "auto" ? "hidden" : undefined,
             scrollSnapType: "x mandatory",
             overscrollBehaviorX: "contain",
             touchAction: "pan-x pan-y",
@@ -476,7 +478,7 @@ export const Pricing: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
         </div>
         <div style={{ display: "grid", gridTemplateRows: cmp ? "1fr" : "0fr", transition: "grid-template-rows .4s cubic-bezier(.22,1,.36,1)" }}>
           <div style={{ overflow: "hidden" }}>
-            <div style={{ marginTop: "18px", overflowX: "auto", borderRadius: "18px", border: "1px solid #EDEAE4" }}>
+            <div style={{ marginTop: "18px", overflowX: "auto", overflowY: "hidden", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y pinch-zoom", borderRadius: "18px", border: "1px solid #EDEAE4" }}>
               <div style={{ minWidth: n === 5 ? "760px" : "480px", display: "grid", gridTemplateColumns: cmpCols, fontSize: "13px" }}>
                 <span style={{ padding: "12px 16px", background: "#FAF9FE", fontWeight: "800", fontSize: "11px", letterSpacing: ".12em", color: "#756D63" }}>{t("FEATURE")}</span>
                 {A.plans.map((p) => (

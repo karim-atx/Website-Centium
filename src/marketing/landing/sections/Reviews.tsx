@@ -51,6 +51,8 @@ export const Reviews: React.FC<{ r: SectionVals; vw: number }> = ({ r, vw }) => 
           onBlur={play}
           style={{
             overflowX: rm ? "auto" : "hidden",
+            // Round I (EZ): never vertically (with x hidden, y would compute to auto).
+            overflowY: "hidden",
             scrollbarWidth: "none",
             padding: "14px 0 22px",
             WebkitMaskImage: EDGE_MASK,

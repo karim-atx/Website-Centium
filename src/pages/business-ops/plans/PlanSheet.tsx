@@ -173,7 +173,7 @@ const ChipRow: React.FC<{ labelledBy: string; selected: string | null; children:
     else if (left + on.offsetWidth > el.scrollLeft + el.clientWidth - 14) el.scrollLeft = left + on.offsetWidth - el.clientWidth + 14;
   }, [selected]);
   return (
-    <div ref={row} role="radiogroup" aria-labelledby={labelledBy} className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "-2px -14px", padding: "2px 14px", position: "relative" }}>
+    <div ref={row} role="radiogroup" aria-labelledby={labelledBy} className="scroll-row no-scrollbar" style={{ display: "flex", gap: 8, margin: "-2px -14px", padding: "2px 14px", position: "relative" }}>
       {children}
     </div>
   );

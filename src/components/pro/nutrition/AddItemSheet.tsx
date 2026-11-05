@@ -231,7 +231,7 @@ export const AddItemSheet: React.FC<{
             <div className="flex" style={{ marginBottom: 16 }}>
               <SearchField value={query} onChange={setQuery} placeholder={t("Search foods, recipes and meals")} height={48} radius={16} />
             </div>
-            <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, padding: "6px 0", margin: "-6px 0 2px" }} role="tablist" aria-label={t("Show")}>
+            <div className="flex scroll-row no-scrollbar" style={{ gap: 6, padding: "6px 0", margin: "-6px 0 2px" }} role="tablist" aria-label={t("Show")}>
               {FILTERS.map((f) => {
                 const on = f.key === filter;
                 return (

@@ -141,7 +141,7 @@ export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line
 
 /** The scrolling sub-tab chips (vitals, filters): r10, pad 7 12, 12 / 700 on, 600 off. */
 export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (k: string) => void; label: string }> = ({ items, active, onChange, label }) => (
-  <div role="tablist" aria-label={label} className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, marginBottom: 12, paddingBottom: 2 }}>
+  <div role="tablist" aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: 6, marginBottom: 12, paddingBottom: 2 }}>
     {items.map((c) => {
       const on = c.key === active;
       return (

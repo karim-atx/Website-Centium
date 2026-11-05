@@ -48,7 +48,7 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
 export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial<Record<ProTab, boolean>>; onChange: (t: ProTab) => void }> = ({ tabs, active, unread, onChange }) => {
   const dark = useIsDark();
   return (
-    <div role="tablist" aria-label={t("Conversations")} className="flex items-center no-scrollbar" style={{ overflowX: "auto", background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, marginBottom: 16 }}>
+    <div role="tablist" aria-label={t("Conversations")} className="flex items-center scroll-row no-scrollbar" style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, marginBottom: 16 }}>
       {tabs.map((tab) => {
         const on = tab === active;
         return (

@@ -322,7 +322,7 @@ export default function LibraryWeb() {
                   {tn(filtered.length, "{n} exercise", "{n} exercises")}
                   {yoursCount > 0 ? ` · ${t("{n} yours", { n: yoursCount })}` : ""}
                 </p>
-                <div ref={listRef} className="flex no-scrollbar" style={{ gap: 24, overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none" }}>
+                <div ref={listRef} className="flex scroll-row no-scrollbar" style={{ gap: 24, scrollbarWidth: "none" }}>
                   {columns.map((col, ci) => (
                     <div key={ci} className="flex flex-col" style={{ flex: "none", width: "calc((100% - 48px) / 3)" }}>
                       {col.map(({ e, head, first }) => (
@@ -392,7 +392,7 @@ export default function LibraryWeb() {
             </div>
             <div className="flex flex-col" style={{ ...borderCard, padding: 16, gap: 10 }}>
               <p style={caps14}>{t("Muscle groups")}</p>
-              <div ref={chipsRef} className="flex no-scrollbar" style={{ flexWrap: "nowrap", gap: 7, overflowX: "auto", scrollbarWidth: "none" }}>
+              <div ref={chipsRef} className="flex scroll-row no-scrollbar" style={{ flexWrap: "nowrap", gap: 7, scrollbarWidth: "none" }}>
                 {sideZoneKeys.map((z) => {
                   const on = selectedZoneKey === z;
                   const hov = hoverZone === z && !on;

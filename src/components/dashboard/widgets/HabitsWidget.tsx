@@ -68,8 +68,8 @@ const HabitGrid: React.FC<{ habits: HabitItem[]; day: string; today: string; dar
   return (
     <span className="block relative z-[1]" style={{ width: 200 }}>
       <span
-        className="flex no-scrollbar"
-        style={{ overflowX: "auto", scrollSnapType: "x mandatory", height: 88 }}
+        className="flex scroll-row no-scrollbar"
+        style={{ scrollSnapType: "x mandatory", height: 88 }}
         onScroll={(e) => setPage(Math.round(inlineScrolled(e.currentTarget) / Math.max(1, e.currentTarget.clientWidth)))}
         onClick={(e) => e.stopPropagation()}
       >

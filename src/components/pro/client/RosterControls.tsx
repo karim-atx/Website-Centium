@@ -27,7 +27,7 @@ import { t } from "../../../i18n/core";
 
 export const ScrollRow: React.FC<{ children: React.ReactNode; label: string; role?: string }> = ({ children, label, role }) => (
   <div className="relative" style={{ marginBlock: "0 12px", marginInline: "0 -16px" }}>
-    <div role={role} aria-label={label} className="flex overflow-x-auto no-scrollbar" style={{ gap: 6, paddingBlock: "5px", paddingInline: "0 44px", margin: "-5px 0" }}>
+    <div role={role} aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: 6, paddingBlock: "5px", paddingInline: "0 44px", margin: "-5px 0" }}>
       {children}
     </div>
     <span aria-hidden className="absolute pointer-events-none" style={{ top: 0, insetInlineEnd: 0, bottom: 0, width: 44, background: "linear-gradient(to right, transparent, rgb(var(--c-cream)))" }} />

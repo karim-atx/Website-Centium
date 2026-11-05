@@ -1038,13 +1038,18 @@ html.big-targets {
    be dragged up and down, and rubber-banded on iOS. Here the vertical axis
    does not scroll at all, so a vertical swipe that starts on the row has
    nothing to move inside it and scrolls the page; sideways overscroll stays
-   in the row instead of turning into the browser's back gesture. Tap,
-   long-press, pinch-zoom and drag are untouched: there is no touch-action
-   here. */
+   in the row instead of turning into the browser's back gesture.
+   Round I (EZ): touch-action names the gestures the browser handles here:
+   sideways and vertical pans (vertical ones scroll the page, since the row
+   itself can't move that way) and pinch-zoom. Never pan-x alone: a vertical
+   swipe that starts on a row would then scroll nothing. Tap, long-press and
+   drag are untouched. A style object uses the same four properties inline
+   (scrollRow.test.ts checks every scroller). */
 .scroll-row {
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y pinch-zoom;
   -webkit-overflow-scrolling: touch;
 }
 

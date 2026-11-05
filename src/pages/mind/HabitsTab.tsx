@@ -565,7 +565,7 @@ export default function HabitsTab() {
             {/* #42–#57: the app's 20 icons (D-1) in one scrolling row, 38 r11
                 tiles 46 apart, 18 icons in #5B5349 / #B8B3C7; the first on
                 the panel padding (its ring has 2 px of room). */}
-            <div className="flex gap-2 overflow-x-auto no-scrollbar -ms-0.5 ps-0.5 pe-3.5 py-[3px] [-webkit-overflow-scrolling:touch]">
+            <div className="flex gap-2 scroll-row no-scrollbar -ms-0.5 ps-0.5 pe-3.5 py-[3px]">
               {habitIconOptions.map((opt) => {
                 const Icon = habitIcon[opt.key];
                 const selected = newIcon === opt.key;
@@ -606,7 +606,7 @@ export default function HabitsTab() {
                 <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">
                   {t("Suggestions")}
                 </p>
-                <div className="flex gap-2 overflow-x-auto no-scrollbar pe-3.5">
+                <div className="flex gap-2 scroll-row no-scrollbar pe-3.5">
                   {suggestions.map((s) => {
                     const Icon = habitIcon[s.icon];
                     return (

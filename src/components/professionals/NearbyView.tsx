@@ -429,7 +429,7 @@ export const NearbyView: React.FC<{
                     const i = Math.round(inlineScrolled(el) / Math.max(1, el.clientWidth));
                     if (i !== active) setActive(i);
                   }}
-                  className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 -my-2"
+                  className="flex scroll-row no-scrollbar snap-x snap-mandatory py-2 -my-2"
                   aria-label={!cardSet && remote.length ? t("Professionals on the map, nearest first, then online") : t("Professionals on the map, nearest first")}
                 >
                   {cards.map((c) => (

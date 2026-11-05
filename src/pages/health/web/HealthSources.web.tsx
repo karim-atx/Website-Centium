@@ -5,6 +5,7 @@ import { fetchClinicalSources, groupSources, type SourceGroup } from "../../../s
 import { useWebLayout } from "../../../components/web/useWebLayout";
 import { t } from "../../../i18n/core";
 import { HealthWebBody, HealthWebHeader } from "./HealthWebKit";
+import { safeHref } from "../../../utils/safeHref";
 
 // Website viewport v1 · WC-HE.G Sources and guidelines (WC-HE Health Web v5,
 // screens "guidelines" and "guidelines-empty"): the disclaimer (15/24
@@ -49,7 +50,7 @@ export default function HealthSourcesWeb() {
                   {g.sources.map((s, i) => (
                     <li key={s.key} style={{ borderTop: i ? "0.5px solid rgba(36,31,27,0.06)" : undefined }}>
                       <a
-                        href={s.url}
+                        href={safeHref(s.url) ?? undefined}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-start justify-between hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"

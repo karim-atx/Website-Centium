@@ -5,6 +5,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { CustomMeal, CustomMealItem, Food, MealType, ServingUnit } from "../../types";
 import { t } from "../../i18n/core";
+import { filterId } from "../postgrestFilter";
 
 // Custom meal DEFINITIONS — the saved groupings, not the diary rows logging
 // one produces.
@@ -171,7 +172,7 @@ export async function getCustomMeals(userId: string): Promise<CustomMealsResult>
   const { data, error } = await supabase
     .from("custom_meals")
     .select(`id, title, meal_type, custom_meal_items(${ITEM_SELECT})`)
-    .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
+    .or(`owner_id.eq.${filterId(userId)},scoped_to_client_id.eq.${filterId(userId)}`)
     .order("created_at", { ascending: true });
 
   if (error) {

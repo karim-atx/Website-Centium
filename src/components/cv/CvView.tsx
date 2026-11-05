@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { PublicCv } from "../../services/professional-cv";
 import { byRecency, formatMonth, formatRange } from "../../services/professional-cv/cvDates";
 import { t } from "../../i18n/core";
+import { safeHref } from "../../utils/safeHref";
 
 // A professional's CV as a client reads it: the public profile and the
 // professional's own "Preview as a client" both render through this one
@@ -115,12 +116,14 @@ export const CvView: React.FC<{ cv: PublicCv; skills: string[]; accent?: CvAccen
                 const l = c.l;
                 // MO1.2.1: "Verified" ends the meta line ("Issued 2017 · Verified"), not a pill.
                 const meta = join(l.issued ? t("Issued {v}", { v: formatMonth(l.issued) }) : null, l.verified ? t("Verified") : null);
+                // Round I, FB: http(s) only, whatever is stored (the table's own check allows https only).
+                const credential = l.credentialUrl ? safeHref(l.credentialUrl) : null;
                 return (
                   <Dot key={c.id} accent={accent} last={last}>
                     <p className={TITLE}>{comma(l.name, l.issuingBody)}</p>
                     {meta && <p className={SUB}>{meta}</p>}
                     {l.expired && l.expires && <p className={SUB}>{t("Expired {date}", { date: formatMonth(l.expires) })}</p>}
-                    {l.credentialUrl && <CvAnchor href={l.credentialUrl}>{t("View credential")}</CvAnchor>}
+                    {credential && <CvAnchor href={credential}>{t("View credential")}</CvAnchor>}
                   </Dot>
                 );
               }

@@ -54,7 +54,7 @@ import { t, tx } from "../../i18n/core";
 
 /** One row of smooth-square options that scrolls sideways (no wrap), as HE1.9.b.3 #38-#39. */
 const OptionRow: React.FC<{ children: React.ReactNode; label: string }> = ({ children, label }) => (
-  <div className="-mx-5 px-5 overflow-x-auto no-scrollbar" role="group" aria-label={label}>
+  <div className="-mx-5 px-5 scroll-row no-scrollbar" role="group" aria-label={label}>
     <div className="flex w-max" style={{ gap: 6 }}>
       {children}
     </div>

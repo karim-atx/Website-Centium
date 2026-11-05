@@ -26,6 +26,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import type { Read, Write } from "./clients";
 import { t } from "../../i18n/core";
+import { filterId } from "../postgrestFilter";
 
 const from = (table: string) => supabase.from(table as never);
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -152,7 +153,7 @@ export interface CareLink {
 }
 
 export async function fetchLinks(me: string): Promise<Read<CareLink[]>> {
-  const { data, error } = await from("care_network_links").select("id, requested_by, requested_of, status, created_at").in("status", ["pending", "accepted"]).or(`requested_by.eq.${me},requested_of.eq.${me}`).order("created_at", { ascending: false });
+  const { data, error } = await from("care_network_links").select("id, requested_by, requested_of, status, created_at").in("status", ["pending", "accepted"]).or(`requested_by.eq.${filterId(me)},requested_of.eq.${filterId(me)}`).order("created_at", { ascending: false });
   if (error) return readFail(error);
   return {
     ok: true,
@@ -206,7 +207,7 @@ export interface Referral {
 export async function fetchReferrals(me: string): Promise<Read<{ received: Referral[]; sent: Referral[] }>> {
   const { data, error } = await from("care_referrals")
     .select("id, from_professional, to_professional, client_id, reason, status, created_at, client_answered_at, responded_at, disputed_at")
-    .or(`from_professional.eq.${me},to_professional.eq.${me}`)
+    .or(`from_professional.eq.${filterId(me)},to_professional.eq.${filterId(me)}`)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) return readFail(error);

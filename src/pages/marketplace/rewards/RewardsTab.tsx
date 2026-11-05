@@ -144,8 +144,8 @@ export default function RewardsTab() {
       <div
         role="group"
         aria-label={t("Reward categories")}
-        className="rewards-chips"
-        style={{ marginTop: 10, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, overflowX: "auto" }}
+        className="rewards-chips scroll-row"
+        style={{ marginTop: 10, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}
       >
         {REWARD_CATEGORIES.map((c) => {
           const on = c.key === category;

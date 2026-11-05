@@ -248,6 +248,8 @@ const auth: Catalogue = {
   // == Onboarding › Finishing ==
   "You're signed out. Go back and sign in again to finish.": "لقد سُجّل خروجك. ارجع وسجّل الدخول مجددًا لإكمال الإعداد.",
   "Couldn't finish setting up your account. Try again.": "تعذّر إكمال إعداد حسابك. حاول مجددًا.",
+  // Round I (FB): the first name's single-line check.
+  "Use letters, spaces and punctuation only.": "استخدم الحروف والمسافات وعلامات الترقيم فقط.",
   "You can add a professional later from the Professionals tab.": "يمكنك إضافة مختص لاحقًا من تبويب «المختصون».",
 
   // == Client › About you ==

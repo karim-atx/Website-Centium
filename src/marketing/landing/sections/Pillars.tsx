@@ -77,7 +77,7 @@ export const Pillars: React.FC<{ r: SectionVals }> = ({ r }) => {
               ))}
             </div>
             <div>
-              <div ref={box} id="pl-panes" style={{ position: "relative", height: r.plPaneH, display: r.plDisp, alignItems: r.plAlign, gap: "14px", overflowX: r.plOver, scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y", margin: r.plM, padding: r.plPad, scrollbarWidth: "none" }}>
+              <div ref={box} id="pl-panes" style={{ position: "relative", height: r.plPaneH, display: r.plDisp, alignItems: r.plAlign, gap: "14px", overflowX: r.plOver, overflowY: r.plOver === "auto" ? "hidden" : undefined, scrollSnapType: "x mandatory", overscrollBehaviorX: "contain", touchAction: "pan-x pan-y", margin: r.plM, padding: r.plPad, scrollbarWidth: "none" }}>
               <PaneNutrition r={r} />
               <PaneTraining r={r} />
               <PaneHealth r={r} />

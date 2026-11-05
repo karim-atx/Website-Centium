@@ -207,14 +207,14 @@ export const BookSheet: React.FC<{
         <p style={{ margin: 0, fontSize: textPx(12.5), color: m.ink2 }}>{t("No open times this week. Try the next week.")}</p>
       ) : (
         <>
-          <div role="radiogroup" aria-label={t("Day")} className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "0 -14px", padding: "4px 14px" }}>
+          <div role="radiogroup" aria-label={t("Day")} className="scroll-row no-scrollbar" style={{ display: "flex", gap: 8, margin: "0 -14px", padding: "4px 14px" }}>
             {openDays.map((k) => (
               <button key={k} type="button" role="radio" aria-checked={k === shownDay} className="hit market-focus" onClick={() => { setDay(k); setChosen(null); }} style={chip(k === shownDay)}>
                 {dayChip(k)}
               </button>
             ))}
           </div>
-          <div role="radiogroup" aria-label={t("Start time")} className="no-scrollbar" style={{ display: "flex", gap: 8, overflowX: "auto", margin: "4px -14px 0", padding: "4px 14px" }}>
+          <div role="radiogroup" aria-label={t("Start time")} className="scroll-row no-scrollbar" style={{ display: "flex", gap: 8, margin: "4px -14px 0", padding: "4px 14px" }}>
             {daySlots.map((s) => (
               <button key={s.startsAt} type="button" role="radio" aria-checked={s.startsAt === chosen} className="hit market-focus" onClick={() => { setChosen(s.startsAt); setError(null); }} style={{ ...chip(s.startsAt === chosen), fontVariantNumeric: "tabular-nums" }}>
                 {timeChip(s.startsAt)}
