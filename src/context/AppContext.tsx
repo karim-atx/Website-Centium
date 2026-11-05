@@ -127,6 +127,7 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
+import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { unsubscribeFromPush } from "../services/push";
@@ -2182,6 +2183,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = activeLanguage;
     if (activeLanguage === "ar") void ensureArabicFont();
+    // The phone app labels its notification channels, widgets and shortcuts
+    // in the same language (App-Centium ROUND_J.md §1.3). Nothing on the web.
+    mirrorLanguage(activeLanguage);
   }, [activeLanguage]);
   const languageReady = activeLanguage === language;
   const t = translate;
@@ -6536,6 +6540,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (removal.status === "error") {
       console.error("[auth] Could not remove this device's push subscription:", removal.message);
     }
+    // The phone app's side (ROUND_J.md §1.4): widgets, shortcuts, a running
+    // session. Best effort and capped at two seconds, like the line above.
+    await nativeSignedOut();
 
     await signOutRemote();
     // A fresh page, bound to "signed out": no in-memory state of this account
