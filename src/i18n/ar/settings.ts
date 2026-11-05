@@ -5,6 +5,10 @@ import type { Catalogue } from "../core";
 // checks every t/tn/tk key in them has Arabic here or in another area file,
 // and that no English is left outside t() in their JSX.
 export const FILES: string[] = [
+  // Round I · FH: Help for members and professionals, and the support chat's row.
+  "pages/settings/HelpPage.tsx",
+  "services/help/index.ts",
+  "services/support/chat.ts",
   "components/navigation/BottomNav.tsx",
   "components/navigation/Sidebar.tsx",
   "components/navigation/Layout.tsx",
@@ -159,6 +163,8 @@ const settings: Catalogue = {
   "Data & account": "البيانات والحساب",
   "Change password": "تغيير كلمة المرور",
   "Your music": "موسيقاك",
+  // Round I · FH (decision 8): the crisis helplines, named for what they are.
+  "Crisis lines": "خطوط الأزمات",
   "Get support now": "اطلب الدعم الآن",
   "Community guidelines": "إرشادات المجتمع",
 
@@ -737,6 +743,23 @@ const settings: Catalogue = {
   "Open Settings and tap Delete business account.": "افتح «الإعدادات» واضغط «حذف حساب النشاط التجاري».",
   "Your business is deleted after 30 days.": "يُحذف نشاطك التجاري بعد 30 يومًا.",
   "Sign in before then and choose Cancel deletion to keep it.": "سجّل الدخول قبل ذلك واختر «إلغاء الحذف» للاحتفاظ به.",
+  // Round I · FH: Help (questions from the database) and "Still need help?".
+  Help: "المساعدة",
+  "Help and questions": "المساعدة والأسئلة",
+  "Answers, live chat and email": "إجابات ودردشة مباشرة وبريد إلكتروني",
+  "Search help": "ابحث في المساعدة",
+  "Loading Help…": "جارٍ تحميل المساعدة…",
+  "Couldn't load Help. Try again.": "تعذّر تحميل المساعدة. حاول مجددًا.",
+  "Write to us with the contact form": "راسلنا عبر نموذج التواصل",
+  "You've opened the chat from Help many times today. Try again tomorrow, or email us.": "فتحت الدردشة من المساعدة مرات كثيرة اليوم. حاول مجددًا غدًا، أو راسلنا عبر البريد الإلكتروني.",
+  // The support chat row and its refusals, which showed in English in Arabic.
+  "Start a chat": "ابدأ محادثة",
+  "Centium replied · {time}": "ردّ Centium · {time}",
+  "Sent · {time}": "أُرسلت · {time}",
+  "Your session expired. Sign in again to chat with support.": "انتهت جلستك. سجّل الدخول مجددًا للدردشة مع الدعم.",
+  "This account is Centium support, so it can't open a support chat with itself.": "هذا الحساب هو دعم Centium، لذا لا يمكنه فتح دردشة دعم مع نفسه.",
+  "Live chat isn't available right now. Email us instead.": "الدردشة المباشرة غير متاحة الآن. راسلنا عبر البريد الإلكتروني بدلًا من ذلك.",
+  "Couldn't open the chat. Try again, or email us.": "تعذّر فتح الدردشة. حاول مجددًا، أو راسلنا عبر البريد الإلكتروني.",
 };
 
 export default settings;

@@ -35,7 +35,7 @@ const {
   AppointmentRoutes, BusinessVenueTab, BusinessCalendarTab, Profile, MyCv, Subscription,
   More, ClientCalendarTab, Community, CertificatePage, CourseBuilderPage, CoursePage, ForumNewPage,
   ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage, Settings, NotificationsPage,
-  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, TwoFactorPage,
+  HealthCheckRemindersPage, AccessibilityPage, PrivacyPage, TermsPage, LanguagePage, YourMusicPage, BillingHelpPage, HelpPage, TwoFactorPage,
   TwoFactorSetupPage, ResetPassword, PublicCertificate, InviteLanding, PublicProfile, PublicBooking,
   SharedCard, BusinessLinkPage, CarePlan, ConsoleGate, CallLink, LegacyCallLink,
   CentiumProgrammesPage, CentiumProgrammePage, MindLibraryPage, LibrarySessionPage, WeeklyReviewPage, DoctorSummaryPage,
@@ -602,7 +602,8 @@ function AppRoutes() {
         <Route path="/app/forum/post" element={<Navigate to="/app/forum" replace />} />
         <Route path="/app/business" element={<Navigate to="/app" replace />} />
         <Route path="/app/calls" element={<Navigate to="/app/messages" replace />} />
-        <Route path="/app/settings/help" element={<Navigate to="/app/settings" replace />} />
+        {/* Round I · FH: Help (it used to send people back to Settings). */}
+        <Route path="/app/settings/help" element={<HelpPage />} />
         <Route path="/app/settings" element={<Settings />} />
         {/* MO1.8 sub-screens, pages since batch C (they were sheets). */}
         <Route path="/app/settings/devices" element={<Settings />} />

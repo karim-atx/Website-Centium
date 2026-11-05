@@ -24,6 +24,7 @@ import {
   Lock,
   HelpCircle,
   HeartHandshake,
+  LifeBuoy,
   Users,
   Mic,
   Camera,
@@ -219,6 +220,10 @@ function SettingsHub() {
           the title (73 against the title's 25 + 40), so the header's 20 bottom
           margin collapses with -12 here. */}
       <SettingsBody className="-mt-3">
+      {/* Round I · FH (decision 8): Help first, one tap from Settings. */}
+      <SettingsSection label={t("Help")}>
+        <SettingsRow icon={LifeBuoy} title={t("Help and questions")} subtitle={t("Answers, live chat and email")} onClick={() => navigate("/app/settings/help")} />
+      </SettingsSection>
       <SettingsSection label={t("Appearance")}>
         <SettingsRow
           icon={theme === "dark" ? Moon : Sun}
@@ -342,8 +347,10 @@ function SettingsHub() {
         {/* Round E: the music app and the Workout, Mind, Sleep and Cooking favourites. */}
         <SettingsRow icon={Music2} title={t("Your music")} onClick={() => navigate("/app/settings/music")} />
         <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
-        {/* Round C Release 2 (PLAN S3): the support popup. */}
-        <SettingsRow icon={HeartHandshake} title={t("Get support now")} onClick={() => navigate("/app/get-support")} />
+        {/* Round C Release 2 (PLAN S3): the support popup. Round I · FH
+            (decision 8): named for what it is, the crisis helplines, now that
+            Help has its own row. */}
+        <SettingsRow icon={HeartHandshake} title={t("Crisis lines")} onClick={() => navigate("/app/get-support")} />
         {/* Round F (DN, F5): Billing and refunds, the help article for clients and professionals. */}
         <SettingsRow icon={CreditCard} title={t("Billing and refunds")} onClick={() => navigate(BILLING_HELP_PATH)} />
         <SettingsRow icon={HelpCircle} title={t("Contact us")} onClick={() => setContactOpen(true)} />
