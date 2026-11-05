@@ -27,9 +27,11 @@ interface CentiumCameraPlugin {
   stopScan(): Promise<void>;
   capturePhoto(opts: { purpose: "progress" | "report" }): Promise<{ data: string; mimeType: string } | CameraCancel>;
   readText(opts: { data: string; mimeType: string; pages?: number[] }): Promise<{ pages: string[] }>;
+  prepareReader(): Promise<{ ready: boolean; reason?: "offline" | "failed" }>;
   protectScreen(opts: { on: boolean }): Promise<void>;
   openSettings(): Promise<void>;
   addListener(eventName: "scan", listener: (r: { code: string; format: string }) => void): Promise<PluginListenerHandle>;
+  addListener(eventName: "readerProgress", listener: (r: { fraction: number }) => void): Promise<PluginListenerHandle>;
 }
 
 const CentiumCamera = registerPlugin<CentiumCameraPlugin>("CentiumCamera");
@@ -90,6 +92,14 @@ export const camera: CameraModule = {
   async readText(file, opts) {
     const data = await toBase64(file);
     return CentiumCamera.readText({ data, mimeType: file.type, ...(opts?.pages ? { pages: opts.pages } : {}) });
+  },
+  async prepareReader(onDownload) {
+    const handle = onDownload ? await CentiumCamera.addListener("readerProgress", (r) => onDownload(r.fraction)) : null;
+    try {
+      return await CentiumCamera.prepareReader().catch(() => ({ ready: false, reason: "failed" as const }));
+    } finally {
+      void handle?.remove();
+    }
   },
   async capturePhoto({ purpose }) {
     const r = await CentiumCamera.capturePhoto({ purpose });

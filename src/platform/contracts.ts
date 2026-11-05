@@ -94,6 +94,13 @@ export interface CameraModule {
    * `pages` limits a PDF to those pages (0-based); the others come back empty.
    */
   readText(file: Blob, opts?: { pages?: number[] }): Promise<{ pages: string[] }>;
+  /**
+   * Gets the text reader ready before readText (Karim, 2026-11-05): on
+   * Android, Google Play services downloads it on first use. Resolves at once
+   * when it is already there; `onDownload` (0 to 1) is called only while it
+   * downloads. "offline": no network, or the download stalled.
+   */
+  prepareReader(onDownload?: (fraction: number) => void): Promise<{ ready: boolean; reason?: "offline" | "failed" }>;
   /** A photo taken inside Centium: never saved to the gallery, without EXIF. */
   capturePhoto(opts: { purpose: "progress" | "report" }): Promise<{ file: File } | CameraCancel>;
   /** Blocks screenshots and the Recents preview while a progress-photo screen is open. */
