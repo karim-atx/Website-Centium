@@ -175,5 +175,33 @@ export function hourSamples(logged: { at: string; value: number }[], hours: Read
 /** The kinds remove_synced_reading takes. */
 export type SyncedKind = "metric" | "blood_pressure" | "water" | "sleep" | "workout" | "mindful";
 
+/** The history pages that offer "Remove from Centium?" on a synced activity day. */
+export type ActivityField = "steps" | "calories" | "heart_rate";
+
+const DAY_KEYS: Record<ActivityField, string[]> = { steps: ["steps"], calories: ["kcal_burned"], heart_rate: ["resting_bpm"] };
+const HOUR_KEYS: Record<ActivityField, string[]> = { steps: ["steps"], calories: ["kcal"], heart_rate: ["hr_avg", "hr_min", "hr_max"] };
+
+type Sourced = { day: string; sources: Partial<Record<string, ReaderSource>> };
+
+/**
+ * The phone source behind a day's steps, calories or heart rate (from the
+ * day's row, else its hours), or null when that day has none synced. Only
+ * then is the day removable with remove_synced_activity_day. Calories are
+ * left out in recovery-sensitive mode, so nothing is offered there.
+ */
+export function syncedActivitySource(field: ActivityField, day: string, days: Sourced[], hours: Sourced[]): ReaderSource | null {
+  const pick = (rows: Sourced[], keys: string[]): ReaderSource | null => {
+    for (const r of rows) {
+      if (r.day !== day) continue;
+      for (const k of keys) {
+        const s = r.sources[k];
+        if (s && s !== "manual") return s;
+      }
+    }
+    return null;
+  };
+  return pick(days, DAY_KEYS[field]) ?? pick(hours, HOUR_KEYS[field]);
+}
+
 /** Whether a row came from a phone source (and so can be removed, never edited). */
 export const isSynced = (source: string | null | undefined): boolean => !!source && source !== "manual";

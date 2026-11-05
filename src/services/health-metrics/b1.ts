@@ -6,7 +6,7 @@ import { clock12 } from "../../utils/time12";
 import { t, tk } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 import { readActivityDays, readActivityHours, readSleepNights, removeSyncedReading } from "./readers";
-import type { ReaderSource } from "./readersModel";
+import type { ReaderDay, ReaderHour, ReaderSource } from "./readersModel";
 
 // Database stage B1 "Health data model" (HANDOVER_API.md "## B1"), read for
 // the Health A pages: raw health_metrics rows (note, context, device_name,
@@ -284,6 +284,19 @@ export function heartRateHours(rows: { day: string; hour: number; hrMin: number 
       max: h.hrMax ?? (h.hrAvg as number),
       source: h.sources.hr_avg ?? h.sources.hr_min ?? h.sources.hr_max ?? "manual",
     }));
+}
+
+/** Which source each day's and hour's activity fields came from, for "Remove from Centium?" (HA-12). */
+export function useActivitySources(fromDay: string, toDay: string) {
+  return useB1Read<{ days: ReaderDay[]; hours: ReaderHour[] }>(
+    () =>
+      Promise.all([readActivityDays(fromDay, toDay), readActivityHours(fromDay, toDay)]).then(([d, h]) => ({
+        days: d.ok ? d.rows : [],
+        hours: h.ok ? h.rows : [],
+      })),
+    [fromDay, toDay],
+    { days: [], hours: [] }
+  );
 }
 
 /** The middle of a local hour as an ISO instant, so an hour's average plots where the hour is. */

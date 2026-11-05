@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
-import { hideSyncedReading, sourceName, useMetricRows, useSleepSessions, type RawMetricRow } from "../../../services/health-metrics/b1";
-import { removeSyncedReading } from "../../../services/health-metrics/readers";
+import { sourceName, useActivitySources, useSleepSessions } from "../../../services/health-metrics/b1";
+import { removeSyncedActivityDay, removeSyncedReading } from "../../../services/health-metrics/readers";
+import { syncedActivitySource, type ActivityField } from "../../../services/health-metrics/readersModel";
 import { HealthPopup } from "./HealthPopup";
 import { SAVE_FAILED } from "./MetricKit";
 import { t } from "../../../i18n/core";
@@ -9,10 +10,9 @@ import { t } from "../../../i18n/core";
 /**
  * Delete on a synced day (HA-12 / PB-H-03, V6-169): "Remove from Centium?" /
  * "It stays in Apple Health. Centium won't import it again." / Cancel /
- * Remove (OURS-health-delete-confirm). Every synced reading of that metric on
- * that day is removed with remove_synced_reading (Database DB-Z4), which also
- * remembers it so the next sync skips it; manual rows are never touched by
- * this path. Offered only on a day that has synced readings.
+ * Remove (OURS-health-delete-confirm). The Database call removes the synced
+ * day or night and remembers it so the next sync skips it; manual rows are
+ * never touched by this path. Offered only on a day that has synced data.
  */
 function useRemovePopup(onToast: (m: string) => void, remove: (day: string) => Promise<boolean[]>, sourceFor: (day: string) => string, after: () => void) {
   const { authUserId, reloadMetrics } = useApp();
@@ -43,31 +43,28 @@ function useRemovePopup(onToast: (m: string) => void, remove: (day: string) => P
 }
 
 /**
- * Steps, calories burned and heart rate.
- *
- * TODO(Round J, pending): under DB-Z4 the sync writes these to activity_daily
- * and activity_hourly only, never to health_metrics, and remove_synced_reading
- * has no activity kind. So this still reads health_metrics (where no synced
- * row is written any more) until the Database session decides between (a) an
- * 'activity_day' kind for remove_synced_reading, which keeps HA-12 here, and
- * (b) dropping HA-12 on these three pages.
+ * Steps, calories burned and heart rate. The sync writes these to
+ * activity_daily and activity_hourly only (DB-Z4), so a synced day is removed
+ * whole with remove_synced_activity_day (Karim's HA-12 decision (a)): that
+ * day's steps, calories and heart rate from the phone go together. Offered
+ * only when this page's own figure for the day came from a phone source.
  */
-export function useSyncedRemove(dbType: "steps" | "calories_burned" | "heart_rate", fromDay: string, toDay: string, onToast: (m: string) => void) {
-  const rows = useMetricRows(dbType, fromDay, toDay);
-  const synced = (d: string): RawMetricRow[] => rows.data.filter((r) => r.day === d && r.source !== "manual");
+export function useSyncedRemove(field: ActivityField, fromDay: string, toDay: string, onToast: (m: string) => void) {
+  const read = useActivitySources(fromDay, toDay);
+  const synced = (d: string) => syncedActivitySource(field, d, read.data.days, read.data.hours);
   const { open, popup } = useRemovePopup(
     onToast,
-    (d) => Promise.all(synced(d).map((r) => hideSyncedReading(r))),
-    (d) => sourceName(synced(d)[0]?.source ?? "apple_health"),
-    rows.reload
+    async (d) => [await removeSyncedActivityDay(d)],
+    (d) => sourceName(synced(d) ?? "apple_health"),
+    read.reload
   );
   return {
-    /** The history row's Delete for a day with synced readings, else undefined. */
-    onDelete: (d: string) => (synced(d).length > 0 ? () => open(d) : undefined),
-    /** "Apple Health" etc. for a day's rows, "Logged by you" for manual, null when none. */
+    /** The history row's Delete for a day with synced activity, else undefined. */
+    onDelete: (d: string) => (synced(d) ? () => open(d) : undefined),
+    /** "Apple Health" etc. when the day's figure is synced, else null. */
     sourceOf: (d: string) => {
-      const r = rows.data.find((x) => x.day === d);
-      return r ? sourceName(r.source) : null;
+      const s = synced(d);
+      return s ? sourceName(s) : null;
     },
     popup,
   };

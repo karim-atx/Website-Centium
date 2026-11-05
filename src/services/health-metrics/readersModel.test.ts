@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addDay, dayChunks, DAYS_MAX, HOURS_MAX, hourSamples, isSynced, parseActivityDay, parseActivityHour, parseSleepNight, parseSources } from "./readersModel";
+import { addDay, dayChunks, DAYS_MAX, HOURS_MAX, hourSamples, isSynced, parseActivityDay, parseActivityHour, parseSleepNight, parseSources, syncedActivitySource } from "./readersModel";
 
 test("dayChunks: every piece within the reader's limit (to - from ≤ max), joined end to end", () => {
   assert.deepEqual(dayChunks("2026-01-01", "2026-01-01", HOURS_MAX), [["2026-01-01", "2026-01-01"]]);
@@ -89,4 +89,24 @@ test("isSynced: anything but manual", () => {
   assert.equal(isSynced("manual"), false);
   assert.equal(isSynced(null), false);
   assert.equal(isSynced("android_health"), true);
+});
+
+test("syncedActivitySource: the page's own figure decides, from the day's row else its hours", () => {
+  const days = [
+    { day: "2026-11-01", sources: { steps: "android_health" as const, resting_bpm: "manual" as const } },
+    { day: "2026-11-02", sources: { steps: "manual" as const } },
+  ];
+  const hours = [
+    { day: "2026-11-02", sources: { hr_avg: "android_health" as const, kcal: "apple_health" as const } },
+    { day: "2026-11-03", sources: { steps: "manual" as const } },
+  ];
+  assert.equal(syncedActivitySource("steps", "2026-11-01", days, hours), "android_health");
+  assert.equal(syncedActivitySource("heart_rate", "2026-11-01", days, hours), null);
+  assert.equal(syncedActivitySource("steps", "2026-11-02", days, hours), null);
+  assert.equal(syncedActivitySource("heart_rate", "2026-11-02", days, hours), "android_health");
+  assert.equal(syncedActivitySource("calories", "2026-11-02", days, hours), "apple_health");
+  assert.equal(syncedActivitySource("steps", "2026-11-03", days, hours), null);
+  // Recovery-sensitive mode leaves kcal out of `sources`: nothing to offer.
+  assert.equal(syncedActivitySource("calories", "2026-11-01", days, hours), null);
+  assert.equal(syncedActivitySource("steps", "2026-11-04", days, hours), null);
 });
