@@ -5,13 +5,20 @@ import { readSources } from "../../pages/settings/sourcesData";
 import { clock12 } from "../../utils/time12";
 import { t, tk } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
+import { readActivityDays, readActivityHours, readSleepNights, removeSyncedReading } from "./readers";
+import type { ReaderSource } from "./readersModel";
 
 // Database stage B1 "Health data model" (HANDOVER_API.md "## B1"), read for
 // the Health A pages: raw health_metrics rows (note, context, device_name,
 // external_id, source), water_intakes, activity_daily / activity_hourly,
 // sleep_details times and sleep_segments, workout_sessions.kcal,
-// heart_rate_alert_settings, hidden_synced_readings. Owner-only rows (RLS).
+// heart_rate_alert_settings. Owner-only rows (RLS).
 // Each result is mapped to a typed shape here.
+//
+// Round J · J-2a (Database DB-Z4): activity, hours and main nights come from
+// the one-source readers (readers.ts), which pick one source per day, hour or
+// night (manual first, then the providers by priority). A synced reading is
+// removed with remove_synced_reading, never edited.
 
 /** The local day [start, end) as ISO instants (local midnights). */
 export function dayWindowIso(fromDay: string, toDay: string): [string, string] {
@@ -97,16 +104,13 @@ export function useMetricRows(dbType: "weight" | "heart_rate" | "steps" | "sleep
 }
 
 /**
- * Delete on a synced reading (V6-169, hidden_synced_readings): record the
- * source's id so the next sync skips it, then remove the row from Centium.
- * The reading stays in Apple Health / Health Connect / WHOOP.
+ * Delete on a synced reading (V6-169): remove_synced_reading('metric') deletes
+ * it and remembers it, so the next sync skips it (DB-Z4; it replaces the old
+ * two-step hide). The reading stays in Apple Health / Health Connect / WHOOP.
  */
-export async function hideSyncedReading(userId: string, row: Pick<RawMetricRow, "id" | "source" | "externalId">): Promise<boolean> {
-  if (row.source === "manual" || !row.externalId) return false;
-  const hide = await db.from("hidden_synced_readings").insert({ user_id: userId, source: row.source, external_id: row.externalId });
-  if (hide.error && hide.error.code !== "23505") return false;
-  const del = await db.from("health_metrics").delete().eq("id", row.id);
-  return !del.error;
+export async function hideSyncedReading(row: Pick<RawMetricRow, "id" | "source">): Promise<boolean> {
+  if (row.source === "manual") return false;
+  return removeSyncedReading("metric", row.id);
 }
 
 /** "Apple Health", "Health Connect", "WHOOP", or "Logged by you" (translated; call at render time). */
@@ -161,7 +165,9 @@ export async function updateDrink(id: string, ml: number): Promise<boolean> {
   return !error;
 }
 
-export async function removeDrink(id: string): Promise<boolean> {
+/** A synced drink can't be edited (DB-Z4: an update changes nothing); it is removed with remove_synced_reading. */
+export async function removeDrink(id: string, source: MetricSource = "manual"): Promise<boolean> {
+  if (source !== "manual") return removeSyncedReading("water", id);
   const { error } = await db.from("water_intakes").delete().eq("id", id);
   return !error;
 }
@@ -171,7 +177,10 @@ export async function removeDrink(id: string): Promise<boolean> {
 
 export interface ActivityDay {
   day: string;
+  /** The steps' source (else the first field's), for the "from Health Connect" line. */
   source: MetricSource;
+  /** Which source each field came from (the reader's `sources`). */
+  sources: Partial<Record<string, ReaderSource>>;
   steps: number | null;
   distanceM: number | null;
   activeMinutes: number | null;
@@ -184,34 +193,32 @@ const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 
 export function useActivityDaily(fromDay: string, toDay: string) {
   return useB1Read<ActivityDay[]>(
-    (uid) =>
-      db
-        .from("activity_daily")
-        .select("local_date, source, steps, distance_m, active_minutes, floors, resting_bpm, kcal_burned")
-        .eq("user_id", uid)
-        .gte("local_date", fromDay)
-        .lte("local_date", toDay)
-        .order("local_date", { ascending: true })
-        .then(({ data, error }) =>
-          error
-            ? []
-            : (data ?? []).map((r: Record<string, unknown>) => ({
-                day: r.local_date as string,
-                source: r.source as MetricSource,
-                steps: num(r.steps),
-                distanceM: num(r.distance_m),
-                activeMinutes: num(r.active_minutes),
-                floors: num(r.floors),
-                restingBpm: num(r.resting_bpm),
-                kcalBurned: num(r.kcal_burned),
-              }))
-        ),
+    () =>
+      readActivityDays(fromDay, toDay).then((r) =>
+        !r.ok
+          ? []
+          : r.rows.map((d) => ({
+              day: d.day,
+              source: d.sources.steps ?? Object.values(d.sources)[0] ?? "manual",
+              sources: d.sources,
+              steps: d.steps,
+              distanceM: d.distanceM,
+              activeMinutes: d.activeMinutes,
+              floors: d.floors,
+              restingBpm: d.restingBpm,
+              kcalBurned: d.kcalBurned,
+            }))
+      ),
     [fromDay, toDay],
     []
   );
 }
 
-/** One row per local day: the first source in `priority` order that reported the field. */
+/**
+ * One row per local day. The readers already send one per day, so this keys
+ * them by day; with several rows a day it keeps the first source in
+ * `priority` order that reported each field.
+ */
 export function activityByDay(rows: ActivityDay[], priority: Partial<Record<string, number>> = {}): Record<string, ActivityDay> {
   const out: Record<string, ActivityDay> = {};
   const rank = (s: string) => priority[s] ?? 99;
@@ -229,29 +236,68 @@ export interface ActivityHour {
   hour: number;
   steps: number | null;
   kcal: number | null;
+  /** The hour's heart rate, from one source together (DB-Z4: the sync keeps no raw samples). */
+  hrMin: number | null;
+  hrAvg: number | null;
+  hrMax: number | null;
 }
 
 export function useActivityHourly(day: string) {
   return useB1Read<ActivityHour[]>(
-    (uid) =>
-      db
-        .from("activity_hourly")
-        .select("hour, steps, kcal")
-        .eq("user_id", uid)
-        .eq("local_date", day)
-        .order("hour", { ascending: true })
-        .then(({ data, error }) =>
-          error ? [] : (data ?? []).map((r: Record<string, unknown>) => ({ hour: Number(r.hour), steps: num(r.steps), kcal: num(r.kcal) }))
-        ),
+    () =>
+      readActivityHours(day, day).then((r) =>
+        !r.ok ? [] : r.rows.map(({ hour, steps, kcal, hrMin, hrAvg, hrMax }) => ({ hour, steps, kcal, hrMin, hrAvg, hrMax }))
+      ),
     [day],
     []
   );
+}
+
+/** Synced heart rate for one hour (min, average, max from one source). */
+export interface HeartRateHour {
+  day: string;
+  hour: number;
+  min: number;
+  avg: number;
+  max: number;
+  source: MetricSource;
+}
+
+/** Synced heart rate by hour over a range (read 31 days at a time). */
+export function useHeartRateHours(fromDay: string, toDay: string) {
+  return useB1Read<HeartRateHour[]>(
+    () => readActivityHours(fromDay, toDay).then((r) => (r.ok ? heartRateHours(r.rows) : [])),
+    [fromDay, toDay],
+    []
+  );
+}
+
+/** The hours that have a heart rate, as HeartRateHour. */
+export function heartRateHours(rows: { day: string; hour: number; hrMin: number | null; hrAvg: number | null; hrMax: number | null; sources: Partial<Record<string, ReaderSource>> }[]): HeartRateHour[] {
+  return rows
+    .filter((h) => h.hrAvg !== null)
+    .map((h) => ({
+      day: h.day,
+      hour: h.hour,
+      avg: h.hrAvg as number,
+      min: h.hrMin ?? (h.hrAvg as number),
+      max: h.hrMax ?? (h.hrAvg as number),
+      source: h.sources.hr_avg ?? h.sources.hr_min ?? h.sources.hr_max ?? "manual",
+    }));
+}
+
+/** The middle of a local hour as an ISO instant, so an hour's average plots where the hour is. */
+export function hourIso(day: string, hour: number): string {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(y, m - 1, d, hour, 30).toISOString();
 }
 
 // ---------------------------------------------------------------------------
 // sleep_details (times) and sleep_segments
 
 export interface SleepSession {
+  /** The night's row, for removing a synced one (remove_synced_reading 'sleep'). */
+  id: string;
   day: string;
   score: number | null;
   bedStart: string | null;
@@ -263,33 +309,56 @@ export interface SleepSession {
   segments: { stage: "awake" | "light" | "deep" | "rem"; startsAt: string; endsAt: string }[];
 }
 
+/**
+ * Main nights from my_sleep_nights (one per date, by source priority), and
+ * naps from sleep_details, which the reader leaves out.
+ */
 export function useSleepSessions(fromDay: string, toDay: string) {
   return useB1Read<SleepSession[]>(
     (uid) =>
-      db
-        .from("sleep_details")
-        .select("id, sleep_date, score, bed_start, wake_end, asleep_min, in_bed_min, source, is_nap, sleep_segments(stage, starts_at, ends_at)")
-        .eq("user_id", uid)
-        .gte("sleep_date", fromDay)
-        .lte("sleep_date", toDay)
-        .order("sleep_date", { ascending: true })
-        .then(({ data, error }) =>
-          error
-            ? []
-            : (data ?? []).map((r: Record<string, unknown>) => ({
-                day: r.sleep_date as string,
-                score: num(r.score),
-                bedStart: (r.bed_start as string | null) ?? null,
-                wakeEnd: (r.wake_end as string | null) ?? null,
-                asleepMin: num(r.asleep_min),
-                inBedMin: num(r.in_bed_min),
-                source: (r.source as string | null) ?? null,
-                isNap: !!r.is_nap,
-                segments: ((r.sleep_segments as { stage: SleepSession["segments"][number]["stage"]; starts_at: string; ends_at: string }[] | null) ?? [])
-                  .map((s) => ({ stage: s.stage, startsAt: s.starts_at, endsAt: s.ends_at }))
-                  .sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1)),
-              }))
-        ),
+      Promise.all([
+        readSleepNights(fromDay, toDay),
+        db
+          .from("sleep_details")
+          .select("id, sleep_date, score, bed_start, wake_end, asleep_min, in_bed_min, source, is_nap, sleep_segments(stage, starts_at, ends_at)")
+          .eq("user_id", uid)
+          .eq("is_nap", true)
+          .gte("sleep_date", fromDay)
+          .lte("sleep_date", toDay)
+          .order("sleep_date", { ascending: true }),
+      ]).then(([nights, naps]) => {
+        const main: SleepSession[] = !nights.ok
+          ? []
+          : nights.rows.map((n) => ({
+              id: n.id,
+              day: n.day,
+              score: n.score,
+              bedStart: n.bedStart,
+              wakeEnd: n.wakeEnd,
+              asleepMin: n.asleepMin,
+              inBedMin: n.inBedMin,
+              source: n.source,
+              isNap: false,
+              segments: n.segments,
+            }));
+        const napRows: SleepSession[] = naps.error
+          ? []
+          : (naps.data ?? []).map((r: Record<string, unknown>) => ({
+              id: r.id as string,
+              day: r.sleep_date as string,
+              score: num(r.score),
+              bedStart: (r.bed_start as string | null) ?? null,
+              wakeEnd: (r.wake_end as string | null) ?? null,
+              asleepMin: num(r.asleep_min),
+              inBedMin: num(r.in_bed_min),
+              source: (r.source as string | null) ?? null,
+              isNap: true,
+              segments: ((r.sleep_segments as { stage: SleepSession["segments"][number]["stage"]; starts_at: string; ends_at: string }[] | null) ?? [])
+                .map((g) => ({ stage: g.stage, startsAt: g.starts_at, endsAt: g.ends_at }))
+                .sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1)),
+            }));
+        return [...main, ...napRows].sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+      }),
     [fromDay, toDay],
     []
   );

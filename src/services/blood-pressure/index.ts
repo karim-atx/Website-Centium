@@ -3,6 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { recordedAtFor } from "../health-metrics";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
 import { t, tk } from "../../i18n/core";
+import { removeSyncedReading } from "../health-metrics/readers";
 
 // Manually logged blood pressure, in public.blood_pressure_readings.
 //
@@ -180,7 +181,14 @@ export async function updateBloodPressure(params: {
   return { ok: true };
 }
 
-export async function deleteBloodPressure(id: string): Promise<BpWriteResult> {
+/**
+ * A synced reading (Round J · DB-Z4) goes through remove_synced_reading, which
+ * also remembers it so the next sync skips it; a manual one is deleted.
+ */
+export async function deleteBloodPressure(id: string, source: string = "manual"): Promise<BpWriteResult> {
+  if (source !== "manual") {
+    return (await removeSyncedReading("blood_pressure", id)) ? { ok: true } : { ok: false, message: tk("Couldn't save that. Check your connection and try again.") };
+  }
   const { error } = await supabase.from("blood_pressure_readings").delete().eq("id", id);
   if (error) {
     console.error("[blood-pressure] Could not delete reading:", error.message);
@@ -198,9 +206,11 @@ function toReading(row: {
   position: string | null;
   notes: string | null;
   recorded_at: string;
+  source?: string | null;
 }): BloodPressureReading {
   return {
     id: row.id,
+    source: row.source ?? "manual",
     systolic: row.systolic,
     diastolic: row.diastolic,
     pulse: row.pulse,
@@ -216,7 +226,7 @@ function toReading(row: {
   };
 }
 
-const COLUMNS = "id, systolic, diastolic, pulse, arm, position, notes, recorded_at";
+const COLUMNS = "id, systolic, diastolic, pulse, arm, position, notes, recorded_at, source";
 
 /**
  * Every reading since `sinceDay`, NEWEST FIRST.

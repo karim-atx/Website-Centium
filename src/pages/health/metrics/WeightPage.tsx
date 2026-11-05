@@ -418,7 +418,7 @@ export default function WeightPage() {
             const r = removing;
             setRemoving(null);
             if (!r || !authUserId) return;
-            if (!(await hideSyncedReading(authUserId, r))) setToast(SAVE_FAILED);
+            if (!(await hideSyncedReading(r))) setToast(SAVE_FAILED);
             weighInRead.reload();
             reloadMetrics();
           },

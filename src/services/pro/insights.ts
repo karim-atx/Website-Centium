@@ -24,6 +24,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { rpc } from "./rpc";
 import { t } from "../../i18n/core";
 import type { Read, Write } from "./clients";
+import { readActivityDays, readActivityHours, readSleepNights } from "../health-metrics/readers";
 import type { SleepNight, SleepStage } from "../../components/pro/insights/sleepModel";
 
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -65,12 +66,15 @@ export interface ActivityDay {
   kcal: number | null;
 }
 
+/**
+ * client_activity_days (Database DB-Z4): one row per day, each field from the
+ * client's best-ranked source, so a day synced from two sources is counted
+ * once. Read 400 days at a time, under the health_metrics consent.
+ */
 export async function fetchActivityDays(clientId: string, since: string): Promise<Read<ActivityDay[]>> {
-  const r = await paged<{ local_date: string; steps: unknown; active_minutes: unknown; resting_bpm: unknown; kcal_burned: unknown }>((a, b) =>
-    from("activity_daily").select("local_date, steps, active_minutes, resting_bpm, kcal_burned").eq("user_id", clientId).gte("local_date", since).order("local_date").range(a, b)
-  );
+  const r = await readActivityDays(since, localDay(new Date().toISOString()), clientId);
   if (!r.ok) return readFail(r.error);
-  return { ok: true, data: r.rows.map((x) => ({ day: x.local_date, steps: num(x.steps), activeMinutes: num(x.active_minutes), restingBpm: num(x.resting_bpm), kcal: num(x.kcal_burned) })) };
+  return { ok: true, data: r.rows.map((x) => ({ day: x.day, steps: x.steps, activeMinutes: x.activeMinutes, restingBpm: x.restingBpm, kcal: x.kcalBurned })) };
 }
 
 export interface ActivityHour {
@@ -79,10 +83,11 @@ export interface ActivityHour {
   steps: number;
 }
 
+/** client_activity_hours (DB-Z4): one source per hour, read 31 days at a time. Hours with no steps (heart rate only) are left out. */
 export async function fetchActivityHours(clientId: string, since: string): Promise<Read<ActivityHour[]>> {
-  const r = await paged<{ local_date: string; hour: number; steps: unknown }>((a, b) => from("activity_hourly").select("local_date, hour, steps").eq("user_id", clientId).gte("local_date", since).order("local_date").range(a, b));
+  const r = await readActivityHours(since, localDay(new Date().toISOString()), clientId);
   if (!r.ok) return readFail(r.error);
-  return { ok: true, data: r.rows.map((x) => ({ day: x.local_date, hour: Number(x.hour), steps: num(x.steps) ?? 0 })) };
+  return { ok: true, data: r.rows.filter((x) => x.steps !== null).map((x) => ({ day: x.day, hour: x.hour, steps: x.steps ?? 0 })) };
 }
 
 export type MetricType = "weight" | "heart_rate" | "steps" | "sleep" | "water" | "calories_burned" | "waist" | "body_fat_pct";
@@ -109,7 +114,8 @@ export async function fetchMetricRows(clientId: string, types: MetricType[], sin
 // professional reads sleep_details through sleep_details_select_granted_
 // professional (Activity and vitals, has_client_access 'health_metrics') and
 // the stage timeline sleep_segments through sleep_segments_select_via_sleep.
-// Main nights only (is_nap false); the timeline comes embedded per night.
+// Main nights only, one per date by source priority (client_sleep_nights,
+// Database DB-Z4); the timeline comes embedded per night.
 // ---------------------------------------------------------------------------
 
 // The shapes live with the pure model (node tests import it without this
@@ -117,43 +123,22 @@ export async function fetchMetricRows(clientId: string, types: MetricType[], sin
 export type { SleepNight, SleepSegment, SleepStage } from "../../components/pro/insights/sleepModel";
 
 export async function fetchSleepNights(clientId: string, since: string): Promise<Read<SleepNight[]>> {
-  type Row = {
-    id: string;
-    sleep_date: string;
-    bed_start: string | null;
-    wake_end: string | null;
-    asleep_min: unknown;
-    in_bed_min: unknown;
-    deep_min: unknown;
-    rem_min: unknown;
-    light_min: unknown;
-    awake_min: unknown;
-    sleep_segments: { stage: SleepStage; starts_at: string; ends_at: string }[] | null;
-  };
-  const r = await paged<Row>((a, b) =>
-    from("sleep_details")
-      .select("id, sleep_date, bed_start, wake_end, asleep_min, in_bed_min, deep_min, rem_min, light_min, awake_min, sleep_segments(stage, starts_at, ends_at)")
-      .eq("user_id", clientId)
-      .eq("is_nap", false)
-      .gte("sleep_date", since)
-      .order("sleep_date")
-      .range(a, b)
-  );
+  const r = await readSleepNights(since, localDay(new Date().toISOString()), clientId);
   if (!r.ok) return readFail(r.error);
   return {
     ok: true,
     data: r.rows.map((x) => ({
       id: x.id,
-      date: x.sleep_date,
-      bedStart: x.bed_start,
-      wakeEnd: x.wake_end,
-      asleepMin: num(x.asleep_min),
-      inBedMin: num(x.in_bed_min),
-      deepMin: num(x.deep_min),
-      remMin: num(x.rem_min),
-      lightMin: num(x.light_min),
-      awakeMin: num(x.awake_min),
-      segments: [...(x.sleep_segments ?? [])].sort((p, q) => (p.starts_at < q.starts_at ? -1 : 1)).map((s) => ({ stage: s.stage, startsAt: s.starts_at, endsAt: s.ends_at })),
+      date: x.day,
+      bedStart: x.bedStart,
+      wakeEnd: x.wakeEnd,
+      asleepMin: x.asleepMin,
+      inBedMin: x.inBedMin,
+      deepMin: x.deepMin,
+      remMin: x.remMin,
+      lightMin: x.lightMin,
+      awakeMin: x.awakeMin,
+      segments: x.segments.map((g) => ({ stage: g.stage as SleepStage, startsAt: g.startsAt, endsAt: g.endsAt })),
     })),
   };
 }

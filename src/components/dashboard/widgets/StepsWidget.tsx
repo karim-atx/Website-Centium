@@ -4,7 +4,7 @@ import { Footprints } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { valueOn } from "../../../services/health-metrics/periods";
 import { NoDeviceSheet } from "../NoDeviceSheet";
-import { useSourceConnected, useStepsGoalOn } from "./data";
+import { useActivityStepsOn, useSourceConnected, useStepsGoalOn } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, useHomeMode, useLoadingTimeout } from "./kit";
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
@@ -135,7 +135,10 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const connected = useSourceConnected();
   const [sheet, setSheet] = useState(false);
   // K1: the board reads the day picked in the Home date selector.
-  const steps = valueOn(healthSeries.steps, selectedDate);
+  // Steps logged by hand (health_metrics) first, as the readers rank manual
+  // first; else the synced day from activity_daily (Round J, DB-Z4).
+  const syncedSteps = useActivityStepsOn(selectedDate, metricsLoadedAt);
+  const steps = valueOn(healthSeries.steps, selectedDate) ?? syncedSteps;
   const loading = steps === null && metricsLoadedAt === null && !metricsError;
   const timedOut = useLoadingTimeout(loading);
   const isLarge = size === "large";
