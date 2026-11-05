@@ -54,16 +54,16 @@ import type {
  * work that depends on one — `streaks.owner_id` references `profiles(id)` —
  * can skip it rather than watch a foreign key fail.
  */
-export async function ensureProfileRow(
-  userId: string,
-  email: string | null
-): Promise<{ profileEnsured: boolean }> {
+export async function ensureProfileRow(userId: string): Promise<{ profileEnsured: boolean }> {
   // Fails toward the old behaviour on purpose: isAdminAccount() answers false
   // when the check itself fails, so a bad round trip creates a profile the
   // way it always did rather than leaving a real user without one.
   if (await isAdminAccount()) return { profileEnsured: false };
 
-  const row: TablesInsert<"profiles"> = { id: userId, email };
+  // Just the id (Round J · FI): the Database sets a new row's email from the
+  // sign-in email itself (a BEFORE INSERT trigger, 20261226520000), whatever a
+  // client sends, and members' INSERT(email) is revoked after this ships.
+  const row: TablesInsert<"profiles"> = { id: userId };
   const { error } = await supabase
     .from("profiles")
     .upsert(row, { onConflict: "id", ignoreDuplicates: true });
