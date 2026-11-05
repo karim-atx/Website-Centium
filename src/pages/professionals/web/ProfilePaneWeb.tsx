@@ -4,7 +4,8 @@ import { BadgeCheck, Handshake, Link2, MessageCircle, Pencil, Star, TicketCheck,
 import { useApp } from "../../../context/AppContext";
 import { useOpenThread } from "../../../components/messages/useOpenThread";
 import { fetchListing, type DirectoryListing } from "../../../services/directory";
-import { fetchClientSince, isActiveClientOf } from "../../../services/connected-professional";
+import { fetchClientRelationship, isActiveClientOf } from "../../../services/connected-professional";
+import { EndRelationship } from "../../../components/professionals/EndRelationship";
 import { fetchPublicCv, type PublicCv } from "../../../services/professional-cv";
 import { byRecency, formatRange } from "../../../services/professional-cv/cvDates";
 import { HireSheet } from "../../../components/hire/HireSheet";
@@ -175,13 +176,18 @@ export const ProfilePaneWeb: React.FC<{
       cancelled = true;
     };
   }, [proId]);
-  const [clientSince, setClientSince] = useState<string | null>(null);
+  // Keyed by professional, so End never holds the last one's relationship.
+  const [relState, setRelState] = useState<{ id: string | null; rel: { id: string; joinedAt: string } | null }>({ id: null, rel: null });
+  const relationship = proId && relState.id === proId ? relState.rel : null;
+  const clientSince = relationship?.joinedAt ?? null;
+  // Round I: the note after End, for the professional it was ended with.
+  const [endedFor, setEndedFor] = useState<string | null>(null);
   const [socialState, setSocialState] = useState<Awaited<ReturnType<typeof fetchConnectedSocials>> | null>(null);
   useEffect(() => {
     if (!proId || activeClient !== true) return;
     let cancelled = false;
-    void fetchClientSince(proId).then((at) => {
-      if (!cancelled) setClientSince(at);
+    void fetchClientRelationship(proId).then((rel) => {
+      if (!cancelled) setRelState({ id: proId, rel });
     });
     void fetchConnectedSocials(proId).then((s) => {
       if (!cancelled) setSocialState(s);
@@ -551,7 +557,27 @@ export const ProfilePaneWeb: React.FC<{
               {t("Client since {date}", { date: new Date(clientSince).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" }) })}
             </PrPill>
           )}
+          {/* Round I: the client's End, an outlined pill of the same height. */}
+          {isConnected && relationship && (
+            <EndRelationship
+              relationshipId={relationship.id}
+              firstName={first}
+              hasPlan={!!liveHire}
+              className="pr-web-press inline-flex items-center whitespace-nowrap"
+              style={{ height: 28, padding: "0 12px", borderRadius: 999, boxSizing: "border-box", fontSize: 13, fontWeight: 700, background: "transparent", border: "1px solid #E4E4E9", color: "#C0392B" }}
+              onEnded={() => {
+                setActiveClient(false);
+                setRelState({ id: null, rel: null });
+                setEndedFor(proId);
+              }}
+            />
+          )}
         </div>
+        {endedFor === proId && activeClient === false && (
+          <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#6B635A" }}>
+            {t("You've ended working with {name}. They no longer see your shared information.", { name: first })}
+          </p>
+        )}
 
         {isConnected && asks.length > 0 && <AccessRequestNotice variant="summary" requests={asks} firstName={first} onChoose={() => scrollTo(sharingRef.current)} />}
 

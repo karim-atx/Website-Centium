@@ -2,11 +2,15 @@ import React, { useState } from "react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { Toast } from "../../ui/Toast";
+import { OFFLINE_ACTION } from "../metric/MetricKit";
 import { WheelPicker, type WheelOption } from "../../ui/WheelPicker";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
-import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, QUEUED_COPY } from "../../../services/health-log/offlineQueue";
+import { browserOffline, enqueueLog, isOfflineFailure, newQueueId, QUEUED_COPY, queuedLogs } from "../../../services/health-log/offlineQueue";
+import { canChangeWaterDay, NOTHING_TO_REMOVE, OUTSIDE_WINDOW, removableWaterMl, removedMessage } from "../../../services/health-log/waterRemove";
+import { useDrinks } from "../../../services/health-metrics/b1";
+import { AddRemoveSwitch } from "../metric/WaterSheets";
 import { FieldLabel, MeasuredOnPopup, WhenField, dayLabel, isoDay, partBSheetTone, whenLabel } from "./LogSheetParts";
 import { t, tx } from "../../../i18n/core";
 
@@ -22,6 +26,11 @@ import { t, tx } from "../../../i18n/core";
 //
 // LIMIT (V6-16): the app's 5 L day clamp stays; a drink that would pass it is
 // refused here with the handover's line rather than silently trimmed.
+//
+// TAKING WATER BACK (Round I · FA): −250 ml / −500 ml beside the adds (Help's wording), and
+// Custom's Add / Remove switch. A removal is unlog_water for the When day:
+// only hand-logged water, never below 0, today or the 7 days before it. The
+// toast shows what the server removed. Offline it waits in the outbox.
 
 const DAY_LIMIT_ML = 5000;
 const CHIPS = [250, 500] as const;
@@ -34,20 +43,23 @@ export function litres(ml: number): string {
 }
 
 export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSaved?: () => void }> = ({ open, onClose, onSaved }) => {
-  const { authUserId, today, waterByDate, waterGoalMl, logWaterDrink } = useApp();
+  const { authUserId, today, waterByDate, waterGoalMl, logWaterDrink, unlogWaterDrinks } = useApp();
   const dark = useIsDark();
+  // A chip's amount; negative takes it back (Round I · FA).
   const [choice, setChoice] = useState<number | "custom" | null>(null);
   const [custom, setCustom] = useState(400);
+  const [customMode, setCustomMode] = useState<"add" | "remove">("add");
   const [when, setWhen] = useState<Date>(() => new Date());
   const [whenOpen, setWhenOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
 
   const [wasOpen, setWasOpen] = useState(false);
   if (open && !wasOpen) {
     setWasOpen(true);
     setChoice(null);
     setCustom(400);
+    setCustomMode("add");
     setWhen(new Date());
     setSaving(false);
   } else if (!open && wasOpen) {
@@ -57,17 +69,46 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
   // The day the drink is filed under: the When day (defaults to now).
   const day = isoDay(when);
   const soFar = waterByDate[day] ?? 0;
-  const amount = choice === "custom" ? custom : choice;
-  const overLimit = amount !== null && soFar + amount > DAY_LIMIT_ML;
+  const removing = choice === "custom" ? customMode === "remove" : choice !== null && choice < 0;
+  const amount = choice === "custom" ? custom : choice === null ? null : Math.abs(choice);
+  const overLimit = !removing && amount !== null && soFar + amount > DAY_LIMIT_ML;
+  // What the When day still has to take back (its hand-logged drinks and the outbox).
+  const dayDrinks = useDrinks(day, day);
+  const removable = removableWaterMl(day, dayDrinks.data, authUserId ? queuedLogs(authUserId) : []);
+  const removeBlocked = !canChangeWaterDay(day, today) ? OUTSIDE_WINDOW : removable <= 0 ? NOTHING_TO_REMOVE : null;
+
+  const remove = async () => {
+    if (amount === null || removeBlocked || !authUserId) return;
+    const requestId = newQueueId();
+    const queue = () => {
+      enqueueLog(authUserId, { kind: "water_remove", ml: amount, day }, requestId);
+      setToast({ message: t(QUEUED_COPY) });
+      onClose();
+    };
+    if (browserOffline()) return queue();
+    setSaving(true);
+    const r = await unlogWaterDrinks(amount, day, requestId);
+    setSaving(false);
+    if (!r.ok) {
+      if (isOfflineFailure(r)) return queue();
+      setToast({ message: t(r.message) });
+      return;
+    }
+    const m = removedMessage(amount, r.removedMl);
+    setToast({ message: t(m.key, { n: m.n }) });
+    onSaved?.();
+    onClose();
+  };
 
   const save = async () => {
+    if (removing) return remove();
     if (amount === null || overLimit || !authUserId) return;
     // One id for this drink: if the answer to the online try is lost, the
     // queued copy replays it and the server answers already_saved.
     const requestId = newQueueId();
     const queue = () => {
       enqueueLog(authUserId, { kind: "water", ml: amount, day, loggedAt: when.toISOString() }, requestId);
-      setToast(t(QUEUED_COPY));
+      setToast({ message: t(QUEUED_COPY) });
       onClose();
     };
     if (browserOffline()) return queue();
@@ -76,9 +117,24 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
     setSaving(false);
     if (!drink.ok) {
       if (isOfflineFailure(drink)) return queue();
-      setToast(t(drink.message));
+      setToast({ message: t(drink.message) });
       return;
     }
+    // Help: "tap Undo right after logging", as on the Water page. Undo takes
+    // the same amount back off that day (unlog_water, newest first, so the
+    // drink just logged), online only like the Water page's Undo.
+    const ml = amount;
+    setToast({
+      message: t("{n} ml added", { n: ml }),
+      // A day past the 7-day window can't be taken back (unlog_water's 22023): no Undo.
+      undo: !canChangeWaterDay(day, today) ? undefined : () => {
+        if (browserOffline()) return setToast({ message: t(OFFLINE_ACTION) });
+        void unlogWaterDrinks(ml, day, newQueueId()).then((back) => {
+          if (back.ok) onSaved?.();
+          else setToast({ message: t(back.message) });
+        });
+      },
+    });
     onSaved?.();
     onClose();
   };
@@ -105,8 +161,8 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
         footerBottom={30}
         footer={
           <CtaButton
-            label={amount !== null ? t("Save {n} ml", { n: amount }) : t("Save")}
-            disabled={amount === null || overLimit}
+            label={amount === null ? t("Save") : removing ? t("Remove {n} ml", { n: amount }) : t("Save {n} ml", { n: amount })}
+            disabled={amount === null || overLimit || (removing && !!removeBlocked)}
             loading={saving}
             onClick={() => void save()}
             style={{ lineHeight: "21px" }}
@@ -149,6 +205,23 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
                 </button>
               );
             })}
+            {CHIPS.map((ml) => {
+              const on = choice === -ml;
+              return (
+                <button
+                  key={-ml}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  aria-label={t("Remove {n} ml", { n: ml })}
+                  onClick={() => setChoice(-ml)}
+                  className={`tap ${on ? "bg-seg-active" : "bg-th-f0edf9 dark:bg-th-303141 text-primary-deep-text"}`}
+                  style={chip(on)}
+                >
+                  {t("−{n} ml", { n: ml })}
+                </button>
+              );
+            })}
             <button
               type="button"
               role="radio"
@@ -162,6 +235,7 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
           </div>
         </div>
 
+        {choice === "custom" && <AddRemoveSwitch value={customMode} onChange={setCustomMode} style={{ marginTop: 16 }} />}
         {choice === "custom" && (
           <div style={{ marginTop: 16 }}>
             <WheelPicker
@@ -171,6 +245,11 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
           </div>
         )}
 
+        {removing && removeBlocked && (
+          <p role="alert" className="text-status-high" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: "17.4px", fontWeight: 600 }}>
+            {t(removeBlocked)}
+          </p>
+        )}
         {overLimit && (
           <p role="alert" className="text-status-high" style={{ margin: "12px 0 0", fontSize: textPx(12), lineHeight: "17.4px", fontWeight: 600 }}>
             {t("That's more than {n} L today. Check the amount.", { n: DAY_LIMIT_ML / 1000 })}
@@ -183,7 +262,19 @@ export const LogWaterSheet: React.FC<{ open: boolean; onClose: () => void; onSav
         </div>
       </BottomSheet>
       <MeasuredOnPopup open={whenOpen} onClose={() => setWhenOpen(false)} value={when} today={today} onDone={setWhen} />
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      <Toast
+        open={!!toast}
+        message={toast?.message ?? ""}
+        onUndo={
+          toast?.undo
+            ? () => {
+                toast.undo?.();
+                setToast(null);
+              }
+            : undefined
+        }
+        onExpire={() => setToast(null)}
+      />
     </>
   );
 };

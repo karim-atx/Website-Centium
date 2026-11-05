@@ -92,6 +92,15 @@ export const MEMBER_NOTIFICATION_KINDS = [
   "premium_pass_started",
   "premium_pass_ending",
   "premium_pass_ended",
+  // Round I · FD (Database 20261226460000 / 470000): the forum, to the person
+  // concerned only when they can see the post (subject forum_post, subject_id
+  // the thread; actor_id always null). A comment on your post, an answer to
+  // your comment, a mention, and one likes summary per post per day. Written
+  // only while platform_settings.forum_notifications_enabled is on.
+  "forum_reply",
+  "forum_comment_reply",
+  "forum_mention",
+  "forum_likes",
 ] as const;
 export type MemberNotificationKind = (typeof MEMBER_NOTIFICATION_KINDS)[number];
 
@@ -138,7 +147,19 @@ export const CLIENT_KINDS: readonly MemberNotificationKind[] = [
   "premium_pass_started",
   "premium_pass_ending",
   "premium_pass_ended",
+  // Round I · FD: the forum.
+  "forum_reply",
+  "forum_comment_reply",
+  "forum_mention",
+  "forum_likes",
 ];
+
+/**
+ * Round I · FD: the forum kinds, which a database before Round I doesn't have
+ * (an unknown label in p_kinds refuses the whole call with 22P02). The
+ * readers in ./index.ts ask again without them when that happens.
+ */
+export const FORUM_NOTIFICATION_KINDS: readonly MemberNotificationKind[] = ["forum_reply", "forum_comment_reply", "forum_mention", "forum_likes"];
 
 /**
  * Round G1: the Premium pass notices exist only while the Premium switch is
@@ -296,6 +317,12 @@ export const CLIENT_COPY: NotificationCopyTable = {
   workout_log_reply: { title: tk("Your coach replied to your workout"), body: tk("Read it in your workout history.") },
   // Round D · courses (payload course_id, title, author_first_name).
   course_published: { title: tk("A new course for you"), body: tk("Open it in Community › Courses.") },
+  // Round I · FD: the lines when the payload is missing (CLIENT_FILLS adds
+  // the label, the post's title and the count).
+  forum_reply: { title: tk("New comment on your post"), body: "" },
+  forum_comment_reply: { title: tk("New reply to your comment"), body: "" },
+  forum_mention: { title: tk("You were mentioned in the forum"), body: "" },
+  forum_likes: { title: tk("New likes on your post today"), body: "" },
   // Round F2 · AB4 (services/no-shows): the business's name joins the payload
   // from the subject when it can be read (withBusinessNames, ./index.ts).
   no_show_warning: NO_SHOW_NOTICE_COPY.no_show_warning,
@@ -329,6 +356,11 @@ const pText = (p: Readonly<Record<string, unknown>>, k: string): string | null =
   const v = p[k];
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 };
+/** Round I · FD: a forum line from the post's title and the comment's label (empty when the label is missing). */
+function forumLine(p: Readonly<Record<string, unknown>>, line: (v: { label: string; title: string }) => string): Partial<NotificationCopy> {
+  const title = pText(p, "title");
+  return title ? { title: line({ label: pText(p, "label") ?? "", title }) } : {};
+}
 /** A positive whole number (a number or a numeric string). */
 const pCount = (p: Readonly<Record<string, unknown>>, k: string): number | null => {
   const n = num(p[k]);
@@ -433,6 +465,18 @@ export const CLIENT_FILLS: NotificationFillTable = {
   workout_log_reply: (p) => {
     const routine = pText(p, "routine");
     return routine ? { body: t("About {routine}. Read it in your workout history.", { routine }) } : {};
+  },
+  // Round I · FD: the Database's wording (HANDOVER_API "Round I · FD"). The
+  // label is the one the comment shows (a nickname, or the real name only
+  // when its author posts under it); without it, the line without a name.
+  forum_reply: (p) => forumLine(p, (v) => (v.label ? t("{label} commented on “{title}”", v) : t("New comment on “{title}”", v))),
+  forum_comment_reply: (p) => forumLine(p, (v) => (v.label ? t("{label} replied to your comment on “{title}”", v) : t("New reply to your comment on “{title}”", v))),
+  forum_mention: (p) => forumLine(p, (v) => (v.label ? t("{label} mentioned you in “{title}”", v) : t("You were mentioned in “{title}”", v))),
+  forum_likes: (p) => {
+    const title = pText(p, "title");
+    const count = num(p.count);
+    if (!title || count === null || count < 1) return {};
+    return { title: tn(count, "{n} like on “{title}” today", "{n} likes on “{title}” today", { title }) };
   },
   course_published: (p) => {
     const title = pText(p, "title");
@@ -591,6 +635,14 @@ export function clientNotificationTarget(
     case "course_removed":
       // Round F2: the course is gone, so there is nothing to open.
       return null;
+    case "forum_reply":
+    case "forum_comment_reply":
+    case "forum_mention":
+    case "forum_likes": {
+      // Round I · FD: the post (payload thread_id, else the subject).
+      const thread = typeof n.payload?.thread_id === "string" && UUID.test(n.payload.thread_id) ? n.payload.thread_id : n.subjectType === "forum_post" ? id : null;
+      return thread ? `/app/forum/post/${thread}` : "/app/forum";
+    }
     case "premium_pass_started":
     case "premium_pass_ending":
     case "premium_pass_ended":
@@ -668,6 +720,12 @@ export function notifLook(kind: string): { tone: NotifTone; glyph: NotifGlyph } 
       return { tone: "teal", glyph: "app" };
     case "course_removed":
       return { tone: "lav", glyph: "app" };
+    case "forum_reply":
+    case "forum_comment_reply":
+    case "forum_mention":
+      return { tone: "lav", glyph: "user" };
+    case "forum_likes":
+      return { tone: "lav", glyph: "star" };
     case "premium_pass_started":
       return { tone: "lav", glyph: "star" };
     case "premium_pass_ending":

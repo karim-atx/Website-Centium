@@ -27,6 +27,7 @@ const DEFAULT_ROW = {
   notification_weekly_summary: true,
   notification_forum_replies: true,
   notification_mentions: true,
+  notification_forum_likes: true,
   notification_professional_messages: true,
   notification_calendar_events: true,
   notification_memberships: true,
@@ -47,10 +48,11 @@ const DEFAULT_ROW = {
   quiet_hours_to: "07:00:00",
 };
 
-test("every MO1.8.3 row has its contract column, and the select names all twenty-eight", () => {
-  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 28);
+test("every MO1.8.3 row has its contract column, and the select names all twenty-nine", () => {
+  // Round I · FD added notification_forum_likes.
+  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 29);
   assert.deepEqual(new Set(Object.values(NOTIFICATION_COLUMNS)), new Set(Object.keys(DEFAULT_ROW)));
-  assert.equal(NOTIFICATION_SELECT.split(", ").length, 28);
+  assert.equal(NOTIFICATION_SELECT.split(", ").length, 29);
   // AX (Round C Release 1): the in-app pop-up's two switches.
   assert.equal(NOTIFICATION_COLUMNS.messagePopups, "message_popups");
   assert.equal(NOTIFICATION_COLUMNS.messagePreviews, "message_previews");

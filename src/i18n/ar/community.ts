@@ -104,6 +104,10 @@ const community: Catalogue = {
   "Likes": { zero: "إعجاب", one: "إعجاب", two: "إعجابان", few: "إعجابات", many: "إعجابًا", other: "إعجاب" },
   "Replies": { zero: "رد", one: "رد", two: "ردّان", few: "ردود", many: "ردًا", other: "رد" },
   "Reply as": "الرد باسم",
+  // Round I · FD: answering a comment (one level).
+  "Replying to {name}": "ردّ على {name}",
+  "Cancel reply to {name}": "إلغاء الردّ على {name}",
+  "That comment can't take replies any more.": "لم يعد بالإمكان الردّ على هذا التعليق.",
   "Reply as {name}": "الرد باسم {name}",
   "This post isn't taking new replies.": "لا يقبل هذا المنشور ردودًا جديدة.",
   "Your nickname": "اسمك المستعار",

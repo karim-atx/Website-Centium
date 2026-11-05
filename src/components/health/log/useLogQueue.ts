@@ -17,7 +17,7 @@ export const OUTBOX_DROPPED_EVENT = "centium:outbox-dropped";
  * one of those screens was open. The queue itself keeps one flush at a time.
  */
 export function useLogQueueFlush() {
-  const { authUserId, today, logWeightForToday, logWaterDrink, reloadBloodPressure, refreshAchievements, deliverQueued } = useApp();
+  const { authUserId, today, logWeightForToday, logWaterDrink, unlogWaterDrinks, clearWaterDayDrinks, reloadBloodPressure, refreshAchievements, deliverQueued } = useApp();
 
   // The latest senders, so the listener is added once per account.
   const send = useRef<(item: QueuedLog) => Promise<{ ok: boolean; message?: string }>>(async () => ({ ok: false }));
@@ -30,6 +30,13 @@ export function useLogQueueFlush() {
           // (log_water with the item's uuid; a replay is already_saved).
           return logWaterDrink(item.ml, item.loggedAt ? new Date(item.loggedAt) : new Date(`${item.day}T12:00:00`), isUuid(item.id) ? item.id : null);
         }
+        // Round I · FA: the item's id is the request id, so a resend after a
+        // lost answer is already_saved and takes nothing more. A day that has
+        // left the 7-day window is refused (22023) and dropped.
+        case "water_remove":
+          return unlogWaterDrinks(item.ml, item.day, item.id);
+        case "water_clear":
+          return clearWaterDayDrinks(item.day, item.id);
         case "weight":
           return logWeightForToday(item.kg, item.day, item.note ?? null, item.id);
         case "bp": {

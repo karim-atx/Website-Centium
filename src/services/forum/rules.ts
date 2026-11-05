@@ -5,6 +5,7 @@
 
 import { ageFromDateOfBirth, detailDate, formatShortDate } from "../../utils/date";
 import { t, tk } from "../../i18n/core";
+import { ACCOUNT_HELD } from "../account-standing/model";
 
 /** Design screen 1, and the brief's wording for an under-18 who opens the link. */
 export const ADULTS_ONLY_TEXT = tk("The community is for adults. You can join the forum from age 18.");
@@ -146,6 +147,9 @@ export function describeForumError(
 ): string | null {
   const message = error.message ?? "";
   switch (error.code ?? "") {
+    // Round I · FG: ATXR1, the account is under review (any action it guards).
+    case "ATXR1":
+      return t(ACCOUNT_HELD);
     case "ATX55":
       return t(ADULTS_ONLY_TEXT);
     case "ATX56":

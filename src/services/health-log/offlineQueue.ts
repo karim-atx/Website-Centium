@@ -36,6 +36,10 @@ export type QueuedWorkout = Omit<WorkoutSession, "id"> & { swaps?: SessionSwap[]
 
 export type QueuedLog =
   | { id: string; kind: "water"; ml: number; day: string; /** B1 drink time (ISO). */ loggedAt?: string }
+  /** Round I · FA: water taken back from a day (unlog_water); the id is its request id. */
+  | { id: string; kind: "water_remove"; ml: number; day: string }
+  /** Round I · FA: a day's hand-logged water deleted (clear_water_day); the id is its request id. */
+  | { id: string; kind: "water_clear"; day: string }
   | { id: string; kind: "weight"; kg: number; day: string; note?: string | null }
   | { id: string; kind: "bp"; reading: QueuedBpReading; day: string; recordedAt: string }
   /** A diary entry; the diary shows it from `provisionalId` until it lands. */

@@ -1,4 +1,5 @@
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { t } from "../../i18n/core";
 
 // Live chat with Centium support (Database stage A5, 20261103000000_support_chat):
 // the pure half, so it can be tested without a Supabase client. The calls are in
@@ -55,9 +56,10 @@ export function supportEntryValue(
   summary: SupportThreadSummary | null,
   formatTime: (iso: string) => string
 ): string {
-  if (!summary || summary.messagesTotal === 0 || !summary.lastMessageAt) return "Start a chat";
+  // Round I · FH: in the app's language (these showed in English in Arabic).
+  if (!summary || summary.messagesTotal === 0 || !summary.lastMessageAt) return t("Start a chat");
   const when = formatTime(summary.lastMessageAt);
-  return summary.lastFromSupport ? `Centium replied · ${when}` : `Sent · ${when}`;
+  return summary.lastFromSupport ? t("Centium replied · {time}", { time: when }) : t("Sent · {time}", { time: when });
 }
 
 /** The unread badge's text: nothing at zero, capped like the chat list's. */

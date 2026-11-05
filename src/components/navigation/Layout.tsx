@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { OutboxStatus } from "../outbox/Outbox";
 import { useLogQueueFlush } from "../health/log/useLogQueue";
 import { PendingDeletionBanner } from "./PendingDeletionBanner";
+import { AccountStandingNotice } from "./AccountStandingNotice";
 import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
@@ -145,6 +146,7 @@ export const Layout: React.FC = () => {
             {/* Round D (D22): "{n} waiting to save" while the outbox holds anything. */}
             <OutboxStatus />
             <PendingDeletionBanner />
+            <AccountStandingNotice />
             <ConsentReviewBanner />
             {/* Round D O1: a page that fails to render keeps the navs and
                 shows the panel; going to another page clears it. */}

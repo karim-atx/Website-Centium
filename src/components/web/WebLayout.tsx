@@ -4,6 +4,7 @@ import { OfflineBanner } from "../navigation/OfflineBanner";
 import { ErrorBoundary } from "../navigation/ErrorBoundary";
 import { OutboxStatus } from "../outbox/Outbox";
 import { PendingDeletionBanner } from "../navigation/PendingDeletionBanner";
+import { AccountStandingNotice } from "../navigation/AccountStandingNotice";
 import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
@@ -27,6 +28,7 @@ const Banners: React.FC = () => (
     <OfflineBanner />
     <OutboxStatus />
     <PendingDeletionBanner />
+    <AccountStandingNotice />
     <ConsentReviewBanner />
   </>
 );

@@ -32,6 +32,9 @@ export interface ContactSubmission {
    * was empty, which is every submission this form makes.
    */
   website: string;
+  /** Round I · FH: from Help's "Still need help?": the topic's key and the question keys opened (up to 20). Dropped by the function when malformed. */
+  helpTopic?: string;
+  helpQuestions?: string[];
 }
 
 /**

@@ -19,6 +19,7 @@ import { t, tk } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 import { formatShortDate } from "../../utils/date";
 import { clock12 } from "../../utils/time12";
+import { ACCOUNT_HELD } from "../account-standing/model";
 
 /** Karim's number (the Database's review_age_gate c_age): reviews open 7 days after joining. */
 export const REVIEW_ACCOUNT_DAYS = 7;
@@ -80,6 +81,8 @@ type DbError = { code?: string | null; details?: string | null; message?: string
  */
 export function reviewRefusalLine(e: DbError, opts: { professional?: boolean; insider?: boolean; now?: Date } = {}): string | null {
   if (!e?.code) return null;
+  // Round I · FG: ATXR1, the account is under review (any action it guards).
+  if (e.code === "ATXR1") return t(ACCOUNT_HELD);
   if (e.code === "ATXW0") return reviewWaitLine(instant(e.details), opts.now);
   if (e.code === "ATX03" && opts.insider) return t(REVIEW_INSIDER_LINE);
   if (e.code === "ATX02" && opts.professional) return t(PROFESSIONAL_REVIEW_LIMIT_LINE);

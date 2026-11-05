@@ -1,6 +1,7 @@
 import React, { useEffect, useState, type ReactNode } from "react";
 import {
   AtSign,
+  Heart,
   Banknote,
   Bell,
   BellRing,
@@ -129,8 +130,10 @@ const GROUPS: Group[] = [
   {
     label: tk("Community"),
     rows: [
-      { key: "forumReplies", label: tk("Replies to my posts"), desc: tk("When someone replies to your forum posts"), icon: MessageCircle },
+      // Round I · FD: replies now include answers to your comments.
+      { key: "forumReplies", label: tk("Replies to my posts"), desc: tk("When someone comments on your posts or replies to your comments"), icon: MessageCircle },
       { key: "mentions", label: tk("Mentions"), desc: tk("When someone mentions you in the forum"), icon: AtSign },
+      { key: "forumLikes", label: tk("Likes on my posts"), desc: tk("Once a day, when your posts and comments get likes"), icon: Heart },
     ],
   },
   {

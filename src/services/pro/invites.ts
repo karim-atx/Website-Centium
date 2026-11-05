@@ -25,6 +25,7 @@ import { rpc } from "./rpc";
 import { invite22023, OFFLINE_GOAL_MAX } from "./inviteErrors";
 import { siteHref, siteText } from "../../config/site";
 import { t, tk } from "../../i18n/core";
+import { ACCOUNT_HELD } from "../account-standing/model";
 
 export interface InviteLink {
   id: string;
@@ -178,6 +179,8 @@ export async function inviteByContact(
   });
   if (error) {
     if (error.code === "ATXG3") return { ok: false, message: t(INVITE_LOCKED_MESSAGE) };
+    // Round I · FG: ATXR1, the account is under review (any action it guards).
+    if (error.code === "ATXR1") return { ok: false, message: t(ACCOUNT_HELD) };
     if (error.code === "ATX02") return { ok: false, message: t("You've sent a lot of invites today. Try again tomorrow.") };
     if (error.code === "22023") return { ok: false, message: invite22023(error.message, channel) };
     return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : t("Couldn't send the invite. Try again."), offline: isOffline(error) };

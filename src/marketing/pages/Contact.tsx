@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { useSEO } from "../useSEO";
 import { submitContact, type ContactTopic } from "../../services/contact";
 import { TURNSTILE_SITEKEY } from "../../components/security/turnstile";
@@ -84,7 +85,17 @@ const FIELD_MESSAGE: Record<Field, string> = {
   message: tk("Please write a message."),
 };
 
+/** Round I · FH: Help's "Still need help?" → Email passes the topic and the question keys opened as router state. */
+function helpContextFrom(state: unknown): { helpTopic?: string; helpQuestions?: string[] } {
+  const st = (state ?? {}) as { helpTopic?: unknown; helpQuestions?: unknown };
+  const out: { helpTopic?: string; helpQuestions?: string[] } = {};
+  if (typeof st.helpTopic === "string" && st.helpTopic) out.helpTopic = st.helpTopic;
+  if (Array.isArray(st.helpQuestions)) out.helpQuestions = st.helpQuestions.filter((k): k is string => typeof k === "string").slice(0, 20);
+  return out;
+}
+
 export const Contact: React.FC = () => {
+  const location = useLocation();
   useSEO(t("Contact"), t("Get in touch with the Centium team."));
   usePageMotion();
   const vw = useViewportWidth();
@@ -160,6 +171,8 @@ export const Contact: React.FC = () => {
       message,
       turnstileToken: token,
       website,
+      // Round I · FH: what was read in Help before "Still need help?" (keys only).
+      ...helpContextFrom(location.state),
     });
 
     resetTurnstile();
