@@ -10,7 +10,8 @@ import { textPx, linePx } from "../../theme/textSize";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
-import { fetchClientSince, isActiveClientOf, professionalRole } from "../../services/connected-professional";
+import { fetchClientRelationship, isActiveClientOf, professionalRole } from "../../services/connected-professional";
+import { EndRelationship } from "../../components/professionals/EndRelationship";
 import { fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import { VerifiedCheck } from "../../components/cv/CvBadges";
 import { HireSheet } from "../../components/hire/HireSheet";
@@ -227,14 +228,17 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
     };
   }, [proId]);
 
-  // ---- "Client since" (the relationship's own start) ----
-  const [since, setSince] = useState<{ id: string | null; at: string | null }>({ id: null, at: null });
-  const clientSince = proId !== null && since.id === proId ? since.at : null;
+  // ---- "Client since" and End (the relationship's own start and id) ----
+  const [since, setSince] = useState<{ id: string | null; rel: { id: string; joinedAt: string } | null }>({ id: null, rel: null });
+  const relationship = proId !== null && since.id === proId ? since.rel : null;
+  const clientSince = relationship?.joinedAt ?? null;
+  // Round I: what's left after End, until another professional is opened.
+  const [endedFor, setEndedFor] = useState<string | null>(null);
   useEffect(() => {
     if (!proId || activeClient !== true) return;
     let cancelled = false;
-    void fetchClientSince(proId).then((at) => {
-      if (!cancelled) setSince({ id: proId, at });
+    void fetchClientRelationship(proId).then((rel) => {
+      if (!cancelled) setSince({ id: proId, rel });
     });
     return () => {
       cancelled = true;
@@ -658,7 +662,8 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
       </div>
 
       {/* The hired chip (DB10 only: omitted while unknown) and the kept
-          "Client since" pill in the same chip style. */}
+          "Client since" pill in the same chip style; then the client's End
+          (Round I), an outlined chip in the same box. */}
       {(profile || (isConnected && clientSince)) && (
         <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
           {profile && <HiredBadge roles={profile.card.hiredViaCentiumCount} variant="chip" />}
@@ -668,7 +673,26 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
               {t("Client since {date}", { date: new Date(clientSince).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" }) })}
             </span>
           )}
+          {isConnected && relationship && !isPreview && (
+            <EndRelationship
+              relationshipId={relationship.id}
+              firstName={first}
+              hasPlan={!!liveHire}
+              className="tap"
+              style={{ display: "inline-flex", alignItems: "center", borderRadius: 10, background: "transparent", border: `1px solid ${m.border}`, padding: "5px 12px", fontSize: textPx(12), fontWeight: 700, color: m.high }}
+              onEnded={() => {
+                setChecked({ id: proId, active: false });
+                setSince({ id: null, rel: null });
+                setEndedFor(proId);
+              }}
+            />
+          )}
         </div>
+      )}
+      {endedFor === proId && activeClient === false && (
+        <p role="status" style={{ margin: "10px 0 0", fontSize: textPx(12.5), lineHeight: 1.45, color: m.ink2 }}>
+          {t("You've ended working with {name}. They no longer see your shared information.", { name: first })}
+        </p>
       )}
 
       {/* Hire / Message (waits for the connection check, so nothing flashes). */}

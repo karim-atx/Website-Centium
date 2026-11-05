@@ -85,24 +85,44 @@ export async function isActiveClientOf(professionalId: string): Promise<boolean>
 }
 
 /**
- * When the caller's active relationship with this professional began, or null
- * when there is none (or the read failed — the same fail-closed direction as
- * isActiveClientOf, so "Client since" is never shown on a guess).
+ * The caller's active relationship with this professional: its id (what End
+ * passes) and when it began. Null when there is none (or the read failed — the
+ * same fail-closed direction as isActiveClientOf, so neither "Client since"
+ * nor End is ever shown on a guess).
  *
  * joined_at is the relationship row's own start, set when the code was
  * redeemed or the request accepted.
  */
-export async function fetchClientSince(professionalId: string): Promise<string | null> {
+export async function fetchClientRelationship(professionalId: string): Promise<{ id: string; joinedAt: string } | null> {
   const { data, error } = await supabase
     .from("active_professional_clients")
-    .select("joined_at")
+    .select("id, joined_at")
     .eq("professional_id", professionalId)
     .maybeSingle();
   if (error) {
     console.error("[connected-professional] Could not read the relationship:", error.message);
     return null;
   }
-  return data?.joined_at ?? null;
+  return data?.id && data.joined_at ? { id: data.id, joinedAt: data.joined_at } : null;
+}
+
+/**
+ * Round I (Karim 2026-11-05): the client ends working with a professional
+ * (disconnect_client_relationship, either party may call it). The same call
+ * turns off every sharing grant for the pair, so the professional stops seeing
+ * the client's information at once. It doesn't cancel a hire: that is its own
+ * Cancel hire. ATX08 (no such row) and ATX10 (already ended) both leave the
+ * relationship ended, which is what was asked.
+ */
+export async function endRelationship(relationshipId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const { error } = await supabase.rpc("disconnect_client_relationship", { p_relationship_id: relationshipId });
+    if (!error || error.code === "ATX08" || error.code === "ATX10") return { ok: true };
+    console.error("[connected-professional] Could not end the relationship:", error.code, error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : tk("Couldn't end it. Try again.") };
+  } catch (e) {
+    return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : tk("Couldn't end it. Try again.") };
+  }
 }
 
 /**

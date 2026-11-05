@@ -55,6 +55,7 @@ export const FILES: string[] = [
   "services/nearby/index.ts",
   "services/consent/index.ts",
   "services/connected-professional/index.ts",
+  "components/professionals/EndRelationship.tsx",
   "services/directory/index.ts",
 ];
 
@@ -495,6 +496,18 @@ const findpros: Catalogue = {
   "That invite link can't be used any more.": "لم يعد بالإمكان استخدام رابط الدعوة هذا.",
   "Couldn't open this invite. Try again.": "تعذّر فتح هذه الدعوة. حاول مرة أخرى.",
   "Couldn't load this profile. Try again.": "تعذّر تحميل هذا الملف الشخصي. حاول مرة أخرى.",
+  // Round I: the client's End on a connected professional's profile (Help:
+  // open their profile in «المختصون» and tap «إنهاء»). Plain "End" stays
+  // «النهاية» (a date field), hence the context key.
+  "End|relationship": "إنهاء",
+  "End working with {name}": "إنهاء العمل مع {name}",
+  "End working with {name}?": "إنهاء العمل مع {name}؟",
+  "{name} stops seeing your shared information straight away. Your own records stay with you. To work together again, you'll need a new client code.":
+    "يتوقّف {name} عن رؤية معلوماتك المشارَكة فورًا. تبقى سجلاتك لديك. للعمل معًا مجددًا، ستحتاج إلى رمز عميل جديد.",
+  "This doesn't cancel your plan with {name}. Use Cancel hire for that.": "لا يُلغي هذا خطتك مع {name}. استخدم «إلغاء التوظيف» لذلك.",
+  "Keep working together": "متابعة العمل معًا",
+  "Couldn't end it. Try again.": "تعذّر الإنهاء. حاول مرة أخرى.",
+  "You've ended working with {name}. They no longer see your shared information.": "أنهيت العمل مع {name}. لم يعد يرى معلوماتك المشارَكة.",
 };
 
 export default findpros;
