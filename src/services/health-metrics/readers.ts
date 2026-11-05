@@ -72,9 +72,10 @@ export async function removeSyncedReading(kind: SyncedKind, id: string): Promise
 
 /**
  * Removes a day's synced activity from Centium (HA-12): every phone source's
- * daily row for that date and all of its hours, so steps, calories and heart
- * rate go together, and remembers the day so the next sync skips it. Manual
- * rows stay. False when the call failed.
+ * daily and hourly rows for that date, so steps, calories and heart rate go
+ * together, and remembers the day so the next sync skips it. Manual rows
+ * (daily or hourly) stay, so the page may still show a figure for that day.
+ * The count isn't read (0 when nothing was synced). False when the call failed.
  */
 export async function removeSyncedActivityDay(day: string): Promise<boolean> {
   const { error } = await rpc("remove_synced_activity_day", { p_date: day });
