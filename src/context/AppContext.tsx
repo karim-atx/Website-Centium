@@ -128,6 +128,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
 import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { startHealthSync, stopHealthSync } from "../platform/health";
 import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
@@ -2559,6 +2560,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const setRecoverySensitive = (on: boolean) => writeRecoveryMode({ enabled: on });
   const setRecoverySensitiveIntroSeen = (seen: boolean) => writeRecoveryMode({ introSeen: seen });
+  // The phone app's Health Connect sync (App-Centium ROUND_J.md §2.3): on
+  // opening and on every return, at most every 15 minutes, for an onboarded
+  // account once its recovery-sensitive setting is known, so weight and body
+  // fat are never read for someone who has the mode on. Nothing on the web.
+  useEffect(() => {
+    if (!authUserId || !profileReady || !user.onboarded || recoveryModePending) {
+      stopHealthSync();
+      return;
+    }
+    startHealthSync(recoverySensitive);
+  }, [authUserId, profileReady, user.onboarded, recoveryModePending, recoverySensitive]);
   const [twoFactorNudgeDismissed, setTwoFactorNudgeDismissed] = usePersistentState<boolean>(
     "twoFactorNudgeDismissed",
     false
