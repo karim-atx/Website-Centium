@@ -44,6 +44,8 @@ let listening: Promise<void> | null = null;
 let started = false;
 const opened = new Set<(url: string) => void>();
 let waiting: ((token: string | null) => void) | null = null;
+/** A tap that came while nothing listened (the app remounting): the next listener gets it. */
+let unopened: string | null = null;
 
 function toPermission(s: PermissionStatus): PushPermission {
   if (s.receive === "granted") return "granted";
@@ -107,7 +109,9 @@ function listen(): Promise<void> {
     // a reminder's link) goes to NativeOpenPath, which follows only /app paths.
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
       const url = (notification.data as { url?: unknown } | undefined)?.url;
-      if (typeof url === "string") for (const l of opened) l(url);
+      if (typeof url !== "string") return;
+      if (opened.size === 0) unopened = url;
+      else for (const l of opened) l(url);
     });
   })();
   return listening;
@@ -198,6 +202,11 @@ export async function nativePushRegistered(): Promise<boolean | null> {
 /** A tapped notification's link, for NativeOpenPath. */
 export function onPushOpen(listener: (url: string) => void): () => void {
   opened.add(listener);
+  if (unopened !== null) {
+    const url = unopened;
+    unopened = null;
+    listener(url);
+  }
   return () => opened.delete(listener);
 }
 
