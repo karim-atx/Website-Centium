@@ -611,6 +611,8 @@ function AppRoutes() {
         <Route path="/app/settings" element={<Settings />} />
         {/* MO1.8 sub-screens, pages since batch C (they were sheets). */}
         <Route path="/app/settings/devices" element={<Settings />} />
+        {/* Round J · J-2e: Health Connect (Settings routes it; a browser goes back to Devices and sources). */}
+        <Route path="/app/settings/devices/health" element={<Settings />} />
         <Route path="/app/settings/notifications" element={<NotificationsPage />} />
         <Route path="/app/settings/notifications/health-checks" element={<HealthCheckRemindersPage />} />
         <Route path="/app/settings/accessibility" element={<AccessibilityPage />} />

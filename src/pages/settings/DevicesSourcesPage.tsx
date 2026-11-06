@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isNative } from "../../platform";
 import { AlertCircle, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GlassWater, GripVertical, HeartPulse, Link, Ruler, Smartphone, Footprints } from "lucide-react";
 import clsx from "clsx";
 import { FixedHeader } from "../../components/ui/FixedHeader";
@@ -277,6 +278,8 @@ export default function DevicesSourcesPage() {
                   name={PROVIDER_NAME[s.provider]}
                   sub={line.text}
                   subDanger={line.danger}
+                  // Round J · J-2e: in the app, Health Connect opens its detail.
+                  onClick={isNative() && s.provider === "android_health" ? () => navigate("/app/settings/devices/health") : undefined}
                 />
               );
             })
