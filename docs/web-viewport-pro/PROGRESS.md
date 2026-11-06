@@ -6,8 +6,8 @@ Statuses: **not started** · **built** (web layout in place) · **verified** (ch
 
 ## Counts
 
-- built: 17
-- not started: 113
+- built: 23
+- not started: 107
 - not built: 1
 
 ## Decisions as applied
@@ -28,6 +28,10 @@ Statuses: **not started** · **built** (web layout in place) · **verified** (ch
 
 Baseline: 233 routes captured at 430 × 932 before any code change, from a harness build of origin/main fd08a94b (headless Chrome, fixed clock 2026-11-06 10:00 +02:00, reduced motion, animations zeroed, network idle), through the read-only proxy, signed in as the local fixture accounts: client, gym (business), and one professional per lane (coach_instructor = Full coaching, dietitian = Nutrition, doctor = Clinical overview). Routes: every mobile route in the CSV per lane (client ids resolved to each lane account's first client), the 65 Client and Business routes of the previous build, and the Addendum's Client Settings and Explore routes. Result after each stage: see the PR.
 
+Result on the final build of this session (commit 6bc1c3f2): **233 of 233 routes pixel-identical** to the baseline (pixelmatch threshold 0), on the first pass with no re-capture needed. The read-only proxy blocks a few volatile reads (for example my_client_stages), so some screens show their error state; they do so identically before and after.
+
+Git diff audit (fd08a94b..HEAD, src): the shared files touched are Layout.tsx (the ≥1024 switch only), Settings.tsx, AccountPage.tsx and Clients.tsx (web branches behind useIsWeb / usePaneEligible; the mobile render is the same JSX), paneWeb.tsx (the business pane kit, web only) and two Arabic string files (keys added). Every other change is in a *.web.tsx file or src/components/web/ and src/components/pro/web/. No mobile-only component, style or copy changed.
+
 ## Professional · COMMON
 
 | Code | Name | Handover status | Mobile route | Status | Notes |
@@ -37,7 +41,7 @@ Baseline: 233 routes captured at 430 × 932 before any code change, from a harne
 | WP-HO.2 | Home · Notifications hub | specified | /app/pro (header bell) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-HO.3 | Home · Trend ring interactions | specified | /app/pro | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-HO.4 | Home · Requests | specified | /app/pro (Requests in the hub) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
-| WP-CL | Clients · Clients | specified | /app/pro/clients | not started | Meanwhile its mobile screen works in the web shell's centred column. |
+| WP-CL | Clients · Clients | specified | /app/pro/clients | built | Clients.tsx web branch + ClientsWeb.tsx: list 5 of 12 / preview 7 of 12 (457 / 639 measured at 1440), 4 + 4 on the rail; at 1920 the list widens (873) and the preview keeps 639. Detail pane as WP-CL Clients Web v2 (avatar 88 / 64, name 40/48 / 28/36, ring 84 / 64, facts 72 rows, Message + Open 44); first client by default, a row selects and is tinted, ⋮ opens the repo row menu. Empty: the web empty card. Not yet: the 64px page header bar (search 360, Add, Filter) — the repo header sits at the top of the list column — and the equal-width status tabs at 1440. Checked live at 1440, 1024 and 1920 with the lane account's real roster (my_client_stages answered by a fixture of its own rows, since the read-only proxy blocks it): 5 rows, Maya selected first; clicking Nour moves the pane; Add client opens the 440 side sheet (x 1000, full height), Esc closes it and focus returns to Add client; no console errors. Arabic: the sidebar on the right (x 1184), the list on the right and the pane on the left, the side sheet from the left (x 0). |
 | WP-CL.1.1 | Clients · Client page · Overview | specified | /app/pro/clients/:id/overview | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CL.1.2 | Clients · Client page · Plan | specified | /app/pro/clients/:id/plan | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CL.1.3 | Clients · Client page · Progress | specified | /app/pro/clients/:id/progress | not started | Meanwhile its mobile screen works in the web shell's centred column. |
@@ -45,10 +49,10 @@ Baseline: 233 routes captured at 430 × 932 before any code change, from a harne
 | WP-CL.1.5 | Clients · Client page · Notes | specified | /app/pro/clients/:id/notes | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CL.1.6 | Clients · Client page · Files | specified | /app/pro/clients/:id/files | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CL.2 | Clients · History sheet | specified | /app/pro/clients/:id (⋮ Change history) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
-| WP-CL.3 | Clients · Add client flows | specified | /app/pro/clients (Add client) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
-| WP-CL.4 | Clients · Requests | specified | /app/pro/clients (Requests segment) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
-| WP-CL.5 | Clients · Roster controls | specified | /app/pro/clients | not started | Meanwhile its mobile screen works in the web shell's centred column. |
-| WP-CL.6 | Clients · Row menu and sheets | specified | /app/pro/clients | not started | Meanwhile its mobile screen works in the web shell's centred column. |
+| WP-CL.3 | Clients · Add client flows | specified | /app/pro/clients (Add client) | built | Global rules: the repo AddClientFlows sheets open as 440 side sheets from 1024px (shared BottomSheet web branch); not checked frame by frame. |
+| WP-CL.4 | Clients · Requests | specified | /app/pro/clients (Requests segment) | built | Global rules: Requests segment cards in the list column; Accept / Decline as centred popups, the reason menu as an anchored dropdown (shared CentredPopup / PopupMenu web branches); toasts as on mobile. Request cards are not 2 across yet. |
+| WP-CL.5 | Clients · Roster controls | specified | /app/pro/clients | built | Global rules: FilterPanel, quick filters and Sort open anchored (shared PopupMenu); bulk bar as on mobile. |
+| WP-CL.6 | Clients · Row menu and sheets | specified | /app/pro/clients | built | Global rules: the row ⋮ menu from the detail pane, Change stage menu anchored, TagsSheet as a 440 side sheet, EndCoachingPopup centred. Web copy "Click again to confirm" not applied yet (the popup is the shared mobile component). |
 | WP-CA.1 | Calendar · Month | specified | /app/pro/calendar | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CA.2 | Calendar · Week | specified | /app/pro/calendar | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-CA.3 | Calendar · Day | specified | /app/pro/calendar | not started | Meanwhile its mobile screen works in the web shell's centred column. |
@@ -148,7 +152,7 @@ Baseline: 233 routes captured at 430 × 932 before any code change, from a harne
 | WP-CO-CN.3 | Care network · Add a colleague | specified | /app/more/care-network (Add a colleague) | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-HO · CO | Home · Clinical overview · Home | specified | /app/pro | not started | Meanwhile its mobile screen works in the web shell's centred column. |
 | WP-MO · CO | More · Clinical overview · More | specified | /app/more | built | Registration and licence; Patients and forms; Clinical note and Referral templates. |
-| WP-CL · CO | Patients (Clients page) · Patients list | specified | /app/pro/clients | not started | Meanwhile its mobile screen works in the web shell's centred column. |
+| WP-CL · CO | Patients (Clients page) · Patients list | specified | /app/pro/clients | built | Same list-detail with the patient copy (Next appointment, Care plan, Add your first patient). |
 
 ## Client · Settings
 
@@ -199,8 +203,14 @@ Baseline: 233 routes captured at 430 × 932 before any code change, from a harne
 - Account (/app/settings/account): a pane of the Settings layout in the Client, Professional and Business Settings (Data & account lit), same logic. Built.
 - Wide-screen rule (2.1) on the Client and Business web pages already on main: caps raised (built); widget grids that are fixed 3-across keep their columns and stretch (adding a 4th column at 1920 is not done yet).
 - WP-SR Global search: not built (Karim: later).
+- Section 7.1 "Build with the global rules" (Redeem a voucher, Premium passes, the calendar hired-class sheet, conflict dialog and ticket rows, the Messages share sheets and card, the Forms send sheets, the Apply and Service edit sheets, the programme builder's sheets, Workout log replies, TemplateFolders, Rename and the template menu): the shared BottomSheet / CentredPopup / ConfirmCard / PopupMenu components already open as the 440 side sheet, the centred popup and the anchored dropdown from 1024px, now for professionals too; the pages they sit on (Redeem, Premium passes) show in the shell's centred column. Not checked one by one.
+- Section 7.1 "Needs a web design; wait for v2", shown in their mobile layout in the web shell's centred column (430, fully working): the Professional Marketplace and its tabs (/app/pro/marketplace/:tab), the offer editor, My applications, My work, the Forms builder and response screen, the Programme builder page, Courses.
+- Arabic (7.5): the shell, sidebar, More / Settings columns and the side sheets use logical properties (inset-inline, border-inline, padding-inline), so they mirror with dir=rtl like the Client and Business build; the list-detail's Open arrow flips. Checked: see the PR.
+- Checks this session: tsc clean; 4019 of 4019 tests; oxlint 380 warnings (the baseline, none new); npm run build passes; the harness build points only at the read-only proxy (54399). Browser zoom: the new web components use px like the rest of the web build (rem units across the web build are not done).
 
 ## Resume here
 
-1. Pages are built in this order: WP-CL (Clients list-detail), WP-HO (Home per lane), WP-CA (Calendar), the client page tabs, Library / Meal plans / Insights, the More panes, Addendum A Explore. Each row above says where it stands.
-2. Tooling (scratchpad wvp/): capture.cjs and routes.json (baseline-430/), shot.cjs for signed-in checks on the after build (port 4316), the read-only proxy on 54399.
+1. Built so far: the professional shell (WP-NAV), More (WP-MO, per lane), Settings (WP-SE / WC-SE and its sub-pages as panes), the Account pane, the wide-screen rule caps, Clients list-detail (WP-CL, WP-CL · CO) and the global-rules sheets. Every other node is "not started" and works in the shell's centred column.
+2. Next, in this order: WP-HO (Home per lane: WP-HO Home Web v2, WP-HO Flows Web v2), WP-CL.1.x client page tabs (WP-CL Client Web v4, Nutrition, Patient), WP-CA Calendar (v4 + Extras), WP-LI Library, WP-NU-MP Meal plans (week builder opens in Week view), WP-CO-IN Insights, WP-CO-CN Care network, the More panes (ST Settings Web panes: spanning the pane, not the 430 column), then Addendum A Explore (WC-EX, 18 nodes) and the Settings pane designs (WC-SE rows as drawn). Build each as a *.web.tsx or a web branch behind useIsWeb(), add its route to PRO_PAGES (or CLIENT_PAGES), then re-run regress.cjs.
+3. Also open: the 4th widget column at 1920 on fixed 3-across grids (2.1); the WP-CL page header bar; 7.3 web copy ("Click") where those web pages get built.
+4. Tooling (scratchpad wvp/): capture.cjs + routes.json + baseline-430/ (233 routes from fd08a94b), regress.cjs (after build on 4316 vs before build on 4315), shot.cjs (signed-in checks, BASE=…), lib.cjs (accounts: client, gym, coach, dietitian, doctor; fixed clock). The read-only proxy runs on 54399; fixtures in ri/proxy/fixtures.json (restore to {}).
