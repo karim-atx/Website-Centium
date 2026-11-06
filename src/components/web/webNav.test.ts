@@ -63,4 +63,6 @@ test("the adapted business pages fill the content area; everything else keeps th
   assert.equal(webPageFor("/app/business/orders/list/to-fulfil", true), true); // area cs: WB-ST-OR.3 See all lists
   assert.equal(webPageFor("/app/business/appointments/day", true), true); // area cs: WB-ST-AP.4 Day list
   assert.equal(webPageFor("/app/business/services", false), false);
+  assert.equal(webPageFor("/app/pro/clients", false, true), true); // WP-CL list-detail
+  assert.equal(webPageFor("/app/pro/clients/x/overview", false, true), false); // the client page keeps the centred column for now
 });

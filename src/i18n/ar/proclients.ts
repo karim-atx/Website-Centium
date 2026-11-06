@@ -110,6 +110,9 @@ const proclients: Catalogue = {
   "No tags": "لا وسوم",
   "No unread messages": "لا رسائل غير مقروءة",
   "Preview of {name}": "معاينة {name}",
+  // Website viewport (WP-CL): the list-detail's two regions.
+  "Client list": "قائمة العملاء",
+  "Client preview, {name}": "معاينة العميل، {name}",
   "More actions for {name}": "إجراءات أخرى لـ{name}",
   Status: "الحالة",
   "Close filters": "إغلاق عوامل التصفية",

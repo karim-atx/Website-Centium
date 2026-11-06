@@ -230,13 +230,6 @@ function SettingsHub() {
   const section = appSettingsSection(search);
   const show = (k: AppSettingsSection) => !paneWeb || section === k;
   const popupParam = paneWeb ? new URLSearchParams(search).get("popup") : null;
-  useEffect(() => {
-    if (popupParam === "contact") setContactOpen(true);
-    else if (popupParam === "bug") setReportBugOpen(true);
-    else if (popupParam === "rate") setRateAppOpen(true);
-    else if (popupParam === "password") setChangePasswordOpen(true);
-    else if (popupParam === "delete") setDeleteOpen(true);
-  }, [popupParam]);
   /** Closing a popup opened from the column drops ?popup= so it doesn't reopen. */
   const closing = (close: () => void) => () => {
     close();
@@ -464,18 +457,18 @@ function SettingsHub() {
       )}
       </SettingsBody>
 
-      <ContactUsPopup open={contactOpen} onClose={closing(() => setContactOpen(false))} />
+      <ContactUsPopup open={contactOpen || popupParam === "contact"} onClose={closing(() => setContactOpen(false))} />
       {/* Keyed on open so each opening mounts fresh: no previous report text,
           no stale error, no rating left over from a previous visit. */}
-      <ReportBugPopup key={reportBugOpen ? "bug-open" : "bug-closed"} open={reportBugOpen} onClose={closing(() => setReportBugOpen(false))} />
-      <RateAppPopup key={rateAppOpen ? "rate-open" : "rate-closed"} open={rateAppOpen} onClose={closing(() => setRateAppOpen(false))} />
+      <ReportBugPopup key={reportBugOpen || popupParam === "bug" ? "bug-open" : "bug-closed"} open={reportBugOpen || popupParam === "bug"} onClose={closing(() => setReportBugOpen(false))} />
+      <RateAppPopup key={rateAppOpen || popupParam === "rate" ? "rate-open" : "rate-closed"} open={rateAppOpen || popupParam === "rate"} onClose={closing(() => setRateAppOpen(false))} />
       {/* Keyed so nothing typed into a password field outlives the sheet. */}
       <ChangePasswordSheet
-        key={changePasswordOpen ? "pw-open" : "pw-closed"}
-        open={changePasswordOpen}
+        key={changePasswordOpen || popupParam === "password" ? "pw-open" : "pw-closed"}
+        open={changePasswordOpen || popupParam === "password"}
         onClose={closing(() => setChangePasswordOpen(false))}
       />
-      <DeleteAccountSheet open={deleteOpen} onClose={closing(() => setDeleteOpen(false))} />
+      <DeleteAccountSheet open={deleteOpen || popupParam === "delete"} onClose={closing(() => setDeleteOpen(false))} />
     </Frame>
   );
 }

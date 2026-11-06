@@ -19,6 +19,8 @@ import { AddClientFlows } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
 import { SentInvitesSection } from "../../components/pro/addclient/SentInvitesSection";
 import { CtaButton } from "../../components/ui/PinnedCta";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { ClientDetailPanel, ClientsEmptyWeb, ClientsSplit } from "../../components/pro/web/ClientsWeb";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Toast } from "../../components/ui/Toast";
 import { time12 } from "../../utils/time12";
@@ -136,6 +138,11 @@ export default function Clients() {
   const { authUserId, professionalClients, rosterLoading, refreshRoster, removeProfessionalClient, accessibility } = useApp();
   const k = accessibility.largerText ? 1.2 : 1;
   const patients = lane === "clinical_overview";
+  // Website viewport (WP-CL): from 1024px a row selects the client shown in the
+  // detail pane beside the list (the first one by default) instead of opening
+  // the client page; the pane's Open does that. Mobile is unchanged.
+  const web = useIsWeb();
+  const [webSel, setWebSel] = useState<string | null>(null);
 
   const today = localIso(new Date());
 
@@ -308,6 +315,9 @@ export default function Clients() {
   }, [clients, requests, inbox.declined, status, passes, q, sort, filtering]);
 
   const shownCount = visible.filter((e) => e.kind !== "declined").length;
+  // WP-CL: the client in the detail pane, the first shown by default.
+  const webClients = visible.filter((e): e is ClientEntry => e.kind === "client");
+  const webEntry: ClientEntry | null = web ? (webClients.find((e) => e.clientId === webSel) ?? webClients[0] ?? null) : null;
 
   const SORTS: { value: SortKey; label: string }[] = [
     { value: "next", label: t("Next session") },
@@ -478,6 +488,25 @@ export default function Clients() {
 
   if (!lane) return null;
 
+  if (empty && web)
+    return (
+      <div>
+        {head}
+        <ClientsEmptyWeb patients={patients} onAdd={() => setAddOpen(true)} />
+        <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />
+        <AddClientFlows
+          open={addOpen}
+          onClose={closeAdd}
+          invitesAllowed={invitesAllowed}
+          pendingCount={requests.length}
+          onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}
+          onPendingRequests={() => setStatus("requests")}
+          onOfflineAdded={(name) => setToast(t("{name} added.", { name }))}
+        />
+        <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      </div>
+    );
+
   if (empty) {
     return (
       <div>
@@ -501,7 +530,7 @@ export default function Clients() {
     );
   }
 
-  return (
+  const page = (
     <div style={{ paddingBottom: selecting ? 96 : 0 }}>
       {head}
       <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />
@@ -598,7 +627,12 @@ export default function Clients() {
                 )}
               </div>
             ) : (
-              <div role="listitem" key={e.clientId}>
+              <div
+                role="listitem"
+                key={e.clientId}
+                aria-current={web && webEntry?.clientId === e.clientId ? "true" : undefined}
+                style={web && webEntry?.clientId === e.clientId ? { borderRadius: 20, background: "#F0EDF9", boxShadow: "0 0 0 1px #AEA1DC" } : undefined}
+              >
                 <ClientRow
                   name={e.name}
                   avatarUrl={e.rel.avatarUrl}
@@ -610,7 +644,7 @@ export default function Clients() {
                   selecting={selecting}
                   picked={picked.has(e.clientId)}
                   onClick={() => {
-                    if (!selecting) return navigate(proClientPath(e.clientId));
+                    if (!selecting) return web ? setWebSel(e.clientId) : navigate(proClientPath(e.clientId));
                     setPicked((p) => {
                       const n = new Set(p);
                       if (n.has(e.clientId)) n.delete(e.clientId);
@@ -688,7 +722,8 @@ export default function Clients() {
         align="left"
       />
 
-      {preview && (
+      {/* On web the preview is the detail pane (WP-CL); its ⋮ sets the entry for the menus below. */}
+      {preview && !web && (
         <ClientPreview
           entry={preview}
           lane={lane}
@@ -775,6 +810,45 @@ export default function Clients() {
       />
     </div>
   );
+
+  if (web && webEntry)
+    return (
+      <ClientsSplit
+        list={page}
+        detail={
+          <ClientDetailPanel
+            lane={lane}
+            facts={{
+              name: webEntry.name,
+              avatarUrl: webEntry.rel.avatarUrl ?? null,
+              statusLabel: t(STATUS_LABEL[webEntry.status]),
+              attention: webEntry.status === "attention",
+              onboarding: webEntry.status === "onboarding",
+              ring: webEntry.numbers ? webEntry.numbers.ring : null,
+              nextLabel: patients ? t("Next appointment") : t("Next session"),
+              next: nextLabel(webEntry.next, today) ?? t("Not booked"),
+              planTitle,
+              plan: webEntry.plan
+                ? webEntry.plan.week
+                  ? webEntry.plan.week.of
+                    ? t("{name}, week {n} of {of}", { name: webEntry.plan.name, n: webEntry.plan.week.n, of: webEntry.plan.week.of })
+                    : t("{name}, week {n}", { name: webEntry.plan.name, n: webEntry.plan.week.n })
+                  : webEntry.plan.name
+                : t("None yet"),
+              tags: webEntry.tags.length ? webEntry.tags.join(t(", ")) : t("No tags"),
+              unread: webEntry.unread ? t("{n} unread", { n: webEntry.unread }) : t("No unread messages"),
+            }}
+            onMessage={() => void message(webEntry.clientId)}
+            onOpen={() => navigate(proClientPath(webEntry.clientId))}
+            onMenu={(el) => {
+              setPreview(webEntry);
+              setMenuEl(el);
+            }}
+          />
+        }
+      />
+    );
+  return page;
 
   function rowLine(e: ClientEntry): string {
     if (e.status === "onboarding" && !e.plan) return t("Joined {date}", { date: new Date(e.joinedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" }) });

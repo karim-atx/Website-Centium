@@ -53,7 +53,9 @@ const BUSINESS_PAGES: RegExp[] = [
 ];
 
 /** Professional pages with a web layout of their own (Professional handover v1, section 5). */
-export const PRO_PAGES: RegExp[] = [];
+export const PRO_PAGES: RegExp[] = [
+  /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
+];
 
 export function webPageFor(pathname: string, isBusiness: boolean, isPro = false): boolean {
   return (isBusiness ? BUSINESS_PAGES : isPro ? PRO_PAGES : CLIENT_PAGES).some((re) => re.test(pathname));

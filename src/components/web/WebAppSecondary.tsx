@@ -261,7 +261,7 @@ function useSettingsGroups(): SecondaryGroup[] {
 }
 
 /** The Settings item a path lights. */
-export function settingsSelected(pathname: string, search: string): string {
+function settingsSelected(pathname: string, search: string): string {
   if (pathname === BILLING_HELP_PATH) return "billing";
   if (under(pathname, "/app/settings/help")) return "help";
   if (under(pathname, "/app/settings/notifications")) return "permissions";
