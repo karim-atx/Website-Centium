@@ -9,6 +9,7 @@ import { NativeAppGate } from "./components/native/NativeAppGate";
 import { NativeOpenPath } from "./components/native/NativeOpenPath";
 import { PushAskCard } from "./components/native/PushAskCard";
 import { WidgetSnapshotSync } from "./components/native/WidgetSnapshotSync";
+import { PhoneCalendarSync } from "./components/native/PhoneCalendarSync";
 import { isNative } from "./platform";
 import { hasReturnedAuthError } from "./services/auth";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
@@ -658,6 +659,8 @@ export default function App() {
       {isNative() && <PushAskCard />}
       {/* The phone app: the home-screen widgets' snapshot (steps, water, habits, workout). */}
       {isNative() && <WidgetSnapshotSync />}
+      {/* The phone app: "Add to my calendar" keeps the Centium calendar matching the bookings. */}
+      {isNative() && <PhoneCalendarSync />}
     </AppProvider>
   );
 }

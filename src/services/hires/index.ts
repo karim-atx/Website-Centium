@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { calendarChanged } from "../phone-calendar/bus";
 import {
   describeHireError,
   describePlansCardError,
@@ -82,6 +83,7 @@ export async function hireProfessional(planId: string, method: HirePaymentMethod
       return { ok: false, code: error.code, message: describeHireError(error.code) };
     }
     if (typeof data !== "string") return { ok: false, message: describeHireError(undefined) };
+    calendarChanged();
     return { ok: true, hireId: data };
   } catch (e) {
     return { ok: false, message: isOffline(e) ? OFFLINE_MESSAGE : describeHireError(undefined) };

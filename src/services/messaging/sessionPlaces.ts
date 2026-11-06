@@ -2,6 +2,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t } from "../../i18n/core";
+import { calendarChanged } from "../phone-calendar/bus";
 import { describeBookingError, describeCancelError, parsePlaces, placesBatches, type SessionPlaces } from "./groupCardsModel";
 
 // Round D · places on a session shared in a group (Database 20261223040000).
@@ -37,14 +38,20 @@ export async function fetchSessionPlaces(messageIds: string[]): Promise<Record<s
 
 export async function bookSharedSession(messageId: string, proFirstName: string): Promise<Done> {
   const { error } = await rpc().rpc("book_shared_session", { p_message_id: messageId });
-  if (!error) return { ok: true };
+  if (!error) {
+    calendarChanged();
+    return { ok: true };
+  }
   console.error("[places] book_shared_session refused:", error.code, error.message);
   return { ok: false, message: describeBookingError(error, proFirstName) };
 }
 
 export async function cancelSharedSessionBooking(messageId: string): Promise<Done> {
   const { error } = await rpc().rpc("cancel_shared_session_booking", { p_message_id: messageId });
-  if (!error) return { ok: true };
+  if (!error) {
+    calendarChanged();
+    return { ok: true };
+  }
   console.error("[places] cancel_shared_session_booking refused:", error.code, error.message);
   return { ok: false, message: describeCancelError(error) };
 }
