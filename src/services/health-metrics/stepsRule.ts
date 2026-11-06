@@ -24,3 +24,29 @@ export function stepsByDay(manual: readonly { date: string; value: number }[], s
   }
   return out;
 }
+
+/**
+ * A Steps history day in its parts (Round J follow-up, Karim 2026-11-06): the
+ * hand-logged count, the synced count (only when it came from a phone
+ * source) and what the day shows. On a day with both, the row edits and
+ * deletes the hand-logged count and the synced one gets its own line to
+ * remove it from Centium.
+ */
+export interface StepsDayParts {
+  shown: number | null;
+  manual: number | null;
+  synced: number | null;
+  both: boolean;
+}
+
+export function stepsDayParts(manual: number | null | undefined, synced: number | null | undefined): StepsDayParts {
+  const m = stepsOfDay(manual, null);
+  const s = stepsOfDay(null, synced);
+  return { shown: stepsOfDay(m, s), manual: m, synced: s, both: m !== null && s !== null };
+}
+
+/** The synced steps of a reader day: its steps when they came from a phone source, else null. */
+export function syncedStepsOf(day: { steps: number | null; sources?: Partial<Record<string, string>> } | undefined): number | null {
+  const s = day?.sources?.steps;
+  return day && s && s !== "manual" ? day.steps : null;
+}

@@ -319,6 +319,9 @@ const health: Catalogue = {
   "It stays in {source}. Centium won't import it again.": "تبقى في {source}. لن يستوردها Centium مرة أخرى.", // note: health wording; a synced reading removed from Centium only
   "Delete this entry?|health": "حذف هذا الإدخال؟", // note: health wording; a logged reading (water, weight, blood pressure), not a journal entry
   "This removes it from your history and totals.": "يؤدي هذا إلى إزالته من سجلك ومن المجاميع.",
+  // == Round J follow-up: Steps history, a day with both counts (pages/health/metrics/StepsPage, EditStepsSheet) ==
+  "Edit steps": "تعديل الخطوات",
+  "Not counted": "غير محتسبة", // note: the synced step count on a day the member also logged by hand; their own count is the one used
   "Saved on this device until you reconnect.": "حُفظ على هذا الجهاز إلى أن يعود الاتصال.", // note: the offline queue's toast (services/health-log/offlineQueue SAVED_ON_DEVICE), shown on the Water page
   Goal: "الهدف",
   "Goal {n}": "الهدف {n}",
