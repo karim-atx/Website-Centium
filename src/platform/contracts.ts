@@ -172,6 +172,8 @@ export interface CalendarModule {
   disable(): Promise<void>;
   /** Makes the calendar match this list: adds, moves and removes. */
   sync(events: PhoneCalendarEvent[]): Promise<{ added: number; updated: number; removed: number }>;
+  /** Centium's page in the phone's settings, to allow calendar access after "Don't allow". */
+  openSettings(): Promise<void>;
 }
 
 // ---- Sessions that keep running with the screen locked (§7) ----
