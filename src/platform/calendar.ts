@@ -24,6 +24,7 @@ interface CentiumCalendarPlugin {
   enable(): Promise<{ granted: boolean }>;
   disable(): Promise<void>;
   sync(options: { events: PhoneCalendarEvent[] }): Promise<{ added: number; updated: number; removed: number }>;
+  openSettings(): Promise<void>;
 }
 
 const CentiumCalendar = registerPlugin<CentiumCalendarPlugin>("CentiumCalendar");
@@ -38,4 +39,5 @@ export const calendar: CalendarModule = {
   disable: () => CentiumCalendar.disable(),
   /** Rejects with code "not_enabled" when sync is off or calendar access was withdrawn. */
   sync: (events) => CentiumCalendar.sync({ events }),
+  openSettings: () => CentiumCalendar.openSettings(),
 };
