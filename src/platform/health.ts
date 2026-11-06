@@ -26,7 +26,7 @@ import { isOffline } from "../services/network-error";
 import { nativeFeatureOn } from "./appConfig";
 import type { HealthAvailability, HealthModule, HealthType } from "./contracts";
 import { featureAvailable } from "./features";
-import { autoSyncDue, ingestBatches, tallyIngest, type IngestAnswer } from "./healthModel";
+import { autoSyncDue, runSync, type SyncResult } from "./healthModel";
 import { isNative, platform } from "./index";
 
 type Sample = Record<string, unknown>;
@@ -67,8 +67,6 @@ let running: Promise<SyncResult> | null = null;
 // server has heard of the connection: no automatic sync until connect() ends.
 let connecting = false;
 
-type SyncResult = { saved: number; skipped: number; error?: "offline" | "server" | "access_off" };
-
 /** One line for report_health_integration_sync: the call and its code, never health data. */
 function report(accessState: "ok" | "access_off" | "error", lastSyncedAt: string | null, error?: string) {
   return rpc("report_health_integration_sync", {
@@ -82,43 +80,19 @@ function report(accessState: "ok" | "access_off" | "error", lastSyncedAt: string
   );
 }
 
-async function sync(): Promise<SyncResult> {
-  let collected;
-  try {
-    collected = await CentiumHealth.collect({ recoverySensitive: recoverySensitive ?? true });
-  } catch (e) {
-    const code = (e as { code?: string } | null)?.code;
-    if (code === "access_off") {
-      // Access withdrawn in Health Connect: the server shows "Access off".
-      void report("access_off", null);
-      return { saved: 0, skipped: 0, error: "access_off" };
-    }
-    console.error("[health] Reading Health Connect failed:", e);
-    return { saved: 0, skipped: 0, error: "server" };
-  }
-
-  const answers: IngestAnswer[] = [];
-  for (const batch of ingestBatches(collected.samples, collected.deleted)) {
-    const { data, error } = await rpc("ingest_health_samples", {
-      p_source: provider(),
-      p_samples: batch.samples,
-      p_deleted: batch.deleted,
-    });
-    if (error) {
-      if (isOffline(error)) return { saved: 0, skipped: 0, error: "offline" };
-      // Not connected on the server (yet): not an attempt worth waiting 15 minutes after.
-      if (error.code === "ATXZ1") lastAttemptAt = null;
-      console.error("[health] The server refused a sync:", error.code, error.message);
-      // Reporting needs the connection too.
-      if (error.code !== "ATXZ1") void report("error", null, `ingest_health_samples ${error.code ?? "failed"}`);
-      return { saved: 0, skipped: 0, error: "server" };
-    }
-    answers.push((data ?? {}) as IngestAnswer);
-  }
-  // Every call answered: the phone moves on, and the server shows when.
-  await CentiumHealth.commit({ syncId: collected.syncId }).catch((e: unknown) => console.warn("[health] Commit failed:", e));
-  void report("ok", new Date().toISOString());
-  return tallyIngest(answers);
+function sync(): Promise<SyncResult> {
+  return runSync<Sample, Deletion>({
+    collect: () => CentiumHealth.collect({ recoverySensitive: recoverySensitive ?? true }),
+    ingest: (batch) => rpc("ingest_health_samples", { p_source: provider(), p_samples: batch.samples, p_deleted: batch.deleted }),
+    commit: (syncId) => CentiumHealth.commit({ syncId }),
+    report,
+    isOffline,
+    // Not an attempt worth waiting 15 minutes after.
+    notConnected: () => {
+      lastAttemptAt = null;
+    },
+    now: () => new Date().toISOString(),
+  });
 }
 
 export const health: HealthModule = {

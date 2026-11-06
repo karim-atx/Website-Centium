@@ -43,6 +43,61 @@ export function tallyIngest(answers: IngestAnswer[]): { saved: number; skipped: 
   return { saved, skipped };
 }
 
+export type SyncResult = { saved: number; skipped: number; error?: "offline" | "server" | "access_off" };
+type CallError = { message: string; code?: string };
+
+/** What a sync calls: the phone's plugin and the server, with the session. */
+export interface SyncSteps<S, D> {
+  /** Rejects with code "access_off" when Health Connect's access was withdrawn. */
+  collect(): Promise<{ syncId: string; samples: S[]; deleted: D[] }>;
+  ingest(batch: IngestBatch<S, D>): PromiseLike<{ data: unknown; error: CallError | null }>;
+  commit(syncId: string): Promise<void>;
+  /** report_health_integration_sync. Never rejects. */
+  report(accessState: "ok" | "access_off" | "error", lastSyncedAt: string | null, error?: string): PromiseLike<unknown>;
+  isOffline(error: CallError): boolean;
+  /** The server hasn't heard of the connection yet (ATXZ1). */
+  notConnected(): void;
+  now(): string;
+}
+
+/**
+ * One sync. It ends only once the server has its outcome, so whoever reads
+ * the status next (Settings' "Last synced") sees this sync, not the one before.
+ */
+export async function runSync<S, D>(steps: SyncSteps<S, D>): Promise<SyncResult> {
+  let collected;
+  try {
+    collected = await steps.collect();
+  } catch (e) {
+    const code = (e as { code?: string } | null)?.code;
+    if (code === "access_off") {
+      // Access withdrawn in Health Connect: the server shows "Access off".
+      await steps.report("access_off", null);
+      return { saved: 0, skipped: 0, error: "access_off" };
+    }
+    console.error("[health] Reading Health Connect failed:", e);
+    return { saved: 0, skipped: 0, error: "server" };
+  }
+
+  const answers: IngestAnswer[] = [];
+  for (const batch of ingestBatches(collected.samples, collected.deleted)) {
+    const { data, error } = await steps.ingest(batch);
+    if (error) {
+      if (steps.isOffline(error)) return { saved: 0, skipped: 0, error: "offline" };
+      console.error("[health] The server refused a sync:", error.code, error.message);
+      // Not connected on the server (yet): reporting needs the connection too.
+      if (error.code === "ATXZ1") steps.notConnected();
+      else await steps.report("error", null, `ingest_health_samples ${error.code ?? "failed"}`);
+      return { saved: 0, skipped: 0, error: "server" };
+    }
+    answers.push((data ?? {}) as IngestAnswer);
+  }
+  // Every call answered: the phone moves on, and the server shows when.
+  await steps.commit(collected.syncId).catch((e: unknown) => console.warn("[health] Commit failed:", e));
+  await steps.report("ok", steps.now());
+  return tallyIngest(answers);
+}
+
 /** How often opening or returning to the app syncs (D2). "Sync now" ignores it. */
 export const AUTO_SYNC_EVERY_MS = 15 * 60 * 1000;
 
