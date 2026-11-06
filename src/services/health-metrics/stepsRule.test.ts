@@ -29,16 +29,16 @@ describe("stepsByDay", () => {
 
 describe("stepsDayParts", () => {
   it("a day with both: shows the hand-logged count and keeps the synced one apart", () => {
-    assert.deepEqual(stepsDayParts(5000, 8123), { shown: 5000, manual: 5000, synced: 8123, both: true });
+    assert.deepEqual(stepsDayParts(5000, 8123), { shown: 5000, manual: 5000, synced: 8123, both: true, editable: true });
   });
-  it("hand-logged only and synced only are not both", () => {
-    assert.deepEqual(stepsDayParts(5000, null), { shown: 5000, manual: 5000, synced: null, both: false });
-    assert.deepEqual(stepsDayParts(undefined, 8123), { shown: 8123, manual: null, synced: 8123, both: false });
+  it("hand-logged only is editable; synced only is not, and neither is both", () => {
+    assert.deepEqual(stepsDayParts(5000, null), { shown: 5000, manual: 5000, synced: null, both: false, editable: true });
+    assert.deepEqual(stepsDayParts(undefined, 8123), { shown: 8123, manual: null, synced: 8123, both: false, editable: false });
   });
   it("zero counts as nothing on either side", () => {
-    assert.deepEqual(stepsDayParts(0, 8123), { shown: 8123, manual: null, synced: 8123, both: false });
-    assert.deepEqual(stepsDayParts(5000, 0), { shown: 5000, manual: 5000, synced: null, both: false });
-    assert.deepEqual(stepsDayParts(null, null), { shown: null, manual: null, synced: null, both: false });
+    assert.deepEqual(stepsDayParts(0, 8123), { shown: 8123, manual: null, synced: 8123, both: false, editable: false });
+    assert.deepEqual(stepsDayParts(5000, 0), { shown: 5000, manual: 5000, synced: null, both: false, editable: true });
+    assert.deepEqual(stepsDayParts(null, null), { shown: null, manual: null, synced: null, both: false, editable: false });
   });
 });
 

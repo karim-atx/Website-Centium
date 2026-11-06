@@ -374,10 +374,10 @@ export default function StepsPage() {
   }
 
   // ---- history (synced rows: no Edit; Delete is native, V6-169) -----------
-  // A day with both counts (Round J follow-up, Karim 2026-11-06): the row is
-  // the hand-logged count with Edit and Delete, and the synced count gets its
-  // own line under it, "Not counted", whose Delete is HA-12's "Remove from
-  // Centium?". Hand-logged-only and synced-only days are as before.
+  // Round J follow-up (Karim 2026-11-06): a day with a hand-logged count is
+  // that count with Edit and Delete; on a day with both, the synced count gets
+  // its own line under it, "Not counted", whose Delete is HA-12's "Remove
+  // from Centium?". A synced-only day keeps that Delete alone.
   const items: HistoryItem[] = Object.keys(byDay)
     .filter((d) => d <= today)
     .sort()
@@ -397,15 +397,17 @@ export default function StepsPage() {
         onClick: () => openDay(d),
         onDelete: syncedRemove.onDelete(d),
       };
-      if (!parts.both || parts.synced === null) return [row];
+      if (!parts.editable) return [row];
+      const manualRow: HistoryItem = {
+        ...row,
+        meta: [when, t("Logged by you")].join(" · "),
+        onEdit: () => (online ? setEditing(d) : setToast(OFFLINE_ACTION)),
+        onDelete: () => (online ? setDeleting(d) : setToast(OFFLINE_ACTION)),
+      };
+      if (!parts.both || parts.synced === null) return [manualRow];
       const source = syncedRemove.sourceOf(d) ?? sourceName(activity[d]?.sources?.steps);
       return [
-        {
-          ...row,
-          meta: [when, t("Logged by you")].join(" · "),
-          onEdit: () => (online ? setEditing(d) : setToast(OFFLINE_ACTION)),
-          onDelete: () => (online ? setDeleting(d) : setToast(OFFLINE_ACTION)),
-        },
+        manualRow,
         {
           key: `${d}:synced`,
           title: rel,

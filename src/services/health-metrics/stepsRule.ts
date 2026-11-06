@@ -28,21 +28,23 @@ export function stepsByDay(manual: readonly { date: string; value: number }[], s
 /**
  * A Steps history day in its parts (Round J follow-up, Karim 2026-11-06): the
  * hand-logged count, the synced count (only when it came from a phone
- * source) and what the day shows. On a day with both, the row edits and
- * deletes the hand-logged count and the synced one gets its own line to
- * remove it from Centium.
+ * source) and what the day shows. Any day with a hand-logged count edits and
+ * deletes it (editable); on a day with both, the synced count also gets its
+ * own line to remove it from Centium. A synced-only day only removes.
  */
 export interface StepsDayParts {
   shown: number | null;
   manual: number | null;
   synced: number | null;
   both: boolean;
+  /** A hand-logged count to Edit and Delete. */
+  editable: boolean;
 }
 
 export function stepsDayParts(manual: number | null | undefined, synced: number | null | undefined): StepsDayParts {
   const m = stepsOfDay(manual, null);
   const s = stepsOfDay(null, synced);
-  return { shown: stepsOfDay(m, s), manual: m, synced: s, both: m !== null && s !== null };
+  return { shown: stepsOfDay(m, s), manual: m, synced: s, both: m !== null && s !== null, editable: m !== null };
 }
 
 /** The synced steps of a reader day: its steps when they came from a phone source, else null. */
