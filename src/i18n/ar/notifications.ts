@@ -281,7 +281,6 @@ const notifications: Catalogue = {
   "Add to my calendar": "إضافة إلى تقويمي",
   "Your bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.": "تُضاف حجوزاتك وحصصك ومواعيدك إلى تقويم Centium على هذا الهاتف، وتتبعها التغييرات والإلغاءات.",
   "Calendar access is off": "الوصول إلى التقويم متوقف",
-  "Allow it for Centium in your phone's settings.": "اسمح به لـ Centium من إعدادات هاتفك.",
   "Removed from this phone's calendar.": "أُزيل من تقويم هذا الهاتف.",
   "Centium booking": "حجز Centium",
   // == Round J · J-2c: the workout widget's line (components/native/WidgetSnapshotSync) ==

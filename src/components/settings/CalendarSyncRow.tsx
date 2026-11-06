@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { isNative } from "../../platform";
 import { calendar } from "../../platform/calendar";
 import { calendarChanged } from "../../services/phone-calendar/bus";
+import { openCalendarSettings } from "../../services/phone-calendar/settings";
 import { t } from "../../i18n/core";
 
 /**
@@ -13,8 +14,8 @@ import { t } from "../../i18n/core";
  * and never for a business account (it gets no events).
  *
  * - On: the phone's calendar prompt (calendar.enable()), then a sync.
- * - Access refused: "Calendar access is off", pointing to the phone's
- *   settings (no call opens them yet; App-Centium's CalendarModule has none).
+ * - Access refused: "Calendar access is off · Open settings" (Centium's page
+ *   in the phone's settings, calendar.openSettings()).
  * - Off: calendar.disable() removes the Centium calendar and its events.
  * The state is the phone's own (calendar.status()), read again when the app
  * comes back to the front.
@@ -87,7 +88,10 @@ export function CalendarSyncRow() {
         <span data-calendar-sync={on ? "on" : denied ? "denied" : "off"}>
           {denied && !on ? (
             <>
-              {t("Calendar access is off")} · {t("Allow it for Centium in your phone's settings.")}
+              {t("Calendar access is off")} ·{" "}
+              <button type="button" onClick={() => void openCalendarSettings()} className="tap font-semibold underline">
+                {t("Open settings")}
+              </button>
             </>
           ) : (
             t("Your bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.")
