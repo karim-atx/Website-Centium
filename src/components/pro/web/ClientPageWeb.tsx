@@ -1,8 +1,10 @@
-import React, { useRef } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { ArrowLeft, CalendarPlus, MessageCircle, MoreHorizontal, Plus, Tag } from "lucide-react";
 import { useIsWide, useWebLayout, WEB_CONTENT_MAX } from "../../web/useWebLayout";
 import { toneOf, type Tone } from "../client/clientFormat";
 import { initialsOf } from "../home/initials";
+import type { ProLane } from "../subtypeLanes";
+import { placeBlocks, tabLayoutFor } from "./clientTabLayout";
 import { t } from "../../../i18n/core";
 
 // Professional handover v1, WP-CL.1 / WP-CL.1 · NU / WP-CO-CL.1 (WP-CL Client
@@ -172,6 +174,139 @@ export const ClientTabsWeb: React.FC<{ items: { key: string; label: string }[]; 
     })}
   </div>
 );
+
+/** The items a tab renders, through any display:contents wrapper; closed or fixed overlays are left out. */
+function tabItems(box: HTMLElement): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  for (const c of Array.from(box.children) as HTMLElement[]) {
+    const cs = getComputedStyle(c);
+    if (cs.display === "contents") out.push(...tabItems(c));
+    else if (cs.display !== "none" && cs.position !== "fixed" && c.tagName !== "STYLE") out.push(c);
+  }
+  return out;
+}
+
+const headOf = (el: HTMLElement): string | null => {
+  const h = el.tagName === "H2" ? el : el.firstElementChild?.tagName === "H2" ? el.firstElementChild : null;
+  return h ? (h.textContent ?? "").trim() : null;
+};
+
+/**
+ * WP-CL.1 / WP-CL.1 · NU / WP-CO-CL.1: the client page tab on the reference
+ * files' column sets (clientTabLayout.ts). The repo's cards are placed into
+ * blocks on a 12-column grid (8 on the rail for Nutrition and Clinical
+ * overview) of 1px rows, each card's height measured, 24 between cards
+ * unless the card above is a section head; re-placed when a card resizes or
+ * the list changes. Full coaching Notes is one block: the toolbar row
+ * (search 4fr | chips 5fr | Add a note, 16 apart, chips 4 equal 40 high) and
+ * the notes 2 across (16).
+ */
+export const ClientTabGridWeb: React.FC<{ lane: ProLane; tab: string; children: React.ReactNode }> = ({ lane, tab, children }) => {
+  const { rail } = useWebLayout();
+  const ref = useRef<HTMLDivElement | null>(null);
+  const notesRow = tabLayoutFor(lane, tab, false) === "notes-row";
+  const [cols, setCols] = useState(12);
+
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box || notesRow) return;
+    let raf = 0;
+    const watched = new Set<Element>();
+    const ro = new ResizeObserver(() => schedule());
+    const run = () => {
+      raf = 0;
+      const layout = tabLayoutFor(lane, tab, !!box.querySelector("[data-wpcl-locked]"));
+      if (layout === "notes-row") return;
+      const grid = layout.grid[rail ? 1 : 0];
+      setCols(grid);
+      const els = tabItems(box);
+      const heads = new Set(els.map(headOf).filter((h): h is string => !!h));
+      const members: number[][] = layout.blocks.map(() => []);
+      let cur = 0;
+      els.forEach((el, index) => {
+        const b = layout.place({ el, head: headOf(el), text: (el.textContent ?? "").trim(), index }, { heads, rail });
+        if (b !== undefined) cur = b;
+        members[cur].push(index);
+      });
+      const spans = layout.blocks.map((b) => b.span[rail ? 1 : 0]);
+      // Columns first (an item's height depends on its width), then rows.
+      const ones = els.map(() => 1);
+      placeBlocks(grid, spans, members, ones, ones).forEach((a, i) => {
+        if (!a) return;
+        els[i].style.gridColumn = `${a.col} / span ${a.span}`;
+        // A bare link button (Change history) keeps its own width.
+        if (els[i].tagName === "BUTTON" && !els[i].classList.contains("w-full")) els[i].style.justifySelf = "start";
+      });
+      const sizes = els.map((el) => {
+        const cs = getComputedStyle(el);
+        const mt = parseFloat(cs.marginTop) || 0;
+        const mb = parseFloat(cs.marginBottom) || 0;
+        return { h: el.getBoundingClientRect().height + mt + mb, mt, mb };
+      });
+      const gaps = els.map((_, i) => {
+        const block = members.find((m) => m.includes(i)) ?? [];
+        const k = block.indexOf(i);
+        if (k <= 0) return 0;
+        const prev = block[k - 1];
+        // 24 between cards; none under a section head; 12 between the insights row and the groups (Client Web v4 gapOf).
+        const list = (el: HTMLElement) => ["insights", "groups"].includes(el.getAttribute("data-wpcl") ?? "");
+        const want = list(els[prev]) && list(els[i]) ? 12 : 24;
+        return headOf(els[prev]) ? 0 : Math.max(0, want - sizes[prev].mb - sizes[i].mt);
+      });
+      placeBlocks(
+        grid,
+        spans,
+        members,
+        sizes.map((s) => s.h),
+        gaps,
+      ).forEach((a, i) => {
+        if (a) els[i].style.gridRow = `${a.row} / span ${a.rows}`;
+      });
+      for (const el of els) {
+        if (!watched.has(el)) {
+          watched.add(el);
+          ro.observe(el);
+        }
+      }
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(run);
+    };
+    run();
+    const mo = new MutationObserver(schedule);
+    mo.observe(box, { childList: true, subtree: true });
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, [lane, tab, rail, notesRow]);
+
+  if (notesRow)
+    return (
+      <>
+        <style>{NOTES_ROW_CSS}</style>
+        <div data-pro-web="client-tab" className="wpcl-notes-row">
+          {children}
+        </div>
+      </>
+    );
+  return (
+    <div data-pro-web="client-tab" ref={ref} style={{ display: "grid", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 24, rowGap: 0, gridAutoRows: 1, alignItems: "start" }}>
+      {children}
+    </div>
+  );
+};
+
+const NOTES_ROW_CSS = [
+  ".wpcl-notes-row{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,5fr) auto;column-gap:16px;align-items:center}",
+  ".wpcl-notes-row>*{grid-column:1/-1}",
+  ".wpcl-notes-row>button{justify-self:start}",
+  ".wpcl-notes-row>label,.wpcl-notes-row>[role=tablist],.wpcl-notes-row>label+[role=tablist]+div{grid-column:auto;margin:0 0 24px!important}",
+  ".wpcl-notes-row>[role=tablist]{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px!important}",
+  ".wpcl-notes-row>[role=tablist]>button{height:40px;font-size:15px!important;padding:0 8px!important}",
+  ".wpcl-notes-row>div.flex-col:has(>button){display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px!important;align-items:start}",
+].join("");
 
 /**
  * The tab's own cards across the page: three columns for Overview (4 + 4 + 4

@@ -329,6 +329,7 @@ const proclients: Catalogue = {
   "Early data: trends start after the first full week.": "بيانات أولية: تبدأ الاتجاهات بعد أول أسبوع كامل.",
   "Open in Insights": "فتح في الرؤى",
   "Client insights": "رؤى العميل",
+  Groups: "المجموعات",
   "Activity, nutrition, vitals": "النشاط والتغذية والعلامات الحيوية",
   "Activity, nutrition, vitals and biomarkers": "النشاط والتغذية والعلامات الحيوية والمؤشرات الحيوية",
   "Couldn't load results.": "تعذّر تحميل النتائج.",

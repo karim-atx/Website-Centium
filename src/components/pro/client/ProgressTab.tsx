@@ -25,6 +25,8 @@ import { CheckInsProgress, checkInsSummary, useClientCheckIns } from "../forms/C
 import { ClientWinsCard } from "../../share/ClientWinsCard";
 import { appLocale } from "../../../i18n/format";
 import { t, tk, tn, tx } from "../../../i18n/core";
+import { useWebLayout } from "../../web/useWebLayout";
+import { SectionHead } from "./kit";
 
 /**
  * Release 3 · CL2 v5 Progress (Full coaching, Nutrition) and Trends
@@ -67,6 +69,7 @@ interface Group {
 export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: (c: AccessCategory) => void }> = ({ data, lane, onAsk }) => {
   const [range, setRange] = useState<Range>("week");
   const navigate = useNavigate();
+  const { web } = useWebLayout();
   const chartInitial = range === "month" ? "M" : "W";
   const [open, setOpen] = useState<string | null>(null);
   const { access, clientId, today, firstName, rel, stage } = data;
@@ -241,6 +244,109 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
     ];
   }
 
+  const insightsRow = (
+    <button
+      type="button"
+      onClick={() => navigate(lane === "clinical_overview" ? `${PRO_ROUTES.insights}/vitals?client=${encodeURIComponent(clientId)}` : proClientPath(clientId, "insights"))}
+      className="tap w-full flex items-center text-start"
+      style={{ gap: 12, minHeight: 52, padding: "12px 16px", borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, marginBottom: 10 }}
+    >
+      <span className="flex-1 min-w-0">
+        <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
+          {lane === "clinical_overview" ? t("Open in Insights") : t("Client insights")}
+        </span>
+        <span className="block" style={{ fontSize: textPx(12), color: INK.chS }}>
+          {lane === "full_coaching" ? t("Activity, nutrition, vitals") : t("Activity, nutrition, vitals and biomarkers")}
+        </span>
+      </span>
+      <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+    </button>
+  );
+
+  // Website viewport (WP-CL.1.3, WP-CL.1.3 · NU, WP-CO-CL.1.4): the range row
+  // fills its row (24 after the label, 40 high, 15), the groups are a list
+  // and the open group shows beside it. Full coaching (Client Web v4): range +
+  // the open group | insights + the other groups; nothing shared: range + the
+  // lock | insights + groups. Nutrition and Clinical overview (Nutrition
+  // Client Web, Patient Web): the list rows (r16, 10 16, 64, tile 40,
+  // selected 1.5 #AEA1DC on #F8F7FD) | "Title · summary" and the group's
+  // card, the wins under it. The client page grid places the parts (data-wpcl).
+  if (web) {
+    const fc = lane === "full_coaching";
+    const locked = fc && !access.has(counted);
+    const sel = groups.find((g) => g.key === open) ?? groups.find((g) => g.key === (lane === "clinical_overview" ? "slp" : "adh")) ?? groups[0];
+    const rangeRow = (
+      <div data-wpcl="range" className="flex items-center" style={{ gap: 24 }}>
+        <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 500, color: INK.chS, whiteSpace: "nowrap" }}>{t(RANGE_LINE[range])}</span>
+        <SegmentedTabs
+          className="flex-1"
+          items={[
+            { key: "today", label: t("Today") },
+            { key: "week", label: t("Week") },
+            { key: "month", label: t("Month") },
+          ]}
+          activeKey={range}
+          onChange={(k) => setRange(k as Range)}
+          tabHeight={40}
+          trackStyle={{ padding: 4, gap: 4, borderRadius: 14, width: "100%" }}
+          tabRadius={10}
+          labelSize={15}
+        />
+      </div>
+    );
+    const wins = lane !== "clinical_overview" && (
+      <div data-wpcl="wins">
+        <ClientWinsCard clientId={clientId} name={data.name} firstName={firstName} today={today} lane={lane} winSharing={stage?.winSharing} />
+      </div>
+    );
+    const earlyLine = early && (
+      <p data-wpcl="early" style={{ fontSize: 13, lineHeight: "20px", color: INK.chF }}>
+        {t("Early data: trends start after the first full week.")}
+      </p>
+    );
+    if (fc) {
+      return (
+        <>
+          {rangeRow}
+          {earlyLine}
+          {locked ? (
+            <div data-wpcl="detail" data-wpcl-locked="">
+              {lock(t("Workout activity"), "workout_activity")}
+            </div>
+          ) : (
+            <div data-wpcl="detail">
+              <GroupCard group={sel} open web onToggle={() => undefined} />
+            </div>
+          )}
+          {wins}
+          <div data-wpcl="insights">{insightsRow}</div>
+          <div data-wpcl="groups" className="flex flex-col" style={{ gap: 12 }}>
+            {(locked ? groups : groups.filter((g) => g.key !== sel.key)).map((g) => (
+              <GroupCard key={g.key} group={g} open={false} web onToggle={() => setOpen(g.key)} />
+            ))}
+          </div>
+        </>
+      );
+    }
+    return (
+      <>
+        {rangeRow}
+        {earlyLine}
+        <div data-wpcl="insights">{insightsRow}</div>
+        <div data-wpcl="groups" role="tablist" aria-orientation="vertical" aria-label={t("Groups")} className="flex flex-col" style={{ gap: 8 }}>
+          {groups.map((g) => (
+            <GroupRow key={g.key} group={g} selected={g.key === sel.key} onSelect={() => setOpen(g.key)} />
+          ))}
+        </div>
+        <div data-wpcl="detail" role="tabpanel" aria-label={sel.title}>
+          <SectionHead label={`${sel.title} · ${sel.summary}`} />
+          {sel.body}
+        </div>
+        {wins}
+      </>
+    );
+  }
+
   return (
     <>
       {/* W8 SH4: the client's wins with Share, above the range row (Full coaching and Nutrition). */}
@@ -263,22 +369,7 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
         />
       </div>
       {early && <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("Early data: trends start after the first full week.")}</p>}
-      <button
-        type="button"
-        onClick={() => navigate(lane === "clinical_overview" ? `${PRO_ROUTES.insights}/vitals?client=${encodeURIComponent(clientId)}` : proClientPath(clientId, "insights"))}
-        className="tap w-full flex items-center text-start"
-        style={{ gap: 12, minHeight: 52, padding: "12px 16px", borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, marginBottom: 10 }}
-      >
-        <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>
-            {lane === "clinical_overview" ? t("Open in Insights") : t("Client insights")}
-          </span>
-          <span className="block" style={{ fontSize: textPx(12), color: INK.chS }}>
-            {lane === "full_coaching" ? t("Activity, nutrition, vitals") : t("Activity, nutrition, vitals and biomarkers")}
-          </span>
-        </span>
-        <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
-      </button>
+      {insightsRow}
       <div className="flex flex-col" style={{ gap: 10 }}>
         {groups.map((g) => (
           <GroupCard key={g.key} group={g} open={open === g.key} onToggle={() => setOpen((o) => (o === g.key ? null : g.key))} />
@@ -288,33 +379,59 @@ export const ProgressTab: React.FC<{ data: ClientPageData; lane: ProLane; onAsk:
   );
 };
 
-const GroupCard: React.FC<{ group: Group; open: boolean; onToggle: () => void }> = ({ group, open, onToggle }) => {
+/** `web`: the Client Web v4 group (min 56, 8 20, tile 40 / 20, title 17/24, summary 13, body 0 20 16). */
+const GroupCard: React.FC<{ group: Group; open: boolean; onToggle: () => void; web?: boolean }> = ({ group, open, onToggle, web }) => {
   const dark = useIsDark();
   const id = `grp-${group.key}`;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20 }}>
-      <button type="button" aria-expanded={open} aria-controls={id} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: 14, minHeight: 64 }}>
-        <span className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
-          <group.icon size={17} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
+      <button type="button" aria-expanded={open} aria-controls={id} onClick={onToggle} className="tap w-full flex items-center text-start" style={web ? { gap: 12, padding: "8px 20px", minHeight: 56 } : { gap: 12, padding: 14, minHeight: 64 }}>
+        <span className="flex items-center justify-center shrink-0" style={{ width: web ? 40 : 36, height: web ? 40 : 36, borderRadius: 11, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
+          <group.icon size={web ? 20 : 17} strokeWidth={1.75} aria-hidden style={{ color: INK.prAccent }} />
         </span>
         <span className="flex-1 min-w-0">
-          <span className="block" style={{ fontSize: textPx(15), fontWeight: 700, color: INK.ch }}>
+          <span className="block" style={web ? { fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch } : { fontSize: textPx(15), fontWeight: 700, color: INK.ch }}>
             {group.title}
           </span>
-          <span className="block" style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.4 }}>
+          <span className="block" style={web ? { fontSize: 13, lineHeight: "20px", color: INK.chS } : { fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.4 }}>
             {group.summary}
           </span>
         </span>
         <ChevronDown size={16} strokeWidth={2} aria-hidden style={{ color: INK.chF, transform: open ? "rotate(180deg)" : undefined, transition: "transform 160ms" }} />
       </button>
       {open && (
-        <div id={id} style={{ padding: "0 14px 14px" }}>
+        <div id={id} style={{ padding: web ? "0 20px 16px" : "0 14px 14px" }}>
           {group.body}
         </div>
       )}
     </div>
   );
 };
+
+/** Nutrition Client Web / Patient Web list row (web): r16, 10 16, min 64, tile 40 r11 / 20, 15/24 700, summary 13/20 one line, chevron; selected 1.5 #AEA1DC on #F8F7FD, chevron #5F5093. */
+const GroupRow: React.FC<{ group: Group; selected: boolean; onSelect: () => void }> = ({ group, selected, onSelect }) => (
+  <button
+    type="button"
+    role="tab"
+    aria-selected={selected}
+    onClick={onSelect}
+    className="w-full flex items-center text-start hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+    style={{ gap: 12, boxSizing: "border-box", borderRadius: 16, border: selected ? "1.5px solid #AEA1DC" : "1px solid rgba(36,31,27,0.08)", background: selected ? "#F8F7FD" : INK.card, padding: "10px 16px", minHeight: 64 }}
+  >
+    <span className="flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 11, background: "#F0EDF9" }}>
+      <group.icon size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D6BB5" }} />
+    </span>
+    <span className="flex-1 min-w-0">
+      <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: INK.ch }}>
+        {group.title}
+      </span>
+      <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
+        {group.summary}
+      </span>
+    </span>
+    <ChevronRight size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: selected ? "#5F5093" : "#8C8378" }} />
+  </button>
+);
 
 const FlagList: React.FC<{ flags: BiomarkerFlag[] | null | undefined }> = ({ flags }) => {
   if (flags === undefined) return <ProCardSkeleton lines={3} />;

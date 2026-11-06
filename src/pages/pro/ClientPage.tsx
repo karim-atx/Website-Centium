@@ -13,7 +13,7 @@ import { OfflineLine, ProCardSkeleton, ProError } from "../../components/pro/sta
 import { CLIENT_TABS, pickTab, proClientPath, PRO_ROUTES, type ProLane } from "../../components/pro/subtypeLanes";
 import { useClientPage } from "../../components/pro/client/useClientPage";
 import { ClientHeader, PendingPaymentBanners } from "../../components/pro/client/ClientHeader";
-import { ClientPageBodyWeb, ClientHeroWeb, ClientTabBodyWeb, ClientTabsWeb, ClientTopBarWeb } from "../../components/pro/web/ClientPageWeb";
+import { ClientPageBodyWeb, ClientHeroWeb, ClientTabGridWeb, ClientTabsWeb, ClientTopBarWeb } from "../../components/pro/web/ClientPageWeb";
 import { useWebLayout } from "../../components/web/useWebLayout";
 import { fmtDay } from "../../components/pro/client/clientFormat";
 import { DietaryNeedsCard } from "../../components/pro/client/DietaryNeedsCard";
@@ -81,7 +81,7 @@ export default function ClientPage() {
   const [tagsOpen, setTagsOpen] = useState(false);
   const [ending, setEnding] = useState(false);
   const [asked, setAsked] = useState<AccessCategory[]>([]);
-  const { web, rail } = useWebLayout();
+  const { web } = useWebLayout();
 
   useEffect(() => {
     if (!authUserId || !id) return;
@@ -283,7 +283,9 @@ export default function ClientPage() {
             active={current}
             onChange={go}
           />
-          <ClientTabBodyWeb columns={current === "overview" && !rail ? 3 : 2}>{tabBody}</ClientTabBodyWeb>
+          <ClientTabGridWeb key={current} lane={lane} tab={current}>
+            {tabBody}
+          </ClientTabGridWeb>
         </ClientPageBodyWeb>
         {overlays}
       </div>
