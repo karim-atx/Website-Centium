@@ -137,15 +137,28 @@ export const SwitchRow: React.FC<{ title: string; sub?: string; checked: boolean
   </div>
 );
 
-/** ui.js sSection: a section label over its rows, 32 above (0 for the first). */
-export const SettingsSection: React.FC<{ label: string; first?: boolean; children: React.ReactNode }> = ({ label, first, children }) => (
-  <section style={{ marginTop: first ? 0 : 32 }}>
-    <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF }}>{label}</h2>
-    <div>{children}</div>
-  </section>
-);
+/**
+ * ui.js sSection: a section label over its rows, 32 above (0 for the first).
+ * `web` (WP-CA Calendar Extras Web): the label 12/16 600, 8 under it, no
+ * margin (the web column spaces its sections).
+ */
+export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: boolean; children: React.ReactNode }> = ({ label, first, web, children }) =>
+  web ? (
+    <section aria-label={label}>
+      <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", color: "#8C8378" }}>{label}</h2>
+      <div>{children}</div>
+    </section>
+  ) : (
+    <section style={{ marginTop: first ? 0 : 32 }}>
+      <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF }}>{label}</h2>
+      <div>{children}</div>
+    </section>
+  );
 
-/** ui.js sRow. `right` is a node (a switch, a value) or the chevron when onClick is set. */
+/**
+ * ui.js sRow. `right` is a node (a switch, a value) or the chevron when onClick is set.
+ * `web` (WP-CA Calendar Extras Web): min 60, 8 0, gap 14, tile 40 r12 / 20, title 15/24 600, sub and value 13/20, the rule from 54; hover #FAF9FD.
+ */
 export const SettingsRow: React.FC<{
   icon?: LucideIcon;
   tile?: React.ReactNode;
@@ -157,8 +170,43 @@ export const SettingsRow: React.FC<{
   onClick?: () => void;
   ariaLabel?: string;
   muted?: boolean;
-}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted }) => {
+  web?: boolean;
+}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted, web }) => {
   const dark = useIsDark();
+  if (web) {
+    const webBody = (
+      <>
+        {(Icon || tile) && (
+          <span className="flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: "#F0EDF9" }}>
+            {tile ?? (Icon && <Icon size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D67D9" }} />)}
+          </span>
+        )}
+        <span className="flex-1 min-w-0">
+          <span className="block truncate" style={{ fontSize: 15, fontWeight: 600, lineHeight: "24px", color: muted ? "#8C8378" : "#241F1B" }}>
+            {title}
+          </span>
+          {sub && (
+            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              {sub}
+            </span>
+          )}
+        </span>
+        {value !== undefined && <span style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>}
+        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378", flexShrink: 0 }} /> : null)}
+        {!last && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: Icon || tile ? 54 : 0, insetInlineEnd: 0, height: 1, background: "rgba(36,31,27,0.06)" }} />}
+      </>
+    );
+    const webStyle: React.CSSProperties = { gap: 14, padding: "8px 0", minHeight: 60, boxSizing: "border-box" };
+    return onClick ? (
+      <button type="button" onClick={onClick} aria-label={ariaLabel} className="relative w-full flex items-center text-start hover:bg-[#FAF9FD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={webStyle}>
+        {webBody}
+      </button>
+    ) : (
+      <div className="relative flex items-center" style={webStyle}>
+        {webBody}
+      </div>
+    );
+  }
   const body = (
     <>
       {(Icon || tile) && (

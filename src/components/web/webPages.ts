@@ -55,6 +55,7 @@ const BUSINESS_PAGES: RegExp[] = [
 /** Professional pages with a web layout of their own (Professional handover v1, section 5). */
 export const PRO_PAGES: RegExp[] = [
   /^\/app\/pro\/?$/, // WP-HO · FC / · NU / · CO Home (header bar, trend card 7 + lane card 5)
+  /^\/app\/pro\/calendar\/availability\/?$/, // WP-CA.5 Availability (Working hours + Time off | Session types + Booking)
   /^\/app\/pro\/calendar\/?$/, // WP-CA.1-.4 Calendar (Month 7 + 5, the Week time grid, Day 7 + 5, Year 6 across)
   /^\/app\/pro\/library(\/(programmes|meal-plans))?\/?$/, // WP-LI.1 / .2 Library lists (inner screens: the centred column inside the page)
   /^\/app\/pro\/meal-plans(\/(plans|journals|recipes|targets))?\/?$/, // WP-NU-MP.1 Plans home (the other areas: the centred column inside the page)
