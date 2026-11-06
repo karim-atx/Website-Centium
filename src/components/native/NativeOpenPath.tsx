@@ -33,6 +33,13 @@ export function NativeOpenPath() {
   const { authUserId, profileReady, user } = useApp();
   const ready = !!authUserId && profileReady && user.onboarded;
   const now = useRef({ ready, pathname, userId: authUserId });
+  // useNavigate's identity changes with the pathname (react-router 7), so it
+  // is read through a ref: the listeners below subscribe once per mount, and
+  // the launch path is asked for once.
+  const navRef = useRef(navigate);
+  useEffect(() => {
+    navRef.current = navigate;
+  }, [navigate]);
 
   const settle = useCallback(() => {
     const decision = decideHeldPath(holder.held, { ...now.current, at: Date.now() });
@@ -40,8 +47,8 @@ export function NativeOpenPath() {
     if (decision !== "open" || !holder.held) return;
     const path = holder.held.path;
     holder.held = null;
-    navigate(path);
-  }, [navigate]);
+    navRef.current(path);
+  }, []);
 
   useEffect(() => {
     let alive = true;
