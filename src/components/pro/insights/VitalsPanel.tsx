@@ -11,6 +11,7 @@ import { fetchClientBloodPressure, type BloodPressureReading } from "../../../se
 import { classifyBloodPressure, splitByTimeOfDay, averageReading } from "../../../services/blood-pressure/classify";
 import { bpCategoryWord } from "../../../services/blood-pressure/guidance";
 import { NO_READINGS } from "../../../services/health-metrics/series";
+import { stepsByDay } from "../../../services/health-metrics/stepsRule";
 import { fetchActivityDays, fetchInsightTargets, fetchMetricRows, fetchSleepNights, fetchTrackedTypes, localDay, type MetricRow, type MetricType } from "../../../services/pro/insights";
 import { SleepView } from "./SleepCharts";
 import {
@@ -98,12 +99,12 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
     if (!hmOn || hrTracked) out.push({ key: "hr", label: t("Heart rate") });
     if (!wOn || (weight.data?.length ?? 0) > 0) out.push({ key: "weight", label: t("Weight") });
     if (!hmOn || has("sleep") || (sleep.data?.length ?? 0) > 0 || sleep.error) out.push({ key: "sleep", label: t("Sleep") });
-    if (hmOn && has("steps")) out.push({ key: "steps", label: t("Steps") });
+    if (hmOn && (has("steps") || !!daily.data?.some((d) => d.steps != null))) out.push({ key: "steps", label: t("Steps") });
     if (hmOn && has("water")) out.push({ key: "water", label: t("Water") });
     if (hmOn && has("calories_burned")) out.push({ key: "calories", label: t("Calories burned") });
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bpOn, hmOn, wOn, bp.data, weight.data, tracked.data, hrTracked, sleep.data, sleep.error]);
+  }, [bpOn, hmOn, wOn, bp.data, weight.data, tracked.data, hrTracked, sleep.data, sleep.error, daily.data]);
   const [chosen, setChosen] = useState<Sub | null>(null);
   const sub = subs.find((s) => s.key === chosen)?.key ?? subs[0]?.key ?? null;
 
@@ -156,7 +157,7 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
             />
           )
         ))}
-      {sub === "steps" && (readGate(vit) ?? <SimpleView kind="steps" rows={(vit.data ?? []).filter((r) => r.type === "steps")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
+      {sub === "steps" && (readGate(vit) ?? <SimpleView kind="steps" rows={stepRows(vit.data ?? [], daily.data ?? [])} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "water" && (readGate(vit) ?? <SimpleView kind="water" rows={(vit.data ?? []).filter((r) => r.type === "water")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "calories" && (readGate(vit) ?? <SimpleView kind="calories" rows={(vit.data ?? []).filter((r) => r.type === "calories_burned")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
     </>
@@ -412,6 +413,24 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
 // ---------------------------------------------------------------------------
 // Sleep duration (SleepView adds the boxes, stages, bedtime and hypnogram),
 // steps, water, calories burned
+
+/**
+ * Steps a day by the one rule (stepsRule, Round J follow-up, Karim
+ * 2026-11-06): the day's hand-logged reading (health_metrics, the last of the
+ * day) over the synced day (client_activity_days), so a client who only syncs
+ * from Health Connect shows steps here too.
+ */
+function stepRows(rows: MetricRow[], days: { day: string; steps: number | null }[]): MetricRow[] {
+  const last = new Map<string, number>();
+  for (const r of rows) if (r.type === "steps") last.set(r.day, r.value);
+  const byDay = stepsByDay(
+    [...last].map(([date, value]) => ({ date, value })),
+    Object.fromEntries(days.map((d) => [d.day, { steps: d.steps }]))
+  );
+  return Object.keys(byDay)
+    .sort()
+    .map((day) => ({ type: "steps", value: byDay[day], at: `${day}T12:00:00`, day, rest: false }));
+}
 // ---------------------------------------------------------------------------
 
 const SIMPLE: Record<"sleep" | "steps" | "water" | "calories", { title: string; unit: string; icon: typeof Activity }> = {

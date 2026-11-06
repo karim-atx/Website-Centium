@@ -187,6 +187,53 @@ export async function deleteHealthMetricsForDay(params: { userId: string; kind: 
   return { ok: true };
 }
 
+/** A hand-logged day of steps (Steps page Edit, Round J follow-up): 1 to 100,000. */
+const STEPS_LIMIT = { min: 1, max: 100_000 };
+
+/**
+ * Steps page Edit on a hand-logged day (Round J follow-up, Karim 2026-11-06).
+ * health_metrics.value can't be updated by a member (only note and context
+ * are granted), so the new count is inserted first and the day's old manual
+ * rows are deleted after it: a failed save leaves the old count in place
+ * rather than none. Manual rows only, by id.
+ */
+export async function replaceManualSteps(params: { userId: string; day: string; today: string; value: number; replaceIds: readonly string[] }): Promise<MetricWriteResult> {
+  const { userId, day, today, value, replaceIds } = params;
+  if (!Number.isFinite(value) || !Number.isInteger(value)) return { ok: false, message: tk("That doesn't look like a number.") };
+  if (value < STEPS_LIMIT.min || value > STEPS_LIMIT.max) {
+    return { ok: false, message: t("Enter a value between {min} and {max} {unit}.", { min: STEPS_LIMIT.min, max: STEPS_LIMIT.max, unit: t("steps") }) };
+  }
+  const { error } = await supabase.from("health_metrics").insert({
+    user_id: userId,
+    metric_type: "steps",
+    value,
+    recorded_at: recordedAtFor(day, today),
+    source: "manual",
+  });
+  if (error) {
+    console.error("[health-metrics] Could not save steps:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return replaceIds.length ? deleteManualSteps({ userId, ids: replaceIds }) : { ok: true };
+}
+
+/** Steps page Delete on a hand-logged day: those manual rows, by id (a synced day is removed with remove_synced_activity_day). */
+export async function deleteManualSteps(params: { userId: string; ids: readonly string[] }): Promise<MetricWriteResult> {
+  if (!params.ids.length) return { ok: true };
+  const { error } = await supabase
+    .from("health_metrics")
+    .delete()
+    .eq("user_id", params.userId)
+    .eq("metric_type", "steps")
+    .eq("source", "manual")
+    .in("id", [...params.ids]);
+  if (error) {
+    console.error("[health-metrics] Could not delete steps:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
 /**
  * Day-keyed history, one map per metric that has any readings.
  *

@@ -12,7 +12,9 @@ import {
   FreshnessLine,
   HistoryCard,
   MetricPage,
+  OFFLINE_ACTION,
   OFFLINE_CACHED,
+  SAVE_FAILED,
   mc,
   useMetricRangeState,
   type HistoryItem,
@@ -44,16 +46,19 @@ import { GoalBarChart, LegendDash, LegendDot, LegendGhost, buildGoalBars } from 
 import { StepsHero } from "../../../components/health/metric/StepsHero";
 import { StepsGoalSheet } from "../../../components/health/metric/StepsGoalSheet";
 import { SyncedNoDevice } from "../../../components/health/metric/StepsNoDevice";
+import { EditStepsSheet } from "../../../components/health/metric/EditStepsSheet";
+import { HealthPopup } from "../../../components/health/metric/HealthPopup";
 import { useSyncedRemove } from "../../../components/health/metric/SyncedRemove";
 import { HourlyBars } from "../../../components/health/metric/HourlyBars";
-import { activityByDay, sourceName, useActivityDaily, useActivityHourly } from "../../../services/health-metrics/b1";
+import { activityByDay, sourceName, useActivityDaily, useActivityHourly, useMetricRows } from "../../../services/health-metrics/b1";
+import { deleteManualSteps } from "../../../services/health-metrics";
 import { hourLabel12 } from "../../../utils/time12";
 import { useClientShare } from "../../../components/share/client/useClientShare";
 import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
 import { stepsCard } from "../../../components/share/client/clientCardModel";
 import { appLocale } from "../../../i18n/format";
-import { t, tk, tn } from "../../../i18n/core";
-import { stepsByDay } from "../../../services/health-metrics/stepsRule";
+import { t, tk, tn, tx } from "../../../i18n/core";
+import { stepsByDay, stepsDayParts, syncedStepsOf } from "../../../services/health-metrics/stepsRule";
 
 // HE1.2 Steps (Week), HE1.2.s, HE1.2.e, HE1.2.1, HE1.2.d, HE1.2.m, HE1.2.y.
 //
@@ -79,13 +84,16 @@ const change = (now: number | null, before: number | null, what: string) => {
 const iconInk = { color: "rgb(var(--th-7d6bb5))" };
 
 export default function StepsPage() {
-  const { healthSeries, stepsGoal, setStepsGoal, metricsError, metricGoalOn } = useApp();
+  const { healthSeries, stepsGoal, setStepsGoal, metricsError, metricGoalOn, authUserId, reloadMetrics } = useApp();
   const navigate = useNavigate();
   const online = useOnline();
   const { range, setRange, anchor, setAnchor, openDay, today } = useMetricRangeState("week");
   const [goalOpen, setGoalOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Round J follow-up (Karim 2026-11-06): Edit / Delete on a day's hand-logged count.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   // Database B1 activity_daily (HA-05): steps, distance, active minutes and
   // floors per local day, one source per row (priority wins); a day it
@@ -110,6 +118,14 @@ export default function StepsPage() {
   const metricSource = useMetricSource();
   // HA-12 (B1 hidden_synced_readings): Delete on a synced day ("Remove from Centium?").
   const syncedRemove = useSyncedRemove("steps", stepAnchor("month", today, -1), today, setToast);
+  // The hand-logged rows (health_metrics, source manual) behind each day, for Edit and Delete.
+  const manualRead = useMetricRows("steps", stepAnchor("month", today, -1), today);
+  const manualOf = (d: string) => manualRead.data.filter((r) => r.day === d && r.source === "manual");
+  const manualValueOf = (d: string) => manualOf(d).at(-1)?.value ?? null;
+  const afterManual = () => {
+    manualRead.reload();
+    reloadMetrics();
+  };
   const goal = stepsGoal;
   // Market + Share 3.0 C-SH.1 e7Steps: today's steps, shareable once the goal is reached.
   const share = useClientShare();
@@ -168,6 +184,34 @@ export default function StepsPage() {
         }}
       />
       {syncedRemove.popup}
+      <EditStepsSheet
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        onSaved={afterManual}
+        day={editing}
+        initial={editing ? manualValueOf(editing) : null}
+        replaceIds={editing ? manualOf(editing).map((r) => r.id) : []}
+      />
+      {/* OURS-health-delete-confirm (a hand-logged day of steps). */}
+      <HealthPopup
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        title={tx("Delete this entry?", "health")}
+        body={<p>{t("This removes it from your history and totals.")}</p>}
+        secondary={{ label: t("Cancel"), onClick: () => setDeleting(null) }}
+        primary={{
+          label: t("Delete"),
+          tone: "destructive",
+          onClick: async () => {
+            const d = deleting;
+            setDeleting(null);
+            if (!d || !authUserId) return;
+            const r = await deleteManualSteps({ userId: authUserId, ids: manualOf(d).map((x) => x.id) });
+            if (!r.ok) setToast(SAVE_FAILED);
+            afterManual();
+          },
+        }}
+      />
       <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </>
   );
@@ -330,23 +374,50 @@ export default function StepsPage() {
   }
 
   // ---- history (synced rows: no Edit; Delete is native, V6-169) -----------
+  // Round J follow-up (Karim 2026-11-06): a day with a hand-logged count is
+  // that count with Edit and Delete; on a day with both, the synced count gets
+  // its own line under it, "Not counted", whose Delete is HA-12's "Remove
+  // from Centium?". A synced-only day keeps that Delete alone.
   const items: HistoryItem[] = Object.keys(byDay)
     .filter((d) => d <= today)
     .sort()
     .reverse()
     .slice(0, 7)
-    .map((d) => {
+    .flatMap((d) => {
       const rel = relativeDayTitle(d, today);
       const v = byDay[d];
-      return {
+      const when = rel === dayLabel(d) ? t("Day total") : dayLabel(d);
+      const parts = stepsDayParts(manualValueOf(d), syncedStepsOf(activity[d]));
+      const row: HistoryItem = {
         key: d,
         title: rel,
-        meta: [rel === dayLabel(d) ? t("Day total") : dayLabel(d), activity[d] ? sourceName(activity[d].source) : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
+        meta: [when, activity[d] ? sourceName(activity[d].source) : syncedRemove.sourceOf(d)].filter(Boolean).join(" · "),
         value: n(v),
         sub: v >= goal ? t("Goal") : `${Math.round((v / goal) * 100)}%`,
         onClick: () => openDay(d),
         onDelete: syncedRemove.onDelete(d),
       };
+      if (!parts.editable) return [row];
+      const manualRow: HistoryItem = {
+        ...row,
+        meta: [when, t("Logged by you")].join(" · "),
+        onEdit: () => (online ? setEditing(d) : setToast(OFFLINE_ACTION)),
+        onDelete: () => (online ? setDeleting(d) : setToast(OFFLINE_ACTION)),
+      };
+      if (!parts.both || parts.synced === null) return [manualRow];
+      const source = syncedRemove.sourceOf(d) ?? sourceName(activity[d]?.sources?.steps);
+      return [
+        manualRow,
+        {
+          key: `${d}:synced`,
+          title: rel,
+          meta: [when, source].join(" · "),
+          value: n(parts.synced),
+          sub: t("Not counted"),
+          onClick: () => openDay(d),
+          onDelete: syncedRemove.onDelete(d),
+        },
+      ];
     });
 
   return (

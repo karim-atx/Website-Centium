@@ -28,6 +28,9 @@ import { useWebLayout } from "../../../components/web/useWebLayout";
 import { appLocale } from "../../../i18n/format";
 import { t, tk } from "../../../i18n/core";
 import { HealthWebBody, HealthWebHeader, PatternLayer, WebCaps, type PatternLayerSpec } from "./HealthWebKit";
+import { useActivityStepsOn } from "../../../components/dashboard/widgets/data";
+import { stepsOfDay } from "../../../services/health-metrics/stepsRule";
+import { valueOn } from "../../../services/health-metrics/periods";
 
 // Website viewport v1 · WC-HE Health overview (WC-HE Health Web v5, screens
 // "overview" and "overview-empty"). The page header carries the title, the
@@ -109,6 +112,7 @@ export default function HealthWeb() {
     waterGoalMl,
     metricValues,
     healthSeries,
+    metricsLoadedAt,
     bloodPressure,
     pregnancy: recordedPregnancy,
     cycleSettings,
@@ -193,7 +197,11 @@ export default function HealthWeb() {
   const waterToday = drinksToday.length ? drinksToday.reduce((s, k) => s + k.ml, 0) : waterByDate[today] ?? 0;
   const waterL = (waterToday / 1000).toFixed(1);
   const goalL = (waterGoalMl / 1000).toFixed(1);
-  const steps = metricValues.steps;
+  // Today's steps by the one rule (stepsRule, Round J follow-up): hand-logged,
+  // else synced (activity_daily), so a Health Connect-only member sees theirs;
+  // a day with neither keeps the latest hand-logged reading, as before.
+  const syncedStepsToday = useActivityStepsOn(today, metricsLoadedAt);
+  const steps = stepsOfDay(valueOn(healthSeries.steps, today), syncedStepsToday) ?? metricValues.steps;
   const sleep = metricValues.sleepHours;
   const sleepAvg = averageOf(week("sleep"));
   const lastNight = useSleepSessions(today, today).data.find((x) => !x.isNap && x.bedStart && x.wakeEnd) ?? null;

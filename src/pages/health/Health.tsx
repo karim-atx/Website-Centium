@@ -35,6 +35,9 @@ import { activityByDay, localDay, syncState, useActivityDaily, useActivityHourly
 import { OFFLINE_CACHED, hairline, useHealthMode, useMetricsLoad } from "../../components/health/metric/MetricKit";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
+import { useActivityStepsOn } from "../../components/dashboard/widgets/data";
+import { stepsOfDay } from "../../services/health-metrics/stepsRule";
+import { valueOn } from "../../services/health-metrics/periods";
 
 // HE1 · Health (v6 Part B, health-handover.md HE1; checklist
 // design-handover/v5-partB/frame-check/HE1.md). Replaces the History-style
@@ -82,6 +85,7 @@ export default function Health() {
     waterGoalMl,
     metricValues,
     healthSeries,
+    metricsLoadedAt,
     bloodPressure,
     pregnancy: recordedPregnancy,
     cycleSettings,
@@ -189,7 +193,11 @@ export default function Health() {
   const goalL = (waterGoalMl / 1000).toFixed(1);
 
   // --- Steps (#17-#25): of the step goal (follows HE1.2.1 Save).
-  const steps = metricValues.steps;
+  // Today's steps by the one rule (stepsRule, Round J follow-up): hand-logged,
+  // else synced (activity_daily), so a Health Connect-only member sees theirs;
+  // a day with neither keeps the latest hand-logged reading, as before.
+  const syncedStepsToday = useActivityStepsOn(today, metricsLoadedAt);
+  const steps = stepsOfDay(valueOn(healthSeries.steps, today), syncedStepsToday) ?? metricValues.steps;
   // --- Sleep (#26-#34): bed/wake times need PB-H-07 (B-stage); until then the
   // kept weekly average (K9) is the context line.
   const sleep = metricValues.sleepHours;
