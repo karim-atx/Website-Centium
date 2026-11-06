@@ -3,6 +3,7 @@ import { directoryCall, directoryErrorText } from "../directory/eg";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { formatPrice } from "../../utils/price";
 import { t } from "../../i18n/core";
+import { calendarChanged } from "../phone-calendar/bus";
 import { featuredFirst } from "./listingLogic";
 import { instructorFacts } from "./instructorRule";
 import { CLASS_POLICY_KINDS, classErrorMessage, sortClassPolicies, type ClassBookingRules, type VenuePolicyKind } from "./classBooking";
@@ -331,7 +332,11 @@ async function call<T>(fn: string, args: Record<string, unknown>, fallback: stri
  * book again).
  */
 export function bookClass(classId: string): Promise<ClassResult<string>> {
-  return call<string>("book_class", { p_class_id: classId, p_method: "cash" }, t("Couldn't book that class. Try again."));
+  return call<string>("book_class", { p_class_id: classId, p_method: "cash" }, t("Couldn't book that class. Try again.")).then((r) => {
+    // Round J · J-2d: the phone's calendar follows.
+    if (r.ok) calendarChanged();
+    return r;
+  });
 }
 
 /** One venue document the member still has to accept before booking (B9). */
@@ -421,6 +426,7 @@ export async function cancelClassBooking(classId: string): Promise<ClassResult<C
   type Row = { was_free: boolean; hours_before: number | string | null; window_hours: number };
   const r = await call<Row[] | Row>("cancel_class_booking", { p_class_id: classId }, t("Couldn't cancel that booking. Try again."));
   if (!r.ok) return r;
+  calendarChanged();
   const row = Array.isArray(r.value) ? r.value[0] : r.value;
   return {
     ok: true,

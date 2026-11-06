@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { calendarChanged } from "../phone-calendar/bus";
 import {
   describeCancelError,
   describeConfirmError,
@@ -179,6 +180,7 @@ export async function cancelHire(hireId: string, reason?: string): Promise<Cance
       if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
       return { ok: false, code: error.code, message: describeCancelError(error.code) };
     }
+    calendarChanged();
     const row = (Array.isArray(data) ? data[0] : data) as { was_free?: boolean } | null;
     // RETURNS TABLE (was_free) always yields one row; a missing value is read
     // as "free" only because a pending hire (all this console cancels) is.

@@ -1,4 +1,5 @@
 import { db, loadFail, writeFail, type Load, type Write } from "../store/backend";
+import { calendarChanged } from "../phone-calendar/bus";
 import type { Row } from "../store/mapping";
 import { isoDate } from "../store/format";
 import { fetchBusinessPeople } from "../business-members";
@@ -240,6 +241,7 @@ export async function searchClients(businessId: string, search: string): Promise
 export async function cancelAppointment(id: string, reason: string | null = null): Promise<Write<{ paidToRefund: boolean }>> {
   const { data, error } = await db.rpc("cancel_appointment", { p_appointment_id: id, p_reason: reason?.trim() || null });
   if (error) return writeFail(error, "Could not cancel the appointment");
+  calendarChanged();
   const row = (Array.isArray(data) ? data[0] : data) as Row | null;
   return { ok: true, value: { paidToRefund: row?.paid_to_refund === true } };
 }
@@ -251,6 +253,7 @@ export async function cancelAppointment(id: string, reason: string | null = null
 export async function bookAppointment(serviceId: string, staffId: string, startsAt: string): Promise<Write<string>> {
   const { data, error } = await db.rpc("book_appointment", { p_service_id: serviceId, p_staff_id: staffId, p_starts_at: startsAt, p_method: "cash" });
   if (error) return writeFail(error, "Could not book the appointment");
+  calendarChanged();
   return { ok: true, value: String(data ?? "") };
 }
 

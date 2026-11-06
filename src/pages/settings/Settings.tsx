@@ -48,6 +48,7 @@ import DevicesSourcesPage from "./DevicesSourcesPage";
 import BusinessSettings from "../business-more/BusinessSettings";
 import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 import { tk } from "../../i18n/core";
+import { CalendarSyncRow } from "../../components/settings/CalendarSyncRow";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -351,6 +352,8 @@ function SettingsHub() {
           valueTight
           onClick={() => navigate("/app/settings/language")}
         />
+        {/* Round J · J-2d (PLAN.md §2.3): "Add to my calendar", in the app only. */}
+        <CalendarSyncRow />
         {/* Round E: the music app and the Workout, Mind, Sleep and Cooking favourites. */}
         <SettingsRow icon={Music2} title={t("Your music")} onClick={() => navigate("/app/settings/music")} />
         <SettingsRow icon={Accessibility} title={t("Accessibility")} onClick={() => navigate("/app/settings/accessibility")} />
