@@ -303,7 +303,7 @@ const notifications: Catalogue = {
   "What's read": "ما تتم قراءته",
   "Weight and body fat aren't read while recovery-sensitive mode is on.": "لا يُقرأ الوزن ودهون الجسم ما دام الوضع المراعي للتعافي مفعّلًا.",
   "Centium only reads. It never writes to {provider}.": "يقرأ Centium فقط، ولا يكتب أبدًا في {provider}.",
-  "What's read is saved to your Centium account and used only in Centium. It's never shared or sold.": "يُحفظ ما تتم قراءته في حسابك على Centium ويُستخدم داخل Centium فقط، ولا تتم مشاركته أو بيعه أبدًا.",
+  "What's read is saved to your Centium account and used only in Centium. It's shared only with professionals you choose, and never sold.": "يُحفظ ما تتم قراءته في حسابك على Centium ويُستخدم داخل Centium فقط، ولا تتم مشاركته إلا مع المختصين الذين تختارهم، ولا يُباع أبدًا.",
   "Connect Health Connect": "ربط Health Connect",
   "Allow Centium again in Health Connect to keep syncing.": "اسمح لـ Centium مجددًا في Health Connect لمواصلة المزامنة.",
   "The last sync didn't finish. Try Sync now.": "لم تكتمل آخر مزامنة. جرّب «زامن الآن».",

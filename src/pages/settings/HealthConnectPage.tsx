@@ -159,7 +159,7 @@ export default function HealthConnectPage() {
             {recoverySensitive && <p className="-mt-4 mb-6 px-1 text-[12.5px] text-charcoal-muted">{t("Weight and body fat aren't read while recovery-sensitive mode is on.")}</p>}
             <div className="mb-6 px-1 flex flex-col gap-2 text-[13px] leading-5 text-charcoal-muted">
               <p>{t("Centium only reads. It never writes to {provider}.", { provider: "Health Connect" })}</p>
-              <p>{t("What's read is saved to your Centium account and used only in Centium. It's never shared or sold.")}</p>
+              <p>{t("What's read is saved to your Centium account and used only in Centium. It's shared only with professionals you choose, and never sold.")}</p>
             </div>
             <Button className="w-full" onClick={() => void connect()} disabled={busy !== null}>
               {busy === "connect" ? t("Connecting…") : t("Connect Health Connect")}

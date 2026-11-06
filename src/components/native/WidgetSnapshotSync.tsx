@@ -15,8 +15,8 @@ import { getLanguage, t } from "../../i18n/core";
  * widgets.update() itself does nothing where widgets are off.
  *
  * Each value is the one its own page shows:
- * - steps: the Steps page's today (activity_daily's steps, else the
- *   health_metrics reading) of the step goal;
+ * - steps: today's as Home and the Steps page show it (the hand-logged
+ *   reading, else the synced day; stepsRule) of the step goal;
  * - water: the day total the water writes return (waterByDate), of the goal;
  * - habits: the Habits page's list and today's ticks, the first six;
  * - workout: today's programme session (what /app/workout?start=today
@@ -67,10 +67,9 @@ export function WidgetSnapshotSync() {
   const metricsKnown = metricsLoadedAt !== null;
   const workout = useWorkoutToday(today, signedIn);
 
-  // The Steps page's today: activity_daily's steps, else the health_metrics reading.
-  const stepsFromActivity = activity[today]?.steps ?? null;
-  const stepsFromMetrics = healthSeries.steps.history.find((p) => p.date === today)?.value ?? null;
-  const stepsToday = stepsFromActivity !== null && stepsFromActivity > 0 ? stepsFromActivity : stepsFromMetrics !== null && stepsFromMetrics > 0 ? stepsFromMetrics : null;
+  // Today's hand-logged reading and synced day; the builder picks (manual first).
+  const stepsSynced = activity[today]?.steps ?? null;
+  const stepsManual = healthSeries.steps.history.find((p) => p.date === today)?.value ?? null;
 
   const snapshot = useMemo(
     () =>
@@ -78,13 +77,13 @@ export function WidgetSnapshotSync() {
         language: getLanguage(),
         hideNumbers,
         now: new Date(),
-        steps: metricsKnown && !activityRead.loading ? { today: stepsToday, goal: stepsGoal } : null,
+        steps: metricsKnown && !activityRead.loading ? { manual: stepsManual, synced: stepsSynced, goal: stepsGoal } : null,
         water: metricsKnown ? { todayMl: waterByDate[today] ?? 0, goalMl: waterGoalMl } : null,
         habits: habitsLoading || habitsError ? null : habits.map((h) => ({ name: h.label, done: h.done })),
         workout,
         dayLabel: (week, day) => t("Week {week} · Day {day}", { week, day }),
       }),
-    [hideNumbers, metricsKnown, activityRead.loading, stepsToday, stepsGoal, waterByDate, today, waterGoalMl, habitsLoading, habitsError, habits, workout]
+    [hideNumbers, metricsKnown, activityRead.loading, stepsManual, stepsSynced, stepsGoal, waterByDate, today, waterGoalMl, habitsLoading, habitsError, habits, workout]
   );
   const key = snapshotKey(snapshot);
 
