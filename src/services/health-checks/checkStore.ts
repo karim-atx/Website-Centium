@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { t, tn } from "../../i18n/core";
+import { pushAskMoment } from "../push/ask";
 import {
   createCustomCheck,
   deactivateReminder,
@@ -166,6 +167,8 @@ export const checkStoreActions = {
       return { ok: false, message: res.message };
     }
     set({ reminders: state.reminders.map((x) => (x.checkId === r.checkId ? { ...x, id: res.data } : x)) });
+    // Round J · J-2b: the first reminder set may ask to turn on notifications (the app only).
+    pushAskMoment("reminder");
     return { ok: true };
   },
   removeReminder(checkId: string): Promise<WriteResult> {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLinkOnce } from "../../../hooks/useLinkOnce";
 import { Activity, ArrowDownToLine, CalendarCheck, CalendarDays, History, Plus, Ruler, Target, TrendingDown } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -117,6 +118,21 @@ export default function WeightPage() {
   const { loading: metricsLoading, retry: retryMetrics } = useMetricsLoad();
   // Recovery-sensitive mode is a safety setting: hold the page while it loads.
   const loading = metricsLoading || recoveryModePending;
+  // Round J · J-2b: "Log weight" opens /app/health/weight?log=1, once the mode
+  // is known. With recovery-sensitive mode on, the link is never offered; a
+  // stale one lands on Health without opening weight (PLAN.md §2.4).
+  useLinkOnce(
+    "log",
+    "1",
+    () => {
+      if (recoverySensitive) {
+        navigate("/app/health", { replace: true });
+        return "navigated";
+      }
+      setLogOpen(true);
+    },
+    !recoveryModePending
+  );
 
   const startDay = allDays[0] ?? null;
   const startKg = startDay ? byDay[startDay] : null;

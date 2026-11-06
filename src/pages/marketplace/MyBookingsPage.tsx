@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLinkOnce } from "../../hooks/useLinkOnce";
 import { LogOut, MoreVertical, QrCode } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
@@ -140,6 +141,19 @@ export default function MyBookingsPage() {
   // The row menu, the pass and the end flow.
   const [menu, setMenu] = useState<{ g: GymMembership; anchor: HTMLElement } | null>(null);
   const [passFor, setPassFor] = useState<GymMembership | null>(null);
+  // Round J · J-2b: the "Gym pass" widget opens ?tab=memberships&pass=1, the
+  // pass of the first active membership (else the first upcoming one) once
+  // they have loaded. Without one, the Memberships tab is where it lands.
+  useLinkOnce(
+    "pass",
+    "1",
+    () => {
+      const gyms = members?.ok ? members.value.gyms : [];
+      const g = gyms.find((x) => x.status === "active") ?? gyms.find((x) => x.status === "upcoming");
+      if (g) setPassFor(g);
+    },
+    members !== null
+  );
   const [ending, setEnding] = useState<GymMembership | null>(null);
 
   const state = tab === "memberships" ? members : tab === "past" ? (pastDb === undefined ? null : pastDb && schedule?.ok ? ({ ok: true } as const) : schedule) : schedule;

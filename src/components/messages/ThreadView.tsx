@@ -98,6 +98,7 @@ import { BizAvatar } from "./BusinessList";
 import { bizAvatarKind } from "./bizAvatar";
 import { appLocale } from "../../i18n/format";
 import { isRtl, t, tk, tn } from "../../i18n/core";
+import { pushAskMoment } from "../../services/push/ask";
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
@@ -937,6 +938,8 @@ export const ThreadView: React.FC<{
     // database's, so the next poll recognises it instead of duplicating it.
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
     void mentionsSelfHarm(body).then((m) => m && setSupportOpen(true));
+    // Round J · J-2b: the first message sent may ask to turn on notifications (the app only).
+    pushAskMoment("message");
   };
 
   /**

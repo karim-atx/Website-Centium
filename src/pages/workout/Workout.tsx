@@ -42,7 +42,7 @@ export default function Workout() {
   if (seenLink !== params.toString()) {
     setSeenLink(params.toString());
     if (linked === "history") setTab("history");
-    else if (linked === "routines") setTab("routines");
+    else if (linked === "routines" || params.get("start") === "today") setTab("routines");
   }
 
   return (

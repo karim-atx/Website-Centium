@@ -13,6 +13,7 @@ import {
 } from "../../services/personal-reminders";
 import { todayLocal } from "../../utils/date";
 import { t, tn } from "../../i18n/core";
+import { pushAskMoment } from "../../services/push/ask";
 
 /**
  * A personal reminder: every so many days, from a chosen date. It carries no
@@ -71,6 +72,8 @@ export const PersonalReminderSheet: React.FC<{ open: boolean; onClose: () => voi
     if (r.ok) {
       setExisting({ cadenceDays: days, nextDueOn: nextDue, enabled });
       setMessage(t("Saved."));
+      // Round J · J-2b: the first reminder set may ask to turn on notifications (the app only).
+      if (enabled) pushAskMoment("reminder");
     } else {
       setMessage(t(r.message));
     }

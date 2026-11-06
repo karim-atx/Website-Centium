@@ -254,3 +254,48 @@ export async function saveNotificationPrefs(
     return { status: "error", message: describeNotificationError(e) };
   }
 }
+
+// --- Round J · J-2b: "Hide details on lock screen" (the app only) ------------
+//
+// app_preferences.notification_lock_screen_details (Database
+// 20261226430000_native_push.sql, default true): false keeps a push's text
+// off the lock screen. Read and written on its own, and only by the phone
+// app's Notifications page, so a browser's load never asks for the column.
+// The switch reads the other way round: ON means the column is false.
+
+type LockRow = { notification_lock_screen_details?: unknown };
+const lockTable = () =>
+  supabase.from("app_preferences") as unknown as {
+    select: (columns: string) => { maybeSingle: () => PromiseLike<{ data: LockRow | null; error: PostgrestError | null }> };
+    update: (values: { notification_lock_screen_details: boolean }) => {
+      eq: (column: "owner_id", value: string) => { select: (columns: string) => PromiseLike<{ data: LockRow[] | null; error: PostgrestError | null }> };
+    };
+  };
+const LOCK_COLUMN = "notification_lock_screen_details";
+
+export type LockScreenResult = { status: "ok"; details: boolean } | { status: "error"; message: string };
+
+/** Whether pushes show their text on the lock screen. Called once the row exists (fetchNotificationPrefs made it). */
+export async function fetchLockScreenDetails(): Promise<LockScreenResult> {
+  try {
+    const r = await lockTable().select(LOCK_COLUMN).maybeSingle();
+    const v = r.data?.notification_lock_screen_details;
+    if (!r.error && typeof v === "boolean") return { status: "ok", details: v };
+    if (r.error) console.error("[preferences] Could not read lock-screen details:", r.error.code, r.error.message);
+    return { status: "error", message: describeNotificationError(r.error, true) };
+  } catch (e) {
+    return { status: "error", message: describeNotificationError(e, true) };
+  }
+}
+
+export async function saveLockScreenDetails(ownerId: string, details: boolean): Promise<LockScreenResult> {
+  try {
+    const r = await lockTable().update({ notification_lock_screen_details: details }).eq("owner_id", ownerId).select(LOCK_COLUMN);
+    const v = r.data?.[0]?.notification_lock_screen_details;
+    if (!r.error && typeof v === "boolean") return { status: "ok", details: v };
+    if (r.error) console.error("[preferences] Could not save lock-screen details:", r.error.code, r.error.message);
+    return { status: "error", message: describeNotificationError(r.error) };
+  } catch (e) {
+    return { status: "error", message: describeNotificationError(e) };
+  }
+}

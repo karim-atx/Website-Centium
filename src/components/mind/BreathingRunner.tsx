@@ -11,6 +11,7 @@ import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { breathingSaveRule, formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import type { BreathingPattern } from "../../data/mockMindContent";
 import { phaseElapsedMs, sessions, useLockedSession } from "../../platform/sessions";
+import { isNative } from "../../platform";
 import type { SessionCue } from "../../platform/contracts";
 import { t, tk, tx } from "../../i18n/core";
 
@@ -60,7 +61,9 @@ tk("Hold");
 
 // Round G3: a library session (mind_library) passes its content id and kind, so the
 // log links to it; today's patterns pass neither and log exactly as before.
-export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: string; kind?: string }> = ({ pattern, contentId, kind }) => {
+// Round J · J-2b: `startSignal` (a count) starts a run when it changes, unless
+// one is running: the "Start a meditation" shortcut (/app/mind/meditation?start=1).
+export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: string; kind?: string; startSignal?: number }> = ({ pattern, contentId, kind, startSignal }) => {
   const { authUserId, refreshMeditationSummary, refreshAchievements } = useApp();
   const reduced = useReducedMotion();
   // Website viewport v1 (WC-MI.4): at 1024 and wider the Start / Stop and
@@ -251,6 +254,28 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
       }
     }
   };
+
+  // The shortcut's start (startSignal above), never stopping a run. In the
+  // app it waits until the phone has said whether it keeps the clock, so the
+  // run starts there too (useLockedSession asks the same, cached, question).
+  const startIfIdle = useRef<() => void>(() => {});
+  useEffect(() => {
+    startIfIdle.current = () => {
+      if (!running) toggle();
+    };
+  });
+  const [sessionsKnown, setSessionsKnown] = useState(() => !isNative());
+  useEffect(() => {
+    if (!isNative()) return;
+    let alive = true;
+    void sessions.available().then(() => alive && setSessionsKnown(true));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (startSignal && sessionsKnown) startIfIdle.current();
+  }, [startSignal, sessionsKnown]);
 
   // The phone's side of the run (in the app only).
   const lockedState = locked.state;

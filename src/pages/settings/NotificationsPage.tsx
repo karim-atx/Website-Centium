@@ -20,6 +20,7 @@ import {
   Gift,
   GlassWater,
   ListChecks,
+  Lock,
   MessageCircle,
   MessagesSquare,
   Moon,
@@ -41,6 +42,8 @@ import {
   SAME_QUIET_TIME_MESSAGE,
   sameQuietTime,
   saveNotificationPrefs,
+  fetchLockScreenDetails,
+  saveLockScreenDetails,
   wrapsMidnight,
   type NotificationPrefKey,
   type NotificationPrefs,
@@ -49,8 +52,10 @@ import {
 import {
   enablePush,
   isThisDeviceRegistered,
+  openPushSettings,
   pushPermissionNow,
   pushSupported,
+  readPushPermission,
   unsubscribeFromPush,
 } from "../../services/push";
 import { fromParts, minuteOptions, toParts, type Meridiem } from "../../components/calendar/calendarTime";
@@ -58,6 +63,7 @@ import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 import { fetchGoneQuietDays } from "../../services/pro/practice";
+import { isNative } from "../../platform";
 import { t, tk, tn } from "../../i18n/core";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
@@ -390,22 +396,33 @@ export default function NotificationsPage() {
 
   // --- the device: permission + registration --------------------------------
   const [pushAvailable] = useState(pushSupported);
+  // Round J · J-2b: inside the phone app (push through FCM, gated by
+  // featureAvailable("push") in pushSupported()). The status then reads the
+  // phone's own answer, and the lock-screen switch shows.
+  const nativeApp = pushAvailable && isNative();
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [pushNote, setPushNote] = useState<string | null>(null);
+  const [permission, setPermission] = useState<NotificationPermission>(() => (pushAvailable ? pushPermissionNow() : "denied"));
 
   useEffect(() => {
     if (!pushAvailable) return;
     let cancelled = false;
-    void isThisDeviceRegistered().then((r) => {
-      if (!cancelled) setRegistered(r);
-    });
+    const check = () => {
+      void readPushPermission().then((p) => !cancelled && setPermission(p));
+      void isThisDeviceRegistered().then((r) => {
+        if (!cancelled) setRegistered(r);
+      });
+    };
+    check();
+    // Back from the phone's settings (or another tab): read it again.
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [pushAvailable]);
-
-  const permission = pushAvailable ? pushPermissionNow() : "denied";
   const deviceOn = pushAvailable && permission === "granted" && registered === true;
   const allow = prefs?.allow ?? null;
   // The lead switch: the account's master AND (where push exists) this device.
@@ -434,6 +451,7 @@ export default function NotificationsPage() {
         const r = await unsubscribeFromPush();
         if (r.status !== "ok") setPushNote(r.message);
       }
+      setPermission(await readPushPermission());
       setRegistered(await isThisDeviceRegistered());
     }
     setBusy(false);
@@ -455,9 +473,52 @@ export default function NotificationsPage() {
     ? t(pushUnavailableReason())
     : deviceOn
     ? t("On")
+    : nativeApp
+    ? // Round J · J-2b (PLAN.md §2.2): the phone's answer, in its words.
+      permission === "denied"
+      ? t("Off in your phone's settings")
+      : permission === "default"
+      ? t("Not asked yet")
+      : t("Off")
     : permission === "denied"
     ? t("Blocked in browser settings")
     : t("Off");
+  // "· Open settings" after "Off in your phone's settings".
+  const offInPhone = nativeApp && !!prefs?.allow && !busy && !pushNote && !deviceOn && permission === "denied";
+
+  // --- Round J · J-2b: Hide details on lock screen (the app only) ------------
+  // ON means notification_lock_screen_details = false. Read once the account's
+  // row has loaded (fetchNotificationPrefs creates it when missing).
+  const [lockDetails, setLockDetails] = useState<boolean | null>(null);
+  const [lockSaving, setLockSaving] = useState(false);
+  const [lockNote, setLockNote] = useState<string | null>(null);
+  const prefsLoaded = prefs !== null;
+  useEffect(() => {
+    if (!nativeApp || !prefsLoaded) return;
+    let cancelled = false;
+    void fetchLockScreenDetails().then((r) => {
+      if (cancelled) return;
+      if (r.status === "ok") setLockDetails(r.details);
+      else setLockNote(r.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [nativeApp, prefsLoaded]);
+  const setHideOnLock = async (hide: boolean) => {
+    if (!authUserId || lockDetails === null) return;
+    const before = lockDetails;
+    setLockDetails(!hide);
+    setLockSaving(true);
+    setLockNote(null);
+    const r = await saveLockScreenDetails(authUserId, !hide);
+    setLockSaving(false);
+    if (r.status === "ok") setLockDetails(r.details);
+    else {
+      setLockDetails(before);
+      setLockNote(r.message);
+    }
+  };
 
   // BR-12 (user decision, 7 October 2026): the rows dim and lock ONLY when the
   // account's own master (notification_allow) is off, Messages included. Every
@@ -481,6 +542,7 @@ export default function NotificationsPage() {
     if (key === "professionalMessages" && value && pushSupported() && pushPermissionNow() !== "granted") {
       const r = await enablePush(authUserId);
       if (r.status !== "ok") setNote(group, `${t(r.message)} ${t("You'll still see new messages in the app.")}`);
+      setPermission(await readPushPermission());
       setRegistered(await isThisDeviceRegistered());
     }
   };
@@ -555,6 +617,14 @@ export default function NotificationsPage() {
           <p className="text-[17px] font-semibold text-charcoal">{t("Allow notifications")}</p>
           <p className="text-[13px] font-bold text-primary-accent mt-px" role="status">
             {deviceLine}
+            {offInPhone && (
+              <>
+                {" · "}
+                <button type="button" onClick={() => void openPushSettings()} className="tap font-bold underline">
+                  {t("Open settings")}
+                </button>
+              </>
+            )}
           </p>
         </div>
         <Toggle
@@ -582,6 +652,23 @@ export default function NotificationsPage() {
             </button>
           </ErrorLine>
         </div>
+      )}
+
+      {nativeApp && (
+        <SettingsSection label={t("On this phone")}>
+          <SettingsRow
+            icon={Lock}
+            title={t("Hide details on lock screen")}
+            srDescription={t("Notifications show only a short line, never names or details. Messages follow their own preview setting.")}
+            dimmed={dimmed}
+            toggle={{
+              checked: lockDetails === false,
+              disabled: lockDetails === null || lockSaving,
+              onChange: (v) => void setHideOnLock(v),
+            }}
+          />
+          {lockNote && <ErrorLine>{t(lockNote)}</ErrorLine>}
+        </SettingsSection>
       )}
 
       {groups.map((g) => (

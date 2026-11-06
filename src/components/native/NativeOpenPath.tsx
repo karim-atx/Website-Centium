@@ -1,7 +1,8 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useApp } from "../../context/AppContext";
 import { CentiumNative } from "../../platform/native";
-import { appPathFrom } from "../../platform/openPathModel";
+import { appPathFrom, decideHeldPath, type HeldPath } from "../../platform/openPathModel";
 import { onPushOpen } from "../../platform/push";
 
 /**
@@ -11,16 +12,51 @@ import { onPushOpen } from "../../platform/push";
  * A cold start leaves the path with the native side until this asks for it;
  * a warm one arrives as an `openPath` event; a tapped push notification's
  * `url` comes from the push plugin (platform/push.ts). Either way only a path under
- * /app is followed (appPathFrom). A signed-out visit lands where any signed-out
- * visit to that page does: the route guards take it to sign-in.
+ * /app is followed (appPathFrom).
+ *
+ * Round J · J-2b (website PLAN.md §2.4): the path is held, and decideHeldPath
+ * (openPathModel.ts) says when it opens: once the account is signed in, its
+ * profile read and onboarded, and off the pages that are still finishing
+ * onboarding (the trial offer, business setup). So a signed-out tap comes back
+ * after sign-in. It is dropped if another account signs in, or after ten
+ * minutes.
+ *
+ * KEPT OUTSIDE THE COMPONENT: AppContext remounts everything under it when
+ * the language settles or changes (an Arabic account right after sign-in or
+ * onboarding), and the native side hands a launch path over only once.
  */
+const holder: { held: HeldPath | null } = { held: null };
+
 export function NativeOpenPath() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { authUserId, profileReady, user } = useApp();
+  const ready = !!authUserId && profileReady && user.onboarded;
+  const now = useRef({ ready, pathname, userId: authUserId });
+  // useNavigate's identity changes with the pathname (react-router 7), so it
+  // is read through a ref: the listeners below subscribe once per mount, and
+  // the launch path is asked for once.
+  const navRef = useRef(navigate);
+  useEffect(() => {
+    navRef.current = navigate;
+  }, [navigate]);
+
+  const settle = useCallback(() => {
+    const decision = decideHeldPath(holder.held, { ...now.current, at: Date.now() });
+    if (decision === "drop") holder.held = null;
+    if (decision !== "open" || !holder.held) return;
+    const path = holder.held.path;
+    holder.held = null;
+    navRef.current(path);
+  }, []);
+
   useEffect(() => {
     let alive = true;
     const open = (raw: unknown) => {
       const path = appPathFrom(raw);
-      if (alive && path) navigate(path);
+      if (!alive || !path) return;
+      holder.held = { path, heldAt: Date.now(), owner: now.current.userId };
+      settle();
     };
     CentiumNative.takeLaunchPath().then(
       ({ path }) => open(path),
@@ -35,6 +71,12 @@ export function NativeOpenPath() {
       offPush();
       void handle.then((h) => h?.remove());
     };
-  }, [navigate]);
+  }, [settle]);
+
+  useEffect(() => {
+    now.current = { ready, pathname, userId: authUserId };
+    settle();
+  }, [ready, pathname, authUserId, settle]);
+
   return null;
 }

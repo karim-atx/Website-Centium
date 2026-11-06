@@ -17,6 +17,7 @@ import { bookSharedSession, cancelSharedSessionBooking } from "../../services/me
 import { placesAfter, placesLine, sessionAction, type SessionPlaces } from "../../services/messaging/groupCardsModel";
 import { appLocale } from "../../i18n/format";
 import { t, tn } from "../../i18n/core";
+import { pushAskMoment } from "../../services/push/ask";
 
 /**
  * Round D · a card the professional shared into a group (DT4), drawn by
@@ -147,6 +148,8 @@ const SessionFooter: React.FC<{
       return;
     }
     onPlaces(placesAfter(places, kind === "book"));
+    // Round J · J-2b: the first booking made may ask to turn on notifications (the app only).
+    if (kind === "book") pushAskMoment("booking");
     onRefresh();
   };
 

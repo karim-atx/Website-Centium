@@ -130,6 +130,37 @@ export function pushPermissionNow(): NotificationPermission {
   return Notification.permission;
 }
 
+/**
+ * pushPermissionNow(), asked again first. In the app the synchronous answer
+ * is the last one the phone gave, so a screen that shows the status (or that
+ * the person came back to from the phone's settings) reads it fresh.
+ */
+export async function readPushPermission(): Promise<NotificationPermission> {
+  if (isNative()) {
+    try {
+      const p = await nativePush.permission();
+      return p === "prompt" ? "default" : p;
+    } catch {
+      return pushPermissionNow();
+    }
+  }
+  return pushPermissionNow();
+}
+
+/**
+ * The phone's notification settings for Centium (Round J · J-2b: "Off in
+ * your phone's settings · Open settings"). In the app only; a browser has no
+ * such page to open, so this does nothing there.
+ */
+export async function openPushSettings(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    await nativePush.openSettings();
+  } catch (e) {
+    console.error("[push] Couldn't open the phone's settings:", e);
+  }
+}
+
 /** Notification.permission's three states, as a boolean with an undecided. */
 export function permissionTriState(p: NotificationPermission): boolean | null {
   if (p === "granted") return true;

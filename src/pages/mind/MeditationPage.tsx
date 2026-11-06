@@ -8,6 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { MindLibraryEntry } from "./library/MindLibraryEntry";
 import { breathingPatterns, stretchList, yogaPoses } from "../../data/mockMindContent";
 import { t, tk } from "../../i18n/core";
+import { useLinkOnce } from "../../hooks/useLinkOnce";
 
 type SubTab = "breathing" | "stretching" | "yoga";
 
@@ -73,6 +74,13 @@ export default function MeditationPage() {
   const [subTab, setSubTab] = useState<SubTab>("breathing");
   const [patternId, setPatternId] = useState(breathingPatterns[0].id);
   const pattern = breathingPatterns.find((p) => p.id === patternId)!;
+  // Round J · J-2b: the "Start a meditation" shortcut opens ?start=1, which
+  // starts a breathing run with the pattern shown.
+  const [startSignal, setStartSignal] = useState(0);
+  useLinkOnce("start", "1", () => {
+    setSubTab("breathing");
+    setStartSignal((n) => n + 1);
+  });
   // Kept stable across renders (the sequence's timer effect depends on it).
   const stretches = useMemo(() => stretchPoses(), []);
   // O6: tab labels never wrap under Larger text; the pattern row scrolls sideways.
@@ -126,7 +134,7 @@ export default function MeditationPage() {
               the fixed area's 12 bottom padding; 12 above the flower (#11 at
               y 288.5). */}
           <p className="mb-3 px-1 text-center text-[12px] leading-[17px] text-charcoal-muted">{pattern.desc}</p>
-          <BreathingRunner pattern={pattern} />
+          <BreathingRunner pattern={pattern} startSignal={startSignal} />
         </div>
       )}
       {subTab === "stretching" && <PoseSequence key="stretching" kind="stretching" poses={stretches} />}

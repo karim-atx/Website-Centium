@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useLinkOnce } from "../../hooks/useLinkOnce";
 import { CalendarRange, Check, ChevronRight, Circle, EllipsisVertical, Play } from "lucide-react";
 import type { Routine } from "../../types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -160,6 +161,25 @@ export const ProgrammeSection: React.FC<{
     setHandledLink(linkedId);
     if (rows.some((r) => r.programme.assignmentId === linkedId)) setOpen(linkedId);
   }
+
+  // Round J · J-2b (PLAN.md §2.4): "Today's workout" and "Start a workout"
+  // open /app/workout?start=today. Once the programmes have loaded (or failed
+  // to), today's first open session starts; with none, the Routines tab is
+  // the start choice.
+  useLinkOnce(
+    "start",
+    "today",
+    () => {
+      for (const l of rows ?? []) {
+        const s = sessionsOn(l.schedule, today).find((x) => isOpen(x) && x.routineId && byId.has(x.routineId));
+        if (s?.routineId) {
+          onStart(byId.get(s.routineId)!);
+          return;
+        }
+      }
+    },
+    rows !== null || failed !== null
+  );
 
   // -------------------------------------------------------------------------
   // Round F: skip, Undo and move. Each is written, then everything is re-read.

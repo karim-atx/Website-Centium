@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { useLinkOnce } from "../../../hooks/useLinkOnce";
 import { Award, CalendarDays, Droplet, History, Plus, Ruler, Target } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
@@ -95,6 +96,8 @@ export default function WaterPage() {
   const [unit, setUnit] = useWaterUnit();
   const [customOpen, setCustomOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  // Round J · J-2b: the "Log water" widget and shortcut open /app/health/water?log=1.
+  useLinkOnce("log", "1", () => setLogOpen(true));
   const [goalOpen, setGoalOpen] = useState(false);
   const [unitsOpen, setUnitsOpen] = useState(false);
   const [dateOpen, setDateOpen] = useState(false);
