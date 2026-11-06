@@ -111,22 +111,42 @@ export interface CameraModule {
 
 // ---- Widgets and shortcuts (§5) ----
 
+/**
+ * What the widgets show (§5.1). A part left out says "Open Centium to see
+ * today" on its widget. The phone hides every figure while `hideNumbers` is
+ * true (and when it is missing), and everything once `updatedAt` is from an
+ * earlier day.
+ */
 export type WidgetSnapshot = {
   language: "en" | "ar";
   /** useHideNumbers(): true while recovery-sensitive mode is on or still unknown. */
   hideNumbers: boolean;
+  /** When these values were read (ISO). Over 30 minutes old, a widget says "Updated 14:05". */
   updatedAt: string;
   steps?: { today: number; goal: number | null };
   water?: { todayMl: number; goalMl: number | null };
-  /** The first six of today's habits. */
+  /** The first six of today's habits; an empty list reads "No habits for today". */
   habits?: { name: string; done: boolean }[];
+  /**
+   * Today's routine or programme session; null reads "Nothing planned today".
+   * `subtitle` is its day ("Week 2 · Day 3"), never volume or kcal; it is
+   * left out while `hideNumbers` is on.
+   */
   workout?: { title: string; subtitle: string | null } | null;
 };
+
+export type WidgetKind = "steps" | "water" | "habits" | "workout";
 
 export interface WidgetsModule {
   available(): Promise<{ ok: boolean }>;
   update(snapshot: WidgetSnapshot): Promise<void>;
   clear(): Promise<void>;
+  /**
+   * The phone's own "Add to home screen" sheet for one widget, for an "Add
+   * widget" button. `ok` is false where the launcher can't do it (then say
+   * "Long-press your home screen, then Widgets").
+   */
+  pin(kind: WidgetKind): Promise<{ ok: boolean }>;
 }
 
 // ---- Calendar (§6) ----
@@ -152,6 +172,8 @@ export interface CalendarModule {
   disable(): Promise<void>;
   /** Makes the calendar match this list: adds, moves and removes. */
   sync(events: PhoneCalendarEvent[]): Promise<{ added: number; updated: number; removed: number }>;
+  /** Centium's page in the phone's settings, to allow calendar access after "Don't allow". */
+  openSettings(): Promise<void>;
 }
 
 // ---- Sessions that keep running with the screen locked (§7) ----
