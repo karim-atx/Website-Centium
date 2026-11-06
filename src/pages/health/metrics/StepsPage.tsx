@@ -53,6 +53,7 @@ import { ShareEntryButton } from "../../../components/share/client/ShareEntryBut
 import { stepsCard } from "../../../components/share/client/clientCardModel";
 import { appLocale } from "../../../i18n/format";
 import { t, tk, tn } from "../../../i18n/core";
+import { stepsByDay } from "../../../services/health-metrics/stepsRule";
 
 // HE1.2 Steps (Week), HE1.2.s, HE1.2.e, HE1.2.1, HE1.2.d, HE1.2.m, HE1.2.y.
 //
@@ -93,13 +94,12 @@ export default function StepsPage() {
   const actFrom = p0.start < stepAnchor("week", today, -1) ? p0.start : stepAnchor("week", today, -1);
   const activity = activityByDay(useActivityDaily(actFrom, today > p0.end ? today : p0.end).data);
   const hourly = useActivityHourly(anchor).data;
-  const byDay = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const pt of healthSeries.steps.history) if (pt.value > 0) out[pt.date] = pt.value;
-    for (const [d, a] of Object.entries(activity)) if (a.steps !== null && a.steps > 0) out[d] = a.steps;
-    return out;
+  // A day with both: the hand-logged reading wins, as on Home (stepsRule).
+  const byDay = useMemo(
+    () => stepsByDay(healthSeries.steps.history, activity),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [healthSeries.steps.history, JSON.stringify(activity)]);
+    [healthSeries.steps.history, JSON.stringify(activity)]
+  );
   // B1 metric_goals: "at goal" on a past day uses the goal that stood then.
   const goalOn = (d: string) => metricGoalOn("steps", d);
   const hasAny = Object.keys(byDay).length > 0;

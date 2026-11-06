@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Footprints } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { valueOn } from "../../../services/health-metrics/periods";
+import { stepsOfDay } from "../../../services/health-metrics/stepsRule";
 import { NoDeviceSheet } from "../NoDeviceSheet";
 import { useActivityStepsOn, useSourceConnected, useStepsGoalOn } from "./data";
 import { FadeValue, HeaderPill, HomeCard, HomeKeyframes, Line, staleLine, useHomeMode, useLoadingTimeout } from "./kit";
@@ -138,7 +139,7 @@ export const StepsWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   // Steps logged by hand (health_metrics) first, as the readers rank manual
   // first; else the synced day from activity_daily (Round J, DB-Z4).
   const syncedSteps = useActivityStepsOn(selectedDate, metricsLoadedAt);
-  const steps = valueOn(healthSeries.steps, selectedDate) ?? syncedSteps;
+  const steps = stepsOfDay(valueOn(healthSeries.steps, selectedDate), syncedSteps);
   const loading = steps === null && metricsLoadedAt === null && !metricsError;
   const timedOut = useLoadingTimeout(loading);
   const isLarge = size === "large";

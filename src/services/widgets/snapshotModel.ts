@@ -10,6 +10,7 @@
 // - The figures themselves are sent either way: the phone hides them while
 //   hideNumbers is true.
 import type { WidgetSnapshot } from "../../platform/contracts";
+import { stepsOfDay } from "../health-metrics/stepsRule";
 
 export const WIDGET_HABITS_MAX = 6;
 
@@ -24,8 +25,8 @@ export type SnapshotInput = {
   language: "en" | "ar";
   hideNumbers: boolean;
   now: Date;
-  /** Today's steps as the Steps page shows them, or null when there is no reading. */
-  steps: { today: number | null; goal: number | null } | null;
+  /** Today's hand-logged reading and synced day (the hand-logged one wins), or null while unknown. */
+  steps: { manual: number | null; synced: number | null; goal: number | null } | null;
   water: { todayMl: number; goalMl: number | null } | null;
   /** Today's habits in the Habits page's order, or null while unknown. */
   habits: { name: string; done: boolean }[] | null;
@@ -36,7 +37,8 @@ export type SnapshotInput = {
 
 export function buildWidgetSnapshot(i: SnapshotInput): WidgetSnapshot {
   const s: WidgetSnapshot = { language: i.language, hideNumbers: i.hideNumbers, updatedAt: i.now.toISOString() };
-  if (i.steps && i.steps.today !== null) s.steps = { today: i.steps.today, goal: i.steps.goal };
+  const stepsToday = i.steps ? stepsOfDay(i.steps.manual, i.steps.synced) : null;
+  if (i.steps && stepsToday !== null) s.steps = { today: stepsToday, goal: i.steps.goal };
   if (i.water) s.water = { todayMl: i.water.todayMl, goalMl: i.water.goalMl };
   if (i.habits) s.habits = i.habits.slice(0, WIDGET_HABITS_MAX).map((h) => ({ name: h.name, done: h.done }));
   if (i.workout.kind === "none") s.workout = null;

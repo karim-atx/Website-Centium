@@ -45,6 +45,8 @@ import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/ref
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
 import { useIsDark } from "../../hooks/useIsDark";
 import DevicesSourcesPage from "./DevicesSourcesPage";
+import HealthConnectPage from "./HealthConnectPage";
+import { HealthConnectRow } from "../../components/settings/HealthConnectRow";
 import BusinessSettings from "../business-more/BusinessSettings";
 import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 import { tk } from "../../i18n/core";
@@ -90,6 +92,8 @@ export default function Settings() {
   const { pathname } = useLocation();
   const { user } = useApp();
   if (pathname.replace(/\/$/, "") === "/app/settings/devices") return <DevicesSourcesPage />;
+  // Round J · J-2e: Health Connect, in the app (a browser goes back to Devices and sources).
+  if (pathname.replace(/\/$/, "") === "/app/settings/devices/health") return <HealthConnectPage />;
   // v6 Batch 3 (MO1B-029 to -034): business accounts get the BizMoreV8 layout;
   // client and professional accounts keep this v5.1 page as built.
   if (user.accountType === "business") return <BusinessSettings />;
@@ -295,20 +299,25 @@ function SettingsHub() {
           {/* v6 (TK 4.6): no brand marks;
               each row shows its neutral placeholder glyph on the standard
               Settings tile (DevicePlaceholders.ts). */}
-          <SettingsRow
-            icon={DEVICE_PLACEHOLDER_ICON[isIos ? "apple-health" : "health-connect"]}
-            title={isIos ? "Apple Health" : "Health Connect"}
-            subtitle={
-              deviceNote === "platform"
-                ? isIos
-                  ? t("Connects in the Centium app on iPhone")
-                  : t("Connects in the Centium app on Android")
-                : undefined
+          {/* Round J · J-2e (PLAN.md §2.1): in the app, a real row with the state. */}
+          <HealthConnectRow
+            fallback={
+              <SettingsRow
+                icon={DEVICE_PLACEHOLDER_ICON[isIos ? "apple-health" : "health-connect"]}
+                title={isIos ? "Apple Health" : "Health Connect"}
+                subtitle={
+                  deviceNote === "platform"
+                    ? isIos
+                      ? t("Connects in the Centium app on iPhone")
+                      : t("Connects in the Centium app on Android")
+                    : undefined
+                }
+                toggle={{
+                  checked: false,
+                  onChange: (next) => setDeviceNote(next ? "platform" : null),
+                }}
+              />
             }
-            toggle={{
-              checked: false,
-              onChange: (next) => setDeviceNote(next ? "platform" : null),
-            }}
           />
         </SettingsSection>
       )}

@@ -7,7 +7,7 @@ const base: SnapshotInput = {
   language: "en",
   hideNumbers: false,
   now: NOW,
-  steps: { today: 8123, goal: 10000 },
+  steps: { manual: null, synced: 8123, goal: 10000 },
   water: { todayMl: 750, goalMl: 2500 },
   habits: [{ name: "Read", done: true }],
   workout: { kind: "session", title: "Upper body", week: 2, day: 3 },
@@ -30,12 +30,18 @@ describe("buildWidgetSnapshot", () => {
   it("leaves out what isn't known, and says none for an empty day", () => {
     const unknown = buildWidgetSnapshot({ ...base, steps: null, water: null, habits: null, workout: { kind: "unknown" } });
     assert.deepEqual(Object.keys(unknown).sort(), ["hideNumbers", "language", "updatedAt"]);
-    assert.equal(buildWidgetSnapshot({ ...base, steps: { today: null, goal: 10000 } }).steps, undefined);
+    assert.equal(buildWidgetSnapshot({ ...base, steps: { manual: null, synced: null, goal: 10000 } }).steps, undefined);
     const empty = buildWidgetSnapshot({ ...base, habits: [], workout: { kind: "none" }, water: { todayMl: 0, goalMl: 2500 } });
     assert.deepEqual(empty.habits, []);
     assert.equal(empty.workout, null);
     assert.ok("workout" in empty);
     assert.deepEqual(empty.water, { todayMl: 0, goalMl: 2500 });
+  });
+
+  it("steps: the hand-logged reading wins on a day with both; else the synced day", () => {
+    assert.deepEqual(buildWidgetSnapshot({ ...base, steps: { manual: 5000, synced: 8123, goal: 10000 } }).steps, { today: 5000, goal: 10000 });
+    assert.deepEqual(buildWidgetSnapshot({ ...base, steps: { manual: null, synced: 8123, goal: 10000 } }).steps, { today: 8123, goal: 10000 });
+    assert.deepEqual(buildWidgetSnapshot({ ...base, steps: { manual: 5000, synced: null, goal: 10000 } }).steps, { today: 5000, goal: 10000 });
   });
 
   it("sends the first six habits only", () => {
