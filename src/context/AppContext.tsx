@@ -128,6 +128,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
 import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
@@ -2219,6 +2220,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Once per signed-in account; the language and onboarding read are that moment's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId, profileReady]);
+  // The phone app's long-press shortcuts (App-Centium ROUND_J.md §5.2): a
+  // signed-in, onboarded member's, decided once the profile is read. Nothing on the web.
+  useEffect(() => {
+    if (!authReady || (authUserId && !profileReady)) return;
+    syncShortcuts(!!authUserId && user.onboarded && user.accountType === "customer");
+  }, [authReady, authUserId, profileReady, user.onboarded, user.accountType]);
   const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
 
