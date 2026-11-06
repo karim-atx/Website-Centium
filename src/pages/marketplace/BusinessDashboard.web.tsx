@@ -25,7 +25,7 @@ import { useActivityFeed } from "../../components/business-dashboard/useActivity
 import { ErrorRow } from "../../components/business-dashboard/parts";
 import { ScheduleBlock } from "../../components/business-dashboard/ScheduleBlock";
 import { WebActivityScreen, WebAttentionPopover, WebDashActions, WebListingPopup, WebRecentActivity, WebSetupCard, WebTodayGym, WebVenueChip, WebVenueSection } from "../../components/business-dashboard/DashboardParts.web";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { BUSINESS_KINDS, fetchUnreadNotificationCount } from "../../services/notifications";
 import { BusinessPlanHomeCard } from "../../components/premium/BusinessPlanHomeCard";
 import { t } from "../../i18n/core";
@@ -278,7 +278,7 @@ export default function BusinessDashboardWeb() {
       <WebAttentionPopover c={c} open={panelOpen} items={attention} anchor={bell} onClose={() => setPanelOpen(false)} onAction={onAttention} onRetry={() => void load()} notificationsUnread={notifUnread} />
 
       {/* At 1440 the second grid row takes the rest of the window (rows "auto minmax(0,1fr)"), as the frame does; on the rail the rows hug their content. */}
-      <div style={{ maxWidth: 1280, boxSizing: "border-box", padding: "32px", minHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}>
+      <div style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: "32px", minHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}>
         {/* The kept notices of the mobile page, full width above the grid. */}
         <DobPromptCard setup className="mb-6" />
         {error && !raw && <ErrorRow c={c} text={error} onRetry={() => void load()} />}

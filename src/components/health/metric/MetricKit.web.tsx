@@ -3,7 +3,7 @@ import { HeroRowContext, HeroSlotContext, type HeroSlot, type HeroStat } from ".
 import { ChevronLeft, ChevronRight, MoreVertical, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { HistoryWindowLine } from "../../premium/HistoryWindowLine";
 import { PopupMenu } from "../../ui/PopupMenu";
-import { useWebLayout } from "../../web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../web/useWebLayout";
 import { HeaderCta, HeaderMenuButton, HealthWebHeader, WebCaps, WebSegmented } from "../../../pages/health/web/HealthWebKit";
 import { RANGE_TABS, type MetricRange } from "./periods";
 import type { MetricKey } from "../MetricWidget";
@@ -95,7 +95,7 @@ export const MetricPageWeb: React.FC<MetricPageWebProps> = ({ metric, title, ran
           </>
         }
       />
-      <div className="flex flex-col" style={{ maxWidth: 1280, width: "100%", marginInline: "auto", padding: `24px ${rail ? 24 : 32}px`, boxSizing: "border-box", gap: 24 }}>
+      <div className="flex flex-col" style={{ maxWidth: WEB_CONTENT_MAX, width: "100%", marginInline: "auto", padding: `24px ${rail ? 24 : 32}px`, boxSizing: "border-box", gap: 24 }}>
         <div>
           <WebSegmented items={RANGE_TABS.map((r) => ({ key: r.key, label: t(r.label) }))} active={range} onChange={(k) => onRangeChange(k as MetricRange)} ariaLabel={title} />
           <HistoryWindowLine className="mt-2" />

@@ -51,6 +51,10 @@ import BusinessSettings from "../business-more/BusinessSettings";
 import { PracticeSection } from "../../components/pro/settings/PracticeSection";
 import { tk } from "../../i18n/core";
 import { CalendarSyncRow } from "../../components/settings/CalendarSyncRow";
+import { PaneFrame, PaneHeader } from "../../components/business-more/paneWeb";
+import { usePaneEligible } from "../../components/business-more/paneWebScope";
+import { appSettingsSection, type AppSettingsSection } from "../../components/web/webNav";
+import { GuidelinesPane } from "./GuidelinesPane.web";
 
 // MO1.8 Settings (R17, batch C; handover-complete pass). The board's layout:
 // labelled sections of flat icon-tile rows instead of cards, sub-screens as
@@ -126,7 +130,7 @@ function SettingsHub() {
   // Layout scrolls to the top on every route change, and the rows above the
   // time zone grow as their reads come back. So it scrolls instantly, then
   // again until the row is actually in view, for up to a second.
-  const { hash } = useLocation();
+  const { hash, search } = useLocation();
   useEffect(() => {
     if (!ANCHORS.includes(hash)) return;
     let tries = 0;
@@ -217,23 +221,69 @@ function SettingsHub() {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  // Website viewport (Addendum A WC-SE, Professional WP-SE): from 1024px the
+  // page sits in the Settings pane and shows the one section picked in the
+  // column (?section=), titled with its name; Contact us, Report a bug, Rate
+  // this app, Change password and Delete account open from the column
+  // (?popup=). Below 1024 every section, as on mobile.
+  const paneWeb = usePaneEligible();
+  const section = appSettingsSection(search);
+  const show = (k: AppSettingsSection) => !paneWeb || section === k;
+  const popupParam = paneWeb ? new URLSearchParams(search).get("popup") : null;
+  useEffect(() => {
+    if (popupParam === "contact") setContactOpen(true);
+    else if (popupParam === "bug") setReportBugOpen(true);
+    else if (popupParam === "rate") setRateAppOpen(true);
+    else if (popupParam === "password") setChangePasswordOpen(true);
+    else if (popupParam === "delete") setDeleteOpen(true);
+  }, [popupParam]);
+  /** Closing a popup opened from the column drops ?popup= so it doesn't reopen. */
+  const closing = (close: () => void) => () => {
+    close();
+    if (popupParam) navigate(`/app/settings?section=${section}`, { replace: true });
+  };
+  const PANE_TITLE: Record<AppSettingsSection, string> = {
+    help: t("Help"),
+    appearance: t("Appearance"),
+    permissions: t("Permissions"),
+    devices: t("Connected devices"),
+    security: t("Security"),
+    practice: t("Practice"),
+    data: t("Data & account"),
+    general: t("General"),
+    legal: t("Legal"),
+    guidelines: t("Community guidelines"),
+  };
+
   const dark = useIsDark();
   const isIos = detectPlatform() === "ios";
   const languageName = languageEntry(language).name;
 
+  if (paneWeb && section === "guidelines")
+    return (
+      <PaneFrame reading>
+        <PaneHeader title={PANE_TITLE.guidelines} />
+        <GuidelinesPane />
+      </PaneFrame>
+    );
+
+  const Frame = paneWeb ? PaneFrame : "div";
   return (
-    <div>
-      <PageHeader title={t("Settings")} showBack tightBack />
+    <Frame {...(paneWeb ? { reading: true } : null)}>
+      {paneWeb ? <PaneHeader title={PANE_TITLE[section]} /> : <PageHeader title={t("Settings")} showBack tightBack />}
 
       {/* MO1.8 measured: the sections sit 24 in from each edge (x 24 to 366,
           342 wide), 8 inside the header's 16; the first label starts 8 under
           the title (73 against the title's 25 + 40), so the header's 20 bottom
           margin collapses with -12 here. */}
-      <SettingsBody className="-mt-3">
+      <SettingsBody className={paneWeb ? undefined : "-mt-3"}>
       {/* Round I · FH (decision 8): Help first, one tap from Settings. */}
+      {show("help") && (
       <SettingsSection label={t("Help")}>
         <SettingsRow icon={LifeBuoy} title={t("Help and questions")} subtitle={t("Answers, live chat and email")} onClick={() => navigate("/app/settings/help")} />
       </SettingsSection>
+      )}
+      {show("appearance") && (
       <SettingsSection label={t("Appearance")}>
         <SettingsRow
           icon={theme === "dark" ? Moon : Sun}
@@ -257,7 +307,9 @@ function SettingsHub() {
           )}
         </div>
       </SettingsSection>
+      )}
 
+      {show("permissions") && (
       <SettingsSection label={t("Permissions")}>
         <SettingsRow
           icon={Mic}
@@ -290,11 +342,12 @@ function SettingsHub() {
           onClick={() => navigate("/app/settings/notifications")}
         />
       </SettingsSection>
+      )}
 
       {/* Customers only, as before (V8: device sync is a personal tracking
           concept). MO1.8 draws a switch on each row (BR-07); "Health
           Connect" is the Android name (C-11). */}
-      {user.accountType === "customer" && (
+      {user.accountType === "customer" && show("devices") && (
         <SettingsSection id="devices" label={t("Connected devices")}>
           {/* v6 (TK 4.6): no brand marks;
               each row shows its neutral placeholder glyph on the standard
@@ -322,6 +375,7 @@ function SettingsHub() {
         </SettingsSection>
       )}
 
+      {show("security") && (
       <SettingsSection label={t("Security")}>
         {/* Opens the two-factor page (MO1.8.4, another area's screen). */}
         <SettingsRow
@@ -330,15 +384,17 @@ function SettingsHub() {
           onClick={() => navigate("/app/settings/two-factor")}
         />
       </SettingsSection>
+      )}
 
       {/* Release 3 W6 · MO23 v3: professionals get Practice here, between
           Security and Data & account, as the frame draws it. */}
-      {user.accountType === "professional" && <PracticeSection />}
+      {user.accountType === "professional" && show("practice") && <PracticeSection />}
 
       {/* MO1.8 draws Data & account (Storage, Time zone, Use device time
           zone, Blocked members). Change password stays here, first (DECIDED),
           so Security keeps one row and no divider. This section's glyphs take
           #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
+      {show("data") && (
       <SettingsSection label={t("Data & account")}>
         {/* Round J · FI: first name and email (/app/settings/account). */}
         <SettingsRow icon={UserRound} iconTone="dark" title={t("Account")} subtitle={accountLine} onClick={() => navigate("/app/settings/account")} />
@@ -352,7 +408,9 @@ function SettingsHub() {
         <TimezoneSetting />
         <ForumBlocksSetting />
       </SettingsSection>
+      )}
 
+      {show("general") && (
       <SettingsSection label={t("General")}>
         <SettingsRow
           icon={Globe}
@@ -376,21 +434,25 @@ function SettingsHub() {
         <SettingsRow icon={Bug} title={t("Report a bug")} onClick={() => setReportBugOpen(true)} />
         <SettingsRow icon={Star} title={t("Rate this app")} onClick={() => setRateAppOpen(true)} />
       </SettingsSection>
+      )}
 
       {/* Round F (DN): the legal documents together. V9 (QA 9.0): for every
           account type; Settings is the one shared page. The guidelines are the
           ones every moderation message links to (Round C Release 2). */}
+      {show("legal") && (
       <SettingsSection label={t("Legal")}>
         <SettingsRow icon={FileText} title={t("Terms of Service")} onClick={() => navigate("/app/settings/terms")} />
         <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
         <SettingsRow icon={ScrollText} title={t("Refund and cancellation policy")} onClick={() => navigate(REFUND_POLICY_HREF)} />
         <SettingsRow icon={Users} title={t("Community guidelines")} onClick={() => navigate("/legal/community-guidelines")} />
       </SettingsSection>
+      )}
 
       {/* MO1.8 #79: red, centred at the foot, one line, 12.5 / 18.8 600,
           padding 8 12, #B4372C (dark #F09A8E); 32 under the Rate row
           (measured on MO1.8-full.png: row bottom 1808.4, button 1840.4).
           Still behind the same 30-day confirm (K13). */}
+      {show("data") && (
       <button
         type="button"
         onClick={() => setDeleteOpen(true)}
@@ -399,20 +461,21 @@ function SettingsHub() {
       >
         {t("Delete account")}
       </button>
+      )}
       </SettingsBody>
 
-      <ContactUsPopup open={contactOpen} onClose={() => setContactOpen(false)} />
+      <ContactUsPopup open={contactOpen} onClose={closing(() => setContactOpen(false))} />
       {/* Keyed on open so each opening mounts fresh: no previous report text,
           no stale error, no rating left over from a previous visit. */}
-      <ReportBugPopup key={reportBugOpen ? "bug-open" : "bug-closed"} open={reportBugOpen} onClose={() => setReportBugOpen(false)} />
-      <RateAppPopup key={rateAppOpen ? "rate-open" : "rate-closed"} open={rateAppOpen} onClose={() => setRateAppOpen(false)} />
+      <ReportBugPopup key={reportBugOpen ? "bug-open" : "bug-closed"} open={reportBugOpen} onClose={closing(() => setReportBugOpen(false))} />
+      <RateAppPopup key={rateAppOpen ? "rate-open" : "rate-closed"} open={rateAppOpen} onClose={closing(() => setRateAppOpen(false))} />
       {/* Keyed so nothing typed into a password field outlives the sheet. */}
       <ChangePasswordSheet
         key={changePasswordOpen ? "pw-open" : "pw-closed"}
         open={changePasswordOpen}
-        onClose={() => setChangePasswordOpen(false)}
+        onClose={closing(() => setChangePasswordOpen(false))}
       />
-      <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
-    </div>
+      <DeleteAccountSheet open={deleteOpen} onClose={closing(() => setDeleteOpen(false))} />
+    </Frame>
   );
 }

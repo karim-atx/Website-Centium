@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, HeartHandshake, Sparkles, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { StreaksBar } from "../../components/dashboard/StreaksBar";
 import { DateSelector } from "../../components/dashboard/DateSelector";
 import { QuickActionsStack } from "../../components/dashboard/web/QuickActionsStack";
@@ -98,7 +98,7 @@ export default function HomeWeb() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box" }}>
+      <div style={{ maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box" }}>
         {/* Task T: only for an older account with no date of birth (global rules: a card above the board). */}
         <DobPromptCard className="mb-6" />
         <ProReminders web={{ rail }} />

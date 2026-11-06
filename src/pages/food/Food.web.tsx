@@ -31,7 +31,7 @@ import { isQueuedEntry } from "../../services/food/provisional";
 import { removeQueued } from "../../services/health-log/offlineQueue";
 import { appLocale } from "../../i18n/format";
 import { t, tn, tk } from "../../i18n/core";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { FoodWebMenu } from "./web/FoodWebMenu";
 import { NutrientSectionsWeb } from "./web/NutrientSectionsWeb";
 import { entryTotals } from "./web/nutrientRows";
@@ -770,7 +770,7 @@ export default function FoodWeb() {
       </header>
       {share.sheet}
 
-      <div className="mx-auto flex flex-col" style={{ maxWidth: 1280, boxSizing: "border-box", padding: `24px ${margin}px`, gap: 24 }}>
+      <div className="mx-auto flex flex-col" style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: `24px ${margin}px`, gap: 24 }}>
         <FoodWebTabs
           label={t("Food")}
           items={foodTabs.map((x) => ({ key: x.key, label: t(x.label) }))}

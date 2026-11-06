@@ -1,7 +1,7 @@
 import React from "react";
 import { ChevronLeft, MoreVertical } from "lucide-react";
 import { useBack } from "../../../hooks/useBack";
-import { useWebLayout } from "../../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
 import { t } from "../../../i18n/core";
 
 // Website viewport v1 · Client · Health: the pieces every Health web page
@@ -170,7 +170,7 @@ export const WebSegmented: React.FC<{ items: { key: string; label: string }[]; a
 export const HealthWebBody: React.FC<{ children: React.ReactNode; gap?: number; style?: React.CSSProperties; className?: string }> = ({ children, gap = 24, style, className }) => {
   const margin = useHealthMargin();
   return (
-    <div className={`flex flex-col ${className ?? ""}`} style={{ maxWidth: 1280, marginInline: "auto", width: "100%", padding: `24px ${margin}px`, boxSizing: "border-box", gap, ...style }}>
+    <div className={`flex flex-col ${className ?? ""}`} style={{ maxWidth: WEB_CONTENT_MAX, marginInline: "auto", width: "100%", padding: `24px ${margin}px`, boxSizing: "border-box", gap, ...style }}>
       {children}
     </div>
   );

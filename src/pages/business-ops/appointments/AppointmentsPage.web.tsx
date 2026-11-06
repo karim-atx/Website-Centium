@@ -136,7 +136,7 @@ export default function AppointmentsPageWeb() {
           />
         </div>
         <div style={{ padding: 32 }}>
-          <div className="max-w-[1280px]">
+          <div className="max-w-[1600px]">
             <ApptPane key={sel} id={sel} rail onChanged={() => void live.refresh()} />
           </div>
         </div>
@@ -227,7 +227,7 @@ export default function AppointmentsPageWeb() {
         <WebPageHeader title={t("Appointments")} sub={todaySub()} actions={businessId ? addButton : undefined} />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px]">
+        <div className="max-w-[1600px]">
           {empty ?? (
             <div className="grid" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(12,minmax(0,1fr))", gap: 24, alignItems: "start" }}>
               <div className="min-w-0 flex flex-col" style={{ gridColumn: rail || !hasBooked ? "1 / -1" : "span 5", gap: 12 }}>
@@ -474,7 +474,7 @@ export function AppointmentsDayPageWeb() {
         <ExtrasHeader kicker={t("Appointments")} title={dayDate(day)} backLabel={t("Back")} onBack={back} />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col">
+        <div className="max-w-[1600px] flex flex-col">
           <div role="tablist" aria-label={t("Day")} className="grid" style={{ gridTemplateColumns: "repeat(14,minmax(0,1fr))", gap: 8, marginBottom: 24 }}>
             {strip.map((x) => {
               const v = isoDate(x);

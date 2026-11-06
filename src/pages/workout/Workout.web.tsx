@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Library, Plus } from "lucide-react";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import { PersonalRecordReviewSheet } from "../../components/workout/PersonalRecordReviewSheet";
@@ -78,7 +78,7 @@ export default function WorkoutWeb() {
           </div>
         )}
       </header>
-      <div className="mx-auto flex flex-col" style={{ maxWidth: 1280, boxSizing: "border-box", padding: `24px ${margin}px`, gap: 24 }}>
+      <div className="mx-auto flex flex-col" style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: `24px ${margin}px`, gap: 24 }}>
         <WebTabs items={tabs} active={tab} onChange={setTab} label={t("Workout")} />
         <div role="tabpanel" aria-label={tabs.find((x) => x.key === tab)?.label}>
           {tab === "routines" && (

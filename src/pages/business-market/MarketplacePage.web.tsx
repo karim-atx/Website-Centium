@@ -3,7 +3,7 @@ import { FOCUS_CSS } from "../../components/market/usePress";
 import { MarketSkeleton } from "../../components/market/MarketStates";
 import { BizShareButton } from "../../components/share/business/BizShareButton";
 import { fetchRatingLine } from "../../components/share/business/useBizBrand";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { MarketWebType } from "../../components/market/webType";
 import { WebSegmented } from "../business-analytics/AnalyticsParts.web";
 import { MarketProvider, MARKET_TAB_KEYS, tabKeyOf, useMarket, type MarketTabKey } from "./MarketContext";
@@ -85,7 +85,7 @@ function Body() {
         </div>
         <BizShareButton label={t("Share your profile: Find us on Centium")} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />
       </header>
-      <div style={{ maxWidth: 1280, boxSizing: "border-box", padding: 32 }}>
+      <div style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: 32 }}>
         <WebSegmented label={t("Marketplace")} items={MARKET_TAB_KEYS.map((k) => ({ key: k, label: labels[k] }))} active={tab} onChange={(k) => setTab(k)} />
         <div role="tabpanel" style={{ marginTop: 24 }}>
           {!m.kindKnown && m.loading ? (

@@ -8,7 +8,7 @@ import { useBack } from "../../hooks/useBack";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { FoodWebMenu } from "./web/FoodWebMenu";
 import { NutrientSectionsWeb } from "./web/NutrientSectionsWeb";
 import { entryTotals, type NutrientFilter } from "./web/nutrientRows";
@@ -94,7 +94,7 @@ export default function NutrientSummaryPageWeb() {
         </button>
       </header>
 
-      <div className="mx-auto flex flex-col" style={{ maxWidth: 1280, boxSizing: "border-box", padding: `24px ${margin}px` }}>
+      <div className="mx-auto flex flex-col" style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: `24px ${margin}px` }}>
         {loggedOnly && (
           <div className="flex items-center" style={{ gap: 8, background: "#F3F3FD", borderRadius: 12, padding: "8px 12px", marginBottom: 16 }}>
             <span className="flex-none rounded-full" style={{ width: 6, height: 6, background: "#6D50D3" }} />

@@ -2,6 +2,7 @@ import React from "react";
 import { Check } from "lucide-react";
 import { PaneScope, usePanePad } from "./paneWebScope";
 import { usePaneFill } from "../web/paneFill";
+import { useWebLayout, WEB_READING_MAX } from "../web/useWebLayout";
 
 // Website viewport v1 · ST Settings Web (the designed More / Settings panes,
 // WB-MO, WB-SE and the type variants). From 1024px wide a business page shown
@@ -23,9 +24,16 @@ export const PaneWebOff: React.FC<{ children: React.ReactNode }> = ({ children }
  * The pane page's frame: it asks the shell's pane to drop its centred 430
  * column (usePaneFill), then lays the design's padding and 880 cap.
  */
-export const PaneFrame: React.FC<{ children: React.ReactNode; label?: string }> = ({ children, label }) => {
+export const PaneFrame: React.FC<{ children: React.ReactNode; label?: string; reading?: boolean }> = ({ children, label, reading }) => {
   const pad = usePanePad();
+  const { rail } = useWebLayout();
   usePaneFill();
+  // Professional handover v1 (section 4) and Addendum A (WC-SE): the client and
+  // professional panes span the pane (32 padding at 1440, 24 at 1024), up to
+  // the reading width of section 2.1. The business panes keep their 880.
+  const frame: React.CSSProperties = reading
+    ? { maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: rail ? 24 : 32 }
+    : { maxWidth: 880, boxSizing: "border-box", padding: `${pad.top}px ${pad.x}px ${pad.bottom}px` };
   return (
     <div data-web-pane-page aria-label={label}>
       {/* Blocks 28 apart, as the design's column gap; a section label sits on
@@ -33,7 +41,7 @@ export const PaneFrame: React.FC<{ children: React.ReactNode; label?: string }> 
       <PaneScope.Provider value="on">
       <div
         className="flex flex-col [&>*+*]:mt-[28px] [&>[data-pane-label]+*]:mt-0"
-        style={{ maxWidth: 880, boxSizing: "border-box", padding: `${pad.top}px ${pad.x}px ${pad.bottom}px` }}
+        style={frame}
       >
         {children}
       </div>

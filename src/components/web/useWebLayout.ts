@@ -10,6 +10,15 @@ export const FULL_SIDEBAR_QUERY = "(min-width: 1280px)";
 
 export const SIDEBAR_W = 256;
 export const RAIL_W = 80;
+/**
+ * Section 2.1 (wide screens, every UI): above 1440 the content area grows to
+ * about 1600 beside the sidebar instead of stopping at 1280; text-heavy pages
+ * (Settings, forms, profiles, More panes) keep a reading width of about 1280.
+ * At 1440 and 1024 both caps are wider than the content area, so the designed
+ * frames are unchanged.
+ */
+export const WEB_CONTENT_MAX = 1600;
+export const WEB_READING_MAX = 1280;
 
 function subscribe(query: string) {
   return (onChange: () => void) => {

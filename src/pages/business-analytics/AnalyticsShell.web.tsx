@@ -5,7 +5,7 @@ import { useBusiness } from "../../components/business-more/useBusiness";
 import { ConsoleGate } from "../../components/business-console/ConsoleGate";
 import { useApp } from "../../context/AppContext";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { AnalyticsContext, type CsvRow } from "./analyticsContext";
 import { presetRange, rangeLine, type AnalyticsRange, type RangeKey } from "./analyticsRange";
 import { CustomRangeSheet } from "./CustomRangeSheet";
@@ -115,7 +115,7 @@ export default function AnalyticsShellWeb() {
       </header>
 
       <div style={{ flex: "none", height: isMembers ? "calc(100dvh - 64px)" : "auto", minHeight: isMembers ? 560 : 0, boxSizing: "border-box" }}>
-        <div style={{ maxWidth: 1280, height: "100%", boxSizing: "border-box", padding: 32, display: "flex", flexDirection: "column" }}>
+        <div style={{ maxWidth: WEB_CONTENT_MAX, height: "100%", boxSizing: "border-box", padding: 32, display: "flex", flexDirection: "column" }}>
           {!known ? (
             <div role="status" aria-label={t("Loading")} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {!biz.loading && !biz.business && biz.error ? (

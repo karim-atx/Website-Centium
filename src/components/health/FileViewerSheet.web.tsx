@@ -100,7 +100,7 @@ export const FileViewerWeb: React.FC<{
           </button>
         )}
       </header>
-      <div className="flex-1 min-h-0 w-full max-w-[1280px] mx-auto flex flex-col" style={{ padding: `24px ${margin}px`, boxSizing: "border-box" }}>
+      <div className="flex-1 min-h-0 w-full max-w-[1600px] mx-auto flex flex-col" style={{ padding: `24px ${margin}px`, boxSizing: "border-box" }}>
         <div className="relative flex-1 min-h-0" style={{ borderRadius: 20, background: "#15171E" }} data-web-viewer-panel>
           <div className="absolute inset-0 overflow-auto grid place-items-center" style={{ borderRadius: 20 }}>
             {loading && <Loader2 size={24} className="animate-spin" color="#FFFFFF" aria-label={t("Opening")} />}

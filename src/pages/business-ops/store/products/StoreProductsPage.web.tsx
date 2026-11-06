@@ -70,7 +70,7 @@ function ProductsScreen() {
           <ExtrasHeader kicker={t("Products")} title={category === "Other" ? t("Other") : category} backLabel={t("Back to Products")} onBack={() => onTab(tab)} />
         </div>
         <div style={{ padding: 32 }}>
-          <div className="max-w-[1280px]">
+          <div className="max-w-[1600px]">
             <Showcase section={category} />
           </div>
         </div>
@@ -88,7 +88,7 @@ function ProductsScreen() {
         />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col" style={{ gap: 24 }}>
+        <div className="max-w-[1600px] flex flex-col" style={{ gap: 24 }}>
           <div role="tablist" aria-label={t("Marketplace")} className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 5, padding: 5, borderRadius: 14, background: "#F3F3FD" }}>
             {MARKET_TAB_KEYS.map((k) => {
               const on = k === tab;

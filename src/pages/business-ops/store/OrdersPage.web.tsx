@@ -123,7 +123,7 @@ export default function OrdersPageWeb() {
           <WebPageHeader title={t("Orders")} back={{ to: "/app/business/orders", label: tk("Back"), square: true, onClick: () => (window.history.length > 1 ? navigate(-1) : navigate("/app/business/orders")) }} />
         </div>
         <div style={{ padding: 32 }}>
-          <div className="max-w-[1280px]">{sel.kind === "order" ? <OrderPane key={sel.id} id={sel.id} rail onChanged={refreshList} /> : <ReturnPane key={sel.id} id={sel.id} rail onChanged={refreshList} />}</div>
+          <div className="max-w-[1600px]">{sel.kind === "order" ? <OrderPane key={sel.id} id={sel.id} rail onChanged={refreshList} /> : <ReturnPane key={sel.id} id={sel.id} rail onChanged={refreshList} />}</div>
         </div>
       </div>
     );
@@ -241,7 +241,7 @@ export default function OrdersPageWeb() {
         <WebPageHeader title={t("Orders")} />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col" style={{ gap: 24 }}>
+        <div className="max-w-[1600px] flex flex-col" style={{ gap: 24 }}>
           <WebTabs label={t("Orders")} tabs={tabs} active={tab} onChange={setTab} />
           <div role="tabpanel" aria-label={tabs.find((x) => x.key === tab)?.label}>
             {empty ? (
