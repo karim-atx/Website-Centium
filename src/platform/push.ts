@@ -26,12 +26,18 @@ import type { PushModule, PushPermission } from "./contracts";
 import { featureAvailable } from "./features";
 import { isNative, platform } from "./index";
 import { CentiumNative } from "./native";
+import type { ReceivedPush } from "./pushBannerModel";
 
 // Not in the generated types yet (Database DB-Z3 is newer than database.types.ts).
 type Rpc = { rpc: (fn: string, args: object) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }> };
 type From = {
   from: (table: string) => {
     select: (cols: string) => { eq: (col: string, v: string) => { limit: (n: number) => PromiseLike<{ data: unknown[] | null; error: unknown }> } };
+  };
+};
+type KindFrom = {
+  from: (table: string) => {
+    select: (cols: string) => { eq: (col: string, v: string) => { maybeSingle: () => PromiseLike<{ data: { kind?: string } | null; error: unknown }> } };
   };
 };
 const rpc = (fn: string, args: object) => (supabase as unknown as Rpc).rpc(fn, args);
@@ -43,6 +49,7 @@ let cachedPermission: PushPermission | null = null;
 let listening: Promise<void> | null = null;
 let started = false;
 const opened = new Set<(url: string) => void>();
+const received = new Set<(push: ReceivedPush) => void>();
 let waiting: ((token: string | null) => void) | null = null;
 /** A tap that came while nothing listened (the app remounting): the next listener gets it. */
 let unopened: string | null = null;
@@ -109,9 +116,13 @@ function listen(): Promise<void> {
     // a reminder's link) goes to NativeOpenPath, which follows only /app paths.
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
       const url = (notification.data as { url?: unknown } | undefined)?.url;
-      if (typeof url !== "string") return;
-      if (opened.size === 0) unopened = url;
-      else for (const l of opened) l(url);
+      if (typeof url === "string") openPushLink(url);
+    });
+    // A push while Centium is open: the phone shows nothing (no
+    // presentationOptions), so PushBanner does (pushBannerModel.ts).
+    await PushNotifications.addListener("pushNotificationReceived", (n) => {
+      const push: ReceivedPush = { id: n.id, title: n.title, body: n.body, data: n.data as Record<string, unknown> | undefined };
+      for (const l of received) l(push);
     });
   })();
   return listening;
@@ -208,6 +219,45 @@ export function onPushOpen(listener: (url: string) => void): () => void {
     listener(url);
   }
   return () => opened.delete(listener);
+}
+
+/** Opens a push's link as a tap on its notification does: a tapped notification, or PushBanner. */
+export function openPushLink(url: string): void {
+  if (opened.size === 0) unopened = url;
+  else for (const l of opened) l(url);
+}
+
+/** Every push that arrives while Centium is open, for PushBanner. */
+export function onPushReceived(listener: (push: ReceivedPush) => void): () => void {
+  received.add(listener);
+  return () => received.delete(listener);
+}
+
+/**
+ * Recovery-sensitive mode: the neutral title and line "Hide details on lock
+ * screen" gives this push's family ("Centium", "You have a reminder"), in the
+ * app's language, from the server's own copy (push_neutral_text), so the two
+ * never read differently. The family comes from the reminder's kind; a push
+ * without one gets the general line. Null when it can't be read.
+ */
+export async function neutralPushText(notificationId: string | null): Promise<{ title: string; line: string } | null> {
+  let family = "";
+  if (notificationId) {
+    const row = await (supabase as unknown as KindFrom)
+      .from("reminder_sends")
+      .select("kind")
+      .eq("id", notificationId)
+      .maybeSingle()
+      .then((r) => r.data, () => null);
+    if (row?.kind) {
+      const { data, error } = await rpc("notification_family", { p_kind: row.kind });
+      if (!error && typeof data === "string") family = data;
+    }
+  }
+  const { data, error } = await rpc("push_neutral_text", { p_family: family, p_language: getLanguage() });
+  const text = (Array.isArray(data) ? data[0] : data) as { title?: unknown; body?: unknown } | null;
+  if (error || typeof text?.title !== "string" || typeof text.body !== "string") return null;
+  return { title: text.title, line: text.body };
 }
 
 export const nativePush: PushModule = {

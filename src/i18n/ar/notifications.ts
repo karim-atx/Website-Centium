@@ -15,6 +15,7 @@ export const FILES: string[] = [
   "components/navigation/errorPanel.ts",
   "components/navigation/OfflineBanner.tsx",
   "components/navigation/offlineBannerText.ts",
+  "components/native/PushBanner.tsx",
 ];
 
 // note (whole file): a sentence that starts with a person or a business
@@ -332,6 +333,9 @@ const notifications: Catalogue = {
   // == Round J · J-2c: the workout widget's line (components/native/WidgetSnapshotSync) ==
   "Week {week} · Day {day}": "الأسبوع {week} · اليوم {day}",
   "Notifications show only a short line, never names or details. Messages follow their own preview setting.": "تُظهر الإشعارات سطرًا قصيرًا فقط، من دون أسماء أو تفاصيل. تتبع الرسائل إعداد المعاينة الخاص بها.",
+  // == A push while the app is open (components/native/PushBanner) ==
+  "Notification: {title}. {line}. Open": "إشعار: {title}. {line}. فتح",
+  "You have a new notification": "لديك إشعار جديد", // note: the server's own neutral line (push_neutral_text), used only when it can't be read
 };
 
 export default notifications;
