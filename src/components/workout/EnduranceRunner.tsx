@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Play, Pause, RotateCcw } from "lucide-react";
-import type { EndurancePlan, EnduranceResult } from "../../types";
+import type { EndurancePlan, EnduranceResult, EnduranceStep } from "../../types";
 import { formatClock } from "../../services/workout/prescription";
 import { averagePace, formatDistance } from "../../services/workout/results";
 import { plannedIntervals, planRows, parseClock } from "../../services/workout/endurance";
@@ -16,7 +16,9 @@ import {
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
+import { sessions, useLockedSession } from "../../platform/sessions";
+import type { SessionCue, SessionPhase } from "../../platform/contracts";
 
 // Mobile v5.1 R3 (no light islands): the plan box's pale lavender has no
 // token of the same light value; dark is primary.tint.2 on the card
@@ -39,16 +41,49 @@ const PLAN_BOX = ["#F6F4FB", "rgb(var(--th-2b2c3a))"] as const;
 // running watch does not need a second clock, and somebody on a treadmill
 // does. Either way the result is typed at the end, not read off this timer,
 // so a forgotten start does not cost them the log.
+//
+// IN THE APP THE PLAN BECOMES AN INTERVAL TIMER (App-Centium ROUND_J.md §7).
+// Starting the stopwatch hands the steps to the phone, which keeps them going
+// with the screen locked and music playing: two high notes to run, two low
+// ones to walk or recover, the step on the lock screen. A timed step moves on
+// by itself; a distance step waits for "Next step" (here or on the lock
+// screen). The result is still typed at the end.
+
+/** The plan's steps as the phone runs them, in planRows' order. */
+function runPhases(plan: EndurancePlan): SessionPhase[] {
+  const phase = (label: string, step: EnduranceStep, cue: SessionCue): SessionPhase => ({
+    label,
+    seconds: step.measure === "time" ? step.seconds : null,
+    cue,
+  });
+  const out: SessionPhase[] = [];
+  if (plan.warmup) out.push(phase(t("Warm-up"), plan.warmup, "walk"));
+  if (plan.main.type === "steady") {
+    out.push(phase(t("Main set"), plan.main.step, "run"));
+  } else {
+    const { repeats, work, recovery } = plan.main;
+    for (let i = 0; i < repeats; i++) {
+      out.push(phase(t("Rep {n} of {total}", { n: i + 1, total: repeats }), work, "run"));
+      if (i < repeats - 1) out.push(phase(tx("Recovery", "run interval"), recovery, "rest"));
+    }
+  }
+  if (plan.cooldown) out.push(phase(t("Cool-down"), plan.cooldown, "walk"));
+  return out;
+}
 
 export const EnduranceRunner: React.FC<{
   plan: EndurancePlan;
+  /** The exercise, so the phone's run belongs to this one. */
+  sessionKey: string;
+  /** The exercise's name, for the lock screen. */
+  title: string;
   result: EnduranceResult | undefined;
   onResult: (result: EnduranceResult) => void;
   onStarted: () => void;
   /** The stopwatch and current step, held with the session (SessionTimers). */
   timer: { watch: Stopwatch; current: number } | undefined;
   onTimer: (timer: { watch: Stopwatch; current: number }) => void;
-}> = ({ plan, result, onResult, onStarted, timer, onTimer }) => {
+}> = ({ plan, sessionKey, title, result, onResult, onStarted, timer, onTimer }) => {
   const rows = planRows(plan);
   const current = timer?.current ?? 0;
   const watch = timer?.watch ?? stoppedStopwatch();
@@ -59,6 +94,36 @@ export const EnduranceRunner: React.FC<{
   const [now, setNow] = useState(() => Date.now());
   const planned = plannedIntervals(plan);
   const dark = useIsDark();
+
+  // In the app: the phone's interval timer for this exercise.
+  const resultKey = `run:${sessionKey}`;
+  const locked = useLockedSession(resultKey);
+  const lockedState = locked.state;
+  const live = useRef({ watch, current, onTimer });
+  useEffect(() => {
+    live.current = { watch, current, onTimer };
+  });
+  const phoneRunning = locked.native && !!lockedState?.active;
+  // The phone moved on, paused or stopped (on the lock screen too): the
+  // stopwatch and the current step follow it.
+  useEffect(() => {
+    if (!lockedState) return;
+    const { watch: w, current: c, onTimer: set } = live.current;
+    if (lockedState.active) {
+      const nextWatch = lockedState.paused
+        ? isRunning(w) ? pause(w, lockedState.pausedAt ?? Date.now()) : w
+        : isRunning(w) ? w : w.pausedMs > 0 ? resume(w, Date.now()) : startedStopwatch(lockedState.startedAt);
+      if (nextWatch !== w || lockedState.phaseIndex !== c) set({ watch: nextWatch, current: lockedState.phaseIndex });
+      return;
+    }
+    if (isRunning(w)) set({ watch: pause(w, lockedState.endedAt ?? Date.now()), current: c });
+    void sessions.clear();
+  }, [lockedState]);
+  const startPhone = (at: number) => {
+    void sessions
+      .start({ kind: "run_intervals", title, phases: runPhases(plan), repeat: 1, resultKey })
+      .then(() => (at > 0 ? sessions.jumpTo(at) : undefined));
+  };
 
   React.useEffect(() => {
     if (!isRunning(watch)) return;
@@ -99,6 +164,11 @@ export const EnduranceRunner: React.FC<{
             <span className="tabular-nums text-[13px] font-bold text-charcoal">{formatClock(elapsed)}</span>
             <button
               onClick={() => {
+                if (locked.native) {
+                  if (isRunning(watch)) void sessions.pause();
+                  else if (phoneRunning) void sessions.resume();
+                  else startPhone(current);
+                }
                 setWatch((w) =>
                   isRunning(w) ? pause(w, Date.now()) : w.pausedMs > 0 ? resume(w, Date.now()) : startedStopwatch(Date.now())
                 );
@@ -111,7 +181,10 @@ export const EnduranceRunner: React.FC<{
               {isRunning(watch) ? <Pause size={12} fill="white" /> : <Play size={12} fill="white" />}
             </button>
             <button
-              onClick={() => setWatch(stoppedStopwatch())}
+              onClick={() => {
+                if (phoneRunning) void sessions.stop().then(() => sessions.clear());
+                setWatch(stoppedStopwatch());
+              }}
               aria-label={t("Reset the stopwatch")}
               className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal-soft flex items-center justify-center"
             >
@@ -123,7 +196,10 @@ export const EnduranceRunner: React.FC<{
           {rows.map((row, i) => (
             <li key={row.key}>
               <button
-                onClick={() => setCurrent(i)}
+                onClick={() => {
+                  if (phoneRunning) void sessions.jumpTo(i);
+                  setCurrent(i);
+                }}
                 aria-current={i === current ? "step" : undefined}
                 className={clsx(
                   "tap w-full flex items-center justify-between text-start",
@@ -148,7 +224,10 @@ export const EnduranceRunner: React.FC<{
           ))}
         </ol>
         <button
-          onClick={() => setCurrent((i) => Math.min(rows.length - 1, i + 1))}
+          onClick={() => {
+            if (phoneRunning) void sessions.next();
+            else setCurrent((i) => Math.min(rows.length - 1, i + 1));
+          }}
           disabled={current >= rows.length - 1}
           className="tap text-[11px] font-semibold text-primary disabled:opacity-40"
           style={{ marginTop: 4, padding: "2px 8px" }}

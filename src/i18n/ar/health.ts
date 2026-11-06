@@ -1337,6 +1337,12 @@ const health: Catalogue = {
   "BIOMARKER SUMMARY": "ملخص المؤشرات الحيوية", // note: health wording; the summary card's title
   "Range: {range} {unit}": "النطاق: {range} {unit}", // note: health wording; same Arabic as the pro branch
   "Prototype health tracking, not a diagnosis.": "تتبّع صحي تجريبي، وليس تشخيصًا.", // note: health wording; the share card's footer
+  // == Round J · the phone's camera (App-Centium ROUND_J.md §4) ==
+  "The camera couldn't start. Choose a file instead.": "تعذّر تشغيل الكاميرا. اختر ملفًا بدلًا من ذلك.",
+  "Camera access is off for Centium. Allow it in your phone's settings.": "الوصول إلى الكاميرا متوقف لـCentium. اسمح به من إعدادات الهاتف.",
+  "Preparing the reader…": "جارٍ تجهيز القارئ…",
+  "Your phone is getting its text reader. This happens once.": "يحمّل هاتفك قارئ النصوص. يحدث هذا مرة واحدة فقط.",
+  "Your phone couldn't get its text reader. Type the results in below, or scan again when you're connected.": "تعذّر على هاتفك تحميل قارئ النصوص. اكتب النتائج أدناه، أو امسح التقرير مجددًا عند الاتصال بالإنترنت.",
 };
 
 export default health;

@@ -127,6 +127,10 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
+import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { startHealthSync, stopHealthSync } from "../platform/health";
+import { syncShortcuts } from "../platform/shortcuts";
+import { startNativePush } from "../platform/push";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { unsubscribeFromPush } from "../services/push";
@@ -1643,6 +1647,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // The phone app's install, once per session (report_app_install
           // references profiles(id) too). Nothing in a browser.
           reportInstallOnce(next.access_token);
+          // Native push registers this install the same way (push_devices
+          // references profiles(id)), only if permission was already given.
+          startNativePush();
           return ensureAutoStreaks(next.user.id);
         });
       }
@@ -2182,6 +2189,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.dir = activeLanguage === "ar" ? "rtl" : "ltr";
     document.documentElement.lang = activeLanguage;
     if (activeLanguage === "ar") void ensureArabicFont();
+    // The phone app labels its notification channels, widgets and shortcuts
+    // in the same language (App-Centium ROUND_J.md §1.3). Nothing on the web.
+    mirrorLanguage(activeLanguage);
   }, [activeLanguage]);
   const languageReady = activeLanguage === language;
   const t = translate;
@@ -2211,6 +2221,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Once per signed-in account; the language and onboarding read are that moment's.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId, profileReady]);
+  // The phone app's long-press shortcuts (App-Centium ROUND_J.md §5.2): a
+  // signed-in, onboarded member's, decided once the profile is read. Nothing on the web.
+  useEffect(() => {
+    if (!authReady || (authUserId && !profileReady)) return;
+    syncShortcuts(!!authUserId && user.onboarded && user.accountType === "customer");
+  }, [authReady, authUserId, profileReady, user.onboarded, user.accountType]);
   const toggleTheme = () => setThemeMode(theme === "dark" ? "light" : "dark");
 
 
@@ -2544,6 +2560,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const setRecoverySensitive = (on: boolean) => writeRecoveryMode({ enabled: on });
   const setRecoverySensitiveIntroSeen = (seen: boolean) => writeRecoveryMode({ introSeen: seen });
+  // The phone app's Health Connect sync (App-Centium ROUND_J.md §2.3): on
+  // opening and on every return, at most every 15 minutes, for an onboarded
+  // account once its recovery-sensitive setting is known, so weight and body
+  // fat are never read for someone who has the mode on. Nothing on the web.
+  useEffect(() => {
+    if (!authUserId || !profileReady || !user.onboarded || recoveryModePending) {
+      stopHealthSync();
+      return;
+    }
+    startHealthSync(recoverySensitive);
+  }, [authUserId, profileReady, user.onboarded, recoveryModePending, recoverySensitive]);
   const [twoFactorNudgeDismissed, setTwoFactorNudgeDismissed] = usePersistentState<boolean>(
     "twoFactorNudgeDismissed",
     false
@@ -6536,6 +6563,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (removal.status === "error") {
       console.error("[auth] Could not remove this device's push subscription:", removal.message);
     }
+    // The phone app's side (ROUND_J.md §1.4): widgets, shortcuts, a running
+    // session. Best effort and capped at two seconds, like the line above.
+    await nativeSignedOut();
 
     await signOutRemote();
     // A fresh page, bound to "signed out": no in-memory state of this account

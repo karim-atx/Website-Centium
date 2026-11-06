@@ -5,8 +5,15 @@
 // This is its typed proxy. On the web registerPlugin() returns a proxy whose
 // every call rejects as unimplemented, so callers branch on isNative() first.
 //
-// Mobile round Z, Phase 1 (App-Centium docs/mobile-round-z/PLAN.md Z1.3, Z1.5).
-import { registerPlugin } from "@capacitor/core";
+// Mobile round Z, Phase 1 (App-Centium docs/mobile-round-z/PLAN.md Z1.3, Z1.5)
+// and Round J (ROUND_J.md §1: open a path, the language, sign-out, features).
+import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
+
+/**
+ * The native features of Round J, each its own module in src/platform/.
+ * `available` answers per feature, so iOS can catch up one at a time.
+ */
+export type RoundJFeature = "push" | "health" | "camera" | "widgets" | "shortcuts" | "calendar" | "sessions";
 
 export interface CentiumNativePlugin {
   /**
@@ -24,6 +31,36 @@ export interface CentiumNativePlugin {
    * person closes the chooser.
    */
   googleSignIn(options: { serverClientId: string; nonce: string }): Promise<{ idToken: string }>;
+
+  /**
+   * Whether this build has a Round J feature (false until its native half
+   * exists on this platform). `reason` explains a false that the person can
+   * fix, e.g. Health Connect needing an install or update.
+   */
+  available(options: { feature: RoundJFeature }): Promise<{ ok: boolean; reason?: string }>;
+
+  /**
+   * The path a widget, shortcut or notification opened the app on, held
+   * from a cold start until the website is ready to ask; null when there is
+   * none. Asking clears it.
+   */
+  takeLaunchPath(): Promise<{ path: string | null }>;
+
+  /** The app's language, for what Android draws itself: channel names, widgets, shortcuts. */
+  setLanguage(options: { language: "en" | "ar" }): Promise<void>;
+
+  /**
+   * Sign-out, on the phone's side: the widget snapshot and shortcuts are
+   * cleared and a running session stops. Health Connect access and the
+   * Centium calendar are left as they are.
+   */
+  signedOut(): Promise<void>;
+
+  /** The phone's notification settings for Centium (its channels, and the switch the person turned off). */
+  openNotificationSettings(): Promise<void>;
+
+  /** A widget, shortcut or notification opened a path while the app was already running. */
+  addListener(eventName: "openPath", listener: (event: { path: string }) => void): Promise<PluginListenerHandle>;
 }
 
 export const CentiumNative = registerPlugin<CentiumNativePlugin>("CentiumNative");

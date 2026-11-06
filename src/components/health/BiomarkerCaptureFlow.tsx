@@ -71,6 +71,8 @@ interface ScanInfo {
   found: number;
   unmatched: string[];
   failed: boolean;
+  /** In the app: the phone's reader couldn't be downloaded (no network). */
+  noReader: boolean;
   /** The report date was read from the report. */
   dated: boolean;
 }
@@ -145,6 +147,8 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
   const [attempt, setAttempt] = useState(0);
   // HE1.9.2.1 #9 / #11: bytes sent, 0 to 1.
   const [progress, setProgress] = useState(0);
+  // In the app, the first scan downloads the phone's reader (scanRead).
+  const [preparing, setPreparing] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const [hasFile, setHasFile] = useState(!!file);
   const [markers, setMarkers] = useState<MarkerDraft[]>([emptyMarker()]);
@@ -194,7 +198,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
     const ac = new AbortController();
     abortRef.current = ac;
     setProgress(0);
-    void readReport(file, { onProgress: setProgress, signal: ac.signal }).then((r) => {
+    void readReport(file, { onProgress: setProgress, onPreparing: setPreparing, signal: ac.signal }).then((r) => {
       if (ac.signal.aborted) return;
       const list = lab.catalogue ?? [];
       const reading = r.ok ? parseReport(r.text, list, today) : null;
@@ -202,7 +206,7 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
       setMarkers(rows.length ? rows.map((x) => x.draft) : [emptyMarker()]);
       setNotes(rows.map((x) => x.note));
       if (reading?.date) setDate(reading.date);
-      setScanInfo({ found: rows.length, unmatched: reading?.unmatched.slice(0, 12) ?? [], failed: !r.ok, dated: !!reading?.date });
+      setScanInfo({ found: rows.length, unmatched: reading?.unmatched.slice(0, 12) ?? [], failed: !r.ok, noReader: !r.ok && r.reason === "no_reader", dated: !!reading?.date });
       setStage("entry");
     });
     return () => ac.abort();
@@ -396,12 +400,14 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           <div style={{ width: 286, marginTop: 26 }}>
             {bar()}
             <div className="flex justify-between items-baseline" style={{ marginTop: 10 }}>
-              <p role="status" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{t("Reading your report")}</p>
+              <p role="status" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 700, color: INK }}>{preparing ? t("Preparing the reader…") : t("Reading your report")}</p>
               <span data-read-pct style={{ fontSize: textPx(12), lineHeight: linePx(18), fontWeight: 600, color: INK_FAINT, fontVariantNumeric: "tabular-nums" }}>
                 {Math.round(progress * 100)}%
               </span>
             </div>
-            <p style={{ margin: "4px 0 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>{t("Keep the app open. The first scan takes a little longer.")}</p>
+            <p style={{ margin: "4px 0 8px", fontSize: textPx(12), lineHeight: linePx(18), color: INK_FAINT }}>
+              {preparing ? t("Your phone is getting its text reader. This happens once.") : t("Keep the app open. The first scan takes a little longer.")}
+            </p>
             {privacy}
             <div className="flex" style={{ gap: 18, marginTop: 8 }}>
               <button type="button" onClick={leave} className="tap min-h-[44px]" style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: deepInk(dark) }}>
@@ -469,7 +475,9 @@ const ScanFlow: React.FC<{ file: File | null; read: boolean; onClose: () => void
           {read && scanInfo && (
             <div style={{ margin: "2px 0 12px", borderRadius: 14, padding: "12px 14px", background: dark ? "rgb(var(--c-primary) / 0.12)" : "rgb(var(--th-9a8cd6) / 0.12)" }}>
               <p role="status" style={{ fontSize: textPx(12.5), lineHeight: linePx(18.8), fontWeight: 700, color: INK }}>
-                {scanInfo.failed
+                {scanInfo.noReader
+                  ? t("Your phone couldn't get its text reader. Type the results in below, or scan again when you're connected.")
+                  : scanInfo.failed
                   ? t("This report couldn't be read. Type the results in below.")
                   : scanInfo.found === 0
                     ? t("No results could be read. Type them in below.")

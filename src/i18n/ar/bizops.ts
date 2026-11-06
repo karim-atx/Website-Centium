@@ -1052,6 +1052,10 @@ const bizops: Catalogue = {
   "Search to find more": "ابحث للعثور على المزيد",
   "{name}'s ID changed.": "تم تغيير معرّف {name}.",
   "{name}'s ID removed.": "تمت إزالة معرّف {name}.",
+  // == Round J · the phone's camera (App-Centium ROUND_J.md §4) ==
+  "Allow camera access for Centium in your phone's settings, or check them in by name.": "اسمح لـCentium باستخدام الكاميرا من إعدادات الهاتف، أو سجّل حضوره بالاسم.",
+  "Open phone settings": "فتح إعدادات الهاتف",
+  "Scan passes": "مسح البطاقات",
 };
 
 export default bizops;

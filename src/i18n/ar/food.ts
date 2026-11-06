@@ -586,6 +586,12 @@ const food: Catalogue = {
   "Couldn't load your allergies.": "تعذّر تحميل الحساسية لديك.",
   // == EH final · the diary's allergy badge, read aloud ==
   "{allergy}, {severity}": "{allergy}، {severity}", // note: health wording (an allergy and its recorded severity, as the badge shows)
+  // == Round J · the phone's camera (App-Centium ROUND_J.md §4) ==
+  "Type it instead": "اكتبه بدلًا من ذلك",
+  "Camera access is off for Centium. Allow it in your phone's settings, or type the number below.": "الوصول إلى الكاميرا متوقف لـCentium. اسمح به من إعدادات الهاتف، أو اكتب الرقم أدناه.",
+  "The camera couldn't start. Type the number under the barcode instead.": "تعذّر تشغيل الكاميرا. اكتب الرقم الموجود تحت الباركود بدلًا من ذلك.",
+  "Open phone settings": "فتح إعدادات الهاتف",
+  "Scan with camera": "المسح بالكاميرا",
 };
 
 export default food;

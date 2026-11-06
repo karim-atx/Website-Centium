@@ -6,6 +6,7 @@ import { HealthChecksProvider } from "./context/HealthChecksContext";
 import { Button } from "./components/ui/Button";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { NativeAppGate } from "./components/native/NativeAppGate";
+import { NativeOpenPath } from "./components/native/NativeOpenPath";
 import { isNative } from "./platform";
 import { hasReturnedAuthError } from "./services/auth";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
@@ -643,6 +644,8 @@ export default function App() {
       <HealthChecksProvider>
         <BrowserRouter>
           <AppRoutes />
+          {/* The phone app: a widget, shortcut or notification opens a page. */}
+          {isNative() && <NativeOpenPath />}
         </BrowserRouter>
       </HealthChecksProvider>
       {/* Above everything: another tab changed the account (tabIdentity.ts). */}

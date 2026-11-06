@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from "react";
-import { CameraOff, Keyboard, WifiOff } from "lucide-react";
+import { Camera, CameraOff, Keyboard, WifiOff } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useOnline } from "../../../hooks/useOnline";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -11,6 +11,7 @@ import { FOCUS_CSS, usePress } from "../usePress";
 import { BackHeader } from "../offers/parts";
 import { t } from "../../../i18n/core";
 import { checkVoucher, checkView, codeComplete, formatCode, markVoucherUsed, type CheckView, type VoucherCheck } from "../../../services/vouchers/check";
+import { camera as phoneCamera, useNativeCamera } from "../../../platform/camera";
 
 // Market + Share 3.0 · W3 · Redeem a voucher (B-MA.4 `scan`…`scanInvalid`,
 // Business Marketplace Screens lines 249–300 and `R` / `scanCode`; P-MA.4,
@@ -41,6 +42,11 @@ import { checkVoucher, checkView, codeComplete, formatCode, markVoucherUsed, typ
 // Ours: the "Voucher marked as used" result after Mark as used (a repeat
 // shows Already used and changes nothing), "Code not found" and "Voucher
 // cancelled" (check_voucher states the board doesn't draw), the error and offline lines.
+//
+// IN THE APP (App-Centium ROUND_J.md §4.1) the phone's own full-screen
+// scanner opens with the screen and after "Scan another"; the panel holds
+// "Scan a voucher" to open it again, and the scanner's "Enter code" opens the
+// Enter code sheet.
 
 export interface RedeemScreenProps {
   variant: "business" | "professional";
@@ -101,12 +107,41 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
     },
     [run, sheetOpen]
   );
-  const { video, camera } = useCameraCodeReader({ active: online && !sheetOpen, kind: "qr", accept });
+  // In the app: null while the phone answers, so the website's camera doesn't start meanwhile.
+  const phone = useNativeCamera();
+  const native = phone?.scan === true;
+  const { video, camera } = useCameraCodeReader({ active: online && !sheetOpen && phone !== null && !native, kind: "qr", accept });
+
+  const [nativeNote, setNativeNote] = useState<"denied" | "unavailable" | null>(null);
+  const scanOnPhone = useCallback(async () => {
+    setNativeNote(null);
+    const r = await phoneCamera
+      .scan({ kind: "pass", prompt: who === "client" ? t("Point the camera at the client's QR code.") : t("Point the camera at the member's QR code."), alt: t("Enter code") })
+      .catch(() => null);
+    if (!r) return setNativeNote("unavailable");
+    if ("cancelled" in r) {
+      if (r.reason === "alt") {
+        setEnterError(null);
+        setEnterOpen(true);
+      } else if (r.reason === "denied") setNativeNote("denied");
+      else if (r.reason !== "closed") setNativeNote("unavailable");
+      return;
+    }
+    void run(r.code, "camera");
+  }, [run, who]);
+  const launched = useRef(false);
+  useEffect(() => {
+    if (native && online && !launched.current) {
+      launched.current = true;
+      void scanOnPhone();
+    }
+  }, [native, online, scanOnPhone]);
 
   const scanAnother = () => {
     setResult(null);
     setMarkError(null);
     setCode("");
+    if (native && online) void scanOnPhone();
   };
 
   const mark = async (c: VoucherCheck) => {
@@ -136,7 +171,36 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
       >
         {/* Always mounted, so a camera allowed after a refusal can start again. */}
         <video ref={video} muted playsInline aria-label={t("Camera")} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", borderRadius: 24, opacity: showVideo && camera === "scanning" ? 1 : 0, display: showVideo ? "block" : "none" }} />
-        {showVideo ? (
+        {native && online ? (
+          nativeNote ? (
+            <CameraNote m={m} kind={nativeNote} who={who} phone>
+              {nativeNote === "denied" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNativeNote(null);
+                    void phoneCamera.openSettings();
+                  }}
+                  className="market-focus"
+                  style={{ minHeight: 44, padding: "0 12px", border: 0, background: "transparent", fontFamily: "inherit", fontSize: textPx(13), fontWeight: 700, color: m.pdark, cursor: "pointer" }}
+                >
+                  {t("Open phone settings")}
+                </button>
+              )}
+            </CameraNote>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void scanOnPhone()}
+              disabled={checking}
+              className="market-focus"
+              style={{ display: "flex", alignItems: "center", gap: 8, height: 50, padding: "0 22px", borderRadius: 16, border: 0, background: m.fill, color: m.onfill, fontFamily: "inherit", fontSize: textPx(15), fontWeight: 700, cursor: "pointer", opacity: checking ? 0.6 : 1 }}
+            >
+              <Camera size={18} strokeWidth={2} aria-hidden style={NO_ICON_SCALE} />
+              {t("Scan a voucher")}
+            </button>
+          )
+        ) : showVideo ? (
           <div aria-hidden style={{ position: "relative", width: 210, height: 210, boxSizing: "border-box", borderRadius: 20, border: `2px solid ${m.fill}` }} />
         ) : (
           <CameraNote m={m} kind={!online ? "offline" : camera === "denied" ? "denied" : "unavailable"} who={who} />
@@ -223,12 +287,16 @@ export const RedeemScreen: React.FC<RedeemScreenProps> = ({ variant, onBack, bac
 };
 
 /** Inside the camera panel when the camera can't run (ours, in the handover chrome). */
-const CameraNote: React.FC<{ m: MarketPalette; kind: "denied" | "unavailable" | "offline"; who: string }> = ({ m, kind, who }) => {
+const CameraNote: React.FC<{ m: MarketPalette; kind: "denied" | "unavailable" | "offline"; who: string; phone?: boolean; children?: React.ReactNode }> = ({ m, kind, who, phone, children }) => {
   const Icon = kind === "offline" ? WifiOff : CameraOff;
   const title = kind === "offline" ? t("You're offline") : kind === "denied" ? t("Camera is blocked") : t("No camera available");
   const body =
     kind === "offline"
       ? t("Checking a voucher needs a connection. Try again when you're connected.")
+      : kind === "denied" && phone
+        ? who === "client"
+          ? t("Allow camera access for Centium in your phone's settings, or enter the code under the client's QR code.")
+          : t("Allow camera access for Centium in your phone's settings, or enter the code under the member's QR code.")
       : kind === "denied"
         ? who === "client"
           ? t("Allow camera access for Centium in your browser settings, or enter the code under the client's QR code.")
@@ -243,6 +311,7 @@ const CameraNote: React.FC<{ m: MarketPalette; kind: "denied" | "unavailable" | 
       </span>
       <div style={{ fontSize: textPx(16), fontWeight: 800 }}>{title}</div>
       <div style={{ fontSize: textPx(13), lineHeight: linePx(19), color: m.ink2, maxWidth: 280 }}>{body}</div>
+      {children}
     </div>
   );
 };

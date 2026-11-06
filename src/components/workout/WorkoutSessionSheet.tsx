@@ -823,6 +823,8 @@ export const WorkoutSessionSheet: React.FC<{
           <div style={{ padding: "10px 14px 0" }}>
             <EnduranceRunner
               plan={meta.endurancePlan}
+              sessionKey={ex.exerciseId}
+              title={ex.name}
               result={ex.enduranceResult}
               onResult={(enduranceResult) => setLogged((prev) => prev.map((l, n) => (n === exIdx ? { ...l, enduranceResult } : l)))}
               onStarted={startClock}

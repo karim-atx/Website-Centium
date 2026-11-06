@@ -10,6 +10,8 @@ import { logMeditationSession } from "../../services/meditation";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { breathingSaveRule, formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 import type { BreathingPattern } from "../../data/mockMindContent";
+import { phaseElapsedMs, sessions, useLockedSession } from "../../platform/sessions";
+import type { SessionCue } from "../../platform/contracts";
 import { t, tk, tx } from "../../i18n/core";
 
 // The breathing runner, v6 MO1.1.4 (layout table #11-#22) on the v5.1
@@ -38,6 +40,9 @@ const holdTargetScale = (pattern: BreathingPattern, phaseIdx: number) => {
 // the MO1.1.4.3 board (K3).
 const PHASE_COLOUR = (label: string) =>
   label === "Breathe in" ? "rgb(var(--c-primary-dark))" : label === "Breathe out" ? "rgb(var(--th-a2c8c2))" : "rgb(var(--th-c8bfe9))";
+// In the app, the phone keeps the run going with the screen locked and plays
+// a soft cue at each phase (App-Centium ROUND_J.md §7).
+const CUE = (label: string): SessionCue => (label === "Breathe in" ? "inhale" : label === "Breathe out" ? "exhale" : "hold");
 const SIZE = 270;
 const ARC_R = 128;
 const ARC_C = 2 * Math.PI * ARC_R;
@@ -66,6 +71,9 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
   const [note, setNote] = useState<string | null>(null);
   /** A failed save (O3, O4, K7): the shared error toast. */
   const [toast, setToast] = useState<string | null>(null);
+  // In the app: the phone's clock for this pattern's run (null in a browser).
+  const locked = useLockedSession(`breathing:${pattern.id}`);
+  const lockedRef = useRef(locked);
 
   // --- the session log -------------------------------------------------------
   //
@@ -83,12 +91,15 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
   const cyclesRef = useRef(0);
   const live = useRef({ authUserId, refreshMeditationSummary, refreshAchievements });
 
-  /** Ends the open run. `report`: show the note (the runner is still on screen). */
-  const endSession = (report: boolean) => {
+  /**
+   * Ends the open run. `report`: show the note (the runner is still on
+   * screen). `endMs`: when it ended, if not now (stopped from the lock screen).
+   */
+  const endSession = (report: boolean, endMs = Date.now()) => {
     const session = sessionRef.current;
     sessionRef.current = null;
     if (!session) return;
-    const seconds = sessionSeconds(session.startedAtMs, Date.now());
+    const seconds = sessionSeconds(session.startedAtMs, endMs);
     const rule = breathingSaveRule(cyclesRef.current, seconds);
     if (rule !== "save" || seconds === null) {
       if (report) setNote(t(rule === "short" ? NOTE_TOO_SHORT : NOTE_NEED_CYCLE));
@@ -123,9 +134,22 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
   useEffect(() => {
     live.current = { authUserId, refreshMeditationSummary, refreshAchievements };
     endRef.current = endSession;
+    lockedRef.current = locked;
   });
+  /** The phone's session ends with the run (in a browser there is none). */
+  const stopLocked = () => {
+    if (lockedRef.current.native) void sessions.stop().then(() => sessions.clear());
+  };
   // Leaving the page (or switching its tab) unmounts the runner mid-run (K6).
-  useEffect(() => () => endRef.current(false), []);
+  useEffect(
+    () => () => {
+      if (sessionRef.current) stopLocked();
+      endRef.current(false);
+    },
+    // stopLocked reads refs only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [cycles, setCycles] = useState(0);
@@ -150,6 +174,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
   useEffect(() => {
     // S3: switching pattern ends the run (saved under the same rule as Stop)
     // and resets the cycle count.
+    if (sessionRef.current) stopLocked();
     endRef.current(true);
     rewind();
   }, [pattern]);
@@ -162,6 +187,20 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
       return;
     }
     intervalRef.current = window.setInterval(() => {
+      // In the app the phone's clock decides where the run is, so it is right
+      // after the screen was locked.
+      const s = lockedRef.current.state;
+      if (s?.active) {
+        const idx = Math.min(s.phaseIndex, pattern.phases.length - 1);
+        const within = Math.min(phaseElapsedMs(s, Date.now()), pattern.phases[idx].seconds * 1000);
+        phaseIdxRef.current = idx;
+        elapsedRef.current = within;
+        cyclesRef.current = s.round;
+        setPhaseIdx(idx);
+        setElapsedMs(within);
+        setCycles(s.round);
+        return;
+      }
       const next = elapsedRef.current + 100;
       const phaseMs = pattern.phases[phaseIdxRef.current].seconds * 1000;
       if (next < phaseMs) {
@@ -186,6 +225,7 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
 
   // S5: back to Breathe in, Cycle 0, WITHOUT saving (the run is discarded).
   const reset = () => {
+    if (sessionRef.current) stopLocked();
     sessionRef.current = null;
     setNote(null);
     rewind();
@@ -194,13 +234,45 @@ export const BreathingRunner: React.FC<{ pattern: BreathingPattern; contentId?: 
   const toggle = () => {
     if (running) {
       setRunning(false);
+      stopLocked();
       endSession(true);
     } else {
       sessionRef.current = { startedAtMs: Date.now(), kind: kind ?? meditationKind(pattern.id), contentId };
       setNote(null);
       setRunning(true);
+      if (locked.native) {
+        void sessions.start({
+          kind: sessionRef.current.kind,
+          title: t(pattern.name),
+          phases: pattern.phases.map((p) => ({ label: t(p.label), seconds: p.seconds, cue: CUE(p.label) })),
+          repeat: 0,
+          resultKey: `breathing:${pattern.id}`,
+        });
+      }
     }
   };
+
+  // The phone's side of the run (in the app only).
+  const lockedState = locked.state;
+  useEffect(() => {
+    if (!lockedState) return;
+    if (lockedState.active && !sessionRef.current) {
+      // The page came back (or reloaded) while the run went on: pick it up.
+      sessionRef.current = { startedAtMs: lockedState.startedAt, kind: lockedState.kind, contentId };
+      setRunning(true);
+    } else if (lockedState.active && sessionRef.current) {
+      sessionRef.current.startedAtMs = lockedState.startedAt;
+    } else if (!lockedState.active) {
+      // Stopped from the lock screen: saved under the same rule as Stop.
+      if (sessionRef.current) {
+        setRunning(false);
+        endSession(true, lockedState.endedAt ?? Date.now());
+      }
+      void sessions.clear();
+    }
+    // endSession and contentId are read at the moment the phone reports.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedState]);
 
   const phase = pattern.phases[phaseIdx];
   const isInhale = phase.label === "Breathe in";

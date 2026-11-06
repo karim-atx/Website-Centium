@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ImageOff, Plus, Trash2 } from "lucide-react";
+import { Camera, Check, Image as ImageIcon, ImageOff, Plus, Trash2 } from "lucide-react";
 import { PageHeader } from "../../../components/ui/PageHeader";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
@@ -35,6 +35,7 @@ import {
 } from "../../../services/premium/g4";
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
+import { camera as phoneCamera, useNativeCamera, useProtectedScreen } from "../../../platform/camera";
 
 // undrawn (Round G, no handover)
 // Round G4 · /app/workout/progress-photos, the member's own progress photos:
@@ -46,6 +47,11 @@ import { t } from "../../../i18n/core";
 //
 // RECOVERY-SENSITIVE MODE: the route doesn't exist (G4Route blocked), and no
 // reader is called (useG3's enabled flag is photosVisible).
+//
+// IN THE APP (App-Centium ROUND_J.md §4.3): the page blocks screenshots and
+// the Recents preview (Karim, D14), and "Take photo" is Centium's own camera:
+// the photo never reaches the phone's gallery or photo backup, and carries no
+// EXIF. "Choose from gallery" stays for a photo the member already has.
 
 const longDay = (ymd: string) => new Date(`${ymd}T12:00:00`).toLocaleDateString(appLocale("en-US"), { day: "numeric", month: "short", year: "numeric" });
 
@@ -63,6 +69,7 @@ function PhotosScreen() {
   const hideNumbers = useHideNumbers();
   const { premium } = usePremium();
   const visible = photosVisible({ premiumOn: premium?.premiumOn === true, g4, hideNumbers });
+  useProtectedScreen(visible);
   const photos = useG3(fetchPhotos, "photos", visible);
   const [mayAdd, setMayAdd] = useState<boolean | null>(null);
   const [adding, setAdding] = useState(false);
@@ -280,6 +287,19 @@ function AddPhotoSheet({ onClose, onAdded }: { onClose: () => void; onAdded: () 
     setPreview(URL.createObjectURL(f));
   };
 
+  const phone = useNativeCamera();
+  const takeOnPhone = async () => {
+    setError(null);
+    const r = await phoneCamera.capturePhoto({ purpose: "progress" }).catch(() => null);
+    if (!r) return setError(t("The camera couldn't start. Choose a photo from your gallery instead."));
+    if ("cancelled" in r) {
+      if (r.reason === "denied") setError(t("Camera access is off for Centium. Allow it in your phone's settings."));
+      else if (r.reason !== "closed") setError(t("The camera couldn't start. Choose a photo from your gallery instead."));
+      return;
+    }
+    pick(r.file);
+  };
+
   const save = async () => {
     if (!authUserId) return;
     if (!file) return setError(t("Choose a photo."));
@@ -319,6 +339,18 @@ function AddPhotoSheet({ onClose, onAdded }: { onClose: () => void; onAdded: () 
           )}
         </button>
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,.heic,.heif" hidden onChange={(e) => pick(e.target.files?.[0] ?? undefined)} />
+        {phone?.capture && (
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => void takeOnPhone()} className="tap inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary-fill px-3 py-2.5 text-[13px] font-bold text-on-primary-fill">
+              <Camera size={15} aria-hidden />
+              {t("Take photo")}
+            </button>
+            <button type="button" onClick={() => fileRef.current?.click()} className="tap inline-flex items-center justify-center gap-1.5 rounded-xl bg-cream-soft px-3 py-2.5 text-[13px] font-bold text-charcoal">
+              <ImageIcon size={15} aria-hidden />
+              {t("Choose from gallery")}
+            </button>
+          </div>
+        )}
 
         <label className="mt-4 block">
           <span className="mb-1.5 block text-[12px] font-semibold text-charcoal-soft">{t("Taken on")}</span>

@@ -2,6 +2,13 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { encodeKey } from "./encode";
 import { isNative } from "../../platform";
+import {
+  nativePush,
+  nativePushPermission,
+  nativePushRegistered,
+  nativePushSupported,
+  unregisterNativePush,
+} from "../../platform/push";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
@@ -98,16 +105,29 @@ function vapidKeyBytes(base64url: string): Uint8Array<ArrayBuffer> {
  * strict one.
  */
 export function pushSupported(): boolean {
+  // The phone app receives push through FCM / APNs instead (App-Centium
+  // ROUND_J.md §3), and registers no service worker (main.tsx).
+  if (isNative()) return nativePushSupported();
   return (
-    // The phone app receives push through APNs / FCM instead (mobile round Z,
-    // Phase 2), and registers no service worker (main.tsx).
-    !isNative() &&
     typeof navigator !== "undefined" &&
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window
   );
+}
+
+/**
+ * This device's notification permission, read synchronously: the browser's
+ * Notification.permission, or in the app the last answer from the phone
+ * (platform/push.ts). Only meaningful where pushSupported() is true.
+ */
+export function pushPermissionNow(): NotificationPermission {
+  if (isNative()) {
+    const p = nativePushPermission();
+    return p === "prompt" ? "default" : p;
+  }
+  return Notification.permission;
 }
 
 /** Notification.permission's three states, as a boolean with an undecided. */
@@ -150,6 +170,7 @@ export async function enablePush(ownerId: string | null): Promise<EnableResult> 
   if (!pushSupported()) {
     return { status: "unsupported", message: "This browser can't receive notifications." };
   }
+  if (isNative()) return enableNativePush(ownerId);
 
   let permission: NotificationPermission;
   try {
@@ -168,6 +189,30 @@ export async function enablePush(ownerId: string | null): Promise<EnableResult> 
     return { status: "error", message: "Sign in to receive notifications on this device." };
   }
   return subscribeToPush(ownerId);
+}
+
+/**
+ * The app's version of enablePush: the phone's prompt (Android 13+), then
+ * register_push_device. The same outcomes, so every caller stays as it is.
+ */
+async function enableNativePush(ownerId: string | null): Promise<EnableResult> {
+  if (!ownerId) {
+    return { status: "error", message: "Sign in to receive notifications on this device." };
+  }
+  let permission: Awaited<ReturnType<typeof nativePush.enable>>;
+  try {
+    permission = await nativePush.enable();
+  } catch (e) {
+    console.error("[push] Native enable failed:", e);
+    return { status: "error", message: "Couldn't register for notifications." };
+  }
+  if (permission !== "granted") {
+    return { status: "denied", message: "Notifications are blocked for Centium." };
+  }
+  const registered = await nativePushRegistered();
+  return registered
+    ? { status: "ok", endpoint: "native", created: true }
+    : { status: "error", message: "Couldn't register for notifications." };
 }
 
 /**
@@ -338,6 +383,11 @@ async function recordSubscription(
  * after signOut() the row is unreachable and would be left behind forever.
  */
 export async function unsubscribeFromPush(): Promise<UnsubscribeResult> {
+  if (isNative()) {
+    // The app's row in push_devices, by this install's token (DB-Z3).
+    const r = await unregisterNativePush();
+    return r.error ? { status: "error", message: "Couldn't remove this device." } : { status: "ok", removed: r.removed };
+  }
   if (!pushSupported()) return { status: "ok", removed: false };
 
   try {
@@ -382,6 +432,7 @@ export async function unsubscribeFromPush(): Promise<UnsubscribeResult> {
  */
 export async function isThisDeviceRegistered(): Promise<boolean | null> {
   if (!pushSupported()) return null;
+  if (isNative()) return nativePushRegistered();
   try {
     const registration = await navigator.serviceWorker.getRegistration();
     if (!registration) return false;
