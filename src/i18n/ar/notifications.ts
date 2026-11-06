@@ -277,6 +277,8 @@ const notifications: Catalogue = {
   "Open settings": "فتح الإعدادات",
   "On this phone": "على هذا الهاتف",
   "Hide details on lock screen": "إخفاء التفاصيل على شاشة القفل",
+  // == Round J · J-2c: the workout widget's line (components/native/WidgetSnapshotSync) ==
+  "Week {week} · Day {day}": "الأسبوع {week} · اليوم {day}",
   "Notifications show only a short line, never names or details. Messages follow their own preview setting.": "تُظهر الإشعارات سطرًا قصيرًا فقط، من دون أسماء أو تفاصيل. تتبع الرسائل إعداد المعاينة الخاص بها.",
 };
 

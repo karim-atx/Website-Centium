@@ -1,0 +1,106 @@
+import { useEffect, useMemo, useState } from "react";
+import { useApp } from "../../context/AppContext";
+import { useHideNumbers } from "../../hooks/useHideNumbers";
+import { activityByDay, useActivityDaily } from "../../services/health-metrics/b1";
+import { fetchMyProgrammes, fetchProgrammeSchedule } from "../../services/programmes";
+import { isOpen, sessionsOn } from "../../services/programmes/model";
+import { buildWidgetSnapshot, snapshotKey, type WorkoutToday } from "../../services/widgets/snapshotModel";
+import { widgets } from "../../platform/widgets";
+import { getLanguage, t } from "../../i18n/core";
+
+/**
+ * Round J · J-2c (website PLAN.md "Widget snapshot"; App-Centium ROUND_J.md
+ * §5.1): keeps the phone's home-screen widgets in step with today's steps,
+ * water, habits and workout. Mounted once, in the app only (App.tsx);
+ * widgets.update() itself does nothing where widgets are off.
+ *
+ * Each value is the one its own page shows:
+ * - steps: the Steps page's today (activity_daily's steps, else the
+ *   health_metrics reading) of the step goal;
+ * - water: the day total the water writes return (waterByDate), of the goal;
+ * - habits: the Habits page's list and today's ticks, the first six;
+ * - workout: today's programme session (what /app/workout?start=today
+ *   starts), the first open one, else the first not skipped.
+ *
+ * Sent only when something changed (the time aside), a moment after the last
+ * change, and again on a language change (AppContext remounts everything).
+ * Never cleared from here: sign-out and the kill switch clear the phone's copy.
+ */
+const SEND_AFTER_MS = 800;
+let lastSent: string | null = null;
+
+/** Today's programme session, read the way ProgrammeSection reads it. */
+function useWorkoutToday(today: string, signedIn: boolean): WorkoutToday {
+  const [workout, setWorkout] = useState<WorkoutToday>({ kind: "unknown" });
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const again = () => document.visibilityState === "visible" && setTick((n) => n + 1);
+    document.addEventListener("visibilitychange", again);
+    return () => document.removeEventListener("visibilitychange", again);
+  }, []);
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    void (async () => {
+      const mine = await fetchMyProgrammes();
+      if (!live || !mine.ok) return;
+      const schedules = await Promise.all(mine.data.map((p) => fetchProgrammeSchedule(p.assignmentId)));
+      if (!live || schedules.some((s) => !s.ok)) return;
+      const rows = schedules.flatMap((s) => (s.ok ? sessionsOn(s.data, today) : []));
+      const pick = rows.find(isOpen) ?? rows.find((r) => !r.skipped) ?? null;
+      setWorkout(pick ? { kind: "session", title: pick.workoutName, week: pick.week, day: pick.day } : { kind: "none" });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [today, signedIn, tick]);
+  return workout;
+}
+
+export function WidgetSnapshotSync() {
+  const { authUserId, profileReady, user, today, healthSeries, stepsGoal, waterByDate, waterGoalMl, habits, habitsLoading, habitsError, metricsLoadedAt } = useApp();
+  const signedIn = !!authUserId && profileReady && user.onboarded;
+  const hideNumbers = useHideNumbers();
+  const activityRead = useActivityDaily(today, today);
+  const activity = activityByDay(activityRead.data);
+  // The day's readings have arrived (until then steps and water are left out).
+  const metricsKnown = metricsLoadedAt !== null;
+  const workout = useWorkoutToday(today, signedIn);
+
+  // The Steps page's today: activity_daily's steps, else the health_metrics reading.
+  const stepsFromActivity = activity[today]?.steps ?? null;
+  const stepsFromMetrics = healthSeries.steps.history.find((p) => p.date === today)?.value ?? null;
+  const stepsToday = stepsFromActivity !== null && stepsFromActivity > 0 ? stepsFromActivity : stepsFromMetrics !== null && stepsFromMetrics > 0 ? stepsFromMetrics : null;
+
+  const snapshot = useMemo(
+    () =>
+      buildWidgetSnapshot({
+        language: getLanguage(),
+        hideNumbers,
+        now: new Date(),
+        steps: metricsKnown && !activityRead.loading ? { today: stepsToday, goal: stepsGoal } : null,
+        water: metricsKnown ? { todayMl: waterByDate[today] ?? 0, goalMl: waterGoalMl } : null,
+        habits: habitsLoading || habitsError ? null : habits.map((h) => ({ name: h.label, done: h.done })),
+        workout,
+        dayLabel: (week, day) => t("Week {week} · Day {day}", { week, day }),
+      }),
+    [hideNumbers, metricsKnown, activityRead.loading, stepsToday, stepsGoal, waterByDate, today, waterGoalMl, habitsLoading, habitsError, habits, workout]
+  );
+  const key = snapshotKey(snapshot);
+
+  useEffect(() => {
+    if (!signedIn || key === lastSent) return;
+    const id = window.setTimeout(() => {
+      lastSent = key;
+      void widgets.update({ ...snapshot, updatedAt: new Date().toISOString() }).catch((e: unknown) => {
+        lastSent = null;
+        console.warn("[widgets]", e);
+      });
+    }, SEND_AFTER_MS);
+    return () => window.clearTimeout(id);
+    // The key stands for the snapshot; the time inside it isn't a change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn, key]);
+
+  return null;
+}
