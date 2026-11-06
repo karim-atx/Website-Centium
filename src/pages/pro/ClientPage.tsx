@@ -12,7 +12,10 @@ import { EmptyState } from "../../components/pro/EmptyState";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../components/pro/states";
 import { CLIENT_TABS, pickTab, proClientPath, PRO_ROUTES, type ProLane } from "../../components/pro/subtypeLanes";
 import { useClientPage } from "../../components/pro/client/useClientPage";
-import { ClientHeader } from "../../components/pro/client/ClientHeader";
+import { ClientHeader, PendingPaymentBanners } from "../../components/pro/client/ClientHeader";
+import { ClientPageBodyWeb, ClientHeroWeb, ClientTabBodyWeb, ClientTabsWeb, ClientTopBarWeb } from "../../components/pro/web/ClientPageWeb";
+import { useWebLayout } from "../../components/web/useWebLayout";
+import { fmtDay } from "../../components/pro/client/clientFormat";
 import { DietaryNeedsCard } from "../../components/pro/client/DietaryNeedsCard";
 import { OverviewTab } from "../../components/pro/client/OverviewTab";
 import { PlanTab } from "../../components/pro/client/PlanTab";
@@ -27,7 +30,7 @@ import { ClientInsightsRoute } from "../../components/pro/insights/ClientInsight
 import { TagsSheet, EndCoachingPopup } from "../../components/pro/client/ClientActions";
 import type { Tone } from "../../components/pro/client/kit";
 import { addTag, CLIENT_STAGES, removeTag, setClientStage, STAGE_LABEL, type ClientStage } from "../../services/pro/clients";
-import { askToShare, fetchPendingAccessRequests } from "../../services/pro/clientPage";
+import { askToShare, fetchPendingAccessRequests, type ClientPendingHire } from "../../services/pro/clientPage";
 import { confirmHirePayment } from "../../services/hires/pro";
 import { startThread } from "../../services/messaging";
 import { shiftIso } from "../../services/pro/home";
@@ -78,6 +81,7 @@ export default function ClientPage() {
   const [tagsOpen, setTagsOpen] = useState(false);
   const [ending, setEnding] = useState(false);
   const [asked, setAsked] = useState<AccessCategory[]>([]);
+  const { web, rail } = useWebLayout();
 
   useEffect(() => {
     if (!authUserId || !id) return;
@@ -144,45 +148,17 @@ export default function ClientPage() {
   const nextLabel = next ? `${next.date === data.today ? t("Today") : next.date === shiftIso(data.today, 1) ? t("Tomorrow") : new Date(`${next.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" })} ${time12(next.startTime)}` : null;
   const sharesAnything = !!data.access.access && (data.access.access.categories.length > 0 || data.access.access.imagingSharedCount > 0 || data.access.access.resultSharedCount > 0);
 
-  return (
-    <div>
-      <ClientHeader
-        name={data.name}
-        avatarUrl={data.rel.avatarUrl}
-        patient={patient}
-        status={status}
-        isNew={stage === "onboarding" && !sharesAnything}
-        joinedAt={data.stage?.joinedAt ?? data.rel.joinedAt}
-        next={nextLabel}
-        tags={data.stage?.tags ?? []}
-        pendingHires={data.pendingHires}
-        onBack={() => (window.history.length > 1 ? navigate(-1) : navigate(PRO_ROUTES.clients))}
-        onMessage={() => void message()}
-        onSchedule={schedule}
-        onMore={setMoreEl}
-        onTags={() => setTagsOpen(true)}
-        onConfirmPayment={async (h) => {
-          const r = await confirmHirePayment(h.id, h.planName);
-          if (!r.ok) return r.message;
-          setToast(t("Payment confirmed. {name} is now active on {plan}.", { name: data.firstName, plan: h.planName }));
-          data.reload();
-          return null;
-        }}
-      />
-      {(data.access.offline || data.stageError) && <OfflineLine />}
-      <DietaryNeedsCard clientId={id} firstName={data.firstName} access={data.access} compact onAsk={() => void ask("allergies_dietary")} asked={asked.includes("allergies_dietary")} />
+  const onConfirmPayment = async (h: ClientPendingHire): Promise<string | null> => {
+    const r = await confirmHirePayment(h.id, h.planName);
+    if (!r.ok) return r.message;
+    setToast(t("Payment confirmed. {name} is now active on {plan}.", { name: data.firstName, plan: h.planName }));
+    data.reload();
+    return null;
+  };
 
-      <SegmentedTabs
-        className="mb-3"
-        items={tabs.map((tab) => ({ key: tab, label: TAB_LABEL[lane][tab] ? t(TAB_LABEL[lane][tab]) : tab }))}
-        activeKey={current}
-        onChange={go}
-        scroll
-        scrollMinWidth={0}
-        scrollTabPadding="0 12px"
-        tabHeight={38}
-      />
-
+  // The open tab and the popups, sheets and toast: the same in both layouts.
+  const tabBody = (
+    <>
       {current === "overview" && <OverviewTab data={data} lane={lane} onMessage={() => void message()} onSchedule={schedule} onAsk={(c) => void ask(c)} />}
       {current === "plan" && <PlanTab data={data} lane={lane} onAsk={(c) => void ask(c)} />}
       {(current === "progress" || current === "trends") && <ProgressTab data={data} lane={lane} onAsk={(c) => void ask(c)} />}
@@ -191,7 +167,10 @@ export default function ClientPage() {
       {current === "files" && <FilesTab data={data} />}
       {current === "care-plan" && <CarePlanTab data={data} onNotes={() => go("notes")} onCalendar={schedule} onAskDiet={() => void ask("allergies_dietary")} dietAsked={asked.includes("allergies_dietary")} />}
       {current === "health-records" && <HealthRecordsTab data={data} onAsk={(c) => void ask(c)} asked={asked} onNote={() => go("notes")} onCarePlan={() => go("care-plan")} />}
-
+    </>
+  );
+  const overlays = (
+    <>
       <PopupMenu
         open={!!moreEl}
         onClose={() => setMoreEl(null)}
@@ -266,6 +245,87 @@ export default function ClientPage() {
         }}
       />
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+    </>
+  );
+
+  // Website viewport (WP-CL.1, WP-CO-CL.1): from 1024px the bar, the hero, the equal tabs and the tab across the page.
+  if (web) {
+    const joined = data.stage?.joinedAt ?? data.rel.joinedAt;
+    const isNew = stage === "onboarding" && !sharesAnything;
+    const since = isNew
+      ? t("Joined {date} · {next}", { date: fmtDay(joined, true), next: nextLabel ? t("Next {when}", { when: nextLabel }) : t("Not booked yet") })
+      : `${patient ? t("Patient since {date}", { date: fmtDay(joined, true) }) : t("Client since {date}", { date: fmtDay(joined, true) })}${nextLabel ? ` · ${t("Next {when}", { when: nextLabel })}` : ""}`;
+    return (
+      <div>
+        <ClientTopBarWeb
+          kicker={patient ? t("Patients") : t("Clients")}
+          onBack={() => (window.history.length > 1 ? navigate(-1) : navigate(PRO_ROUTES.clients))}
+          onMessage={() => void message()}
+          onSchedule={schedule}
+          onMore={setMoreEl}
+        />
+        <ClientPageBodyWeb>
+          <ClientHeroWeb
+            name={data.name}
+            avatarUrl={data.rel.avatarUrl}
+            isNew={isNew}
+            status={status}
+            since={since}
+            tags={data.stage?.tags ?? []}
+            onTags={() => setTagsOpen(true)}
+            diet={<DietaryNeedsCard clientId={id} firstName={data.firstName} access={data.access} compact onAsk={() => void ask("allergies_dietary")} asked={asked.includes("allergies_dietary")} />}
+          />
+          <PendingPaymentBanners pendingHires={data.pendingHires} onConfirmPayment={onConfirmPayment} />
+          {(data.access.offline || data.stageError) && <OfflineLine />}
+          <ClientTabsWeb
+            label={patient ? t("Patient page") : t("Client page")}
+            items={tabs.map((tab) => ({ key: tab, label: TAB_LABEL[lane][tab] ? t(TAB_LABEL[lane][tab]) : tab }))}
+            active={current}
+            onChange={go}
+          />
+          <ClientTabBodyWeb columns={current === "overview" && !rail ? 3 : 2}>{tabBody}</ClientTabBodyWeb>
+        </ClientPageBodyWeb>
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <ClientHeader
+        name={data.name}
+        avatarUrl={data.rel.avatarUrl}
+        patient={patient}
+        status={status}
+        isNew={stage === "onboarding" && !sharesAnything}
+        joinedAt={data.stage?.joinedAt ?? data.rel.joinedAt}
+        next={nextLabel}
+        tags={data.stage?.tags ?? []}
+        pendingHires={data.pendingHires}
+        onBack={() => (window.history.length > 1 ? navigate(-1) : navigate(PRO_ROUTES.clients))}
+        onMessage={() => void message()}
+        onSchedule={schedule}
+        onMore={setMoreEl}
+        onTags={() => setTagsOpen(true)}
+        onConfirmPayment={onConfirmPayment}
+      />
+      {(data.access.offline || data.stageError) && <OfflineLine />}
+      <DietaryNeedsCard clientId={id} firstName={data.firstName} access={data.access} compact onAsk={() => void ask("allergies_dietary")} asked={asked.includes("allergies_dietary")} />
+
+      <SegmentedTabs
+        className="mb-3"
+        items={tabs.map((tab) => ({ key: tab, label: TAB_LABEL[lane][tab] ? t(TAB_LABEL[lane][tab]) : tab }))}
+        activeKey={current}
+        onChange={go}
+        scroll
+        scrollMinWidth={0}
+        scrollTabPadding="0 12px"
+        tabHeight={38}
+      />
+
+      {tabBody}
+
+      {overlays}
     </div>
   );
 }

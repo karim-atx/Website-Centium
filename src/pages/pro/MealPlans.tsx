@@ -1,7 +1,12 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { MEAL_PLAN_TABS, PRO_ROUTES, pickTab } from "../../components/pro/subtypeLanes";
 import { MealPlansArea } from "../../components/pro/nutrition/MealPlansArea";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { MobileFrame } from "../../components/web/WebLayout";
+import { ProPageBodyWeb, ProPageHeaderWeb } from "../../components/pro/web/ProPageWeb";
+import { ClientTabBodyWeb } from "../../components/pro/web/ClientPageWeb";
+import { t } from "../../i18n/core";
 
 /**
  * Release 3 · Meal plans, Nutrition's navbar tab (/app/pro/meal-plans/:tab;
@@ -16,7 +21,28 @@ export default function MealPlans() {
   const { tab } = useParams();
   const { lane } = useProSubtype();
   const area = pickTab(MEAL_PLAN_TABS, tab);
+  const web = useIsWeb();
+  const [params] = useSearchParams();
   if (tab !== undefined && tab !== area) return <Navigate to={`${PRO_ROUTES.mealPlans}/${area}`} replace />;
   if (lane !== "nutrition") return null;
+  // Website viewport (WP-NU-MP.1): the Plans home gets the page header and its sections across the page; the
+  // builder, journals, recipes and targets keep their mobile screen in the centred column until they are built.
+  if (web && area === "plans" && !params.get("plan"))
+    return (
+      <div>
+        <ProPageHeaderWeb title={t("Meal plans")} />
+        <ProPageBodyWeb>
+          <ClientTabBodyWeb columns={2}>
+            <MealPlansArea lane={lane} area={area} />
+          </ClientTabBodyWeb>
+        </ProPageBodyWeb>
+      </div>
+    );
+  if (web)
+    return (
+      <MobileFrame>
+        <MealPlansArea lane={lane} area={area} />
+      </MobileFrame>
+    );
   return <MealPlansArea lane={lane} area={area} />;
 }

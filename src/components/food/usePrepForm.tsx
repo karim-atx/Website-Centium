@@ -23,6 +23,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 import { t } from "../../i18n/core";
+import { WebCopy } from "../web/WebCopy";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
@@ -518,7 +519,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           </div>
           {confirmDelete && (
             <p className="text-[12px] font-semibold text-status-high text-center">
-              {isR ? t("Tap again to delete this recipe") : t("Tap again to delete this meal")}
+              {isR ? <WebCopy mobile={t("Tap again to delete this recipe")} web={t("Click again to delete this recipe")} /> : t("Tap again to delete this meal")}
             </p>
           )}
         </div>

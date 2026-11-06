@@ -5,6 +5,9 @@ import { textPx } from "../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "./proInk";
 import { PRO_CHART_RANGES, type ProChartRange } from "./proRules";
 import { t, tx, isRtl } from "../../i18n/core";
+import { WebCopy } from "../web/WebCopy";
+import { webScrubHint } from "../web/webScrubHint";
+import { useIsWeb } from "../web/useWebLayout";
 
 /**
  * Release 3 · ProChart, the one chart standard (HANDOVER e: "Range W M 3M Y,
@@ -176,6 +179,7 @@ export const ProChart: React.FC<ProChartProps> = ({
   flat,
   goalLegend,
 }) => {
+  const web = useIsWeb();
   const { theme } = useApp();
   const dark = theme === "dark";
   const H = height;
@@ -541,7 +545,7 @@ export const ProChart: React.FC<ProChartProps> = ({
       )}
       <p aria-hidden className="flex items-center" style={{ gap: 5, fontSize: textPx(10), color: INK.chT, marginTop: 6 }}>
         <MoveHorizontal size={11} strokeWidth={2} />
-        {scrubHint ?? t("Drag sideways to scrub, tap to pin")}
+        {scrubHint ? (web ? webScrubHint(scrubHint) : scrubHint) : <WebCopy mobile={t("Drag sideways to scrub, tap to pin")} web={t("Drag sideways to scrub, click to pin")} />}
       </p>
     </>
   );

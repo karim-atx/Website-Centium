@@ -30,6 +30,7 @@ import {
 import { StatBoxes, type StatBox } from "./parts";
 import { useRead, type ReadState } from "./reads";
 import { isRtl, t, tn, tx } from "../../../i18n/core";
+import { WebCopy } from "../../web/WebCopy";
 
 /**
  * Release 3 · W9 Insights › Vitals › Sleep (TR9 v5 "Sleep · stages" and
@@ -143,7 +144,7 @@ const Card: React.FC<{ title: string; question?: string; right?: React.ReactNode
     {scrub && (
       <p aria-hidden className="flex items-center" style={{ gap: 5, fontSize: textPx(10), color: INK.chT, marginTop: 6 }}>
         <MoveHorizontal size={11} strokeWidth={2} />
-        {t("Drag sideways to scrub, tap to pin")}
+        <WebCopy mobile={t("Drag sideways to scrub, tap to pin")} web={t("Drag sideways to scrub, click to pin")} />
       </p>
     )}
   </div>

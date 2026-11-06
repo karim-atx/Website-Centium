@@ -58,3 +58,11 @@ export function useWebLayout(): WebLayout {
 export function useIsWeb(): boolean {
   return useSyncExternalStore(subWeb, isWeb, no);
 }
+
+/** Section 2.1: at 1920 and wider, widget and card grids add a column (3 per row at 1440, 4 at 1920). */
+export const WIDE_QUERY = "(min-width: 1920px)";
+const subWide = subscribe(WIDE_QUERY);
+const isWide = matches(WIDE_QUERY);
+export function useIsWide(): boolean {
+  return useSyncExternalStore(subWide, isWide, no);
+}

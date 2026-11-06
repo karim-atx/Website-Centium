@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsWeb } from "../web/useWebLayout";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -139,6 +140,7 @@ export const NotificationsHub: React.FC<{
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
+  const web = useIsWeb();
   useBackCloses(p.open, p.onClose);
   const online = useOnline();
   // Clear all asks first (W9 post-review); only "Clear all" in the popup calls
@@ -426,16 +428,20 @@ export const NotificationsHub: React.FC<{
     { key: "updates", label: t("Updates"), n: updN },
   ];
   return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-center">
-      <div className="relative w-full h-full" style={{ maxWidth: 430 }}>
+    <div className="fixed inset-0 z-40 flex justify-center" onMouseDown={web ? (e) => e.target === e.currentTarget && p.onClose() : undefined}>
+      {/* Website viewport (WP-HO.2): from 1024px the hub is a 440 panel anchored under the header bell (top 72, 32 from the edge); a click outside closes it. Mobile keeps the full screen. */}
+      <div
+        className={web ? "absolute" : "relative w-full h-full"}
+        style={web ? { top: 72, insetInlineEnd: 32, width: 440, maxHeight: "calc(100dvh - 96px)", height: "auto", display: "flex", borderRadius: 24, overflow: "hidden", border: "1px solid rgba(36,31,27,0.08)", boxShadow: "0 16px 40px rgba(0,0,0,0.2)" } : { maxWidth: 430 }}
+      >
         <div
           ref={panel}
           role="dialog"
           aria-modal="true"
           aria-label={t("Notifications")}
           tabIndex={-1}
-          className="absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"
-          style={{ background: m.page, color: m.ink, padding: "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
+          className={web ? "relative w-full outline-none flex flex-col overflow-y-auto overscroll-contain" : "absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"}
+          style={{ background: m.page, color: m.ink, padding: web ? "20px 20px 24px" : "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
         >
           <style>{FOCUS_CSS}</style>
           <div className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BookOpenCheck, ChevronRight, EllipsisVertical, Salad, SlidersHorizontal, Target, UserRound, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
+import { useIsWeb } from "../../web/useWebLayout";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -59,6 +60,8 @@ export const LibraryHome: React.FC<{
   const { authUserId, recipes, customMeals } = useApp();
   const dark = useIsDark();
   const nutrition = lane === "nutrition";
+  // Website viewport (WP-NU-MP.1): the web page header carries the title.
+  const web = useIsWeb();
   const today = todayLocal();
   const [templates, setTemplates] = useState<{ list: MealPlan[] | null; error: boolean; offline: boolean }>({ list: null, error: false, offline: false });
   const [assigned, setAssigned] = useState<Assignment[] | null>(null);
@@ -113,7 +116,7 @@ export const LibraryHome: React.FC<{
 
   return (
     <div style={{ paddingBottom: 72 }}>
-      {nutrition && <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{t("Meal plans")}</h1>}
+      {nutrition && !web && <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{t("Meal plans")}</h1>}
       {nutrition && (
         <div className="flex" style={{ gap: 8, marginBottom: 12 }}>
           {(

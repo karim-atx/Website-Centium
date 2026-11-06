@@ -54,7 +54,13 @@ const BUSINESS_PAGES: RegExp[] = [
 
 /** Professional pages with a web layout of their own (Professional handover v1, section 5). */
 export const PRO_PAGES: RegExp[] = [
+  /^\/app\/pro\/?$/, // WP-HO · FC / · NU / · CO Home (header bar, trend card 7 + lane card 5)
+  /^\/app\/pro\/calendar\/?$/, // WP-CA.1-.4 Calendar (Month 7 + 5, the Week time grid, Day 7 + 5, Year 6 across)
+  /^\/app\/pro\/library(\/(programmes|meal-plans))?\/?$/, // WP-LI.1 / .2 Library lists (inner screens: the centred column inside the page)
+  /^\/app\/pro\/meal-plans(\/(plans|journals|recipes|targets))?\/?$/, // WP-NU-MP.1 Plans home (the other areas: the centred column inside the page)
+  /^\/app\/pro\/insights(\/(activity|nutrition|vitals|biomarkers))?\/?$/, // WP-CO-IN.1-.4 Insights
   /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
+  /^\/app\/pro\/clients\/[^/]+(\/(overview|plan|progress|sessions|notes|files|care-plan|health-records|trends|appointments))?\/?$/, // WP-CL.1 / · NU / WP-CO-CL.1 client and patient page (Client insights keeps its column)
 ];
 
 export function webPageFor(pathname: string, isBusiness: boolean, isPro = false): boolean {

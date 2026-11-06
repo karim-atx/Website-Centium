@@ -10,6 +10,9 @@ import { playlistFieldValid } from "../../components/music/PlaylistField";
 import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { YearScroll } from "../../components/calendar/YearScroll";
+import { useWebLayout } from "../../components/web/useWebLayout";
+import { CalendarBodyWeb, CalendarTopBarWeb, SplitWeb, WeekTimeGridWeb } from "../../components/pro/web/CalendarWeb";
+import { ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 import { dayBefore } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
 import { normaliseLink } from "../../components/calendar/calendarTime";
@@ -143,6 +146,8 @@ export default function Calendar() {
   const { lane } = useProSubtype();
   const navigate = useNavigate();
   const dark = useIsDark();
+  // Website viewport (WP-CA): from 1024px the page header and the web views; mobile is unchanged.
+  const { web, rail } = useWebLayout();
   const reducedMotion = useReducedMotion();
   const [params, setParams] = useSearchParams();
   const clinical = lane === "clinical_overview";
@@ -547,6 +552,375 @@ export default function Calendar() {
 
   if (!lane) return null;
 
+  // Popups, sheets and toasts: the same in both layouts.
+  const overlays = (
+    <>
+      <AddSessionSheet
+        open={!!addOpen}
+        me={me}
+        todayIso={todayIso}
+        initial={addOpen ?? { date: todayIso }}
+        clients={sessionClients}
+        types={data.types}
+        reminders={reminders}
+        onClose={() => setAddOpen(null)}
+        onAddType={() => {
+          setAddOpen(null);
+          navigate(`${PRO_ROUTES.calendar}/availability`);
+        }}
+        onPersonal={(date) => {
+          setAddOpen(null);
+          openPersonal(date);
+        }}
+        onSaved={({ clientName, date }) => {
+          setAddOpen(null);
+          void data.reload();
+          setToast({
+            ok: true,
+            text: t("Session saved. {clientName} has been invited.", { clientName }),
+            action: {
+              label: t("View"),
+              onClick: () => {
+                setSelected(date);
+                setView("day");
+              },
+            },
+          });
+        }}
+      />
+
+      <SessionSheet
+        item={session}
+        me={me}
+        lane={lane}
+        planLine={session?.clientId ? planLineOf(session.clientId) : null}
+        avatarUrl={session?.clientId ? professionalClients.find((c) => c.clientId === session.clientId)?.avatarUrl ?? null : null}
+        type={sessionType}
+        started={sessionStarted}
+        onClose={() => setSession(null)}
+        onProfile={(id) => navigate(proClientPath(id))}
+        onMessage={(id) => void message(id)}
+        onEdit={
+          session?.event && !session.event.sourceKind
+            ? () => {
+                const s = session;
+                setSession(null);
+                openEdit(s);
+              }
+            : null
+        }
+        onCancel={cancelSession}
+        onOpenAttachment={(p) => void openAttachment(p)}
+        onChanged={() => void data.reload()}
+      />
+
+      <EventDetailSheet
+        event={detail?.event ?? null}
+        onClose={() => setDetail(null)}
+        dark={dark}
+        responding={responding}
+        online={data.online}
+        onRespond={(accepted) => void respond(accepted)}
+        onOpenAttachment={(p) => void openAttachment(p)}
+        bookingMade={!!detail?.event?.sourceKind}
+      />
+
+      <HiredClassSheet
+        info={classSheet}
+        onClose={() => setClassSheet(null)}
+        onViewClass={(id) => {
+          setClassSheet(null);
+          navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`);
+        }}
+        onMessageGym={(id) => void messageGym(id)}
+        onNote={(text) => setToast({ ok: true, text })}
+      />
+
+      {note && sync.note && <SyncNote title={note.title} body={note.body} age={ageText(sync.note.createdAt, now)} onClose={() => data.dismissNotice(sync.note!.id)} />}
+
+      <EventComposeSheet
+        open={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        editing={!!editingId}
+        draft={draft}
+        setDraft={setDraft}
+        todayIso={todayIso}
+        saving={saving}
+        error={saveError}
+        linkError={linkError}
+        onSave={() => void saveEvent()}
+        onDelete={() => {
+          if (repeats) return void removeEvent();
+          if (!confirmDelete) {
+            setConfirmDelete(true);
+            window.setTimeout(() => setConfirmDelete(false), 3000);
+            return;
+          }
+          void removeEvent();
+        }}
+        confirmDelete={confirmDelete}
+        extra={
+          <>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Places (optional)")}</span>
+              <input
+                value={capacity}
+                inputMode="numeric"
+                maxLength={3}
+                onChange={(e) => setCapacity(e.target.value.replace(/[^\d]/g, ""))}
+                placeholder={t("No limit")}
+                aria-label={t("Places")}
+                className="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
+              />
+              <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("When you share this to a group, members can book up to this many places. Leave it empty for no limit.")}</span>
+            </label>
+            {candidates.length > 0 ? (
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Invitees")}</span>
+                <select
+                  multiple
+                  value={guests}
+                  onChange={(e) => setGuests(Array.from(e.target.selectedOptions, (o) => o.value))}
+                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  size={Math.min(4, candidates.length)}
+                >
+                  {candidates.map((c) => (
+                    <option key={c.userId} value={c.userId}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Hold Ctrl or Cmd to choose more than one.")}</span>
+                {editingId && (data.invitees[editingId]?.length ?? 0) > 0 && (
+                  <span className="mt-2.5 flex flex-col gap-1">
+                    {data.invitees[editingId].map((i) => (
+                      <span key={i.userId} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-charcoal-soft truncate">{i.name}</span>
+                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-cream-soft text-charcoal-faint">
+                          {i.status === "accepted" ? t("Accepted") : i.status === "declined" ? t("Declined") : t("No reply yet")}
+                        </span>
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </label>
+            ) : (
+              <p className="text-[11px] text-charcoal-faint">{t("You can invite clients and colleagues you work with. Once a connection is active, they'll appear here.")}</p>
+            )}
+            <div>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Attachment")}</span>
+              {editingId ? (
+                <>
+                  {series?.attachmentPath && (
+                    <button type="button" onClick={() => void openAttachment(series.attachmentPath!)} className="tap mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary-deep-text">
+                      <Paperclip size={12} aria-hidden />{" "}{t("Open current attachment")}</button>
+                  )}
+                  <input
+                    type="file"
+                    accept={acceptFor("calendar-attachments")}
+                    disabled={saving}
+                    aria-label={t("Attach a file")}
+                    onChange={(e) => e.target.files?.[0] && void attach(e.target.files[0])}
+                    className="w-full text-xs text-charcoal-faint file:me-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
+                  />
+                  <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Invitees can open whatever you attach here.")}</span>
+                </>
+              ) : (
+                <span className="block text-[11px] text-charcoal-faint">{t("Save the event first, then reopen it to attach a file.")}</span>
+              )}
+            </div>
+          </>
+        }
+      />
+
+      <RepeatScopePopup mode={scopeAsk} busy={saving} onCancel={() => setScopeAsk(null)} onChoose={(scope) => void (scopeAsk === "delete" ? removeEvent(scope) : saveEvent(scope))} />
+
+      <TimeOffSheet
+        open={!!offSheet}
+        me={me}
+        todayIso={todayIso}
+        entry={offSheet?.entry ?? null}
+        date={offSheet?.day ?? selected}
+        onDay={offSheet?.day ?? null}
+        onClose={() => setOffSheet(null)}
+        onSaved={() => void data.reload()}
+      />
+
+      <Toast
+        open={!!toast}
+        message={toast?.text ?? ""}
+        action={toast?.action}
+        icon={
+          toast?.ok ? (
+            <CircleCheck size={18} strokeWidth={2} aria-hidden className="flex-none" style={{ color: INK.good }} />
+          ) : (
+            <AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />
+          )
+        }
+        onExpire={() => setToast(null)}
+      />
+    </>
+  );
+
+  // Website viewport (WP-CA.1-.4): from 1024px the page header, the view tabs and the views laid out across the page.
+  if (web) {
+    const changeView = (k: string) => {
+      if (k === "year" && view === "year") {
+        setCursor((c) => ({ ...c, year: now.getFullYear() }));
+        setYearJump((n) => n + 1);
+        return;
+      }
+      if (k === "month") setCursor({ year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) - 1 });
+      setView(k as View);
+    };
+    const period =
+      view === "month" ? (
+        <HeaderCard label={monthTitle(cursor.year, cursor.month)} onPrev={() => goMonth(-1)} onNext={() => goMonth(1)} prevLabel={t("Previous month")} nextLabel={t("Next month")} jump={jump.show ? jump.jump : null} />
+      ) : view === "week" ? (
+        <HeaderCard label={dateRange(weekDays[0], weekDays[6])} onPrev={() => setSelected(addDays(selected, -7))} onNext={() => setSelected(addDays(selected, 7))} prevLabel={t("Previous week")} nextLabel={t("Next week")} jump={jump.show ? jump.jump : null} />
+      ) : view === "day" ? (
+        <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel={t("Previous day")} nextLabel={t("Next day")} jump={jump.show ? jump.jump : null} />
+      ) : null;
+    const agenda = (
+      <>
+        <Eyebrow mt={0} mb={8}>{[longDay(selected), hoursLine(selected) ? t("Working {v}", { v: hoursLine(selected) ?? "" }) : hasHours || offToday ? t("Day off") : null].filter(Boolean).join(" · ")}</Eyebrow>
+        {!data.loaded ? (
+          skeletonRows
+        ) : dayItems.length === 0 ? (
+          <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No sessions")}</p>
+        ) : (
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            {dayItems.map((i) => (
+              <AgendaRow key={i.key} item={i} onOpen={openItem} />
+            ))}
+          </div>
+        )}
+      </>
+    );
+    return (
+      <div>
+        <CalendarTopBarWeb clinical={clinical} onAvailability={() => navigate(`${PRO_ROUTES.calendar}/availability`)} onNew={() => setAddOpen({ date: selected < todayIso ? todayIso : selected })} />
+        <CalendarBodyWeb>
+          <div style={{ display: "grid", gridTemplateColumns: period ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", columnGap: 24, alignItems: "start" }}>
+            <ClientTabsWeb label={t("Calendar view")} items={VIEWS.map((v) => ({ key: v, label: t(VIEW_LABEL[v]) }))} active={view} onChange={changeView} />
+            {period && <div style={{ marginBottom: 24 }}>{period}</div>}
+          </div>
+          {strip && sync.strip && (
+            <div style={{ marginBottom: 16 }} data-sync-strip>
+              <ConfirmationStrip
+                compact
+                still={reducedMotion}
+                tone={strip.tone}
+                text={strip.text}
+                action={strip.action}
+                onAction={() => {
+                  const jumpTo = strip.jumpTo;
+                  data.dismissNotice(sync.strip!.id);
+                  if (jumpTo) {
+                    setSelected(jumpTo);
+                    setView("week");
+                  }
+                }}
+              />
+            </div>
+          )}
+          {statusLine}
+          {view === "month" && (
+            <SplitWeb
+              left={
+                <MonthGrid
+                  year={cursor.year}
+                  month={cursor.month}
+                  todayIso={todayIso}
+                  selected={selected}
+                  dots={(iso) => dayDots(items[iso] ?? [])}
+                  hiredLive={data.hiredLive}
+                  dayOff={dayOff}
+                  leading={monthLeadingBlanks(cursor.year, cursor.month)}
+                  onSelect={setSelected}
+                />
+              }
+              right={agenda}
+            />
+          )}
+          {view === "week" && (
+            <>
+              <WeekTimeGridWeb
+                days={weekDays}
+                todayIso={todayIso}
+                nowMinutes={now.getHours() * 60 + now.getMinutes()}
+                items={items}
+                dayOff={dayOff}
+                onDay={(iso) => {
+                  setSelected(iso);
+                  setView("day");
+                }}
+                onOpen={openItem}
+              />
+              {noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
+            </>
+          )}
+          {view === "year" && (
+            <YearScroll
+              year={cursor.year}
+              todayIso={todayIso}
+              eventDays={Object.keys(items).filter((d) => (items[d] ?? []).length > 0)}
+              jumpSignal={yearJump}
+              columns={rail ? 4 : 6}
+              onOpenMonth={(y, m) => {
+                setCursor({ year: y, month: m });
+                setView("month");
+              }}
+            />
+          )}
+          {view === "day" && (
+            <SplitWeb
+              left={
+                !data.loaded ? (
+                  skeletonRows
+                ) : (
+                  <DayTimeline
+                    from={bounds.from}
+                    to={bounds.to}
+                    windows={hasHours ? windows : [{ start: `${String(bounds.from).padStart(2, "0")}:00`, end: `${String(bounds.to).padStart(2, "0")}:00` }]}
+                    items={dayTimed}
+                    breaks={breaks}
+                    open={openNow}
+                    nowMinutes={nowMinutes}
+                    clinical={clinical}
+                    hiredLive={data.hiredLive}
+                    onOpen={openItem}
+                    onBreak={(e) => setOffSheet({ entry: e, day: selected })}
+                    onOpenSlot={(start) => setAddOpen({ date: selected, start })}
+                  />
+                )
+              }
+              right={
+                <>
+                  <Eyebrow mt={0}>{t("Requests")}</Eyebrow>
+                  {dayRequests.length === 0 && <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378", marginBottom: 16 }}>{t("No requests")}</p>}
+                  {dayRequests.map((i) => (
+                    <RequestCard key={i.key} item={i} busy={requestBusy === i.request?.id} onAccept={() => void answerRequest(i, true)} onDecline={() => void answerRequest(i, false)} />
+                  ))}
+                  {offToday && <DayOffRow entry={offToday} onOpen={() => setOffSheet({ entry: offToday, day: selected })} />}
+                  {dayAllDay.length > 0 && (
+                    <div className="flex flex-col" style={{ gap: 8, marginTop: 16 }}>
+                      <Eyebrow mb={2}>{t("All day")}</Eyebrow>
+                      {dayAllDay.map((i) => (
+                        <AgendaRow key={i.key} item={i} onOpen={openItem} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              }
+            />
+          )}
+        </CalendarBodyWeb>
+        {overlays}
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* P-CA.1-3 (raw P-CA.1/2/3 frames): the content under the header starts 14 below the header card
@@ -760,210 +1134,7 @@ export default function Calendar() {
         </>
       )}
 
-      <AddSessionSheet
-        open={!!addOpen}
-        me={me}
-        todayIso={todayIso}
-        initial={addOpen ?? { date: todayIso }}
-        clients={sessionClients}
-        types={data.types}
-        reminders={reminders}
-        onClose={() => setAddOpen(null)}
-        onAddType={() => {
-          setAddOpen(null);
-          navigate(`${PRO_ROUTES.calendar}/availability`);
-        }}
-        onPersonal={(date) => {
-          setAddOpen(null);
-          openPersonal(date);
-        }}
-        onSaved={({ clientName, date }) => {
-          setAddOpen(null);
-          void data.reload();
-          setToast({
-            ok: true,
-            text: t("Session saved. {clientName} has been invited.", { clientName }),
-            action: {
-              label: t("View"),
-              onClick: () => {
-                setSelected(date);
-                setView("day");
-              },
-            },
-          });
-        }}
-      />
-
-      <SessionSheet
-        item={session}
-        me={me}
-        lane={lane}
-        planLine={session?.clientId ? planLineOf(session.clientId) : null}
-        avatarUrl={session?.clientId ? professionalClients.find((c) => c.clientId === session.clientId)?.avatarUrl ?? null : null}
-        type={sessionType}
-        started={sessionStarted}
-        onClose={() => setSession(null)}
-        onProfile={(id) => navigate(proClientPath(id))}
-        onMessage={(id) => void message(id)}
-        onEdit={
-          session?.event && !session.event.sourceKind
-            ? () => {
-                const s = session;
-                setSession(null);
-                openEdit(s);
-              }
-            : null
-        }
-        onCancel={cancelSession}
-        onOpenAttachment={(p) => void openAttachment(p)}
-        onChanged={() => void data.reload()}
-      />
-
-      <EventDetailSheet
-        event={detail?.event ?? null}
-        onClose={() => setDetail(null)}
-        dark={dark}
-        responding={responding}
-        online={data.online}
-        onRespond={(accepted) => void respond(accepted)}
-        onOpenAttachment={(p) => void openAttachment(p)}
-        bookingMade={!!detail?.event?.sourceKind}
-      />
-
-      <HiredClassSheet
-        info={classSheet}
-        onClose={() => setClassSheet(null)}
-        onViewClass={(id) => {
-          setClassSheet(null);
-          navigate(`/app/marketplace/class?id=${encodeURIComponent(id)}`);
-        }}
-        onMessageGym={(id) => void messageGym(id)}
-        onNote={(text) => setToast({ ok: true, text })}
-      />
-
-      {note && sync.note && <SyncNote title={note.title} body={note.body} age={ageText(sync.note.createdAt, now)} onClose={() => data.dismissNotice(sync.note!.id)} />}
-
-      <EventComposeSheet
-        open={composeOpen}
-        onClose={() => setComposeOpen(false)}
-        editing={!!editingId}
-        draft={draft}
-        setDraft={setDraft}
-        todayIso={todayIso}
-        saving={saving}
-        error={saveError}
-        linkError={linkError}
-        onSave={() => void saveEvent()}
-        onDelete={() => {
-          if (repeats) return void removeEvent();
-          if (!confirmDelete) {
-            setConfirmDelete(true);
-            window.setTimeout(() => setConfirmDelete(false), 3000);
-            return;
-          }
-          void removeEvent();
-        }}
-        confirmDelete={confirmDelete}
-        extra={
-          <>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Places (optional)")}</span>
-              <input
-                value={capacity}
-                inputMode="numeric"
-                maxLength={3}
-                onChange={(e) => setCapacity(e.target.value.replace(/[^\d]/g, ""))}
-                placeholder={t("No limit")}
-                aria-label={t("Places")}
-                className="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 placeholder:text-charcoal-faint"
-              />
-              <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("When you share this to a group, members can book up to this many places. Leave it empty for no limit.")}</span>
-            </label>
-            {candidates.length > 0 ? (
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Invitees")}</span>
-                <select
-                  multiple
-                  value={guests}
-                  onChange={(e) => setGuests(Array.from(e.target.selectedOptions, (o) => o.value))}
-                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  size={Math.min(4, candidates.length)}
-                >
-                  {candidates.map((c) => (
-                    <option key={c.userId} value={c.userId}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Hold Ctrl or Cmd to choose more than one.")}</span>
-                {editingId && (data.invitees[editingId]?.length ?? 0) > 0 && (
-                  <span className="mt-2.5 flex flex-col gap-1">
-                    {data.invitees[editingId].map((i) => (
-                      <span key={i.userId} className="flex items-center justify-between gap-2">
-                        <span className="text-xs text-charcoal-soft truncate">{i.name}</span>
-                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold bg-cream-soft text-charcoal-faint">
-                          {i.status === "accepted" ? t("Accepted") : i.status === "declined" ? t("Declined") : t("No reply yet")}
-                        </span>
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </label>
-            ) : (
-              <p className="text-[11px] text-charcoal-faint">{t("You can invite clients and colleagues you work with. Once a connection is active, they'll appear here.")}</p>
-            )}
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{t("Attachment")}</span>
-              {editingId ? (
-                <>
-                  {series?.attachmentPath && (
-                    <button type="button" onClick={() => void openAttachment(series.attachmentPath!)} className="tap mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary-deep-text">
-                      <Paperclip size={12} aria-hidden />{" "}{t("Open current attachment")}</button>
-                  )}
-                  <input
-                    type="file"
-                    accept={acceptFor("calendar-attachments")}
-                    disabled={saving}
-                    aria-label={t("Attach a file")}
-                    onChange={(e) => e.target.files?.[0] && void attach(e.target.files[0])}
-                    className="w-full text-xs text-charcoal-faint file:me-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
-                  />
-                  <span className="block text-[11px] text-charcoal-faint mt-1.5">{t("Invitees can open whatever you attach here.")}</span>
-                </>
-              ) : (
-                <span className="block text-[11px] text-charcoal-faint">{t("Save the event first, then reopen it to attach a file.")}</span>
-              )}
-            </div>
-          </>
-        }
-      />
-
-      <RepeatScopePopup mode={scopeAsk} busy={saving} onCancel={() => setScopeAsk(null)} onChoose={(scope) => void (scopeAsk === "delete" ? removeEvent(scope) : saveEvent(scope))} />
-
-      <TimeOffSheet
-        open={!!offSheet}
-        me={me}
-        todayIso={todayIso}
-        entry={offSheet?.entry ?? null}
-        date={offSheet?.day ?? selected}
-        onDay={offSheet?.day ?? null}
-        onClose={() => setOffSheet(null)}
-        onSaved={() => void data.reload()}
-      />
-
-      <Toast
-        open={!!toast}
-        message={toast?.text ?? ""}
-        action={toast?.action}
-        icon={
-          toast?.ok ? (
-            <CircleCheck size={18} strokeWidth={2} aria-hidden className="flex-none" style={{ color: INK.good }} />
-          ) : (
-            <AlertCircle size={15} strokeWidth={2.4} aria-hidden className="flex-none text-status-high" />
-          )
-        }
-        onExpire={() => setToast(null)}
-      />
+      {overlays}
     </div>
   );
 }

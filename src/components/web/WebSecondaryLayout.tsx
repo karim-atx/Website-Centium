@@ -41,6 +41,7 @@ import { tk, tn } from "../../i18n/core";
 import { bizSettingsSection, type BizSettingsSection, type SecondaryKind } from "./webNav";
 import { AppSettingsLayout, ProMoreLayout } from "./WebAppSecondary";
 import { PaneFillContext } from "./paneFill";
+import { useWebLayout, WEB_READING_MAX } from "./useWebLayout";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
@@ -362,8 +363,14 @@ function settingsSectionFor(pathname: string): string | null {
  * screen inside it (pinned buttons, toasts), whose --app-gutter is the pane's
  * so they sit on the pane's centred column. A page shows in a centred 430
  * column (its mobile screen) unless it fills the pane (usePaneFill).
+ * Professional handover v1 (section 4) and Addendum A (WC-SE): the professional
+ * More and the Client / Professional Settings panes span the pane instead
+ * (`span`): 32 padding (24 on the rail), the reading width of about 1280, values
+ * and chevrons at the right edge. The Business panes keep their 430 column.
  */
-export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string }> = ({ banners, children, scrollKey }) => {
+export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string; span?: boolean }> = ({ banners, children, scrollKey, span }) => {
+  const { rail } = useWebLayout();
+  const pad = rail ? 24 : 32;
   const wrap = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [gutter, setGutter] = useState(0);
@@ -371,19 +378,22 @@ export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNod
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const update = () => setGutter(Math.max(0, (el.clientWidth - 430) / 2));
+    const update = () => setGutter(span ? pad : Math.max(0, (el.clientWidth - 430) / 2));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [span, pad]);
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [scrollKey]);
   return (
     <div ref={wrap} className="relative flex-1 min-w-0 h-full" style={{ contain: "layout", ["--app-gutter" as string]: `${gutter}px` }}>
       <div ref={scroller} className="h-full overflow-y-auto" style={{ scrollbarWidth: "thin" }} data-web-pane={fill ? "fill" : ""}>
-        <div className={fill ? undefined : "max-w-[430px] mx-auto px-4 pt-6 pb-12"}>
+        <div
+          className={fill || span ? undefined : "max-w-[430px] mx-auto px-4 pt-6 pb-12"}
+          style={!fill && span ? { maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: `${pad}px ${pad}px 48px` } : undefined}
+        >
           <PaneFillContext.Provider value={setFill}>
             {banners}
             {children}

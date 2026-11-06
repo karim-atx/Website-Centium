@@ -199,7 +199,7 @@ export const ProMoreLayout: React.FC<{ secW: number; banners: React.ReactNode; c
       >
         <SecondaryGroups title={t("More")} groups={groups} selected={selected} navPb={24} onSelect={(it) => (it.onClick ? it.onClick() : it.to && navigate(it.to))} />
       </Column>
-      <Pane banners={banners} scrollKey={pathname + search}>
+      <Pane banners={banners} scrollKey={pathname + search} span>
         {children}
       </Pane>
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
@@ -290,7 +290,7 @@ export const AppSettingsLayout: React.FC<{ secW: number; banners: React.ReactNod
       <Column title={t("Settings")} secW={secW}>
         <SecondaryGroups title={t("Settings")} groups={groups} selected={selected} navPb={24} onSelect={(it) => (it.onClick ? it.onClick() : it.to && navigate(it.to))} />
       </Column>
-      <Pane banners={banners} scrollKey={pathname + search}>
+      <Pane banners={banners} scrollKey={pathname + search} span>
         {children}
       </Pane>
     </>

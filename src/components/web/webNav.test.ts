@@ -64,5 +64,11 @@ test("the adapted business pages fill the content area; everything else keeps th
   assert.equal(webPageFor("/app/business/appointments/day", true), true); // area cs: WB-ST-AP.4 Day list
   assert.equal(webPageFor("/app/business/services", false), false);
   assert.equal(webPageFor("/app/pro/clients", false, true), true); // WP-CL list-detail
-  assert.equal(webPageFor("/app/pro/clients/x/overview", false, true), false); // the client page keeps the centred column for now
+  assert.equal(webPageFor("/app/pro/clients/x/overview", false, true), true); // WP-CL.1 client page
+  assert.equal(webPageFor("/app/pro/clients/x/insights", false, true), false); // Client insights keeps the centred column
+  assert.equal(webPageFor("/app/pro", false, true), true); // WP-HO Home
+  assert.equal(webPageFor("/app/pro/calendar", false, true), true); // WP-CA
+  assert.equal(webPageFor("/app/pro/calendar/availability", false, true), false); // WP-CA.5 not built yet
+  assert.equal(webPageFor("/app/pro/insights/vitals", false, true), true); // WP-CO-IN
+  assert.equal(webPageFor("/app/pro/marketplace/opportunities", false, true), false); // wait for v2
 });

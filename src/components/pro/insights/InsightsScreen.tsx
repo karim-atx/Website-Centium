@@ -25,6 +25,9 @@ import { BiomarkersPanel } from "./BiomarkersPanel";
 import { NutrientAnalysis } from "./NutrientAnalysis";
 import { TargetsReadOnly } from "../nutrition/Targets";
 import { t, tk } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
+import { ClientTabBodyWeb, ClientTabsWeb } from "../web/ClientPageWeb";
 
 /**
  * Release 3 · W5 the Insights screen (TR9 v3/v4/v5, TR16 v3, NU10, NU14 /
@@ -86,39 +89,52 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   const patient = lane === "clinical_overview";
   const tabs = tabsForLane(lane);
   const allPatients = patient && tab === "nutrition";
+  // Website viewport (WP-CO-IN): the Insights page (not the client page's Client insights, which keeps its column) gets the page header, the equal tabs and its cards across the page.
+  const web = useIsWeb() && !onBack;
 
   // Hold a real client whenever "All patients" isn't on offer.
   useEffect(() => {
     if (!loading && !clientId && !allPatients && clients.length) onClient(clients[0].clientId);
   }, [loading, clientId, allPatients, clients, onClient]);
 
-  const head = onBack ? (
+  const head = web ? (
+    <ProPageHeaderWeb title={t(title)} />
+  ) : onBack ? (
     <DetailHead title={t(title)} onBack={onBack} />
   ) : (
     <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{t(title)}</h1>
   );
-  const tabBar = (
+  const tabBar = web ? (
+    <ClientTabsWeb label={t(title)} items={tabs.map((k) => ({ key: k, label: t(TAB_LABEL[k]) }))} active={tab} onChange={(k) => onTab(k as InsightsTab)} />
+  ) : (
     <SegmentedTabs className="mb-[10px]" items={tabs.map((k) => ({ key: k, label: t(TAB_LABEL[k]) }))} activeKey={tab} onChange={(k) => onTab(k as InsightsTab)} labelSize={11.5} />
   );
 
-  if (loading && !clients.length)
-    return (
+  // The page around the content: the same elements on mobile; on web the header, then the padded body.
+  const frame = (children: React.ReactNode) =>
+    web ? (
+      <div>
+        {head}
+        <ProPageBodyWeb>
+          {tabBar}
+          {children}
+        </ProPageBodyWeb>
+      </div>
+    ) : (
       <div>
         {head}
         {tabBar}
-        <ProCardSkeleton lines={4} height={220} />
+        {children}
       </div>
     );
 
+  if (loading && !clients.length) return frame(<ProCardSkeleton lines={4} height={220} />);
+
   if (!clients.length)
-    return (
-      <div>
-        {head}
-        {tabBar}
+    return frame(
         <EmptyState icon={Activity} title={t("No shared data yet")} line={emptyLine(patient, tab)}>
           <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={patient ? t("Ask a patient to share") : t("Ask a client to share")} onClick={() => navigate(PRO_ROUTES.clients)} />
         </EmptyState>
-      </div>
     );
 
   const range5 = (
@@ -134,17 +150,16 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
     </div>
   );
 
-  return (
-    <div>
-      {head}
-      {tabBar}
+  const body = clientId ? (
+    <ClientInsights key={clientId} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
+  ) : allPatients ? (
+    <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
+  ) : null;
+  return frame(
+    <>
       {range5}
-      {clientId ? (
-        <ClientInsights key={clientId} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
-      ) : allPatients ? (
-        <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
-      ) : null}
-    </div>
+      {web ? <ClientTabBodyWeb columns={2}>{body}</ClientTabBodyWeb> : body}
+    </>
   );
 };
 

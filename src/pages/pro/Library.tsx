@@ -17,6 +17,10 @@ import { LibraryMealPlans } from "../../components/pro/nutrition/LibraryMealPlan
 import { programmesDetailOpen } from "../../components/pro/library/libraryModel";
 import { isMealPlansSubview } from "../../components/pro/nutrition/nav";
 import { t, tk } from "../../i18n/core";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { MobileFrame } from "../../components/web/WebLayout";
+import { ProPageBodyWeb, ProPageHeaderWeb } from "../../components/pro/web/ProPageWeb";
+import { ClientTabBodyWeb, ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 
 /**
  * Release 3 · Library (/app/pro/library/:tab, Full coaching only; TR1 v7 and
@@ -37,6 +41,7 @@ export default function Library() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const current = pickTab(LIBRARY_TABS, tab);
+  const web = useIsWeb();
   if (tab !== undefined && tab !== current)
     return <Navigate to={`${PRO_ROUTES.library}/${current}`} replace />;
   // An inner screen (a programme, a plan builder, journals...) has its own back header.
@@ -44,6 +49,20 @@ export default function Library() {
     current === "programmes"
       ? programmesDetailOpen(new URLSearchParams(search))
       : isMealPlansSubview(search);
+  const content = current === "programmes" ? <ProgrammesTab /> : <LibraryMealPlans />;
+  // Website viewport (WP-LI.1, WP-LI.2): the two lists get the page header, the equal tabs and their sections across
+  // the page; an inner screen (a programme, a client's copy, a builder) keeps its mobile screen in the centred column.
+  if (web && inner) return <MobileFrame>{content}</MobileFrame>;
+  if (web)
+    return (
+      <div>
+        <ProPageHeaderWeb title={t("Library")} />
+        <ProPageBodyWeb>
+          <ClientTabsWeb label={t("Library")} items={LIBRARY_TABS.map((k) => ({ key: k, label: t(LABEL[k]) }))} active={current} onChange={(k) => navigate(`${PRO_ROUTES.library}/${k}`, { replace: true })} />
+          <ClientTabBodyWeb columns={2}>{content}</ClientTabBodyWeb>
+        </ProPageBodyWeb>
+      </div>
+    );
   return (
     <div>
       {!inner && (
@@ -70,7 +89,7 @@ export default function Library() {
           />
         </>
       )}
-      {current === "programmes" ? <ProgrammesTab /> : <LibraryMealPlans />}
+      {content}
     </div>
   );
 }
