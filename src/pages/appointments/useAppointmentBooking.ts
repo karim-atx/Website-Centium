@@ -3,6 +3,7 @@ import { acceptClassPolicies, pendingClassPolicies, type PendingClassPolicy } fr
 import { APPOINTMENT_POLICY_KINDS } from "../../services/marketplace/classBooking";
 import { bookAppointment, bookErrorMessage } from "../../services/appointments";
 import { t, tk } from "../../i18n/core";
+import { pushAskMoment } from "../../services/push/ask";
 
 // B12 booking, the class flow (useClassBooking) with the appointment's
 // documents: book_appointment() refuses with ATXE4 until the client has
@@ -33,7 +34,11 @@ export function useAppointmentBooking(businessId: string, userId: string | null)
   const book = useCallback(
     async (serviceId: string, staffId: string, startsAt: string): Promise<ApptBookOutcome> => {
       const r = await bookAppointment(serviceId, staffId, startsAt);
-      if (r.ok) return { kind: "booked", id: r.value };
+      if (r.ok) {
+        // Round J · J-2b: the first booking made may ask to turn on notifications (the app only).
+        pushAskMoment("booking");
+        return { kind: "booked", id: r.value };
+      }
       if (r.code === "ATXE4") {
         const again = await showTerms();
         if (again) return again;

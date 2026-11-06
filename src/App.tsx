@@ -7,6 +7,7 @@ import { Button } from "./components/ui/Button";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { NativeAppGate } from "./components/native/NativeAppGate";
 import { NativeOpenPath } from "./components/native/NativeOpenPath";
+import { PushAskCard } from "./components/native/PushAskCard";
 import { isNative } from "./platform";
 import { hasReturnedAuthError } from "./services/auth";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
@@ -652,6 +653,8 @@ export default function App() {
       <TabIdentityNotice />
       {/* The phone app's version gate (app_config); nothing on the web. */}
       {isNative() && <NativeAppGate />}
+      {/* The phone app: asks to turn on notifications after a moment that explains itself. */}
+      {isNative() && <PushAskCard />}
     </AppProvider>
   );
 }

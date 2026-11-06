@@ -32,7 +32,7 @@ export default function WorkoutWeb() {
   if (seenLink !== params.toString()) {
     setSeenLink(params.toString());
     if (linked === "history") setTab("history");
-    else if (linked === "routines") setTab("routines");
+    else if (linked === "routines" || params.get("start") === "today") setTab("routines");
   }
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolder, setCreateFolder] = useState<string | null>(null);

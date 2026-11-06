@@ -14,6 +14,7 @@ import { meditationPoseV2Urls } from "../../../utils/assetUrls";
 import { t, tk, tn, tx } from "../../../i18n/core";
 import { MindSectionWeb } from "./MindSectionWeb";
 import { mindCaps } from "./mindWebStyles";
+import { useLinkOnce } from "../../../hooks/useLinkOnce";
 
 type SubTab = "breathing" | "stretching" | "yoga";
 type Level = "beginner" | "intermediate" | "advanced";
@@ -72,6 +73,12 @@ export default function MeditationWeb() {
   const [tab, setTab] = useState<SubTab>("breathing");
   const [patternId, setPatternId] = useState(breathingPatterns[0].id);
   const pattern = breathingPatterns.find((p) => p.id === patternId)!;
+  // Round J · J-2b: ?start=1 starts a breathing run (MeditationPage has the same).
+  const [startSignal, setStartSignal] = useState(0);
+  useLinkOnce("start", "1", () => {
+    setTab("breathing");
+    setStartSignal((n) => n + 1);
+  });
   const { meditationSummary } = useApp();
   const { rail } = useWebLayout();
 
@@ -165,7 +172,7 @@ export default function MeditationWeb() {
           >
             {/* The mobile column's width, so the phase rail keeps its proportions. */}
             <div style={{ width: "100%", maxWidth: 358 }}>
-              <BreathingRunner pattern={pattern} />
+              <BreathingRunner pattern={pattern} startSignal={startSignal} />
             </div>
             <p data-med-line className="absolute whitespace-nowrap" style={{ insetInlineStart: 24, bottom: 18, margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
               {medLine}

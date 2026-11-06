@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { acceptClassPolicies, bookClass, pendingClassPolicies, type PendingClassPolicy } from "../services/marketplace";
+import { pushAskMoment } from "../services/push/ask";
 
 // Booking a class since B9: book_class() refuses (ATXE4) until the member has
 // accepted the venue's published liability waiver, class terms and house
@@ -29,7 +30,11 @@ export function useClassBooking({ classId, businessId, userId }: { classId: stri
   const book = useCallback(async (): Promise<BookOutcome> => {
     if (!classId) return { kind: "error", message: "Couldn't book that class. Try again." };
     const r = await bookClass(classId);
-    if (r.ok) return { kind: "booked" };
+    if (r.ok) {
+      // Round J · J-2b: the first booking made may ask to turn on notifications (the app only).
+      pushAskMoment("booking");
+      return { kind: "booked" };
+    }
     if (r.code === "ATXE4") {
       const again = await showTerms();
       if (again) return again;

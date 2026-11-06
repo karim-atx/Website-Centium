@@ -264,6 +264,20 @@ const notifications: Catalogue = {
   "Couldn't reach the server. Check your connection and try again.": "تعذّر الوصول إلى الخادم. تحقق من اتصالك وحاول مرة أخرى.", // note: OFFLINE_MESSAGE; services return it in English (screens compare against it), so it shows in Arabic only where a screen passes it through t()
   "Too many tries. Try again in {n} minutes.": { zero: "محاولات كثيرة. حاول مجددًا بعد {n} دقيقة.", one: "محاولات كثيرة. حاول مجددًا بعد دقيقة واحدة.", two: "محاولات كثيرة. حاول مجددًا بعد دقيقتين.", few: "محاولات كثيرة. حاول مجددًا بعد {n} دقائق.", many: "محاولات كثيرة. حاول مجددًا بعد {n} دقيقة.", other: "محاولات كثيرة. حاول مجددًا بعد {n} دقيقة." }, // note: replaces the server's raw "Too many review_gym attempts…" (rate limits)
   "Too many tries. Wait a few minutes and try again.": "محاولات كثيرة. انتظر بضع دقائق وحاول مجددًا.",
+
+  // == Round J · J-2b: the phone app's notifications (components/native/PushAskCard, settings/NotificationsPage) ==
+  "Know when they reply": "اعرف متى يأتيك الرد",
+  "Turn on notifications to hear about replies, even when Centium is closed.": "فعّل الإشعارات لتعرف بالردود، حتى عندما يكون Centium مغلقًا.",
+  "Get your reminders on time": "تلقَّ تذكيراتك في وقتها",
+  "Turn on notifications so your reminders reach you, even when Centium is closed.": "فعّل الإشعارات لتصلك تذكيراتك، حتى عندما يكون Centium مغلقًا.",
+  "Stay on top of your booking": "ابقَ على اطلاع بحجزك",
+  "Turn on notifications for reminders and any changes to your bookings.": "فعّل الإشعارات لتصلك التذكيرات وأي تغييرات على حجوزاتك.",
+  "Off in your phone's settings": "متوقفة في إعدادات هاتفك",
+  "Not asked yet": "لم يُطلب بعد",
+  "Open settings": "فتح الإعدادات",
+  "On this phone": "على هذا الهاتف",
+  "Hide details on lock screen": "إخفاء التفاصيل على شاشة القفل",
+  "Notifications show only a short line, never names or details. Messages follow their own preview setting.": "تُظهر الإشعارات سطرًا قصيرًا فقط، من دون أسماء أو تفاصيل. تتبع الرسائل إعداد المعاينة الخاص بها.",
 };
 
 export default notifications;
