@@ -8,6 +8,7 @@ import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { NativeAppGate } from "./components/native/NativeAppGate";
 import { NativeOpenPath } from "./components/native/NativeOpenPath";
 import { PushAskCard } from "./components/native/PushAskCard";
+import { PushBanner } from "./components/native/PushBanner";
 import { WidgetSnapshotSync } from "./components/native/WidgetSnapshotSync";
 import { PhoneCalendarSync } from "./components/native/PhoneCalendarSync";
 import { isNative } from "./platform";
@@ -651,6 +652,8 @@ export default function App() {
           <AppRoutes />
           {/* The phone app: a widget, shortcut or notification opens a page. */}
           {isNative() && <NativeOpenPath />}
+          {/* A push that arrives while the app is open (calls and messages excepted). */}
+          {isNative() && <PushBanner />}
         </BrowserRouter>
       </HealthChecksProvider>
       {/* Above everything: another tab changed the account (tabIdentity.ts). */}
