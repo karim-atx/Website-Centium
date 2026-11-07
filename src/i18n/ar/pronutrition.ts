@@ -247,6 +247,7 @@ const pronutrition: Catalogue = {
 
   // == Shared words these screens use (the same Arabic as the food, member and business areas) ==
   "Recipes": "الوصفات",
+  Journals: "اليوميات",
   "Foods": "الأطعمة",
   "Swap": "استبدال",
   "Add anyway": "إضافة رغم ذلك",

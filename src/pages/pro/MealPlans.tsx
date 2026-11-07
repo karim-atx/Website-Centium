@@ -1,4 +1,6 @@
-import { Navigate, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Recipes } from "../../components/pro/nutrition/Recipes";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { MEAL_PLAN_TABS, PRO_ROUTES, pickTab } from "../../components/pro/subtypeLanes";
 import { MealPlansArea } from "../../components/pro/nutrition/MealPlansArea";
@@ -23,8 +25,32 @@ export default function MealPlans() {
   const area = pickTab(MEAL_PLAN_TABS, tab);
   const web = useIsWeb();
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   if (tab !== undefined && tab !== area) return <Navigate to={`${PRO_ROUTES.mealPlans}/${area}`} replace />;
   if (lane !== "nutrition") return null;
+  // WP-NU-MP.3 Recipes: its own web page with the area tabs (Plans | Journals | Recipes | Targets, 40, equal).
+  if (web && area === "recipes")
+    return (
+      <Recipes
+        onBack={() => navigate(`${PRO_ROUTES.mealPlans}/plans`)}
+        webTabs={
+          <SegmentedTabs
+            items={[
+              { key: "plans", label: t("Plans") },
+              { key: "journals", label: t("Journals") },
+              { key: "recipes", label: t("Recipes") },
+              { key: "targets", label: t("Targets") },
+            ]}
+            activeKey="recipes"
+            onChange={(k) => navigate(`${PRO_ROUTES.mealPlans}/${k}`)}
+            tabHeight={32}
+            trackStyle={{ height: 40, boxSizing: "border-box", padding: 4, gap: 4, borderRadius: 14 }}
+            tabRadius={10}
+            labelSize={15}
+          />
+        }
+      />
+    );
   // Website viewport (WP-NU-MP.1): the Plans home gets the page header and its sections across the page; the
   // builder, journals, recipes and targets keep their mobile screen in the centred column until they are built.
   if (web && area === "plans" && !params.get("plan"))
