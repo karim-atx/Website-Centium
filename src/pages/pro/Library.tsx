@@ -52,6 +52,10 @@ export default function Library() {
   const content = current === "programmes" ? <ProgrammesTab /> : <LibraryMealPlans />;
   // Website viewport (WP-LI.1, WP-LI.2): the two lists get the page header, the equal tabs and their sections across
   // the page; an inner screen (a programme, a client's copy, a builder) keeps its mobile screen in the centred column.
+  // WP-LI.7.3: a meal plan's builder spans the page (its own web header; Week view by default); Journals and
+  // Targets are list-detail pages (the same components as WP-NU-MP.2 / .4).
+  const q = new URLSearchParams(search);
+  if (web && current === "meal-plans" && (q.get("plan") || q.get("area") === "journals" || q.get("area") === "targets")) return content;
   if (web && inner) return <MobileFrame>{content}</MobileFrame>;
   if (web)
     return (

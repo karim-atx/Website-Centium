@@ -11,7 +11,9 @@ import { BiomarkersTab } from "../../health/records/BiomarkersTab";
 import { LabsTab } from "../../health/records/LabsTab";
 import { ImagingTab } from "../../health/records/ImagingTab";
 import { HistoryTab } from "../../health/records/HistoryTab";
-import { REPORT_NAME_DEFAULT } from "../../health/records/kit";
+import { REPORT_NAME_DEFAULT, StatusWord, rangeText } from "../../health/records/kit";
+import { useClientWebSizes } from "./clientWebSizes";
+import { fmtDay } from "./clientFormat";
 import { HealthDataPending } from "../../professionals/HealthDataPending";
 import { INK } from "../proInk";
 import { BiomarkerChart } from "./BiomarkerChart";
@@ -90,6 +92,7 @@ export const HealthRecordsTab: React.FC<{
   onCarePlan: () => void;
 }> = ({ data, onAsk, asked, onNote, onCarePlan }) => {
   const dark = useIsDark();
+  const webSizes = useClientWebSizes();
   const { authUserId } = useApp();
   const { access, clientId, firstName } = data;
   const lab = useLabCatalogue();
@@ -261,6 +264,45 @@ export const HealthRecordsTab: React.FC<{
                 })}
               </div>
             )}
+            {webSizes && labs && !labs.error && shownMarkers.length > 0 ? (
+              // WP-CO Patient Web `list(rows, 2)`: the markers 2 across (column gap 32),
+              // rows 56: name 15/24, "Range … · date" 13/20, value 15/800 + unit 13 and the status word 13.
+              <div role="list" className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))", columnGap: 32, boxSizing: "border-box", borderRadius: 20, border: `1px solid ${INK.bCard}`, background: INK.card, padding: webSizes.listPad, marginBottom: 12 }}>
+                {shownMarkers.map((m, i) => {
+                  const threshold = lab.isThreshold(m);
+                  const last = shownMarkers.length - (shownMarkers.length % 2 || 2);
+                  const date = m.history.reduce<string | null>((b, h) => (!b || h.date > b ? h.date : b), null);
+                  const meta = [threshold ? null : t("Range {range}", { range: rangeText(m.rangeLow, m.rangeHigh) }), date ? fmtDay(date) : null].filter(Boolean).join(" · ");
+                  return (
+                    <button
+                      key={m.id}
+                      role="listitem"
+                      type="button"
+                      onClick={() => setOpen(m)}
+                      className="min-w-0 flex items-center text-start hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                      style={{ gap: 12, padding: webSizes.rowPad, minHeight: webSizes.rowMin, boxSizing: "border-box", borderBottom: i < last ? `1px solid ${INK.b06}` : "none" }}
+                    >
+                      <span className="flex-1 min-w-0">
+                        <span className="line-clamp-2" style={{ fontSize: textPx(15), lineHeight: "24px", fontWeight: 600, color: INK.ch }}>
+                          {m.name}
+                        </span>
+                        {meta && (
+                          <span className="block truncate" style={{ fontSize: textPx(13), lineHeight: "20px", color: INK.chF }}>
+                            {meta}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 flex flex-col items-end" style={{ textAlign: "end" }}>
+                        <span className="whitespace-nowrap" style={{ fontSize: textPx(15), lineHeight: "24px", fontWeight: 800, color: INK.ch, fontVariantNumeric: "tabular-nums" }}>
+                          {m.value} <span style={{ fontSize: textPx(13), fontWeight: 600, color: INK.chF }}>{m.unit}</span>
+                        </span>
+                        {!threshold && <StatusWord status={m.status} size={13} line={20} icon={14} long />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
             <BiomarkersTab
               markers={shownMarkers}
               query=""
@@ -278,6 +320,7 @@ export const HealthRecordsTab: React.FC<{
               highlight={new Set()}
               professional={{ emptyTitle: t("No results shared yet."), emptyBody: t("Results {firstName} shares appear here.", { firstName }) }}
             />
+            )}
           </>
         ))}
 

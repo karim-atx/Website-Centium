@@ -104,7 +104,8 @@ function useTargetsData(clientId: string, access: ReturnType<typeof useClientAcc
   return { data: state && state.key === key ? state : null, stale: state, progress, weightShared };
 }
 
-export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: () => void }> = ({ lane, clientId, onBack }) => {
+/** `pane` (website viewport, WP-NU-MP.4): the editor column of the web list-detail, without its back button. */
+export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: () => void; pane?: boolean }> = ({ lane, clientId, onBack, pane }) => {
   const { clients } = useNuRoster(lane);
   const client = clients?.find((c) => c.clientId === clientId) ?? null;
   const access = useClientAccess(clientId);
@@ -148,7 +149,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     </button>
   );
 
-  const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={onBack} />;
+  const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={pane ? undefined : onBack} />;
   if (!data || !draft) {
     return (
       <div>
@@ -324,11 +325,12 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
 };
 
 /** The Targets area without a client: who has targets you set (NU1 "Targets" box). */
-export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string) => void }> = ({ lane, onBack, onOpen }) => {
+/** `pane` (website viewport, WP-NU-MP.4): the list column of the web list-detail: no head, the open client tinted. */
+export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string) => void; pane?: { selected: string | null } }> = ({ lane, onBack, onOpen, pane }) => {
   const o = useNutritionOverview(lane);
   return (
     <div>
-      <NuHead title={t("Targets")} onBack={onBack} />
+      {!pane && <NuHead title={t("Targets")} onBack={onBack} />}
       {o.error && !o.offline && <ProError onRetry={o.retry} />}
       {o.error && o.offline && <OfflineLine />}
       {o.loading ? (
@@ -340,7 +342,7 @@ export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: 
           {o.clients.map((c, i) => {
             const tg = o.targets[c.clientId];
             return (
-              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
+              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} aria-current={pane?.selected === c.clientId || undefined} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none", ...(pane?.selected === c.clientId ? { background: INK.prPale, marginInline: -14, paddingInline: 14, width: "calc(100% + 28px)" } : null) }}>
                 <Avatar name={c.name} url={c.avatarUrl} size={34} />
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>

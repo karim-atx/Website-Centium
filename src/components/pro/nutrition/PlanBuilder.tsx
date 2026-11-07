@@ -39,8 +39,14 @@ import { DietStrip, Flag, NuHead } from "./kit";
 import { MACRO_COLOUR, conflictBody, conflictTitle } from "./nuFormat";
 import { useDietaryNeeds, useNuRoster, useTileBg } from "./hooks";
 import { itemLine, itemMacros } from "./itemFacts";
-import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
+import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, shiftDate, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
+import { weekdayLong } from "../proDates";
+import { mondayIndex } from "../../../utils/week";
 import { appLocale } from "../../../i18n/format";
+import { useSearchParams } from "react-router-dom";
+import { useIsWeb } from "../../web/useWebLayout";
+import { PlanHeaderWeb, WeekBuilderWeb } from "../web/WeekBuilderWeb";
+import { planTargets, targetsLine } from "../web/weekBuilderModel";
 import { t } from "../../../i18n/core";
 
 /**
@@ -65,6 +71,20 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const dark = useIsDark();
   const tile = useTileBg();
   const today = todayLocal();
+  // Website viewport (WP-LI.7.3 / WP-NU-MP.7, decision 6): the builder opens in Week view on web; ?view=day is the Day view.
+  const web = useIsWeb();
+  const [params, setParams] = useSearchParams();
+  const webView: "day" | "week" = params.get("view") === "day" ? "day" : "week";
+  const setView = (v: "day" | "week") =>
+    setParams(
+      (p) => {
+        const n = new URLSearchParams(p);
+        if (v === "day") n.set("view", "day");
+        else n.delete("view");
+        return n;
+      },
+      { replace: true }
+    );
   const [state, setState] = useState<{ plan: MealPlan | null; error: boolean; offline: boolean } | null>(null);
   const [assignment, setAssignment] = useState<(Assignment & { endedAt: string | null }) | null>(null);
   const [nonce, setNonce] = useState(0);
@@ -203,19 +223,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
     isCopy ? { value: "end", label: firstName ? t("End {name}'s plan", { name: firstName }) : t("End this plan"), destructive: true } : { value: "delete", label: t("Delete template"), destructive: true },
   ];
 
-  return (
-    <div>
-      <NuHead
-        title={plan.name}
-        eyebrow={isCopy ? t("{name}'s copy", { name: clientName }) : t("Template")}
-        onBack={onBack}
-        right={
-          <div className="flex shrink-0" style={{ gap: 8 }}>
-            {!isCopy && <RoundBtn icon={UserPlus} label={t("Assign")} onClick={() => onAssign(plan)} />}
-            <RoundBtn ref={moreRef} icon={MoreHorizontal} label={t("More")} expanded={!!menuAnchor} onClick={() => moreRef.current && setMenuAnchor(moreRef.current)} />
-          </div>
-        }
-      />
+  const notices = (
+    <>
       {state.error && state.offline && <OfflineLine />}
       {state.error && !state.offline && (
         <div style={{ marginBottom: 12 }}>
@@ -226,6 +235,68 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       {isCopy && assignment?.endedAt && (
         <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("This plan has ended. Changes won't reach the client.")}</p>
       )}
+    </>
+  );
+  const kicker = isCopy ? t("{name}'s copy", { name: clientName }) : t("Template");
+
+  return (
+    <div>
+      {web ? (
+        <PlanHeaderWeb
+          kicker={kicker}
+          title={plan.name}
+          line={targetsLine(planTargets(plan))}
+          view={webView}
+          onView={setView}
+          onBack={onBack}
+          onMore={(el) => setMenuAnchor(el)}
+          moreOpen={!!menuAnchor}
+        />
+      ) : (
+      <NuHead
+        title={plan.name}
+        eyebrow={kicker}
+        onBack={onBack}
+        right={
+          <div className="flex shrink-0" style={{ gap: 8 }}>
+            {!isCopy && <RoundBtn icon={UserPlus} label={t("Assign")} onClick={() => onAssign(plan)} />}
+            <RoundBtn ref={moreRef} icon={MoreHorizontal} label={t("More")} expanded={!!menuAnchor} onClick={() => moreRef.current && setMenuAnchor(moreRef.current)} />
+          </div>
+        }
+      />
+      )}
+      {web && webView === "week" ? (
+        <>
+          {(state.error || isCopy) && <div style={{ padding: "16px 32px 0" }}>{notices}</div>}
+          <WeekBuilderWeb
+            days={days.map((d) => ({ id: d.id, dayIndex: d.dayIndex, name: startsOn ? weekdayLong(mondayIndex(new Date(`${shiftDate(startsOn, d.dayIndex - 1)}T00:00:00`).getDay())) : labels(d.dayIndex).tab, short: labels(d.dayIndex).short, items: d.items }))}
+            targets={planTargets(plan)}
+            src={src}
+            readOnly={!!(isCopy && assignment?.endedAt)}
+            onAdd={(dayIndex, slot) => {
+              setDay(dayIndex);
+              setAdding({ slot, swap: null });
+            }}
+            onItemMenu={(item, dayIndex, anchor) => {
+              setDay(dayIndex);
+              setItemMenu({ item, anchor });
+            }}
+            onQty={async (item, value) => {
+              if (!item.kind || !item.refId) return;
+              const r = await replaceItem(item.id, { ref: { kind: item.kind, refId: item.refId }, slot: item.slot, grams: item.grams != null ? value : null, servings: item.grams != null ? item.servings : value });
+              if (!r.ok) setMsg(r.message);
+              reload();
+            }}
+          />
+          {msg && (
+            <p role="alert" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.hi, padding: "8px 32px" }}>
+              {msg}
+            </p>
+          )}
+        </>
+      ) : (
+      <DayFrame web={web}>
+      {notices}
 
       {/* Day tabs (r6b tabsScroll6, h 34) */}
       <div role="tablist" aria-label={t("Day")} className="flex items-center scroll-row no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
@@ -311,6 +382,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginTop: 8 }}>
           {msg}
         </p>
+      )}
+      </DayFrame>
       )}
 
       <PopupMenu
@@ -674,3 +747,13 @@ const PlanTargetsSheet: React.FC<{ open: boolean; plan: MealPlan; onClose: () =>
     </BottomSheet>
   );
 };
+
+/** Website viewport: the Day view keeps its mobile screen in the centred column below the web header (WP-LI.7 is not built yet); on mobile it adds nothing. */
+const DayFrame: React.FC<{ web: boolean; children: React.ReactNode }> = ({ web, children }) =>
+  web ? (
+    <div data-web-frame="mobile" className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
+      {children}
+    </div>
+  ) : (
+    <>{children}</>
+  );

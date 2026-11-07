@@ -5,6 +5,7 @@ import { toneOf, type Tone } from "../client/clientFormat";
 import { initialsOf } from "../home/initials";
 import type { ProLane } from "../subtypeLanes";
 import { placeBlocks, tabLayoutFor } from "./clientTabLayout";
+import { ClientWebSizeContext, FC_WEB_SIZES, webSizes3 } from "../client/clientWebSizes";
 import { t } from "../../../i18n/core";
 
 // Professional handover v1, WP-CL.1 / WP-CL.1 · NU / WP-CO-CL.1 (WP-CL Client
@@ -282,19 +283,23 @@ export const ClientTabGridWeb: React.FC<{ lane: ProLane; tab: string; children: 
     };
   }, [lane, tab, rail, notesRow]);
 
+  // The cards at their web sizes (kit.tsx ClientWebSizes).
+  const sizes = lane === "full_coaching" ? FC_WEB_SIZES : webSizes3(rail);
   if (notesRow)
     return (
-      <>
+      <ClientWebSizeContext.Provider value={sizes}>
         <style>{NOTES_ROW_CSS}</style>
         <div data-pro-web="client-tab" className="wpcl-notes-row">
           {children}
         </div>
-      </>
+      </ClientWebSizeContext.Provider>
     );
   return (
-    <div data-pro-web="client-tab" ref={ref} style={{ display: "grid", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 24, rowGap: 0, gridAutoRows: 1, alignItems: "start" }}>
-      {children}
-    </div>
+    <ClientWebSizeContext.Provider value={sizes}>
+      <div data-pro-web="client-tab" ref={ref} style={{ display: "grid", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 24, rowGap: 0, gridAutoRows: 1, alignItems: "start" }}>
+        {children}
+      </div>
+    </ClientWebSizeContext.Provider>
   );
 };
 

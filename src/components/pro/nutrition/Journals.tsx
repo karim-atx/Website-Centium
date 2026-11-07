@@ -48,7 +48,8 @@ import { t, tk, tn, tx } from "../../../i18n/core";
  * the database has no review state of its own ("Mark reviewed" and the note
  * for the whole day are a backend gap, Coming soon).
  */
-export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string, day: string) => void }> = ({ lane, onBack, onOpen }) => {
+/** `pane` (website viewport, WP-NU-MP.2): the queue column of the web list-detail: no head, the open client tinted. */
+export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string, day: string) => void; pane?: { selected: string | null } }> = ({ lane, onBack, onOpen, pane }) => {
   const o = useNutritionOverview(lane);
   const [tab, setTab] = useState<"waiting" | "reviewed">("waiting");
   const today = todayLocal();
@@ -57,7 +58,7 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
   const targetOf = (id: string) => o.targets[id] ?? null;
   return (
     <div>
-      <NuHead eyebrow={t("To review")} title={t("Food journals")} onBack={onBack} />
+      {!pane && <NuHead eyebrow={t("To review")} title={t("Food journals")} onBack={onBack} />}
       <SegmentedTabs
         className="mb-3"
         tabHeight={36}
@@ -87,18 +88,18 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
         rows.map((r) => {
           const c = byId.get(r.clientId);
           if (!c) return null;
-          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} />;
+          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} selected={pane?.selected === r.clientId} />;
         })
       )}
     </div>
   );
 };
 
-const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void }> = ({ row, name, avatarUrl, today, hasTarget, onOpen }) => {
+const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void; selected?: boolean }> = ({ row, name, avatarUrl, today, hasTarget, onOpen, selected }) => {
   const flagged = (row.proteinUnder ?? 0) > 0;
   const n = row.days.length;
   return (
-    <button type="button" onClick={onOpen} className="tap w-full flex text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
+    <button type="button" onClick={onOpen} aria-current={selected || undefined} className="tap w-full flex text-start" style={{ background: selected ? INK.prPale : INK.card, border: selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
       <Avatar name={name} url={avatarUrl} size={38} tone={flagged ? "gold" : "pr"} />
       <span className="flex-1 min-w-0">
         <span className="flex justify-between" style={{ gap: 8 }}>
@@ -134,7 +135,8 @@ const REACTION_LABEL: Record<Reaction, string> = { like: tk("Great choice"), lov
  * Targets: the ones you set (my_client_nutrition_targets), else the client's
  * own when Progress is shared, else "No target set".
  */
-export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: string | null; onBack: () => void; onDay: (day: string) => void }> = ({ lane, clientId, day, onBack, onDay }) => {
+/** `pane` (website viewport, WP-NU-MP.2): the entry column of the web list-detail, without its back button. */
+export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: string | null; onBack: () => void; onDay: (day: string) => void; pane?: boolean }> = ({ lane, clientId, day, onBack, onDay, pane }) => {
   const { authUserId } = useApp();
   const dark = useIsDark();
   const today = todayLocal();
@@ -193,7 +195,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
 
   const first = client?.firstName ?? "";
   const name = client?.name ?? "";
-  const head = <NuHead eyebrow={t("Food journal · {date}", { date: dayDate(current) })} title={name || t("Food journal")} onBack={onBack} />;
+  const head = <NuHead eyebrow={t("Food journal · {date}", { date: dayDate(current) })} title={name || t("Food journal")} onBack={pane ? undefined : onBack} />;
 
   if (access.loading) return <div>{head}<ProCardSkeleton lines={3} /></div>;
   if (!diaryShared) {

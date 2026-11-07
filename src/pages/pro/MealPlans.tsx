@@ -64,6 +64,9 @@ export default function MealPlans() {
         </ProPageBodyWeb>
       </div>
     );
+  // WP-NU-MP.7: the plan builder spans the page (its own web header; Week view by default); WP-NU-MP.2 / .4:
+  // Journals and Targets are list-detail pages.
+  if (web && ((area === "plans" && params.get("plan")) || area === "journals" || area === "targets")) return <MealPlansArea lane={lane} area={area} />;
   if (web)
     return (
       <MobileFrame>

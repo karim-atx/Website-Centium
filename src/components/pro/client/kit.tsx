@@ -5,6 +5,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { initialsOf, toneOf, type Tone } from "./clientFormat";
 import { t } from "../../../i18n/core";
+import { useClientWebSizes } from "./clientWebSizes";
 
 export type { Tone } from "./clientFormat";
 
@@ -28,26 +29,41 @@ export type { Tone } from "./clientFormat";
  */
 
 
-export const SectionHead: React.FC<{ label: string; right?: React.ReactNode; onRight?: () => void; className?: string }> = ({ label, right, onRight, className }) => (
-  <div className={`flex items-center justify-between ${className ?? ""}`} style={{ marginBottom: 10, paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}` }}>
-    <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", color: INK.chF }}>{label}</h2>
-    {right &&
-      (onRight ? (
-        <button type="button" onClick={onRight} className="tap flex items-center relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep, gap: 2 }}>
-          {right}
-          <ChevronRight size={12} strokeWidth={2.4} aria-hidden />
-        </button>
-      ) : (
-        <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{right}</span>
-      ))}
-  </div>
-);
 
-export const Card: React.FC<{ children: React.ReactNode; pad?: string; className?: string; style?: React.CSSProperties }> = ({ children, pad = "14px 16px", className, style }) => (
-  <div className={className} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: pad, marginBottom: 12, ...style }}>
-    {children}
-  </div>
-);
+export const SectionHead: React.FC<{ label: string; right?: React.ReactNode; onRight?: () => void; className?: string }> = ({ label, right, onRight, className }) => {
+  const w = useClientWebSizes();
+  return (
+    <div className={`flex items-center justify-between ${className ?? ""}`} style={{ marginBottom: w ? w.secMb : 10, paddingBottom: w ? w.secPb : 7.5, borderBottom: `1.5px solid ${INK.pr}` }}>
+      <h2
+        style={
+          w
+            ? { fontSize: textPx(w.secFs), fontWeight: 700, lineHeight: `${w.secL}px`, textTransform: "uppercase", letterSpacing: w.secLs, color: w.secC ?? INK.chF }
+            : { fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", color: INK.chF }
+        }
+      >
+        {label}
+      </h2>
+      {right &&
+        (onRight ? (
+          <button type="button" onClick={onRight} className="tap flex items-center relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(w ? w.secR : 12), fontWeight: 700, color: INK.prDeep, gap: 2 }}>
+            {right}
+            <ChevronRight size={w ? 16 : 12} strokeWidth={2.4} aria-hidden />
+          </button>
+        ) : (
+          <span style={{ fontSize: textPx(w ? w.secR : 12), fontWeight: 700, color: INK.prDeep }}>{right}</span>
+        ))}
+    </div>
+  );
+};
+
+export const Card: React.FC<{ children: React.ReactNode; pad?: string; className?: string; style?: React.CSSProperties }> = ({ children, pad, className, style }) => {
+  const w = useClientWebSizes();
+  return (
+    <div className={className} style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: pad ?? (w ? w.cardPad : "14px 16px"), marginBottom: 12, ...style }}>
+      {children}
+    </div>
+  );
+};
 
 export interface ListRow {
   key: string;
@@ -63,31 +79,34 @@ export interface ListRow {
 
 export const ListCard: React.FC<{ rows: ListRow[]; more?: { label: string; onClick: () => void } }> = ({ rows, more }) => {
   const dark = useIsDark();
+  const w = useClientWebSizes();
   return (
-    <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
+    <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: w ? w.listPad : "4px 14px", marginBottom: 12 }}>
       {rows.map((r, i) => {
         const t = r.tone ? toneOf(r.tone) : null;
         const inner = (
           <>
             {r.icon && (
-              <span className="flex items-center justify-center shrink-0" style={{ width: 34, height: 34, borderRadius: 11, background: t ? t.bg : dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
-                <r.icon size={16} strokeWidth={1.75} aria-hidden style={{ color: t ? t.ink : INK.prAccent }} />
+              <span className="flex items-center justify-center shrink-0" style={{ width: w ? w.tile : 34, height: w ? w.tile : 34, borderRadius: w ? w.tileR : 11, background: t ? t.bg : dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
+                <r.icon size={w ? w.tileIc : 16} strokeWidth={1.75} aria-hidden style={{ color: t ? t.ink : INK.prAccent }} />
               </span>
             )}
             <span className="flex-1 min-w-0 text-start">
-              <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
+              <span className="block" style={w ? { fontSize: textPx(w.rT), lineHeight: `${w.rTl}px`, fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" } : { fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                 {r.title}
               </span>
               {r.meta && (
-                <span className="block" style={{ fontSize: textPx(11), color: INK.chF, lineHeight: 1.4, overflowWrap: "anywhere" }}>
+                <span className="block" style={{ fontSize: textPx(w ? w.rM : 11), color: INK.chF, lineHeight: w ? `${w.rMl}px` : 1.4, overflowWrap: "anywhere" }}>
                   {r.meta}
                 </span>
               )}
             </span>
-            {r.trailing ?? (r.onClick ? <ChevronRight size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} /> : null)}
+            {r.trailing ?? (r.onClick ? <ChevronRight size={w ? w.chev : 14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} /> : null)}
           </>
         );
-        const style: React.CSSProperties = { gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 || more ? `1px solid ${INK.b06}` : "none" };
+        const style: React.CSSProperties = w
+          ? { gap: 12, padding: w.rowPad, minHeight: w.rowMin, boxSizing: "border-box", borderBottom: i < rows.length - 1 || more ? `1px solid ${INK.b06}` : "none" }
+          : { gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < rows.length - 1 || more ? `1px solid ${INK.b06}` : "none" };
         return r.onClick ? (
           <button key={r.key} type="button" onClick={r.onClick} aria-label={r.ariaLabel} className="tap w-full flex items-center" style={style}>
             {inner}
@@ -110,8 +129,12 @@ export const ListCard: React.FC<{ rows: ListRow[]; more?: { label: string; onCli
 
 export const Chip: React.FC<{ label: string; tone?: Tone }> = ({ label, tone = "pr" }) => {
   const t = toneOf(tone);
+  const w = useClientWebSizes();
   return (
-    <span className="whitespace-nowrap shrink-0" style={{ fontSize: textPx(10.5), fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: t.bg, color: t.ink }}>
+    <span
+      className="whitespace-nowrap shrink-0"
+      style={w ? { fontSize: textPx(w.chipFs), lineHeight: "16px", fontWeight: 700, padding: w.chipPad, borderRadius: 9999, background: t.bg, color: t.ink } : { fontSize: textPx(10.5), fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: t.bg, color: t.ink }}
+    >
       {label}
     </span>
   );
@@ -129,7 +152,22 @@ export const Pill: React.FC<{ label: string; tone?: Tone }> = ({ label, tone = "
   );
 };
 
-export const NumBox: React.FC<{ label: string; value: string; sub?: string }> = ({ label, value, sub }) => (
+export const NumBox: React.FC<{ label: string; value: string; sub?: string }> = ({ label, value, sub }) => {
+  const w = useClientWebSizes();
+  if (w)
+    return (
+      <div className="flex-1 min-w-0" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: w.numPad }}>
+        <p className="truncate" style={{ fontSize: textPx(w.numL), fontWeight: 600, color: INK.chF, lineHeight: `${w.numLl}px` }}>
+          {label}
+        </p>
+        <p style={{ marginTop: w.numMt, fontSize: textPx(w.numV), fontWeight: 800, letterSpacing: "-0.02em", color: INK.ch, lineHeight: w.numVl ? `${w.numVl}px` : 1 }}>{value}</p>
+        {sub && <p style={{ fontSize: textPx(w.numS), lineHeight: `${w.numSl}px`, color: INK.chT }}>{sub}</p>}
+      </div>
+    );
+  return <NumBoxMobile label={label} value={value} sub={sub} />;
+};
+
+const NumBoxMobile: React.FC<{ label: string; value: string; sub?: string }> = ({ label, value, sub }) => (
   <div className="flex-1 min-w-0" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 18, padding: "12px 12px 11px" }}>
     <p className="truncate" style={{ fontSize: textPx(10.5), fontWeight: 600, color: INK.chF, lineHeight: 1.3 }}>
       {label}
@@ -142,15 +180,21 @@ export const NumBox: React.FC<{ label: string; value: string; sub?: string }> = 
 export const SharedChips: React.FC<{ items: { label: string; on: boolean }[] }> = ({ items }) => {
   const dark = useIsDark();
   const onInk = dark ? "#B2D4CF" : "#3C6B65";
+  const w = useClientWebSizes();
+  const ic = w ? w.shIc : 11;
   return (
-    <div className="flex flex-wrap" style={{ gap: 6 }}>
+    <div className="flex flex-wrap" style={{ gap: w ? w.shGap : 6 }}>
       {items.map((x) => (
         <span
           key={x.label}
           className="inline-flex items-center whitespace-nowrap"
-          style={{ gap: 4, height: 26, padding: "0 10px", borderRadius: 9999, fontSize: textPx(11), fontWeight: 700, background: x.on ? INK.tealPale : INK.soft, color: x.on ? onInk : INK.chF }}
+          style={
+            w
+              ? { gap: 6, height: w.shH, padding: `0 ${w.shPx}px`, borderRadius: 9999, fontSize: textPx(w.shFs), fontWeight: 700, background: x.on ? INK.tealPale : INK.soft, color: x.on ? onInk : INK.chF }
+              : { gap: 4, height: 26, padding: "0 10px", borderRadius: 9999, fontSize: textPx(11), fontWeight: 700, background: x.on ? INK.tealPale : INK.soft, color: x.on ? onInk : INK.chF }
+          }
         >
-          {x.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
+          {x.on ? <ShieldCheck size={ic} strokeWidth={2.2} aria-hidden /> : <Lock size={ic} strokeWidth={2.2} aria-hidden />}
           {x.label}
           <span className="sr-only">{x.on ? t(", shared") : t(", not shared")}</span>
         </span>
@@ -187,7 +231,22 @@ export const RoundBtn = React.forwardRef<HTMLButtonElement, { icon: LucideIcon; 
 RoundBtn.displayName = "RoundBtn";
 
 /** The soft lock / info line (r6b): r14 soft, pad 10 12, icon 13, 11.5 / 1.5 text.soft. */
-export const SoftLine: React.FC<{ icon: LucideIcon; children: React.ReactNode; action?: React.ReactNode }> = ({ icon: Icon, children, action }) => (
+export const SoftLine: React.FC<{ icon: LucideIcon; children: React.ReactNode; action?: React.ReactNode }> = ({ icon: Icon, children, action }) => {
+  const w = useClientWebSizes();
+  if (w)
+    return (
+      <div className="flex items-start" style={{ gap: 8, borderRadius: 14, background: INK.soft, padding: w.softPad, marginBottom: 12 }}>
+        <Icon size={w.softIc} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0, marginTop: 4 }} />
+        <div className="flex-1 min-w-0" style={{ fontSize: textPx(w.softFs), lineHeight: w.softL, color: INK.chS }}>
+          {children}
+        </div>
+        {action}
+      </div>
+    );
+  return <SoftLineMobile icon={Icon} action={action}>{children}</SoftLineMobile>;
+};
+
+const SoftLineMobile: React.FC<{ icon: LucideIcon; children: React.ReactNode; action?: React.ReactNode }> = ({ icon: Icon, children, action }) => (
   <div className="flex items-start" style={{ gap: 8, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginBottom: 12 }}>
     <Icon size={13} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0, marginTop: 3 }} />
     <div className="flex-1 min-w-0" style={{ fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chS }}>

@@ -13,6 +13,8 @@ import { EmptyState } from "../EmptyState";
 import { ComingSoonPill } from "../ComingSoon";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { Card, Chip, ListCard, SectionHead, type ListRow } from "./kit";
+import { useClientWebSizes } from "./clientWebSizes";
+import { useWebLayout } from "../../web/useWebLayout";
 import { fmtDay } from "./clientFormat";
 import { DietaryNeedsCard } from "./DietaryNeedsCard";
 import { useLabCatalogue } from "../../health/useLabCatalogue";
@@ -70,15 +72,22 @@ function splitRec(body: string): { kind: string; text: string } {
   return m ? { kind: m[1], text: m[2] } : { kind: "Recommendation", text: body };
 }
 
-const EyeTag: React.FC<{ on: boolean; name: string }> = ({ on, name }) => (
-  <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 3, fontSize: textPx(10), fontWeight: 700, color: on ? INK.tealDark : INK.chF }}>
-    {on ? <Eye size={11} strokeWidth={2} aria-hidden /> : <EyeOff size={11} strokeWidth={2} aria-hidden />}
-    {on ? t("{name} sees", { name }) : t("Only you")}
-  </span>
-);
+const EyeTag: React.FC<{ on: boolean; name: string }> = ({ on, name }) => {
+  // Web (WP-CO Patient Web eyeFs 13, eyeIc 14); mobile as before.
+  const w = useClientWebSizes();
+  const ic = w ? 14 : 11;
+  return (
+    <span className="inline-flex items-center whitespace-nowrap" style={{ gap: w ? 4 : 3, fontSize: textPx(w ? 13 : 10), lineHeight: w ? "16px" : undefined, fontWeight: 700, color: on ? INK.tealDark : INK.chF }}>
+      {on ? <Eye size={ic} strokeWidth={2} aria-hidden /> : <EyeOff size={ic} strokeWidth={2} aria-hidden />}
+      {on ? t("{name} sees", { name }) : t("Only you")}
+    </span>
+  );
+};
 
 export const CarePlanTab: React.FC<{ data: ClientPageData; onNotes: () => void; onCalendar: () => void; onAskDiet: () => void; dietAsked: boolean }> = ({ data, onNotes, onCalendar, onAskDiet, dietAsked }) => {
   const dark = useIsDark();
+  const webSizes = useClientWebSizes();
+  const { rail } = useWebLayout();
   const lab = useLabCatalogue();
   const names = Object.fromEntries((lab.catalogue ?? []).map((c) => [c.key, c.displayName]));
   const { carePlan, firstName, clientId, today } = data;
@@ -117,6 +126,53 @@ export const CarePlanTab: React.FC<{ data: ClientPageData; onNotes: () => void; 
   return (
     <>
       {carePlan.offline && <OfflineLine />}
+      {webSizes ? (
+        // WP-CO Patient Web `b.plan`: one strip across the page: title and chip,
+        // the three date boxes, the two 40 buttons (planCols; two columns on the rail).
+        <div style={{ boxSizing: "border-box", borderRadius: 20, border: `1px solid ${INK.bCard}`, background: INK.card, padding: webSizes.cardPad, marginBottom: 12 }}>
+          <div className="grid items-center" style={{ gridTemplateColumns: rail ? "minmax(0,1fr) minmax(0,1.4fr)" : "minmax(0,1fr) minmax(0,1.5fr) auto", gap: rail ? 16 : 24 }}>
+            <div className="min-w-0 flex justify-between items-start" style={{ gap: 8 }}>
+              <div className="min-w-0">
+                <p style={{ fontSize: textPx(12), lineHeight: "16px", fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: INK.chF }}>{t("Care plan")}</p>
+                <p className="truncate" title={plan.title} style={{ marginTop: 2, fontSize: textPx(22), lineHeight: "28px", fontWeight: 800, color: INK.ch }}>
+                  {plan.title}
+                </p>
+              </div>
+              <Chip label={plan.status === "active" ? t("Active") : t("Closed")} tone={plan.status === "active" ? "act" : "pau"} />
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+              {[
+                [t("Started"), fmtDay(plan.createdAt, true)],
+                [t("Last reviewed"), lastReviewed ? fmtDay(lastReviewed) : t("Not yet")],
+                [t("Next review"), nextReview ? fmtDay(nextReview.dueOn) : t("Not set")],
+              ].map(([k, v], i) => (
+                <div key={k} className="min-w-0" style={{ borderRadius: 12, background: i === 2 ? INK.prPale : INK.soft, padding: "8px 12px" }}>
+                  <p style={{ fontSize: textPx(13), lineHeight: "16px", fontWeight: 600, color: INK.chF }}>{k}</p>
+                  <p style={{ fontSize: textPx(15), lineHeight: "24px", fontWeight: 800, color: i === 2 ? INK.prDeep : INK.ch, whiteSpace: "nowrap" }}>{v}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap" style={{ gap: 8 }}>
+              {[
+                { label: t("Edit plan"), Icon: Pencil, on: () => setSheet(true), out: false },
+                { label: t("Review history"), Icon: History, on: () => setHistory(true), out: true },
+              ].map(({ label, Icon, on, out }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={on}
+                  className="flex items-center justify-center whitespace-nowrap hover:brightness-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                  style={{ height: 40, boxSizing: "border-box", padding: "0 16px", borderRadius: 12, gap: 8, fontSize: textPx(15), fontWeight: 600, background: out ? INK.card : INK.prPale, color: INK.prDeep, border: out ? "1.5px solid #AEA1DC" : "none" }}
+                >
+                  <Icon size={16} strokeWidth={2} aria-hidden />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {!plan.publishedAt && <p style={{ fontSize: textPx(13), lineHeight: "20px", color: INK.chF, marginTop: 10 }}>{t("Not published yet. {firstName} sees the plan once you mark it reviewed.", { firstName })}</p>}
+        </div>
+      ) : (
       <Card>
         <div className="flex justify-between items-start" style={{ gap: 8 }}>
           <div className="min-w-0">
@@ -143,6 +199,7 @@ export const CarePlanTab: React.FC<{ data: ClientPageData; onNotes: () => void; 
         </div>
         {!plan.publishedAt && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 10 }}>{t("Not published yet. {firstName} sees the plan once you mark it reviewed.", { firstName })}</p>}
       </Card>
+      )}
 
       <SectionHead label={t("Goals")} />
       {goals.length ? (
@@ -157,16 +214,17 @@ export const CarePlanTab: React.FC<{ data: ClientPageData; onNotes: () => void; 
           {recs.map((r) => {
             const { kind, text } = splitRec(r.body);
             return (
-              <div key={r.id} className="flex" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "10px 12px", marginBottom: 6, gap: 10 }}>
-                <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
-                  <Lightbulb size={14} strokeWidth={1.9} aria-hidden style={{ color: INK.prAccent }} />
+              // Web: WP-CO Patient Web recs (pad 12 14, tile 36 / 18, kind and text 15/24, 8 apart).
+              <div key={r.id} className="flex" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: webSizes ? "12px 14px" : "10px 12px", marginBottom: webSizes ? 8 : 6, gap: 10 }}>
+                <span className="flex items-center justify-center shrink-0" style={{ width: webSizes ? 36 : 30, height: webSizes ? 36 : 30, borderRadius: 10, background: dark ? "rgba(174,161,220,0.14)" : "#F0EDF9" }}>
+                  <Lightbulb size={webSizes ? 18 : 14} strokeWidth={1.9} aria-hidden style={{ color: INK.prAccent }} />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="flex justify-between" style={{ gap: 6 }}>
-                    <span style={{ fontSize: textPx(12.5), fontWeight: 800, color: INK.ch }}>{kind}</span>
+                    <span style={webSizes ? { fontSize: textPx(15), lineHeight: "24px", fontWeight: 800, color: INK.ch } : { fontSize: textPx(12.5), fontWeight: 800, color: INK.ch }}>{kind}</span>
                     <EyeTag on={r.visibleToClient} name={firstName} />
                   </span>
-                  <span className="block" style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45, marginTop: 2, overflowWrap: "anywhere" }}>
+                  <span className="block" style={webSizes ? { fontSize: textPx(15), color: INK.chS, lineHeight: "24px", marginTop: 2, overflowWrap: "anywhere" } : { fontSize: textPx(12), color: INK.chS, lineHeight: 1.45, marginTop: 2, overflowWrap: "anywhere" }}>
                     {text}
                   </span>
                 </span>

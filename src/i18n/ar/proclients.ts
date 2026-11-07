@@ -607,6 +607,7 @@ const proclients: Catalogue = {
   "Ended|history": "تم إنهاء",
   "workouts|unit": "تمارين",
   "Due|status": "مستحقة",
+  "Range {range}": "النطاق {range}", // note: health wording (web marker row: the reference range, then the date)
 };
 
 export default proclients;
