@@ -594,6 +594,9 @@ const marketplace: Catalogue = {
   // Round G clash fix: the same English with another meaning in this area.
   "Payment|how it is paid": "الدفع",
   "Membership|subscription": "الاشتراك",
+  "{distance} away": "على بُعد {distance}",
+  "Open gym page": "فتح صفحة النادي",
+  "Booking detail": "تفاصيل الحجز",
 };
 
 export default marketplace;

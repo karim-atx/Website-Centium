@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLinkOnce } from "../../hooks/useLinkOnce";
-import { LogOut, MoreVertical, QrCode } from "lucide-react";
+import { CalendarDays, LogOut, MoreVertical, QrCode, Star } from "lucide-react";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
+import { VenueWebHeader, WebTabs } from "./venueWeb";
+import { WEB_FAINT, WEB_HAIR, WEB_INK2 } from "./venueWebTokens";
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
@@ -84,6 +87,9 @@ export default function MyBookingsPage() {
   const { user } = useApp();
   const [params, setParams] = useSearchParams();
   const tab = tabFromQuery(params.get("tab"));
+  // Addendum A (WC-EX.3): the list-detail on web, and the selected row (the first by default).
+  const { web, rail } = useWebLayout();
+  const [selKey, setSelKey] = useState<string | null>(null);
   const setTab = (next: BookingsTab) => setParams({ tab: next }, { replace: true });
 
   const [members, setMembers] = useState<Loaded<MembershipsData> | null>(null);
@@ -169,6 +175,149 @@ export default function MyBookingsPage() {
     tabsRef.current[n]?.focus();
   };
 
+  const overlays = (
+    <>
+      <PopupMenu
+        open={!!menu}
+        onClose={() => setMenu(null)}
+        anchor={menu?.anchor ?? null}
+        width={200}
+        align="right"
+        rowLineHeight={16}
+        options={[
+          ...(menu && (menu.g.status === "active" || menu.g.status === "upcoming") ? [{ value: "pass", label: t("Show pass"), icon: <QrCode size={15} strokeWidth={1.75} /> }] : []),
+          ...(menu && menu.g.status === "active" && !endsOn[menu.g.id] && !(menu.g.cancelAtPeriodEnd && menu.g.expiresOn)
+            ? [{ value: "end", label: t("End membership"), icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]
+            : []),
+        ]}
+        onSelect={(v) => {
+          const g = menu?.g ?? null;
+          setMenu(null);
+          if (v === "pass") setPassFor(g);
+          else setEnding(g);
+        }}
+      />
+
+      <CentredPopup open={!!passFor} onClose={() => setPassFor(null)} title={passFor?.gymName ?? ""} geometry="ours">
+        {passFor && <MembershipPass membership={passFor} gymLocation={null} memberName={user.firstName} />}
+        <button type="button" onClick={() => setPassFor(null)} className="tap mt-2 w-full h-12 text-[14px] font-bold text-th-7d67d9 dark:text-primary-accent">
+          {t("Done")}
+        </button>
+      </CentredPopup>
+
+      <InstructorReviewDialog
+        target={reviewing}
+        onClose={() => setReviewing(null)}
+        onSent={(r, rating) => {
+          setReviewing(null);
+          setSent((s) => ({ ...s, [r.bookingId]: rating }));
+          setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(r.professionalName, r.gymName), professionalId: r.professionalId }));
+        }}
+      />
+
+      <EndMembershipDialog
+        membership={ending}
+        onClose={() => setEnding(null)}
+        onEnded={(g, status) => {
+          setEnding(null);
+          if (status === "active" && g.expiresOn) setEndsOn((e) => ({ ...e, [g.id]: g.expiresOn as string }));
+          void loadMemberships().then((r) => r.ok && setMembers(r));
+        }}
+      />
+    </>
+  );
+
+  // Addendum A, WC-EX.3 (WC-EX Bookings Web): from 1024px the header, the
+  // thin full-width tabs, then a list-detail: the ticket rows (5) beside the
+  // selected booking (7); 1 | 1 on the rail. The first row is selected by
+  // default; the empty states span the content width.
+  if (web) {
+    const list = state && state.ok ? (rows ?? []) : [];
+    const sel = list.find((r) => r.key === selKey) ?? list[0] ?? null;
+    const selGym = sel && sel.kind === "membership" ? gymById.get(sel.refId) : undefined;
+    const canEnd = !!selGym && selGym.status === "active" && !endsOn[selGym.id] && !(selGym.cancelAtPeriodEnd && selGym.expiresOn);
+    const canPass = !!selGym && (selGym.status === "active" || selGym.status === "upcoming");
+    const empty = BOOKINGS_EMPTY[tab];
+    return (
+      <div data-bookings-web="" style={{ color: m.ink, lineHeight: "normal" }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader rail={rail} title={t("My bookings")} onBack={() => navigate("/app/marketplace")} />
+        <div style={{ maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${rail ? 24 : 32}px`, boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 16 }}>
+          <WebTabs tabs={BOOKINGS_TABS.map((bt) => ({ key: bt.key, label: t(bt.label) }))} active={tab} onChange={setTab} />
+          {tab === "memberships" && cachedAt ? <MarketOffline loaded force /> : null}
+          {state === null ? (
+            <MarketSkeleton radius={18} rows={3} height={88} count={2} label={tk("Loading your bookings")} />
+          ) : !state.ok ? (
+            !online || state.offline ? <MarketOffline loaded={false} force onRetry={retry} /> : <MarketError thing={tk("your bookings")} onRetry={retry} />
+          ) : list.length === 0 ? (
+            <div style={{ borderRadius: 20, border: `0.5px solid ${WEB_HAIR}`, padding: "48px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+              <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", color: "#7D67D9" }}>
+                <CalendarDays size={24} strokeWidth={1.75} />
+              </span>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{t(empty.title)}</h2>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: WEB_FAINT }}>{t(empty.body)}</p>
+              <button
+                type="button"
+                onClick={() => navigate(empty.href)}
+                className="market-focus"
+                style={{ marginTop: 6, height: 40, borderRadius: 12, border: "1px solid rgba(36,31,27,0.11)", background: "#FFFFFF", padding: "0 16px", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#5F5093", cursor: "pointer" }}
+              >
+                {t(empty.cta)}
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: rail ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
+              <div role="list" aria-label={t("My bookings")} style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                {tab === "past" && strip ? (
+                  <div ref={stripRef}>
+                    <ConfirmationStrip
+                      key={strip.n}
+                      text={strip.text}
+                      action={t("View")}
+                      onAction={() => {
+                        const id = strip.professionalId;
+                        setStrip(null);
+                        navigate(`/app/professionals/${encodeURIComponent(id)}`);
+                      }}
+                      still={reduced}
+                    />
+                  </div>
+                ) : null}
+                {list.map((r) => {
+                  const g = r.kind === "membership" ? gymById.get(r.refId) : undefined;
+                  const end = !!g && g.status === "active" && !endsOn[g.id] && !(g.cancelAtPeriodEnd && g.expiresOn);
+                  const pass = !!g && (g.status === "active" || g.status === "upcoming");
+                  return (
+                    <WebBookingRow
+                      key={r.key}
+                      row={r}
+                      selected={r.key === sel?.key}
+                      onSelect={() => setSelKey(r.key)}
+                      menu={g && (end || pass) ? (anchor) => setMenu({ g, anchor }) : undefined}
+                      menuOpen={!!g && menu?.g.id === g.id}
+                    />
+                  );
+                })}
+              </div>
+              {sel && (
+                <WebBookingDetail
+                  row={sel}
+                  gym={selGym}
+                  actions={[
+                    ...(canPass && selGym ? [{ label: t("Show pass"), kind: "p" as const, icon: <QrCode size={18} strokeWidth={1.75} aria-hidden />, onClick: () => setPassFor(selGym) }] : []),
+                    ...(sel.review ? [{ label: t("Review"), kind: "p" as const, icon: <Star size={18} strokeWidth={1.75} aria-hidden />, onClick: () => setReviewing(sel.review ?? null) }] : []),
+                    ...(sel.href ? [{ label: sel.kind === "membership" ? t("Open gym page") : sel.kind === "class" ? t("Open class") : t("Open"), kind: canPass || sel.review ? ("s" as const) : ("p" as const), onClick: () => navigate(sel.href as string) }] : []),
+                    ...(canEnd && selGym ? [{ label: t("End membership"), kind: "d" as const, icon: <LogOut size={18} strokeWidth={1.75} aria-hidden />, onClick: () => setEnding(selGym) }] : []),
+                  ]}
+                />
+              )}
+            </div>
+          )}
+        </div>
+        {overlays}
+      </div>
+    );
+  }
   return (
     <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{`${FOCUS_CSS}.bk-review button:focus-visible{outline:2px solid #AEA1DC;outline-offset:-2px}`}</style>
@@ -247,53 +396,7 @@ export default function MyBookingsPage() {
         )}
       </div>
 
-      <PopupMenu
-        open={!!menu}
-        onClose={() => setMenu(null)}
-        anchor={menu?.anchor ?? null}
-        width={200}
-        align="right"
-        rowLineHeight={16}
-        options={[
-          ...(menu && (menu.g.status === "active" || menu.g.status === "upcoming") ? [{ value: "pass", label: t("Show pass"), icon: <QrCode size={15} strokeWidth={1.75} /> }] : []),
-          ...(menu && menu.g.status === "active" && !endsOn[menu.g.id] && !(menu.g.cancelAtPeriodEnd && menu.g.expiresOn)
-            ? [{ value: "end", label: t("End membership"), icon: <LogOut size={15} strokeWidth={1.75} />, destructive: true }]
-            : []),
-        ]}
-        onSelect={(v) => {
-          const g = menu?.g ?? null;
-          setMenu(null);
-          if (v === "pass") setPassFor(g);
-          else setEnding(g);
-        }}
-      />
-
-      <CentredPopup open={!!passFor} onClose={() => setPassFor(null)} title={passFor?.gymName ?? ""} geometry="ours">
-        {passFor && <MembershipPass membership={passFor} gymLocation={null} memberName={user.firstName} />}
-        <button type="button" onClick={() => setPassFor(null)} className="tap mt-2 w-full h-12 text-[14px] font-bold text-th-7d67d9 dark:text-primary-accent">
-          {t("Done")}
-        </button>
-      </CentredPopup>
-
-      <InstructorReviewDialog
-        target={reviewing}
-        onClose={() => setReviewing(null)}
-        onSent={(r, rating) => {
-          setReviewing(null);
-          setSent((s) => ({ ...s, [r.bookingId]: rating }));
-          setStrip((p) => ({ n: (p?.n ?? 0) + 1, text: sentText(r.professionalName, r.gymName), professionalId: r.professionalId }));
-        }}
-      />
-
-      <EndMembershipDialog
-        membership={ending}
-        onClose={() => setEnding(null)}
-        onEnded={(g, status) => {
-          setEnding(null);
-          if (status === "active" && g.expiresOn) setEndsOn((e) => ({ ...e, [g.id]: g.expiresOn as string }));
-          void loadMemberships().then((r) => r.ok && setMembers(r));
-        }}
-      />
+      {overlays}
     </div>
   );
 }
@@ -370,6 +473,124 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
         <MoreVertical size={16} aria-hidden style={NO_ICON_SCALE} />
       </button>
     </TicketStub>
+  );
+};
+
+const WEB_TONES: Record<BookingRow["tone"], { bg: string; ink: string; perf: string }> = {
+  teal: { bg: "#E4F0EE", ink: "#2F5F58", perf: "#7FB2AA" },
+  pale: { bg: "#F0EDF9", ink: "#7D6BB5", perf: "#AEA1DC" },
+  muted: { bg: "#F5F5F6", ink: "#8C8378", perf: "rgba(36,31,27,0.2)" },
+};
+
+/**
+ * WC-EX Bookings Web, a ticket row: min 88, r18 (selected: #FAF9FE with a
+ * 1.5 #A79AD5 border; else white, 0.5 hair); the 44 tile, the title 15/22
+ * 700, the sub 13/20 600 #7D67D9, the meta 13/20 #8C8378; the ⋮ 32 × 40; the
+ * 46 stub (11/16 800 0.1em, vertical) behind a dashed perforation.
+ */
+const WebBookingRow: React.FC<{ row: BookingRow; selected: boolean; onSelect: () => void; menu?: (anchor: HTMLElement) => void; menuOpen: boolean }> = ({ row, selected, onSelect, menu, menuOpen }) => {
+  const tone = WEB_TONES[row.tone];
+  const notch: React.CSSProperties = { position: "absolute", insetInlineEnd: 39, width: 14, height: 14, boxSizing: "border-box", borderRadius: 999, background: "#FFFFFF", border: "0.5px solid rgba(36,31,27,0.08)" };
+  return (
+    <div
+      role="listitem"
+      data-booking-row={row.key}
+      style={{ position: "relative", display: "flex", minHeight: 88, borderRadius: 18, background: selected ? "#FAF9FE" : "#FFFFFF", border: selected ? "1.5px solid #A79AD5" : "0.5px solid rgba(36,31,27,0.08)", boxSizing: "border-box", overflow: "hidden" }}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-pressed={selected}
+        aria-label={[row.title, row.sub, row.meta, row.note, row.stub].filter(Boolean).join(", ")}
+        className="market-focus"
+        style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "none", border: 0, font: "inherit", color: "inherit", textAlign: "start", cursor: "pointer" }}
+      >
+        <span aria-hidden style={{ width: 44, height: 44, flex: "none", borderRadius: 12, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "#7D67D9" }}>
+          {row.tile}
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span className="truncate" style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{row.title}</span>
+          <span style={{ display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#7D67D9" }}>{row.sub}</span>
+          <span className="truncate" style={{ display: "block", fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{row.meta}</span>
+          {row.note ? <span style={{ display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: WEB_INK2 }}>{row.note}</span> : null}
+        </span>
+      </button>
+      {menu && (
+        <button
+          type="button"
+          onClick={(e) => menu(e.currentTarget)}
+          aria-label={t("Options for {name}", { name: row.title })}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          className="market-focus hover:bg-[#F5F4FE]"
+          style={{ width: 32, height: 40, flex: "none", alignSelf: "center", marginInlineEnd: 4, borderRadius: 10, border: 0, background: menuOpen ? "#F5F4FE" : "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: WEB_INK2, cursor: "pointer" }}
+        >
+          <MoreVertical size={18} strokeWidth={2} aria-hidden />
+        </button>
+      )}
+      <span aria-hidden style={{ width: 46, flex: "none", background: tone.bg, borderInlineStart: `1.5px dashed ${tone.perf}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", whiteSpace: "nowrap", color: tone.ink }}>{row.stub}</span>
+      </span>
+      <span aria-hidden style={{ ...notch, top: -7 }} />
+      <span aria-hidden style={{ ...notch, bottom: -7 }} />
+    </div>
+  );
+};
+
+/**
+ * WC-EX Bookings Web, the selected booking: r20, padding 24, gap 18; the 56
+ * tile, the title 22/30 800, the sub 15/24 600, the stub pill; the facts
+ * box (#F7F7FA r16, rows 48, 15/24); the line 13/20; the actions (40, r12:
+ * primary #9A8CD6, secondary #F5F5F6, danger white with #F3C9C4).
+ */
+const WebBookingDetail: React.FC<{
+  row: BookingRow;
+  gym?: GymMembership;
+  actions: { label: string; kind: "p" | "s" | "d"; icon?: React.ReactNode; onClick: () => void }[];
+}> = ({ row, gym, actions }) => {
+  const tone = WEB_TONES[row.tone];
+  const facts: [string, string][] = gym
+    ? [
+        [t("Plan"), [gym.planName, gym.priceAgreed ? `$${gym.priceAgreed}` : null].filter(Boolean).join(" · ")],
+        [t("Started"), longDate(gym.startedOn)],
+        ...(gym.expiresOn ? ([[t("Valid until"), longDate(gym.expiresOn)]] as [string, string][]) : []),
+      ]
+    : [[t("When"), row.meta], ...(row.note ? ([[t("Note"), row.note]] as [string, string][]) : [])];
+  return (
+    <section aria-label={t("Booking detail")} data-booking-detail="" style={{ minWidth: 0, borderRadius: 20, border: `0.5px solid ${WEB_HAIR}`, padding: 24, boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <span aria-hidden style={{ width: 56, height: 56, flex: "none", borderRadius: 16, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800, color: "#7D67D9" }}>{row.tile}</span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: "block", fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{row.title}</span>
+          <span style={{ display: "block", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#7D67D9" }}>{row.sub}</span>
+        </span>
+        <span style={{ flex: "none", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", padding: "4px 10px", borderRadius: 999, background: tone.bg, color: tone.ink }}>{row.stub}</span>
+      </div>
+      <div style={{ borderRadius: 16, background: "#F7F7FA", padding: "4px 16px" }}>
+        {facts.map(([k, v], i) => (
+          <div key={k} style={{ minHeight: 48, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : "none", fontSize: 15, lineHeight: "24px" }}>
+            <span style={{ color: WEB_INK2, flex: "none", whiteSpace: "nowrap" }}>{k}</span>
+            <span className="truncate" style={{ fontWeight: 700, textAlign: "end", minWidth: 0 }}>{v}</span>
+          </div>
+        ))}
+      </div>
+      {actions.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {actions.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              onClick={a.onClick}
+              className="market-focus"
+              style={{ height: 40, padding: "0 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer", background: a.kind === "p" ? "#9A8CD6" : a.kind === "d" ? "#FFFFFF" : "#F5F5F6", color: a.kind === "p" ? "#FFFFFF" : a.kind === "d" ? "#C0392B" : "#241F1B", border: a.kind === "d" ? "1px solid #F3C9C4" : "none" }}
+            >
+              {a.icon}
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

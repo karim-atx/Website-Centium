@@ -31,6 +31,8 @@ import { marketplaceCategoryIcon } from "../../../utils/icons";
 import type { MarketplaceCategoryId } from "../../../types";
 import { TYPE_CATEGORY, categoryLabel } from "../venueTypes";
 import { t, tk, tn } from "../../../i18n/core";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
+import { VenueWebBody, VenueWebHeader, WebCaps } from "../venueWeb";
 import { distanceLine, productsNote, showcaseSegments, showcaseTypeLabel, type ShowcaseSegKey } from "./rewardsModel";
 import { fetchPublicShelf, fetchShowcaseExtras, type ShowcaseExtras } from "./showcaseData";
 import { BackRow, CapsLabel, OwnerTile, QuietLine, RowChevron } from "./rewardsParts";
@@ -81,6 +83,8 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   const dark = useIsDark();
   const m = marketPalette(dark);
   const back = useBack("/app/marketplace?tab=rewards");
+  // Addendum A (WC-EX.7.2): the web layout from 1024px.
+  const { web, rail } = useWebLayout();
   const navigate = useNavigate();
   const here = useKnownPosition();
   const bizStatus = useBusinessStatus(businessId);
@@ -162,6 +166,24 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
 
   const closed = closedLine(bizStatus, "bookings");
 
+  // On web: the header (REWARDS, the name), then the loading or missing state in the body.
+  if (web && !venue) {
+    return (
+      <div style={{ lineHeight: "normal", color: m.ink }}>
+        <VenueWebHeader rail={rail} kicker={t("Rewards")} title="" onBack={back} />
+        <div style={{ maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${rail ? 24 : 32}px`, boxSizing: "border-box" }}>
+          {venue === undefined ? (
+            <MarketSkeleton radius={18} count={3} rows={3} label={tk("Loading this business")} />
+          ) : loadFailed ? (
+            <MarketError thing={tk("this business")} onRetry={load} />
+          ) : (
+            <MarketEmptyCard title={tk("This business isn't on Explore right now")} body={closed ?? tk("It may have paused its listing. Anything you've booked or redeemed stays in your account.")} />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (venue === undefined) {
     return (
       <div style={{ paddingBottom: 32 }}>
@@ -195,6 +217,125 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
   // category it has a product in.
   const productList = products.state === "done" ? products.list : [];
   const categoryIds = [...new Set([...(storeCategory ? [storeCategory] : []), ...productList.map((p) => p.marketCategory)])].filter((c) => c !== "gyms" && c !== "classes");
+
+  // Addendum A, WC-EX.7.2 (WC-EX Rewards Web): from 1024px the header
+  // (REWARDS, the name), then the left 8 (type + bio, the Shop · Location ·
+  // Online strip beside its panel, Products 4 across, 3 on the rail) and the
+  // right 4 (Offers for your points); 3 | 2 on the rail.
+  if (web) {
+    return (
+      <div data-showcase-web="" style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader rail={rail} kicker={t("Rewards")} title={venue.name} onBack={back} />
+        <VenueWebBody
+          rail={rail}
+          cols={rail ? [3, 2] : [8, 4]}
+          left={
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <OwnerTile name={venue.name} logoUrl={extras?.logoUrl} size={60} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#7D67D9" }}>{showcaseTypeLabel(venue.venueType)}</div>
+                  {venue.bio ? <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349", whiteSpace: "pre-line" }}>{venue.bio}</p> : null}
+                </div>
+              </div>
+              {venue.perk || venue.upcomingClassCount > 0 || venue.canHostClasses ? (
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+                  {venue.perk ? <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, borderRadius: 999, padding: "2px 10px", background: "#F0EDF9", color: "#7D6BB5" }}>{venue.perk}</span> : null}
+                  {venue.upcomingClassCount > 0 || venue.canHostClasses ? (
+                    <span style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
+                      {venue.upcomingClassCount > 0 ? tn(venue.upcomingClassCount, "{n} upcoming class", "{n} upcoming classes") : t("No upcoming classes")}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+              {closed ? (
+                <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.caution }}>
+                  {closed}
+                </p>
+              ) : null}
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.3fr)", gap: 12, alignItems: "stretch" }}>
+                <SegmentedTicketStrip
+                  variant="tile"
+                  label={t("Where to use your vouchers")}
+                  items={segments.map((s) => ({ key: s.key, label: s.label, step: s.step, icon: s.key === "shop" ? Store : s.key === "loc" ? MapPin : Globe }))}
+                  active={current.key}
+                  onChange={setSeg}
+                />
+                <div role="status" aria-live="polite" style={{ borderRadius: 14, padding: "8px 16px", display: "flex", flexDirection: "column", justifyContent: "center", background: dark ? hexAlpha(stepInk, 0.16) : tint }}>
+                  {current.href ? (
+                    <a href={current.href} target="_blank" rel="noopener noreferrer" className="market-focus" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink, textDecoration: "none" }}>
+                      {current.value}
+                    </a>
+                  ) : (
+                    <div style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{current.value}</div>
+                  )}
+                  {current.line ? <div style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{current.line}</div> : null}
+                </div>
+              </div>
+              {storeCategory ? (
+                <Link to={`/app/store/${venue.venueId}`} className="market-focus" style={{ ...rowBox(m), textDecoration: "none" }}>
+                  <span aria-hidden style={{ width: 36, height: 36, borderRadius: 11, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: m.pdark }}>
+                    <ShoppingBag size={17} strokeWidth={1.9} />
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{t("Shop in the app")}</span>
+                    <span style={{ display: "block", fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{venue.venueType === "wellness_service" ? t("Products and appointments") : t("Products, pickup and delivery")}</span>
+                  </span>
+                  <RowChevron />
+                </Link>
+              ) : null}
+              <section aria-labelledby="showcase-products" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
+                  <WebCaps id="showcase-products">{t("Products")}</WebCaps>
+                  <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textAlign: "end" }}>{productsNote(extras?.website ?? null)}</span>
+                </div>
+                {products.state === "loading" ? (
+                  <MarketSkeleton radius={18} count={1} rows={2} label={tk("Loading products")} />
+                ) : !products.ok ? (
+                  <MarketError thing={tk("products")} onRetry={loadProducts} />
+                ) : products.list.length === 0 ? (
+                  <QuietLine>{t("No products yet.")}</QuietLine>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${rail ? 3 : 4},minmax(0,1fr))`, gap: 12 }}>
+                    {products.list.map((p) => (
+                      <ProductTile key={p.id} product={p} to={storeCategory ? `/app/store/${venue.venueId}/p/${p.id}` : null} web />
+                    ))}
+                  </div>
+                )}
+              </section>
+              {venueLess ? (
+                <section aria-label={t("Reviews")} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <WebCaps>{t("Reviews")}</WebCaps>
+                  <GymReviews businessId={venue.venueId} gymName={venue.name} summary={null} onChanged={() => undefined} pinned={false} />
+                </section>
+              ) : null}
+              {categoryIds.length > 0 ? (
+                <section aria-labelledby="showcase-browse" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <WebCaps id="showcase-browse">{t("Browse by category")}</WebCaps>
+                  <div style={{ display: "grid", gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                    {categoryIds.map((c) => {
+                      const Icon = marketplaceCategoryIcon[c as MarketplaceCategoryId] ?? marketplaceCategoryIcon.stores;
+                      return (
+                        <Link key={c} to={`/app/marketplace/${c}`} className="market-focus" style={{ ...rowBox(m), textDecoration: "none" }}>
+                          <span aria-hidden style={{ width: 36, height: 36, borderRadius: 11, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: m.pdark }}>
+                            <Icon size={17} strokeWidth={1.9} />
+                          </span>
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{categoryLabel(c)}</span>
+                          <RowChevron />
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+            </>
+          }
+          right={<ShowcaseOffers state={offers} balance={balance} onRetry={loadOffers} onOpen={(o) => navigate(`/app/marketplace/rewards/${encodeURIComponent(o.offerId)}`)} web />}
+        />
+      </div>
+    );
+  }
 
 
   return (
@@ -343,9 +484,40 @@ const rowBox = (m: ReturnType<typeof marketPalette>): React.CSSProperties => ({
 });
 
 /** "Offers for your points": the business's live offers (none: the section stays out). */
-const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => void; onOpen: (o: CatalogOffer) => void }> = ({ state, balance, onRetry, onOpen }) => {
+const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => void; onOpen: (o: CatalogOffer) => void; web?: boolean }> = ({ state, balance, onRetry, onOpen, web }) => {
   const m = marketPalette(useIsDark());
   if (state.state === "done" && state.result.ok && state.result.value.length === 0) return null;
+  // WC-EX Rewards Web: the right column; rows min 64, padding 10 16, the headline 15/22 700, the note 13/20 700, the cost 17.
+  if (web)
+    return (
+      <section aria-labelledby="showcase-offers" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <WebCaps id="showcase-offers">{t("Offers for your points")}</WebCaps>
+        {state.state === "loading" ? (
+          <MarketSkeleton radius={18} count={1} rows={2} label={tk("Loading offers")} />
+        ) : !state.result.ok ? (
+          <MarketError thing={tk("offers")} onRetry={onRetry} />
+        ) : (
+          state.result.value.map((o) => {
+            const prog = offerProgress(balance, o.pointsCost);
+            return (
+              <button
+                key={o.offerId}
+                type="button"
+                onClick={() => onOpen(o)}
+                className="market-focus hover:bg-[#FAFAFC]"
+                style={{ width: "100%", minHeight: 64, boxSizing: "border-box", borderRadius: 16, border: "0.5px solid rgba(36,31,27,0.1)", background: "transparent", padding: "10px 16px", display: "flex", alignItems: "center", gap: 12, font: "inherit", lineHeight: "normal", textAlign: "start", color: m.ink, cursor: "pointer" }}
+              >
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{o.headline}</span>
+                  <span style={{ display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: prog.can ? "#3C6B65" : "#8C8378" }}>{prog.note}</span>
+                </span>
+                <PointsFigure value={o.pointsCost} mark="leaf" size={17} />
+              </button>
+            );
+          })
+        )}
+      </section>
+    );
   return (
     <section aria-labelledby="showcase-offers" style={{ marginTop: 18 }}>
       <CapsLabel id="showcase-offers">{t("Offers for your points")}</CapsLabel>
@@ -380,7 +552,7 @@ const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => 
 };
 
 /** A product: the square photo (or the designed empty tile), the name and the display price. */
-const ProductTile: React.FC<{ product: Product; to: string | null }> = ({ product: p, to }) => {
+const ProductTile: React.FC<{ product: Product; to: string | null; web?: boolean }> = ({ product: p, to, web }) => {
   const m = marketPalette(useIsDark());
   const [failed, setFailed] = useState(false);
   const price = formatPrice(p.price);
@@ -393,8 +565,17 @@ const ProductTile: React.FC<{ product: Product; to: string | null }> = ({ produc
           <ShoppingBag size={24} strokeWidth={1.75} color={m.tert} aria-hidden style={NO_ICON_SCALE} />
         )}
       </span>
-      <span style={{ display: "block", fontSize: textPx(13), fontWeight: 700, marginTop: 6, color: m.ink }}>{p.name}</span>
-      {price ? <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{price}</span> : null}
+      {web ? (
+        <>
+          <span style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 700, marginTop: 6, color: m.ink }}>{p.name}</span>
+          {price ? <span style={{ display: "block", fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{price}</span> : null}
+        </>
+      ) : (
+        <>
+          <span style={{ display: "block", fontSize: textPx(13), fontWeight: 700, marginTop: 6, color: m.ink }}>{p.name}</span>
+          {price ? <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{price}</span> : null}
+        </>
+      )}
     </>
   );
   return to ? (

@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Pencil, Star, ThumbsUp, User } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PinnedCta, PinnedSlot } from "../ui/PinnedCta";
@@ -82,7 +84,14 @@ export function GymReviews({
   summary: gymSummary,
   onChanged,
   pinned = true,
+  web,
 }: {
+  /**
+   * Addendum A (WC-EX Gym Web): the web Reviews tab. The summary card beside
+   * the sort, the reviews `cols` across, and Write a review (or the wait
+   * note) in the page header's slot.
+   */
+  web?: { ctaSlot: HTMLElement | null; cols: number };
   /** A venue's reviews (gym_reviews_page) … */
   gymId?: string;
   /** … or a venue-less business's (business_reviews_public). */
@@ -167,6 +176,175 @@ export function GymReviews({
   // Round F (AB7): an account under 7 days old sees when it may, in the button's place.
   const opensAt = useReviewOpensAt();
   const waitFor = !mine && authUserId ? opensAt : null;
+  const writeLabel = mine && !mine.redacted ? t("Edit your review") : t("Write a review");
+
+  const sheet = (
+    <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={t("Rate {title}", { title: gymName })}>
+      <GymReviewForm
+        key={mine?.id ?? "new"}
+        gymName={gymName}
+        existing={mine}
+        onDone={async () => {
+          setWriteOpen(false);
+          setSort("recent");
+          await Promise.all([load(0), loadMine()]);
+          onChanged();
+        }}
+        gymId={gymId}
+        businessId={biz ? businessId : undefined}
+      />
+    </BottomSheet>
+  );
+
+  if (web) {
+    const hair = "0.5px solid rgba(36,31,27,0.1)";
+    const headCta = waitFor ? (
+      <ReviewWaitNote
+        opensAt={waitFor}
+        style={{ justifyContent: "flex-start", textAlign: "start", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#5B5349", background: "#F5F5F6", borderRadius: 12, padding: "8px 14px" }}
+      />
+    ) : authUserId ? (
+      <button
+        type="button"
+        onClick={() => setWriteOpen(true)}
+        disabled={writeOff}
+        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+        style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#FFFFFF", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: writeOff ? 0.5 : 1, cursor: writeOff ? "default" : "pointer" }}
+      >
+        <Pencil size={18} strokeWidth={1.75} aria-hidden />
+        {writeLabel}
+      </button>
+    ) : null;
+    return (
+      <div data-gym-reviews="" style={{ display: "flex", flexDirection: "column", gap: 16, lineHeight: "normal", color: m.ink }}>
+        {web.ctaSlot && headCta && createPortal(headCta, web.ctaSlot)}
+        {reviews !== null && reviews.length === 0 && !error ? (
+          <MarketEmptyCard title={t("No reviews yet")} body={t("Reviews of {gym} will show here.", { gym: gymName })} />
+        ) : (
+          <>
+            {/* The summary (r18, padding 16 20, gap 20: the average 40/48 800, the 14 stars, the count 13/20; the 6 bars) beside the sort. */}
+            <div style={{ display: "grid", gridTemplateColumns: web.cols > 1 ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", gap: 16, alignItems: "stretch" }}>
+              <div style={{ borderRadius: 18, border: hair, background: m.card, padding: "16px 20px", display: "flex", gap: 20, alignItems: "center" }}>
+                <div style={{ textAlign: "center", flex: "none" }}>
+                  <div style={{ fontSize: 40, lineHeight: "48px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{total > 0 ? summary!.average.toFixed(1) : "–"}</div>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <Stars value={summary?.average ?? 0} size={14} m={m} />
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{tn(total, "{n} review", "{n} reviews")}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }} aria-label={t("Ratings breakdown")}>
+                  {[5, 4, 3, 2, 1].map((n, i) => {
+                    const c = summary?.counts[i] ?? 0;
+                    return (
+                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, lineHeight: "16px", color: "#8C8378" }}>
+                        <span style={{ width: 8, fontVariantNumeric: "tabular-nums" }}>{n}</span>
+                        <span aria-hidden style={{ flex: 1, height: 6, borderRadius: 999, background: "#F5F5F6", overflow: "hidden" }}>
+                          <span style={{ display: "block", height: "100%", borderRadius: 999, background: "#C08A1E", width: `${(c / maxCount) * 100}%` }} />
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Sort reviews")}</p>
+                <SegmentedTabs
+                  items={SORTS.map((s) => ({ key: s.key, label: t(s.label) }))}
+                  activeKey={sort}
+                  onChange={(k) => {
+                    setReviews(null);
+                    setSort(k as ReviewSort);
+                  }}
+                  idleInk="#5B5349"
+                  labelSize={15}
+                  tabHeight={32}
+                  trackStyle={{ height: 40, boxSizing: "border-box", padding: 4, gap: 4, borderRadius: 14 }}
+                  tabRadius={10}
+                />
+              </div>
+            </div>
+            {error && (
+              <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.high }}>
+                {error}
+              </p>
+            )}
+            {reviews === null ? (
+              <MarketSkeleton radius={18} rows={3} count={2} label={tk("Loading reviews")} />
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${web.cols},minmax(0,1fr))`, gap: 12, alignItems: "start" }}>
+                {reviews.map((r) => (
+                  <article key={r.id} style={{ minWidth: 0, borderRadius: 18, border: hair, background: m.card, padding: "14px 16px" }}>
+                    {r.redacted ? (
+                      <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontStyle: "italic", color: "#8C8378" }}>{t("This review was removed.")}</p>
+                    ) : (
+                      <>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span aria-hidden style={{ width: 32, height: 32, borderRadius: 999, background: "#F0EDF9", color: "#7D67D9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <User size={17} strokeWidth={2} fill="currentColor" />
+                          </span>
+                          <span style={{ minWidth: 0, flex: 1 }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>
+                              <span className="truncate">{r.isMine ? t("You") : (r.authorName ?? t("Anonymous reviewer"))}</span>
+                              {r.authorIsMember && <MemberTag label={t("Member")} tone="member" />}
+                            </span>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                              <Stars value={r.rating ?? 0} size={13} m={m} />
+                              <span>
+                                {reviewAge(r.createdAt)}
+                                {r.editedAt ? ` · ${t("edited")}` : ""}
+                                {r.classTitle ? ` · ${r.classTitle}` : ""}
+                              </span>
+                            </span>
+                          </span>
+                        </div>
+                        {r.body && (
+                          <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "8px 0 0", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
+                            {r.body}
+                          </p>
+                        )}
+                        {r.reply && (
+                          <div style={{ marginTop: 8, borderRadius: 12, background: "#F5F5F6", padding: "10px 12px" }}>
+                            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 800, color: "#7D6BB5" }}>{t("{name} replied", { name: gymName })}</p>
+                            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
+                              {r.reply.body}
+                            </p>
+                          </div>
+                        )}
+                        {!biz && (
+                          <button
+                            type="button"
+                            onClick={() => void helpful(r)}
+                            disabled={r.isMine}
+                            aria-pressed={r.viewerFoundHelpful}
+                            className="market-focus"
+                            style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: 0, background: "none", font: "inherit", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: r.viewerFoundHelpful ? m.accent : "#8C8378", opacity: r.isMine ? 0.6 : 1, cursor: r.isMine ? "default" : "pointer" }}
+                          >
+                            <ThumbsUp size={13} strokeWidth={1.75} aria-hidden fill={r.viewerFoundHelpful ? "currentColor" : "none"} />
+                            {t("Helpful")} · {r.helpfulCount}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </article>
+                ))}
+              </div>
+            )}
+            {more && (
+              <button
+                type="button"
+                onClick={() => void load(reviews?.length ?? 0)}
+                className="market-focus"
+                style={{ alignSelf: "center", height: 40, border: 0, background: "none", font: "inherit", fontSize: 15, fontWeight: 700, color: m.accent, cursor: "pointer" }}
+              >
+                {t("Show more reviews")}
+              </button>
+            )}
+          </>
+        )}
+        {sheet}
+      </div>
+    );
+  }
 
   return (
     <div data-gym-reviews="" style={{ marginTop: 8, display: "flex", flexDirection: "column", lineHeight: "normal", color: m.ink }}>
@@ -383,21 +561,7 @@ export function GymReviews({
         )
       )}
 
-      <BottomSheet open={writeOpen} onClose={() => setWriteOpen(false)} title={t("Rate {title}", { title: gymName })}>
-        <GymReviewForm
-          key={mine?.id ?? "new"}
-          gymName={gymName}
-          existing={mine}
-          onDone={async () => {
-            setWriteOpen(false);
-            setSort("recent");
-            await Promise.all([load(0), loadMine()]);
-            onChanged();
-          }}
-          gymId={gymId}
-          businessId={biz ? businessId : undefined}
-        />
-      </BottomSheet>
+      {sheet}
     </div>
   );
 }

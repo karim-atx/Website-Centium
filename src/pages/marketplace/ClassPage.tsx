@@ -12,6 +12,10 @@ import { useOnline } from "../../hooks/useOnline";
 import { useIsDark } from "../../hooks/useIsDark";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PinnedSlot } from "../../components/ui/PinnedCta";
+import { PinnedInline } from "../../components/ui/pinnedInline";
+import { useWebLayout } from "../../components/web/useWebLayout";
+import { VenueWebBody, VenueWebHeader, WebCaps, WebMapCard, WebPanelCta, WebTextSection } from "./venueWeb";
+import { WEB_FAINT, WEB_HAIR, WEB_INK2 } from "./venueWebTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { InstructorCard } from "../../components/market/InstructorCard";
 import { hiredViaCentium } from "../../services/marketplace/instructorRule";
@@ -187,6 +191,8 @@ export function ClassPage({ classId }: { classId: string }) {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const press = usePress();
+  // Addendum A (WC-EX.2): the web layout from 1024px.
+  const { web, rail } = useWebLayout();
   const [all, setAll] = useState<MarketplaceClass[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [booked, setBooked] = useState<Set<string>>(new Set());
@@ -489,6 +495,26 @@ export function ClassPage({ classId }: { classId: string }) {
     </div>
   );
 
+  // On web: the header, then the loading skeleton or the missing card in the body.
+  if (web && (all === null || !c)) {
+    return (
+      <div aria-busy={all === null || undefined} style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader rail={rail} kicker={t("Class")} title="" onBack={back} />
+        <div style={{ padding: `24px ${rail ? 24 : 32}px` }}>
+          {all === null ? (
+            <MarketSkeleton radius={20} height={275} rows={3} label={tk("Loading the class")} />
+          ) : loadFailed ? (
+            <MarketError thing={tk("this class")} onRetry={retry} />
+          ) : live?.cancelledAt ? (
+            <MarketEmptyCard title={tk("This class was cancelled by the venue.")} body={live.cancelReason ?? undefined} style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }} />
+          ) : (
+            <MarketEmptyCard title={tk("This class isn't available any more.")} />
+          )}
+        </div>
+      </div>
+    );
+  }
   // D-04 loading: the page's shapes (title, venue, time card, instructor).
   if (all === null) {
     return (
@@ -628,7 +654,8 @@ export function ClassPage({ classId }: { classId: string }) {
     cursor: "pointer",
   };
   // Everything pinned in the CTA's place sits on one --card panel (radius 20, 0.5px --hair, padding 12, gap 10, the sheet shadow) so it reads over the page.
-  const panel: React.CSSProperties = {
+  // On web the states sit inside the booking panel, which draws the card.
+  const panel: React.CSSProperties = web ? { display: "flex", flexDirection: "column", gap: 12, lineHeight: "normal" } : {
     borderRadius: 20,
     background: m.card,
     border: `0.5px solid ${m.hair}`,
@@ -642,6 +669,673 @@ export function ClassPage({ classId }: { classId: string }) {
   const offStyle = (off: boolean): React.CSSProperties =>
     off ? { opacity: 0.4, cursor: "default" } : {};
 
+  const overlays = (
+    <>
+      {/* S3: Directions to the venue's coordinates when it has them, else
+          to the address; Copy copies the address. */}
+      <DirectionsMenu
+        open={dirOpen}
+        onClose={() => setDirOpen(false)}
+        anchor={dirAnchor}
+        address={address}
+        coords={venueCoords}
+        onCopied={flash}
+      />
+
+      {/* C-MO.4.3.2 classSheet: the booking sheet. */}
+      <PurchaseSheet
+        open={popup === "sheet"}
+        onClose={() => setPopup(null)}
+        title={t("Book {name}", { name: c.title })}
+        summary={
+          <ClassTicketSummary
+            title={c.title}
+            place={sheetPlace(c)}
+            when={sheetWhen(c)}
+            booked={t("{n} of {total} booked", { n: taken, total: cap })}
+            pct={cap > 0 ? (taken / cap) * 100 : 0}
+            price={priceText}
+          />
+        }
+        cashHint={free ? null : t("Pay at the front desk before class")}
+        ctaLabel={free ? t("Confirm booking") : confirmLabel(priceText)}
+        busy={booking.busy}
+        disabled={!online}
+        error={sheetError}
+        note={!online ? <MarketOffline loaded /> : null}
+        onConfirm={() => void book()}
+      />
+
+      {/* OURS-class-terms (B9, ATXE4): the venue's waiver, class terms and
+          house rules, each agreed, then booked. */}
+      <ClassTermsSheet
+        docs={booking.terms}
+        businessName={c.businessName}
+        busy={booking.busy}
+        online={online}
+        error={booking.termsError}
+        onAgree={() => void agree()}
+        onClose={booking.closeTerms}
+      />
+
+      {/* C-MO.4.3.2 classDone: the confirmation page. book_class() has
+          already added the class to the Calendar (15-minute alert). */}
+      <BookingDone
+        open={done}
+        title={t("You're booked")}
+        body={doneBody(
+          c.title,
+          firstVisit && firstVisit.gymId === gymId ? firstVisit.text : null,
+        )}
+        rows={[
+          { k: t("Class"), v: c.title },
+          { k: t("When"), v: doneWhen(c) },
+          { k: tx("Payment", "how it is paid"), v: paymentLine(priceText, free) },
+        ]}
+        bookingsTab="upcoming"
+        extra={
+          <span
+            data-calendar-pill=""
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: textPx(12),
+              fontWeight: 700,
+              color: m.tealink,
+              background: m.tealbg,
+              borderRadius: 999,
+              padding: "4px 10px",
+            }}
+          >
+            <svg
+              width={13}
+              height={13}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+              style={NO_ICON_SCALE}
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <path d="M16 2v4M8 2v4M3 10h18m-12 6 2 2 4-4" />
+            </svg>
+            {t("Added to your calendar")}
+          </span>
+        }
+        onDone={() => setDone(false)}
+      />
+
+      {/* Cancel confirmation: BR-14 warned before cancel_class_booking(). */}
+      <CentredPopup
+        open={popup === "cancel"}
+        onClose={() => setPopup(null)}
+        title={t("Cancel booking?")}
+        geometry="ours"
+        body={
+          <>
+            <span className="block">{`${c.title} · ${when}`}</span>
+            <span
+              className="mt-1.5 block"
+              style={late ? { fontWeight: 600, color: m.high } : undefined}
+            >
+              {late
+                ? tn(windowHours, "It starts in under {n} hour, so this isn't a free cancellation. The studio may charge for it.", "It starts in under {n} hours, so this isn't a free cancellation. The studio may charge for it.")
+                : cancellationLine(windowHours)}
+            </span>
+          </>
+        }
+        cta={{
+          label: t("Cancel booking"),
+          loading: busy,
+          disabled: !online,
+          onClick: () => void cancel(),
+        }}
+      />
+
+      {/* Other times: every session of this class, the current one marked
+          and not tappable; a row opens that session (replace); scrim /
+          Escape close. Six rows show, then it scrolls. */}
+      <CentredPopup
+        open={popup === "times"}
+        onClose={() => setPopup(null)}
+        title={t("Other times")}
+        geometry="ours"
+        bodyWeight={400}
+        body={
+          <span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{t("{name} at {place}", { name: c.title, place: venueOf(c) })}</span>
+        }
+      >
+        <ul
+          className="m-0 p-0 list-none flex flex-col gap-2 overflow-y-auto max-h-[328px] text-start"
+          data-other-times=""
+        >
+          {sessions.map((s) => {
+            const current = s.classId === c.classId;
+            const n = current ? left : s.spotsRemaining;
+            const inner = (
+              <>
+                <span
+                  style={{
+                    fontSize: textPx(13),
+                    lineHeight: linePx(19.5),
+                    fontWeight: 700,
+                    color: m.ink,
+                    fontVariantNumeric: "tabular-nums",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {`${shortDate(s.date)} · ${time12(s.startTime)}`}
+                </span>
+                <span
+                  style={{
+                    flexShrink: 0,
+                    fontSize: textPx(11),
+                    fontWeight: 600,
+                    color: n <= 0 ? m.high : m.tealink,
+                  }}
+                >
+                  {spotsText(n)}
+                </span>
+              </>
+            );
+            const row: React.CSSProperties = {
+              width: "100%",
+              height: 48,
+              padding: "0 14px",
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              boxSizing: "border-box",
+            };
+            return (
+              <li key={s.classId}>
+                {current ? (
+                  <div
+                    aria-current="true"
+                    style={{
+                      ...row,
+                      background: m.pale,
+                      border: `1.5px solid ${m.accent}`,
+                    }}
+                  >
+                    {inner}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPopup(null);
+                      openOther(s.classId);
+                    }}
+                    className="tap market-focus"
+                    style={{
+                      ...row,
+                      background: m.card,
+                      border: `0.5px solid ${m.hair}`,
+                      font: "inherit",
+                      textAlign: "start",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {inner}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        <button
+          type="button"
+          onClick={() => setPopup(null)}
+          className="market-focus"
+          style={{
+            marginTop: 8,
+            width: "100%",
+            height: 48,
+            background: "none",
+            border: 0,
+            font: "inherit",
+            fontSize: textPx(14),
+            fontWeight: 700,
+            color: m.accent,
+            cursor: "pointer",
+          }}
+        >
+          {t("Close")}
+        </button>
+      </CentredPopup>
+    </>
+  );
+
+  const pinned = (
+    <>
+      {mine ? (
+        // Booked: a teal block in the CTA's place (--tealbg, radius 16,
+        // padding 14): a 36 --card disc with the tick, "You're booked" 14 / 800
+        // --tealink, the time 12 --ink2; then "Cancel booking" in --high and
+        // BR-14's line.
+        <PinnedSlot>
+          <div style={panel}>
+            <div
+              data-booked-block=""
+              style={{
+                borderRadius: 16,
+                background: m.tealbg,
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                lineHeight: "normal",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  background: m.card,
+                  color: m.tealink,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width={17}
+                  height={17}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.6}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={NO_ICON_SCALE}
+                >
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
+              <span style={{ minWidth: 0 }}>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: textPx(14),
+                    fontWeight: 800,
+                    color: m.tealink,
+                  }}
+                >
+                  {t("You're booked")}
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: textPx(12),
+                    color: m.ink2,
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {when}
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => !(busy || !online) && setPopup("cancel")}
+              aria-disabled={busy || !online || undefined}
+              className="market-focus"
+              style={{ ...dangerLink, ...offStyle(busy || !online) }}
+            >
+              {t("Cancel booking")}
+            </button>
+            <p
+              style={{
+                margin: "-6px 0 0",
+                textAlign: "center",
+                fontSize: textPx(11.5),
+                color: m.faint,
+                lineHeight: "normal",
+              }}
+            >
+              {cancellationLine(windowHours)}
+            </p>
+          </div>
+        </PinnedSlot>
+      ) : position !== null ? (
+        // Waitlist: Other times stay; a --pale block with a 40 --card disc
+        // "#3", "You're #3 on the waitlist." 14 / 800 --accent then 13 --ink2;
+        // "Leave waitlist" in --high.
+        <PinnedSlot>
+          <div style={panel}>
+            {others.length > 0 && (
+              <OtherTimes others={others} onOpen={openOther} m={m} />
+            )}
+            <div
+              data-waitlist-block=""
+              style={{
+                borderRadius: 16,
+                background: m.pale,
+                padding: 14,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                lineHeight: "normal",
+              }}
+            >
+              <span
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 999,
+                  background: m.card,
+                  color: m.accent,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  fontSize: textPx(14),
+                  fontWeight: 800,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                #{position}
+              </span>
+              <p
+                style={{
+                  margin: 0,
+                  minWidth: 0,
+                  fontSize: textPx(13),
+                  lineHeight: 1.45,
+                  color: m.ink2,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: textPx(14),
+                    fontWeight: 800,
+                    color: m.accent,
+                  }}
+                >
+                  {t("You're #{n} on the waitlist.", { n: position })}
+                </span>{" "}
+                {t("We'll notify you if a spot opens.")}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => !(busy || !online) && void waitlist(false)}
+              aria-disabled={busy || !online || undefined}
+              className="market-focus"
+              style={{ ...dangerLink, ...offStyle(busy || !online) }}
+            >
+              {t("Leave waitlist")}
+            </button>
+          </div>
+        </PinnedSlot>
+      ) : !takesNewActivity(bizStatus) ? (
+        <PinnedSlot>
+          <BusinessClosedNote status={bizStatus} className="" />
+        </PinnedSlot>
+      ) : bookingPause.pause ? (
+        // Round F2 AB4: new bookings here are paused after 3 no-shows; the
+        // sentence replaces Book (and Join waitlist, whose offer books through
+        // book_class and would be refused).
+        <PinnedSlot>
+          <BookingPausedNote pause={bookingPause.pause} gym={c.businessName || null} />
+        </PinnedSlot>
+      ) : full ? (
+        // Full: Other times (up to three) and "Join waitlist" (BR-10), on a
+        // --card panel (radius 20, 0.5px --hair).
+        <PinnedSlot>
+          <div style={panel}>
+            {others.length > 0 && (
+              <OtherTimes others={others} onOpen={openOther} m={m} />
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                !(busy || !authUserId || !online) && void waitlist(true)
+              }
+              aria-disabled={busy || !authUserId || !online || undefined}
+              className="market-focus"
+              style={{
+                // WC-EX Class Web: Join waitlist is the panel's 44 primary (#AEA1DC, 15/24 700).
+                height: web ? 44 : 52,
+                borderRadius: web ? 12 : 16,
+                border: web ? 0 : `1.5px solid ${m.fill}`,
+                background: web ? "#AEA1DC" : m.card,
+                font: "inherit",
+                fontSize: web ? 15 : textPx(15),
+                fontWeight: web ? 700 : 800,
+                color: web ? "#FFFFFF" : m.accent,
+                cursor: "pointer",
+                ...offStyle(busy || !authUserId || !online),
+              }}
+            >
+              {t("Join waitlist")}
+            </button>
+          </div>
+        </PinnedSlot>
+      ) : (
+        // "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill; off signed
+        // out and offline.
+        <PinnedSlot>
+          <button
+            type="button"
+            data-book-cta=""
+            onClick={() => {
+              if (!authUserId || !online) return;
+              recordListingEvent({
+                businessId: c.businessId,
+                kind: "book_tap",
+                source: listingSource,
+                itemId: c.classId,
+              });
+              setSheetError(null);
+              setPopup("sheet");
+            }}
+            aria-disabled={!authUserId || !online || undefined}
+            className="market-focus"
+            {...press.handlers}
+            style={{
+              height: 52,
+              borderRadius: 16,
+              border: 0,
+              background: m.fill,
+              color: m.onfill,
+              font: "inherit",
+              fontSize: textPx(15),
+              fontWeight: 800,
+              cursor: "pointer",
+              ...(!authUserId || !online
+                ? { opacity: 0.4, cursor: "default" }
+                : press.style),
+            }}
+          >
+            {t("Book · {price}", { price: priceText })}
+          </button>
+        </PinnedSlot>
+      )}
+    </>
+  );
+
+  // Addendum A, WC-EX.2 (WC-EX Class Web): from 1024px the header (back,
+  // CLASS, the title, the venue link), then the left 8 (the time card beside
+  // the seat panel, the instructor, About · Level · What to bring) and the
+  // right 4 (the booking panel in the pinned CTA's place, Location); 5 | 3
+  // and one column inside on the rail. The panel's states are the pinned
+  // ones, rendered in place (PinnedInline); open: the price, Book and the
+  // booking lines.
+  if (web) {
+    const open = !mine && position === null && takesNewActivity(bizStatus) && !bookingPause.pause && !full;
+    const bookOff = !authUserId || !online;
+    const one = rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))";
+    const aboutRows = [
+      about ? { h: t("About this class"), b: about, span: 2 } : null,
+      level ? { h: t("Level"), b: level, span: 1 } : null,
+      bring ? { h: t("What to bring"), b: bring, span: 1 } : null,
+    ].filter((x): x is { h: string; b: string; span: number } => !!x);
+    return (
+      <div data-class-web="" style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader
+          rail={rail}
+          kicker={t("Class")}
+          title={c.title}
+          onBack={back}
+          after={
+            <Link to={venueTo} className="market-focus" style={{ flexShrink: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#7D67D9", textDecoration: "none", whiteSpace: "nowrap" }}>
+              {venueOf(c)}
+            </Link>
+          }
+        />
+        <VenueWebBody
+          rail={rail}
+          left={
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: one, gap: 16, alignItems: "stretch" }}>
+                <div data-time-card="" style={{ borderRadius: 20, border: `0.5px solid ${WEB_HAIR}`, background: m.card, padding: 20, textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <div style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: WEB_FAINT }}>{longDate(c.date)}</div>
+                  <div style={{ marginTop: 6, fontSize: 34, lineHeight: "40px", fontWeight: 700, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", textWrap: "balance" }}>{range}</div>
+                  <div aria-hidden style={{ margin: "12px auto 0", width: "64%", height: 4, borderRadius: 999, background: "#A79AD5" }} />
+                  <div style={{ marginTop: 6, fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{durationText(c.startTime, c.endTime)}</div>
+                  {manyTimes && (
+                    <button
+                      type="button"
+                      onClick={() => setPopup("times")}
+                      aria-haspopup="dialog"
+                      className="market-focus"
+                      style={{ alignSelf: "center", marginTop: 6, padding: 0, border: 0, background: "none", font: "inherit", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5F5093", cursor: "pointer" }}
+                    >
+                      {t("Other times")}
+                    </button>
+                  )}
+                </div>
+                <div data-seat-panel={tone} style={{ borderRadius: 20, padding: 20, background: tone === "almost" ? "#E6F1EF" : "#EEEAF8", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  {tone !== "open" && (
+                    <div style={{ marginBottom: 12, fontSize: 15, lineHeight: "22px", fontWeight: 700, color: tone === "almost" ? "#2F5F58" : "#7D6BB5" }}>{tone === "almost" ? t("Almost full") : t("Class full")}</div>
+                  )}
+                  {cap > 0 &&
+                    (seats.kind === "dots" ? (
+                      <div aria-hidden data-seats="dots" style={{ display: "grid", gridTemplateColumns: `repeat(${seats.cols},1fr)`, rowGap: 10, justifyItems: "center" }}>
+                        {seats.seats.map((x, i) => (
+                          <span key={i} style={{ width: 18, height: 18, borderRadius: 999, boxSizing: "border-box", background: x ? "#AEA1DC" : "#E6F1EF", border: x ? "none" : "1.5px solid #4F8F8A" }} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div aria-hidden data-seats="bar" style={{ display: "flex", gap: 2 }}>
+                        {seats.seats.map((x, i) => (
+                          <span key={i} style={{ flex: 1, height: 10, borderRadius: 2, boxSizing: "border-box", background: x ? "#AEA1DC" : "#E6F1EF", border: `1px solid ${x ? "#AEA1DC" : "#4F8F8A"}` }} />
+                        ))}
+                      </div>
+                    ))}
+                  <div style={{ marginTop: 14, display: "flex", alignItems: "baseline", gap: 6 }}>
+                    <span style={{ fontSize: 22, lineHeight: "30px", fontWeight: 700, color: "#7D67D9", fontVariantNumeric: "tabular-nums" }}>{t("{n} of {total}", { n: left, total: cap })}</span>
+                    <span style={{ fontSize: 15, lineHeight: "24px", color: WEB_INK2 }}>{t("spots left")}</span>
+                  </div>
+                </div>
+              </div>
+              {listed ? (
+                <InstructorCard
+                  listed
+                  id={c.instructorId!}
+                  name={c.instructorName!}
+                  photoUrl={c.instructorAvatarUrl ?? null}
+                  specialty={c.instructorSpecialty ?? t("Instructor")}
+                  rating={c.instructorRating ?? null}
+                  reviewCount={c.instructorReviewCount ?? 0}
+                  hiredViaCentium={hiredViaCentium(c)}
+                  to={`/app/professionals/${encodeURIComponent(c.instructorId!)}`}
+                />
+              ) : (
+                <InstructorCard listed={false} />
+              )}
+              <MarketOffline loaded />
+              {online && loadFailed && <MarketError thing={tk("this class")} onRetry={() => void load()} />}
+              {error && <ConfirmationStrip tone="error" text={error} still />}
+              {note && <ConfirmationStrip tone="neutral" text={note} />}
+              {aboutRows.length > 0 && (
+                <div style={{ display: "grid", gridTemplateColumns: one, gap: "16px 24px" }}>
+                  {aboutRows.map((a) => (
+                    <WebTextSection key={a.h} label={a.h} style={{ gridColumn: `span ${rail ? 1 : a.span}` }}>
+                      {a.b}
+                    </WebTextSection>
+                  ))}
+                </div>
+              )}
+              {c.playlistUrl && (
+                <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <WebCaps>{t("Music")}</WebCaps>
+                  <MusicSection moment="workout" provider={{ url: c.playlistUrl, heading: t("{name}'s playlist", { name: c.businessName }) }} />
+                </section>
+              )}
+              {copied && <ConfirmationStrip tone="teal" text={copied} />}
+            </>
+          }
+          right={
+            <>
+              <div data-booking-panel="" style={{ borderRadius: 20, border: `0.5px solid ${WEB_HAIR}`, background: m.card, padding: 16, display: "flex", flexDirection: "column", gap: 12, boxShadow: "0 8px 24px rgba(36,31,27,0.06)" }}>
+                {open ? (
+                  <>
+                    <p style={{ margin: 0, display: "flex", alignItems: "baseline", flexWrap: "wrap", columnGap: 6 }}>
+                      <span style={{ fontSize: 28, lineHeight: "36px", fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{priceText}</span>
+                      {!free && <span style={{ fontSize: 15, lineHeight: "24px", color: WEB_FAINT }}>{t("Pay at the front desk before class")}</span>}
+                    </p>
+                    <WebPanelCta
+                      label={t("Book · {price}", { price: priceText })}
+                      disabled={bookOff}
+                      onClick={() => {
+                        if (bookOff) return;
+                        recordListingEvent({ businessId: c.businessId, kind: "book_tap", source: listingSource, itemId: c.classId });
+                        setSheetError(null);
+                        setPopup("sheet");
+                      }}
+                    />
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{[windowLine, cancellationLine(windowHours)].filter(Boolean).join(" ")}</p>
+                    <ClassPremiumLines businessId={c.businessId} startsAt={live?.startsAt ?? c.startsAt ?? null} windowDays={live?.rules?.bookingWindowDays ?? null} waitlist={false} />
+                  </>
+                ) : (
+                  <PinnedInline.Provider value>
+                    {pinned}
+                    {!mine && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{[windowLine, cancellationLine(windowHours)].filter(Boolean).join(" ")}</p>}
+                    {!mine && <ClassPremiumLines businessId={c.businessId} startsAt={live?.startsAt ?? c.startsAt ?? null} windowDays={live?.rules?.bookingWindowDays ?? null} waitlist={full || position !== null} />}
+                  </PinnedInline.Provider>
+                )}
+              </div>
+              <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <WebCaps>{t("Location")}</WebCaps>
+                <WebMapCard
+                  height={110}
+                  address={address || null}
+                  label={address ? t("Directions to {address}", { address }) : t("Directions")}
+                  onOpen={
+                    address || venueCoords
+                      ? (el) => {
+                          setDirAnchor(el as HTMLButtonElement);
+                          setDirOpen(true);
+                        }
+                      : undefined
+                  }
+                >
+                  {distance && <div style={{ fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{t("{distance} away", { distance })}</div>}
+                </WebMapCard>
+              </section>
+            </>
+          }
+        />
+        {overlays}
+      </div>
+    );
+  }
   return (
     <div style={{ lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
@@ -988,495 +1682,9 @@ export function ClassPage({ classId }: { classId: string }) {
         }}
       />
 
-      {mine ? (
-        // Booked: a teal block in the CTA's place (--tealbg, radius 16,
-        // padding 14): a 36 --card disc with the tick, "You're booked" 14 / 800
-        // --tealink, the time 12 --ink2; then "Cancel booking" in --high and
-        // BR-14's line.
-        <PinnedSlot>
-          <div style={panel}>
-            <div
-              data-booked-block=""
-              style={{
-                borderRadius: 16,
-                background: m.tealbg,
-                padding: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                lineHeight: "normal",
-              }}
-            >
-              <span
-                aria-hidden
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 999,
-                  background: m.card,
-                  color: m.tealink,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width={17}
-                  height={17}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2.6}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={NO_ICON_SCALE}
-                >
-                  <path d="M20 6 9 17l-5-5" />
-                </svg>
-              </span>
-              <span style={{ minWidth: 0 }}>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: textPx(14),
-                    fontWeight: 800,
-                    color: m.tealink,
-                  }}
-                >
-                  {t("You're booked")}
-                </span>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: textPx(12),
-                    color: m.ink2,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {when}
-                </span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => !(busy || !online) && setPopup("cancel")}
-              aria-disabled={busy || !online || undefined}
-              className="market-focus"
-              style={{ ...dangerLink, ...offStyle(busy || !online) }}
-            >
-              {t("Cancel booking")}
-            </button>
-            <p
-              style={{
-                margin: "-6px 0 0",
-                textAlign: "center",
-                fontSize: textPx(11.5),
-                color: m.faint,
-                lineHeight: "normal",
-              }}
-            >
-              {cancellationLine(windowHours)}
-            </p>
-          </div>
-        </PinnedSlot>
-      ) : position !== null ? (
-        // Waitlist: Other times stay; a --pale block with a 40 --card disc
-        // "#3", "You're #3 on the waitlist." 14 / 800 --accent then 13 --ink2;
-        // "Leave waitlist" in --high.
-        <PinnedSlot>
-          <div style={panel}>
-            {others.length > 0 && (
-              <OtherTimes others={others} onOpen={openOther} m={m} />
-            )}
-            <div
-              data-waitlist-block=""
-              style={{
-                borderRadius: 16,
-                background: m.pale,
-                padding: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                lineHeight: "normal",
-              }}
-            >
-              <span
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 999,
-                  background: m.card,
-                  color: m.accent,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontSize: textPx(14),
-                  fontWeight: 800,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                #{position}
-              </span>
-              <p
-                style={{
-                  margin: 0,
-                  minWidth: 0,
-                  fontSize: textPx(13),
-                  lineHeight: 1.45,
-                  color: m.ink2,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: textPx(14),
-                    fontWeight: 800,
-                    color: m.accent,
-                  }}
-                >
-                  {t("You're #{n} on the waitlist.", { n: position })}
-                </span>{" "}
-                {t("We'll notify you if a spot opens.")}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => !(busy || !online) && void waitlist(false)}
-              aria-disabled={busy || !online || undefined}
-              className="market-focus"
-              style={{ ...dangerLink, ...offStyle(busy || !online) }}
-            >
-              {t("Leave waitlist")}
-            </button>
-          </div>
-        </PinnedSlot>
-      ) : !takesNewActivity(bizStatus) ? (
-        <PinnedSlot>
-          <BusinessClosedNote status={bizStatus} className="" />
-        </PinnedSlot>
-      ) : bookingPause.pause ? (
-        // Round F2 AB4: new bookings here are paused after 3 no-shows; the
-        // sentence replaces Book (and Join waitlist, whose offer books through
-        // book_class and would be refused).
-        <PinnedSlot>
-          <BookingPausedNote pause={bookingPause.pause} gym={c.businessName || null} />
-        </PinnedSlot>
-      ) : full ? (
-        // Full: Other times (up to three) and "Join waitlist" (BR-10), on a
-        // --card panel (radius 20, 0.5px --hair).
-        <PinnedSlot>
-          <div style={panel}>
-            {others.length > 0 && (
-              <OtherTimes others={others} onOpen={openOther} m={m} />
-            )}
-            <button
-              type="button"
-              onClick={() =>
-                !(busy || !authUserId || !online) && void waitlist(true)
-              }
-              aria-disabled={busy || !authUserId || !online || undefined}
-              className="market-focus"
-              style={{
-                height: 52,
-                borderRadius: 16,
-                border: `1.5px solid ${m.fill}`,
-                background: m.card,
-                font: "inherit",
-                fontSize: textPx(15),
-                fontWeight: 800,
-                color: m.accent,
-                cursor: "pointer",
-                ...offStyle(busy || !authUserId || !online),
-              }}
-            >
-              {t("Join waitlist")}
-            </button>
-          </div>
-        </PinnedSlot>
-      ) : (
-        // "Book · $12": 52, radius 16, --fill, 15 / 800 --onfill; off signed
-        // out and offline.
-        <PinnedSlot>
-          <button
-            type="button"
-            data-book-cta=""
-            onClick={() => {
-              if (!authUserId || !online) return;
-              recordListingEvent({
-                businessId: c.businessId,
-                kind: "book_tap",
-                source: listingSource,
-                itemId: c.classId,
-              });
-              setSheetError(null);
-              setPopup("sheet");
-            }}
-            aria-disabled={!authUserId || !online || undefined}
-            className="market-focus"
-            {...press.handlers}
-            style={{
-              height: 52,
-              borderRadius: 16,
-              border: 0,
-              background: m.fill,
-              color: m.onfill,
-              font: "inherit",
-              fontSize: textPx(15),
-              fontWeight: 800,
-              cursor: "pointer",
-              ...(!authUserId || !online
-                ? { opacity: 0.4, cursor: "default" }
-                : press.style),
-            }}
-          >
-            {t("Book · {price}", { price: priceText })}
-          </button>
-        </PinnedSlot>
-      )}
+      {pinned}
 
-      {/* S3: Directions to the venue's coordinates when it has them, else
-          to the address; Copy copies the address. */}
-      <DirectionsMenu
-        open={dirOpen}
-        onClose={() => setDirOpen(false)}
-        anchor={dirAnchor}
-        address={address}
-        coords={venueCoords}
-        onCopied={flash}
-      />
-
-      {/* C-MO.4.3.2 classSheet: the booking sheet. */}
-      <PurchaseSheet
-        open={popup === "sheet"}
-        onClose={() => setPopup(null)}
-        title={t("Book {name}", { name: c.title })}
-        summary={
-          <ClassTicketSummary
-            title={c.title}
-            place={sheetPlace(c)}
-            when={sheetWhen(c)}
-            booked={t("{n} of {total} booked", { n: taken, total: cap })}
-            pct={cap > 0 ? (taken / cap) * 100 : 0}
-            price={priceText}
-          />
-        }
-        cashHint={free ? null : t("Pay at the front desk before class")}
-        ctaLabel={free ? t("Confirm booking") : confirmLabel(priceText)}
-        busy={booking.busy}
-        disabled={!online}
-        error={sheetError}
-        note={!online ? <MarketOffline loaded /> : null}
-        onConfirm={() => void book()}
-      />
-
-      {/* OURS-class-terms (B9, ATXE4): the venue's waiver, class terms and
-          house rules, each agreed, then booked. */}
-      <ClassTermsSheet
-        docs={booking.terms}
-        businessName={c.businessName}
-        busy={booking.busy}
-        online={online}
-        error={booking.termsError}
-        onAgree={() => void agree()}
-        onClose={booking.closeTerms}
-      />
-
-      {/* C-MO.4.3.2 classDone: the confirmation page. book_class() has
-          already added the class to the Calendar (15-minute alert). */}
-      <BookingDone
-        open={done}
-        title={t("You're booked")}
-        body={doneBody(
-          c.title,
-          firstVisit && firstVisit.gymId === gymId ? firstVisit.text : null,
-        )}
-        rows={[
-          { k: t("Class"), v: c.title },
-          { k: t("When"), v: doneWhen(c) },
-          { k: tx("Payment", "how it is paid"), v: paymentLine(priceText, free) },
-        ]}
-        bookingsTab="upcoming"
-        extra={
-          <span
-            data-calendar-pill=""
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: textPx(12),
-              fontWeight: 700,
-              color: m.tealink,
-              background: m.tealbg,
-              borderRadius: 999,
-              padding: "4px 10px",
-            }}
-          >
-            <svg
-              width={13}
-              height={13}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-              style={NO_ICON_SCALE}
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18m-12 6 2 2 4-4" />
-            </svg>
-            {t("Added to your calendar")}
-          </span>
-        }
-        onDone={() => setDone(false)}
-      />
-
-      {/* Cancel confirmation: BR-14 warned before cancel_class_booking(). */}
-      <CentredPopup
-        open={popup === "cancel"}
-        onClose={() => setPopup(null)}
-        title={t("Cancel booking?")}
-        geometry="ours"
-        body={
-          <>
-            <span className="block">{`${c.title} · ${when}`}</span>
-            <span
-              className="mt-1.5 block"
-              style={late ? { fontWeight: 600, color: m.high } : undefined}
-            >
-              {late
-                ? tn(windowHours, "It starts in under {n} hour, so this isn't a free cancellation. The studio may charge for it.", "It starts in under {n} hours, so this isn't a free cancellation. The studio may charge for it.")
-                : cancellationLine(windowHours)}
-            </span>
-          </>
-        }
-        cta={{
-          label: t("Cancel booking"),
-          loading: busy,
-          disabled: !online,
-          onClick: () => void cancel(),
-        }}
-      />
-
-      {/* Other times: every session of this class, the current one marked
-          and not tappable; a row opens that session (replace); scrim /
-          Escape close. Six rows show, then it scrolls. */}
-      <CentredPopup
-        open={popup === "times"}
-        onClose={() => setPopup(null)}
-        title={t("Other times")}
-        geometry="ours"
-        bodyWeight={400}
-        body={
-          <span className="block text-[12.5px] leading-[18.8px] text-charcoal-faint">{t("{name} at {place}", { name: c.title, place: venueOf(c) })}</span>
-        }
-      >
-        <ul
-          className="m-0 p-0 list-none flex flex-col gap-2 overflow-y-auto max-h-[328px] text-start"
-          data-other-times=""
-        >
-          {sessions.map((s) => {
-            const current = s.classId === c.classId;
-            const n = current ? left : s.spotsRemaining;
-            const inner = (
-              <>
-                <span
-                  style={{
-                    fontSize: textPx(13),
-                    lineHeight: linePx(19.5),
-                    fontWeight: 700,
-                    color: m.ink,
-                    fontVariantNumeric: "tabular-nums",
-                    minWidth: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {`${shortDate(s.date)} · ${time12(s.startTime)}`}
-                </span>
-                <span
-                  style={{
-                    flexShrink: 0,
-                    fontSize: textPx(11),
-                    fontWeight: 600,
-                    color: n <= 0 ? m.high : m.tealink,
-                  }}
-                >
-                  {spotsText(n)}
-                </span>
-              </>
-            );
-            const row: React.CSSProperties = {
-              width: "100%",
-              height: 48,
-              padding: "0 14px",
-              borderRadius: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              boxSizing: "border-box",
-            };
-            return (
-              <li key={s.classId}>
-                {current ? (
-                  <div
-                    aria-current="true"
-                    style={{
-                      ...row,
-                      background: m.pale,
-                      border: `1.5px solid ${m.accent}`,
-                    }}
-                  >
-                    {inner}
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPopup(null);
-                      openOther(s.classId);
-                    }}
-                    className="tap market-focus"
-                    style={{
-                      ...row,
-                      background: m.card,
-                      border: `0.5px solid ${m.hair}`,
-                      font: "inherit",
-                      textAlign: "start",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {inner}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <button
-          type="button"
-          onClick={() => setPopup(null)}
-          className="market-focus"
-          style={{
-            marginTop: 8,
-            width: "100%",
-            height: 48,
-            background: "none",
-            border: 0,
-            font: "inherit",
-            fontSize: textPx(14),
-            fontWeight: 700,
-            color: m.accent,
-            cursor: "pointer",
-          }}
-        >
-          {t("Close")}
-        </button>
-      </CentredPopup>
+      {overlays}
     </div>
   );
 }

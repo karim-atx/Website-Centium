@@ -138,7 +138,7 @@ export default function MyRewardsPage() {
                   stubLabel={row.stub}
                   tone={row.tone}
                   labelType={[10.5, "0.16em"]}
-                  onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`)}
+                  onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`, { state: { under: "/app/marketplace/rewards/mine" } })}
                   ariaLabel={`${[v.offerHeadline, v.ownerSubtitle].filter(Boolean).join(", ")}. ${row.meta}. ${row.stub}`}
                   className="market-focus"
                   bodyStyle={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}

@@ -82,7 +82,7 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
     }
     refreshAchievements();
     onClose();
-    navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`);
+    navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`, { state: { under: window.location.pathname } });
   };
 
   const primary = step === 1 ? t("Continue") : tn(cost, "Redeem {n} point", "Redeem {n} points", { n: cost.toLocaleString(appLocale("en-US")) });

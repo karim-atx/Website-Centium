@@ -35,6 +35,10 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/marketplace\/?$/, // WC-EX Discover and WC-EX.7 Rewards (the hero beside the tiles, card grids 3 / 2 / 4)
   /^\/app\/marketplace\/rewards\/mine\/?$/, // WC-EX.4 My rewards (voucher grid 3 / 2 / 4)
   /^\/app\/marketplace\/points\/(history|earn)\/?$/, // WC-EX.5 Points history (4 + 8) and WC-EX.6 How to earn (2 columns)
+  /^\/app\/marketplace\/(gym|class|business)\/?$/, // WC-EX.1 Gym page, WC-EX.2 Class page (8 + 4) and WC-EX.7.2 Showcase (8 + 4)
+  /^\/app\/marketplace\/bookings\/?$/, // WC-EX.3 My bookings (list-detail 5 + 7)
+  /^\/app\/marketplace\/rewards\/(?!mine\/?$)[^/]+\/?$/, // WC-EX.7.1 Offer (8 + 4)
+  /^\/app\/marketplace\/vouchers\/[^/]+\/?$/, // WC-EX.7.3 Voucher (a centred popup over the page it was opened from)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY, · CS and · ST Dashboards
