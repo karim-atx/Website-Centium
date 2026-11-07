@@ -1,8 +1,9 @@
-// Round F (AV, F11): IBM Plex Sans Arabic, from Google Fonts like Manrope,
-// added only once Arabic is chosen, so English pages load nothing new. Every
-// font stack lists it after Manrope, which has no Arabic letters, so the
-// browser takes Arabic from it and everything else from Manrope.
-const HREF = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap";
+// Round F (AV, F11): IBM Plex Sans Arabic, served from this site like Manrope
+// (public/fonts/, Round K), added only once Arabic is chosen, so English pages
+// load nothing new. Every font stack lists it after Manrope, which has no
+// Arabic letters, so the browser takes Arabic from it and everything else
+// from Manrope.
+const HREF = "/fonts/ibm-plex-sans-arabic/ibm-plex-sans-arabic.css";
 
 const HAS_ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
 // Google serves the face in subsets by unicode-range; a sample of Arabic

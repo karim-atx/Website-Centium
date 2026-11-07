@@ -26,7 +26,8 @@ import "../landing/landing.css";
 // - Moving to another marketing page fades this one out (.32 s) and the new
 //   one in (.35 s): PageFadeContext, used by navigation.ts.
 
-const MONO_HREF = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap";
+// Served from this site (public/fonts/, Round K), not Google Fonts.
+const MONO_HREF = "/fonts/jetbrains-mono/jetbrains-mono.css";
 
 const useMarketingDocument = () => {
   useEffect(() => {
