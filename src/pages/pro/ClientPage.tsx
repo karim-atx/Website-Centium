@@ -164,7 +164,7 @@ export default function ClientPage() {
       {(current === "progress" || current === "trends") && <ProgressTab data={data} lane={lane} onAsk={(c) => void ask(c)} />}
       {(current === "sessions" || current === "appointments") && <SessionsTab data={data} patient={patient} onSchedule={schedule} />}
       {current === "notes" && <NotesTab data={data} lane={lane} onHistory={() => setHistoryOpen(true)} />}
-      {current === "files" && <FilesTab data={data} />}
+      {current === "files" && <FilesTab data={data} onAsk={asked.includes("medical_history") ? undefined : () => void ask("medical_history")} />}
       {current === "care-plan" && <CarePlanTab data={data} onNotes={() => go("notes")} onCalendar={schedule} onAskDiet={() => void ask("allergies_dietary")} dietAsked={asked.includes("allergies_dietary")} />}
       {current === "health-records" && <HealthRecordsTab data={data} onAsk={(c) => void ask(c)} asked={asked} onNote={() => go("notes")} onCarePlan={() => go("care-plan")} />}
     </>

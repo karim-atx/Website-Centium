@@ -409,6 +409,14 @@ export default function Home() {
         navigate(imageHome(n.payload.surface, "professional") ?? PRO_ROUTES.more);
         return;
       }
+      case "readiness_request":
+        // Round K · DW: "Before you start" sits on Files (Health records for patients).
+        if (n.clientId) {
+          setHubOpen(false);
+          navigate(proClientPath(n.clientId, lane === "clinical_overview" ? "health-records" : "files"));
+          return;
+        }
+        break;
       case "care_link":
       case "care_referral":
         setHubOpen(false);

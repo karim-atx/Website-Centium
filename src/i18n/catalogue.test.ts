@@ -68,13 +68,14 @@ import * as webcs from "./ar/webcs.ts";
 import * as webclientworkout from "./ar/webclientworkout.ts";
 import * as webclientmore from "./ar/webclientmore.ts";
 import * as webgym from "./ar/webgym.ts";
+import * as readiness from "./ar/readiness.ts";
 
 // Round F (AV): the translated areas (F7) stay translated. For every source
 // file an area lists, every t/tn/tk key has Arabic, every Arabic entry keeps
 // the English placeholders, no English is left as bare JSX text or a bare
 // text attribute, and a key used by two areas has one Arabic.
 
-const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member, community, findpros, misc, health, cycle, food, workout, mind, business, bizanalytics, bizrevenue, bizops, bizmarket, bizteam, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork, promarket, premium, premium2, premium3, premium4, premium5, web, webclienthome, webclientfood, webclienthealth, webcs, webclientworkout, webclientmore, webgym };
+const AREAS = { landing, legal, auth, settings, plans, messages, notifications, services, shared, programmes, safety, venues, certificates, marketplace, market, share, member, community, findpros, misc, health, cycle, food, workout, mind, business, bizanalytics, bizrevenue, bizops, bizmarket, bizteam, sharedbiz, sharedmember, sharedfood, sharedhealth, sharedpro, pro, proclients, proprofile, procalendar, promessages, prolibrary, pronutrition, proforms, proinsights, provitals, procourses, pronetwork, promarket, premium, premium2, premium3, premium4, premium5, web, webclienthome, webclientfood, webclienthealth, webcs, webclientworkout, webclientmore, webgym, readiness };
 const SRC = join(import.meta.dirname, "..");
 
 // Words that are the same in both languages (names, never translated).

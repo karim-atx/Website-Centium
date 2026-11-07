@@ -25,6 +25,7 @@ import { fetchClientImaging, fetchClientMedicalHistory } from "../../../services
 import { fetchBiomarkerFlags, fetchSharedResults, type BiomarkerFlag, type SharedResult } from "../../../services/pro/clientPage";
 import { formatRange } from "../../../services/labs";
 import type { AccessCategory } from "../../../services/pro/access";
+import { ReadinessProBlock } from "../../readiness/ReadinessProBlock";
 import type { BloodMarker, ImagingRecord, LabReport, Medication, Surgery } from "../../../types";
 import { t, tk } from "../../../i18n/core";
 
@@ -202,7 +203,16 @@ export const HealthRecordsTab: React.FC<{
     </div>
   );
 
-  if (nothing) return <HealthDataPending label={t("Health records")} />;
+  // Round K · DW: "Before you start" can be sent with nothing shared.
+  const readiness = <ReadinessProBlock clientId={clientId} firstName={firstName} onAsk={asked.includes("medical_history") ? undefined : () => onAsk("medical_history")} />;
+
+  if (nothing)
+    return (
+      <>
+        <HealthDataPending label={t("Health records")} />
+        {readiness}
+      </>
+    );
 
   return (
     <>
@@ -219,6 +229,8 @@ export const HealthRecordsTab: React.FC<{
         </div>
         <p style={{ fontSize: textPx(11), color: INK.chF, marginTop: 6, lineHeight: 1.45 }}>{t("Read only. You see records from the moment {firstName} turns sharing on, and lose access as soon as it's turned off.", { firstName })}</p>
       </div>
+
+      {readiness}
 
       <SegmentedTabs
         className="mb-3"

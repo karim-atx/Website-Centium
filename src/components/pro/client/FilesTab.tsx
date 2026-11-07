@@ -18,6 +18,7 @@ import { getMedicalHistory } from "../../../services/medical-history";
 import { FORMS_PATH } from "../forms/formsList";
 import { responseMarker } from "../forms/reviewModel";
 import { t, tn } from "../../../i18n/core";
+import { ReadinessProBlock } from "../../readiness/ReadinessProBlock";
 
 /**
  * Release 3 · CL2 v3 Tab 6 Files (source gen/r6b.js cpTab6 'Files'):
@@ -34,7 +35,7 @@ import { t, tn } from "../../../i18n/core";
  *   with Body measurements (client_file_visible); not shared: "{name} hasn't
  *   shared progress photos." with the lock.
  */
-export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
+export const FilesTab: React.FC<{ data: ClientPageData; onAsk?: () => void }> = ({ data, onAsk }) => {
   const { authUserId } = useApp();
   const online = useOnline();
   const { clientId, firstName, access } = data;
@@ -119,6 +120,8 @@ export const FilesTab: React.FC<{ data: ClientPageData }> = ({ data }) => {
           },
         ]}
       />
+      {/* Round K · DW: "Before you start", beside the intake and health history. */}
+      <ReadinessProBlock clientId={clientId} firstName={firstName} onAsk={historyOn ? undefined : onAsk} />
       <SectionHead label={t("Documents")} />
       {docs.length ? (
         <ListCard rows={docs.map((f) => ({ key: f.id, icon: FileText, title: f.title, meta: `${by(f)} · ${fmtDay(f.createdAt)}`, onClick: () => setViewing(f) }))} />

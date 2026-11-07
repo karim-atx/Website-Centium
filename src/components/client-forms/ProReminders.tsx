@@ -18,6 +18,7 @@ import {
   popupQueue,
   referralBody,
   referralTitle,
+  readinessReminder,
   referralReminder,
   sessionReminder,
   shareReminder,
@@ -36,6 +37,8 @@ import { answerToast, sharedTitle } from "../share/client/sharingText";
 import { specFromPayload } from "../share/shareCardModel";
 import { fetchMyPendingShareRequests, type ShareRequest } from "../../services/share";
 import { fetchProfessionalHandles, fetchProSummaries } from "../../services/share/client";
+import { fetchMyReadinessRequests, type ReadinessRequest } from "../../services/readiness";
+import { ReadinessSheet } from "../readiness/ReadinessSheet";
 
 /**
  * Release 3 · W7 CU5 / CU6 / CU23 / CU26 on Home, an addition between the
@@ -103,6 +106,8 @@ interface Data {
   connects: ConnectReferral[];
   sessions: TodaySession[];
   shares: ShareAsk[];
+  /** Round K · DW: professionals waiting on "Before you start". */
+  readiness: ReadinessRequest[];
 }
 
 type Status = "loading" | "ready" | "error" | "offline";
@@ -128,6 +133,7 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
   const [toast, setToast] = useState<string | null>(null);
   // CU29 reopened from the Home card ("Review"): the request id.
   const [shareOpen, setShareOpen] = useState<string | null>(null);
+  const [readinessOpen, setReadinessOpen] = useState(false);
 
   const hideBody = recoverySensitive || recoveryModePending;
 
@@ -135,7 +141,7 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
   const load = useCallback(async () => {
     if (!authUserId) return;
     const at = new Date();
-    const [f, r, s, sh, cn] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at), fetchShareAsks(authUserId), fetchMyAcceptedReferrals(authUserId)]);
+    const [f, r, s, sh, cn, rd] = await Promise.all([fetchMyOpenForms(authUserId), fetchMyPendingReferrals(authUserId), fetchTodaySessions(authUserId, at), fetchShareAsks(authUserId), fetchMyAcceptedReferrals(authUserId), fetchMyReadinessRequests()]);
     // Release A: a failed read of the connect step keeps what was there, like the share asks.
     const connects = cn.ok ? cn.data : null;
     setNow(at);
@@ -145,7 +151,8 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
       setStatus((prev) => (prev === "ready" ? prev : offline ? "offline" : "error"));
       return;
     }
-    setData((prev) => ({ forms: f.data, referrals: r.data, connects: connects ?? prev?.connects ?? [], sessions: s.data, shares: sh ?? prev?.shares ?? [] }));
+    // Round K · DW: a failed read of the readiness requests keeps what was there, like the share asks.
+    setData((prev) => ({ forms: f.data, referrals: r.data, connects: connects ?? prev?.connects ?? [], sessions: s.data, shares: sh ?? prev?.shares ?? [], readiness: rd.ok ? rd.data : (prev?.readiness ?? []) }));
     setStatus("ready");
     // The pop-up queue is set once, from what was waiting when Home opened.
     if (!queued.current) {
@@ -160,7 +167,7 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
   useEffect(() => {
     void load();
   }, [load]);
-  usePoll(() => void load(), POLL_MS, !!authUserId && !formOpen);
+  usePoll(() => void load(), POLL_MS, !!authUserId && !formOpen && !readinessOpen);
 
   const reminders = useMemo<Reminder[]>(() => {
     if (!data) return [];
@@ -168,7 +175,8 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
     const refs = [...data.referrals.map(referralReminder), ...data.connects.map(connectReminder)];
     const sess = data.sessions.map((s) => sessionReminder(s, now)).filter((x): x is Reminder => !!x);
     const shares = data.shares.map(toShareReminder);
-    return [...sess, ...refs, ...shares, ...forms];
+    const readiness = data.readiness.map(readinessReminder);
+    return [...sess, ...refs, ...shares, ...forms, ...readiness];
   }, [data, hideBody, now]);
 
   const groups = useMemo(() => groupReminders(reminders), [reminders]);
@@ -206,6 +214,10 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
     }
     if (r.kind === "referral_connect") {
       setConnectOpen(connectByKey(r.key));
+      return;
+    }
+    if (r.kind === "readiness") {
+      setReadinessOpen(true);
       return;
     }
     if (r.kind === "share_request") {
@@ -353,6 +365,15 @@ export const ProReminders: React.FC<{ web?: { rail: boolean } }> = ({ web }) => 
         timezone={myTimezone?.timezone ?? null}
         onClose={(changed) => {
           setFormOpen(null);
+          if (changed) void load();
+        }}
+      />
+
+      <ReadinessSheet
+        open={readinessOpen}
+        latest={null}
+        onClose={(changed) => {
+          setReadinessOpen(false);
           if (changed) void load();
         }}
       />
