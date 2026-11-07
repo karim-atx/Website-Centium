@@ -57,7 +57,8 @@ export default function Library() {
   if (web && current === "meal-plans" && (q.get("plan") || q.get("area") === "journals" || q.get("area") === "targets")) return content;
   // WP-LI.3 to .3.3: a programme, its Progress, a client's copy and a workout log are web pages of their own.
   if (web && current === "programmes" && ["template", "progress", "copy", "log"].includes(q.get("view") ?? "")) return content;
-  if (web && inner) return <MobileFrame>{content}</MobileFrame>;
+  // WP-LI.5 all: All assignments is a web page with the Library header and tabs.
+  if (web && inner && !(current === "programmes" && q.get("view") === "assignments")) return <MobileFrame>{content}</MobileFrame>;
   const webTabs = <ClientTabsWeb label={t("Library")} items={LIBRARY_TABS.map((k) => ({ key: k, label: t(LABEL[k]) }))} active={current} onChange={(k) => navigate(`${PRO_ROUTES.library}/${k}`, { replace: true })} mb={16} />;
   // WP-LI.1 / WP-LI.6: the Programmes list is its own web page (search, Filter and New programme in the header).
   if (web && current === "programmes") return <ProgrammesTab webTabs={webTabs} />;

@@ -3,6 +3,7 @@ import { ArrowDownRight, ArrowUpRight, ChevronRight, ClipboardPlus, FileText, Fl
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useWebLayout } from "../../web/useWebLayout";
+import { InsightsCardWeb } from "./webCard";
 import { textPx } from "../../../theme/textSize";
 import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
@@ -850,8 +851,23 @@ const ResultSheet: React.FC<{ point: Point | null; m: Marker; clinical: boolean;
 // TR21 · compare (against range / own scales)
 // ---------------------------------------------------------------------------
 
+/** Website viewport (WP-CO-IN.10): a Compare chart in the drawn card (r20, 1px border, 20 24), flat at the card's plot height. Mobile: the chart as it is. */
+const WebCompareCard: React.FC<{ web: boolean; plotPx: number; children: React.ReactNode }> = ({ web, plotPx, children }) =>
+  web ? (
+    <InsightsCardWeb col="auto" plotPx={plotPx} legendBelow titlePx={15}>
+      {children}
+    </InsightsCardWeb>
+  ) : (
+    <>{children}</>
+  );
+
+/** Website viewport (WP-CO-IN.10 cmp-own): the Own scales cards 2 across, 24 apart. Mobile: no wrapper. */
+const WebCompareGrid: React.FC<{ web: boolean; children: React.ReactNode }> = ({ web, children }) =>
+  web ? <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 24, marginBottom: 12 }}>{children}</div> : <>{children}</>;
+
 const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: string; onKeys: (k: string[]) => void; onBack: () => void }> = ({ all, keys, name, today, onKeys, onBack }) => {
   const dark = useIsDark();
+  const { web } = useWebLayout();
   const [mode, setMode] = useState<"range" | "own">("range");
   const [addEl, setAddEl] = useState<HTMLElement | null>(null);
   const [pinDate, setPinDate] = useState<string | null>(null);
@@ -904,8 +920,11 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
         ]}
         activeKey={mode}
         onChange={(k) => setMode(k as "range" | "own")}
-        tabHeight={36}
-        labelSize={12}
+        tabHeight={web ? 30 : 36}
+        labelSize={web ? 15 : 12}
+        // Website viewport (WP-CO-IN.10 cmp-range / cmp-own): the light tabs on the #F3F3FD track.
+        light={web && !dark ? { activeFill: "#FFFFFF", activeInk: "#5F5093", idleFill: "transparent", idleInk: "#5B5349" } : undefined}
+        trackStyle={web && !dark ? { background: "#F3F3FD", borderRadius: 14, padding: 5, gap: 4 } : undefined}
       />
       <div className="flex flex-wrap" style={{ gap: 6, marginBottom: 10 }}>
         {chosen.map((m, i) => (
@@ -940,6 +959,7 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
       />
       {mode === "range" ? (
         <>
+          <WebCompareCard web={web} plotPx={260}>
           <ProChart
             title={t("Position in each lab range")}
             question={cat ? t("Are the {category} moving together?", { category: cat.toLowerCase() }) : t("Are these results moving together?")}
@@ -983,12 +1003,14 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
             insight={insight ? t("{insight}. Filled points are outside their range.", { insight }) : undefined}
             scrubHint={t("Drag sideways to scrub, tap a point to pin it")}
           />
-          <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5 }}>
+          </WebCompareCard>
+          <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: web ? 12 : undefined }}>
             {`${t("Each line is placed against its own lab range: 0 is the lower limit, 100 the upper.")}${noTop.map((m) => ` ${t("{name} has no upper limit, so {value} {unit} is used as its top.", { name: m.name, value: roundMarker(topOf(m)), unit: m.unit })}`).join("")}`}
           </p>
         </>
       ) : (
         <>
+          <WebCompareGrid web={web}>
           {chosen.map((m, i) => {
             const idx = pinDate ? m.points.findIndex((x) => x.date === pinDate) : -1;
             const vals = m.points.map((x) => x.value);
@@ -996,8 +1018,8 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
             const bottom = Math.min(...vals, m.low ?? Math.min(...vals));
             const padV = (top - bottom) * 0.15 || 1;
             return (
+              <WebCompareCard key={m.key} web={web} plotPx={150}>
               <ProChart
-                key={m.key}
                 title={`${m.name} · ${m.unit}`}
                 x={m.points.map((x) => x.date)}
                 xPos={m.points.map((x) => pos(x.date))}
@@ -1011,8 +1033,10 @@ const Compare: React.FC<{ all: Marker[]; keys: string[]; name: string; today: st
                 onPinnedChange={(j) => setPinDate(j == null ? null : m.points[j].date)}
                 tooltip={(j) => ({ title: dateLong(m.points[j].date), lines: [`${m.points[j].value} ${m.unit} · ${statusWord(markerStatus(m.points[j].value, m.points[j].low ?? m.low, m.points[j].high ?? m.high))}`] })}
               />
+              </WebCompareCard>
             );
           })}
+          </WebCompareGrid>
           <p className="flex" style={{ gap: 6, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
             {`${t("{charts} on one time axis, each on its own scale.", { charts: numberWord })}${chosen.length > 1 ? ` ${chosen.length === 2 ? t("Scrubbing one moves the pin on both.") : chosen.length === 3 ? t("Scrubbing one moves the pin on all three.") : t("Scrubbing one moves the pin on all four.")}` : ""}`}
           </p>

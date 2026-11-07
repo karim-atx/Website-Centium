@@ -261,6 +261,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
                   items={segments.map((s) => ({ key: s.key, label: s.label, step: s.step, icon: s.key === "shop" ? Store : s.key === "loc" ? MapPin : Globe }))}
                   active={current.key}
                   onChange={setSeg}
+                  web
                 />
                 <div role="status" aria-live="polite" style={{ borderRadius: 14, padding: "8px 16px", display: "flex", flexDirection: "column", justifyContent: "center", background: dark ? hexAlpha(stepInk, 0.16) : tint }}>
                   {current.href ? (

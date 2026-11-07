@@ -627,6 +627,7 @@ const DeclineReferralPopup: React.FC<{ open: boolean; clientLabel: string; fromN
   const fromFirst = firstName(fromName) || fromName;
   const needsWords = reason === "other" && !other.trim();
   const reasons = REFERRAL_DECLINE_REASONS.map((r) => ({ ...r, label: t(r.label) }));
+  const web = useIsWeb();
   return (
     <CentredPopup
       open={open}
@@ -658,6 +659,8 @@ const DeclineReferralPopup: React.FC<{ open: boolean; clientLabel: string; fromN
           matchWidth={trigger}
           heading={t("Reason")}
           options={reasons}
+          // Website viewport (WP-CO-CN.2 decline-menu): the reasons as plain rows.
+          variant={web ? "plain" : undefined}
           selected={reason}
           onSelect={(v) => {
             setReason(v);

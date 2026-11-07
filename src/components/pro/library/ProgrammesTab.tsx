@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardList, Copy, Dumbbell, Pencil, Plus, Search, Send, Settings2, SlidersHorizontal, Trash2, UserRound } from "lucide-react";
+import { ChevronLeft, ClipboardList, Copy, Dumbbell, Pencil, Plus, Search, Send, Settings2, SlidersHorizontal, Trash2, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -26,7 +26,7 @@ import { WorkoutLogView } from "./WorkoutLogView";
 import { WeekProgrammesSection, WeekProgrammeView } from "../programmes/WeekProgrammes";
 import { DetailHeader, ErrorLine, Fab, FilterChip, LibCard, SquareBtn } from "./libraryUi";
 import { assignedLine, clientsLabel, currentWeek, isActive, templateMeta } from "./libraryModel";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
 import { ProPageBodyWeb } from "../web/ProPageWeb";
 import { AssignedListWeb, EmptyPanelWeb, LibSectionHeadWeb, LibraryChipsWeb, LibraryHeaderWeb, WorkoutCardWeb } from "../web/ProgrammeWeb";
@@ -341,6 +341,60 @@ export const ProgrammesTab: React.FC<{
         <Fab label={t("New programme")} icon={Plus} onClick={() => setEditor({ template: null, folderId: null })} />
         {sheets}
       </>
+    );
+  }
+  if (view === "assignments" && web && webTabs) {
+    // Website viewport (WP-LI.5 all; WP-LI Library Extras Web): the Library header and tabs, the back circle with
+    // PROGRAMMES / All assignments and the count, then one card of rows 2 across (1 on the rail).
+    const cols = rail ? 1 : 2;
+    const clients = new Set(assignedRows.map(({ a }) => a.clientId)).size;
+    return (
+      <div>
+        <LibraryHeaderWeb
+          query={query}
+          onQuery={setQuery}
+          placeholder={t("Search programmes and workouts")}
+          action={{ label: t("New programme"), icon: Plus, onClick: () => setEditor({ template: null, folderId: null }) }}
+        />
+        <ProPageBodyWeb>
+          {webTabs}
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 16 }}>
+            <button type="button" onClick={back} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)" }}>
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
+            </button>
+            <div className="min-w-0">
+              <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: "#8C8378" }}>{t("Programmes")}</p>
+              <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("All assignments")}</h2>
+            </div>
+            <span style={{ marginInlineStart: "auto", fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{tn(clients, "{n} client on a programme", "{n} clients on a programme")}</span>
+          </div>
+          {assignedRows.length === 0 ? (
+            <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+          ) : (
+            <div className="grid" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: "0 20px", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 32 }}>
+              {assignedRows.map(({ a, tpl }, i) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => go({ view: "template", id: tpl.id })}
+                  className="flex items-center text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+                  style={{ gap: 16, minHeight: 72, borderBottom: i < assignedRows.length - cols ? "1px solid rgba(36,31,27,0.06)" : "none" }}
+                >
+                  <span className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 44, borderRadius: 11, background: "#F0EDF9" }}>
+                    <UserRound size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D6BB5" }} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{`${clientName(a.clientId)} · ${tpl.name}`}</span>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{assignedLine(currentWeek(a.startsOn, a.joinWeek, tpl.durationWeeks, today), rings[a.clientId]) ?? ""}</span>
+                  </span>
+                  <StatusRing value={rings[a.clientId] ?? null} lane="full_coaching" />
+                </button>
+              ))}
+            </div>
+          )}
+          {sheets}
+        </ProPageBodyWeb>
+      </div>
     );
   }
   if (view === "assignments") {

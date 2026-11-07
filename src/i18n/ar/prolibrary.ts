@@ -162,6 +162,7 @@ const prolibrary: Catalogue = {
   "Replace it": "استبداله",
   "Assigning…": "جارٍ التعيين…",
   "Assign to {n} clients": { zero: "التعيين لـ{n} عميل", one: "التعيين لعميل واحد", two: "التعيين لعميلين", few: "التعيين لـ{n} عملاء", many: "التعيين لـ{n} عميلًا", other: "التعيين لـ{n} عميل" },
+  "{n} clients on a programme": { zero: "{n} عميل في برنامج", one: "عميل واحد في برنامج", two: "عميلان في برنامج", few: "{n} عملاء في برنامج", many: "{n} عميلًا في برنامج", other: "{n} عميل في برنامج" },
 
   // == Library · A client's copy ==
   "{name} follows their own copy of this programme.": "يتبع {name} نسخته الخاصة من هذا البرنامج.",
