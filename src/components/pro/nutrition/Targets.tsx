@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Lock, Target } from "lucide-react";
+import { Check, Equal, Lock, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
 import { textPx } from "../../../theme/textSize";
@@ -26,8 +26,9 @@ import { useNuRoster } from "./hooks";
 import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
 import { appLocale } from "../../../i18n/format";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
 import { useWebLayout } from "../../web/useWebLayout";
+import { ExtrasCapWeb, ExtrasCardWeb, ExtrasGridWeb, ExtrasHeadWeb, ExtrasLockWeb, ExtrasStatsWeb } from "../insights/extrasWeb";
 
 /**
  * Release 3 · NU8 v3 "Targets · weight goal rate and TDEE" (source gen
@@ -333,14 +334,16 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
  * plus weigh-ins behind Weight. "Read only. Set on {date}." says when; the
  * setter's name isn't readable for another professional (gap).
  */
-export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; showHead?: boolean; onBack?: () => void; clientName?: string }> = ({ clientId, firstName, showHead, onBack, clientName }) => {
+/** `web` (website viewport, WP-CO-IN.7; only the web Insights page passes it): the Extras cards, 4 across (2 on the rail). */
+export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; showHead?: boolean; onBack?: () => void; clientName?: string; web?: boolean }> = ({ clientId, firstName, showHead, onBack, clientName, web }) => {
   const access = useClientAccess(clientId);
   const dark = useIsDark();
+  const { rail } = useWebLayout();
   const [nonce, setNonce] = useState(0);
   const { data, stale, progress } = useTargetsData(clientId, access, nonce);
   const first = firstName || t("This client");
   const weight = useMemo(() => (data?.weights ? buildMetricReadings("weight", data.weights) : null), [data]);
-  const head = showHead ? <NuHead eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} /> : null;
+  const head = web ? <ExtrasHeadWeb eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} backLabel={t("Back")} /> : showHead ? <NuHead eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} /> : null;
 
   if (access.loading || (!data && !stale?.error)) return <div>{head}<ProCardSkeleton lines={5} height={240} /></div>;
   if (!data) return <div>{head}<ProError onRetry={() => setNonce((n) => n + 1)} /></div>;
@@ -350,6 +353,122 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
   const split = { proteinPct: g.proteinPct, carbsPct: g.carbsPct, fatPct: g.fatPct };
   const grams = macroGrams(g.calories, split);
   const est = tdeeView(data.basics, weight?.current ?? null, !!data.weights, first);
+  if (web) {
+    // WP-CO-IN.7 (Extras): Weight goal across; Current weight | Daily target | TDEE estimate (2 wide); Macro distribution across; the lock note.
+    const setLine = g.setByProfessionalId ? t("Read only. Set by a professional on {date}.", { date: fmtDay(g.createdAt) }) : t("Read only. Set by {name} on {date}.", { name: first, date: fmtDay(g.createdAt) });
+    const GOALS = [
+      ["lose", TrendingDown, t("Lose weight")],
+      ["maintain", Equal, tx("Maintain", "weight goal")],
+      ["gain", TrendingUp, t("Gain weight")],
+    ] as const;
+    const hist = weight?.history ?? [];
+    const cur = weight?.current ?? null;
+    const kg = (n: number) => String(Math.round(n * 10) / 10);
+    const eta = cur != null && g.desiredWeightKg != null && g.weeklyRateKg > 0 && g.weightGoal !== "maintain" && Math.abs(cur - g.desiredWeightKg) > 0.05 ? shiftDate(todayLocal(), Math.round((Math.abs(cur - g.desiredWeightKg) / g.weeklyRateKg) * 7)) : null;
+    const diff = est.tdee != null ? Math.round(g.calories - est.tdee) : null;
+    const n0 = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
+    return (
+      <div>
+        {head}
+        {data.error && data.offline && <OfflineLine />}
+        <ExtrasGridWeb cols={4} railCols={2} gap="24px">
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasCapWeb>{t("Weight goal")}</ExtrasCapWeb>
+            <div role="radiogroup" aria-label={t("Weight goal")} aria-readonly style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+              {GOALS.map(([k, Icon, label]) => {
+                const on = g.weightGoal === k;
+                return (
+                  <span key={k} role="radio" aria-checked={on} style={{ height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 15, fontWeight: 600, background: on ? "#AEA1DC" : INK.soft, color: on ? "#FFFFFF" : INK.chS, whiteSpace: "nowrap" }}>
+                    <Icon size={13} strokeWidth={2.2} aria-hidden />
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
+              {(
+                [
+                  [t("Weekly rate"), g.weightGoal === "maintain" ? "–" : t("{n} kg a week", { n: kg(g.weeklyRateKg) }), null],
+                  [t("Desired weight"), g.desiredWeightKg != null ? t("{n} kg", { n: kg(g.desiredWeightKg) }) : "–", eta ? t("About {date} at this rate", { date: fmtDay(eta) }) : null],
+                ] as const
+              ).map(([label, v, v2]) => (
+                <div key={label} style={{ minWidth: 0, borderRadius: 14, background: INK.soft, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: INK.ch, whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ flex: "none", textAlign: "end" }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{v}</span>
+                    {v2 && <span style={{ display: "block", fontSize: 13, color: INK.chF, whiteSpace: "nowrap" }}>{v2}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="span 1" stretch>
+            <ExtrasCapWeb>{t("Current weight")}</ExtrasCapWeb>
+            {data.weights ? (
+              <ExtrasStatsWeb
+                top={0}
+                fill
+                stats={[
+                  {
+                    label: hist.length ? t("Last logged {date}", { date: fmtDay(hist[hist.length - 1].date) }) : t("No weigh-ins yet"),
+                    value: cur != null ? kg(cur) : "–",
+                    unit: cur != null ? t("kg") : undefined,
+                    sub: cur != null && hist.length > 1 ? t("{delta} kg since {date}", { delta: `${cur - hist[0].value >= 0 ? "+" : "−"}${kg(Math.abs(cur - hist[0].value))}`, date: fmtDay(hist[0].date) }) : undefined,
+                  },
+                ]}
+              />
+            ) : (
+              <LockLine what={t("Weight")} clientFirstName={first} />
+            )}
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="span 1" stretch>
+            <ExtrasCapWeb>{t("Daily target")}</ExtrasCapWeb>
+            <ExtrasStatsWeb top={0} fill stats={[{ label: t("Calories"), value: n0(g.calories), unit: t("kcal") }]} />
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span={rail ? "1 / -1" : "span 2"} stretch>
+            <ExtrasCapWeb>{t("TDEE estimate")}</ExtrasCapWeb>
+            {est.tdee != null ? (
+              <ExtrasStatsWeb
+                top={0}
+                fill
+                stats={[
+                  { label: t("Maintenance"), value: n0(est.tdee), unit: t("kcal"), sub: est.basis },
+                  { label: t("Target"), value: n0(g.calories), unit: t("kcal"), sub: diff ? t("{n} a day", { n: `${diff > 0 ? "+" : "−"}${n0(Math.abs(diff))}` }) : undefined, ink: "#5F5093" },
+                ]}
+              />
+            ) : (
+              <div>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: INK.ch }}>{est.title}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: INK.chF }}>{est.line}</p>
+              </div>
+            )}
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasCapWeb>{t("Macro distribution")}</ExtrasCapWeb>
+            <div className="flex overflow-hidden" style={{ height: 20, borderRadius: 999, gap: 2 }} role="img" aria-label={t("Protein {p}%, carbs {c}%, fat {f}%", { p: split.proteinPct, c: split.carbsPct, f: split.fatPct })}>
+              {(
+                [
+                  [split.proteinPct, "#7D6BB5"],
+                  [split.carbsPct, "#8175C2"],
+                  [split.fatPct, "#4274D7"],
+                ] as const
+              ).map(([p, col], i) => (
+                <span key={i} className="flex items-center justify-center" style={{ flex: p, background: col, fontSize: 11, fontWeight: 800, color: "#FFFFFF" }}>{`${Math.round(p)}%`}</span>
+              ))}
+            </div>
+            <div className="flex flex-wrap" style={{ gap: 12, marginTop: 8, fontSize: 13, color: INK.chS }}>
+              <span>{t("Protein {n} g", { n: grams.p })}</span>
+              <span>{t("Carbs {n} g", { n: grams.c })}</span>
+              <span>{t("Fat {n} g", { n: grams.f })}</span>
+            </div>
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasLockWeb>{setLine}</ExtrasLockWeb>
+          </ExtrasCardWeb>
+        </ExtrasGridWeb>
+      </div>
+    );
+  }
   const pro: GoalsPanelPro = {
     goal: { weightGoal: g.weightGoal, weeklyRateKg: g.weeklyRateKg, targetCalories: Math.round(g.calories), macroSplit: split, desiredWeightKg: g.desiredWeightKg ?? undefined },
     onChange: () => undefined,

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronLeft, Lightbulb, Lock, Send, ShieldCheck, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
@@ -11,7 +11,6 @@ import { Avatar } from "../client/kit";
 import { EmptyState } from "../EmptyState";
 import { askWithMessage, ASK_MESSAGE_MAX } from "../../../services/pro/insights";
 import { useIsWeb } from "../../web/useWebLayout";
-import { GroupsOpenContext } from "./groupsOpen";
 import { StatBoxesWeb } from "./webCard";
 import { useInsightsWebCard } from "./webCardContext";
 import { t } from "../../../i18n/core";
@@ -122,10 +121,8 @@ export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => {
   );
 };
 
-export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open: openProp, onToggle, children }) => {
+export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open, onToggle, children }) => {
   const dark = useIsDark();
-  const allOpen = useContext(GroupsOpenContext);
-  const open = openProp || allOpen;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10, overflow: "hidden" }}>
       <button type="button" aria-expanded={open} aria-controls={`grp-${id}`} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "14px 16px", minHeight: 64 }}>

@@ -322,6 +322,14 @@ const pronutrition: Catalogue = {
   "F {n}g": "د {n} غ",
   "e.g. Chicken and rice bowl": "مثلًا: وعاء دجاج وأرز",
   "One step per line": "خطوة في كل سطر",
+  // Website viewport (WP-CO-IN.7; the Extras targets)
+  "Weekly rate": "المعدّل الأسبوعي",
+  "{n} kg a week": "{n} كغ في الأسبوع",
+  "About {date} at this rate": "نحو {date} بهذا المعدّل",
+  "Last logged {date}": "آخر تسجيل {date}",
+  "{delta} kg since {date}": "{delta} كغ منذ {date}",
+  "Maintenance": "الحفاظ",
+  "{n} a day": "{n} في اليوم",
 };
 
 export default pronutrition;

@@ -17,7 +17,6 @@ import { localIso } from "../../../services/pro/home";
 import type { AccessCategory } from "../../../services/pro/access";
 import type { ChartRange } from "./insightsModel";
 import { ClientPicker, DetailHead, RangeTabs, SharedBadges, type PickerClient } from "./parts";
-import { GroupsOpenContext } from "./groupsOpen";
 import { CATEGORY_LABEL, chartRangeFor, tabsForLane, type InsightsTab, type PageRange, type PanelProps } from "./panelProps";
 import { ActivityPanel } from "./ActivityPanel";
 import { NutritionPanel, NutritionRoster } from "./NutritionPanel";
@@ -136,7 +135,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
         {head}
         <ProPageBodyWeb>
           {/* WP-CO-IN chips (Vitals, Results): one row of equal 36 cells, 8 apart, 15/24, ellipsis (Insights Web v2 chipN). */}
-          <style>{".wpin-an .wpcl-tab>:nth-child(-n+3),.wpin-tg .wpcl-tab>:first-child{column-span:all}[data-pro-web=page] [role=tablist].scroll-row{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}[data-pro-web=page] [role=tablist].scroll-row>button{min-width:0;padding:0 8px!important;overflow:hidden;text-overflow:ellipsis}"}</style>
+          <style>{"[data-pro-web=page] [role=tablist].scroll-row{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}[data-pro-web=page] [role=tablist].scroll-row>button{min-width:0;padding:0 8px!important;overflow:hidden;text-overflow:ellipsis}"}</style>
           {tabBar}
           {children}
         </ProPageBodyWeb>
@@ -243,20 +242,14 @@ const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string;
     <>
       {access.offline && <OfflineLine />}
       {web && analysis === "targets" && tab === "nutrition" ? (
-        // Website viewport (WP-CO-IN.7): the read-only targets across the page, their cards in two columns under the head.
-        <div className="wpin-tg" style={{ columnSpan: "all", display: "block" }}>
-          <ClientTabBodyWeb columns={2}>
-            <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} />
-          </ClientTabBodyWeb>
+        // Website viewport (WP-CO-IN.7): the read-only targets across the page in the Extras cards.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} web />
         </div>
       ) : web && analysis && tab === "nutrition" ? (
-        // Website viewport (WP-CO-IN.6): the analysis across the page; its head, tabs and range span both columns and every Group is open beside the main card.
-        <div className="wpin-an" style={{ columnSpan: "all", display: "block" }}>
-          <GroupsOpenContext.Provider value>
-            <ClientTabBodyWeb columns={2}>
-              <NutrientAnalysis clientId={clientId} lane={lane} onBack={() => setAnalysis(null)} />
-            </ClientTabBodyWeb>
-          </GroupsOpenContext.Provider>
+        // Website viewport (WP-CO-IN.6): the analysis across the page in the Extras cards, on the page header's range.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <NutrientAnalysis clientId={clientId} lane={lane} onBack={() => setAnalysis(null)} web={{ pageRange }} />
         </div>
       ) : web && (tab === "vitals" || tab === "activity" || tab === "nutrition") ? (
         // Website viewport (WP-CO-IN.1, .2, .8): across the page, the panel draws the frames' cards (Activity and Nutrition in their grid; Vitals one card per view, its chart, stat boxes and insight).

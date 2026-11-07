@@ -31,6 +31,8 @@ import { StatBoxes, type StatBox } from "./parts";
 import { useRead, type ReadState } from "./reads";
 import { isRtl, t, tn, tx } from "../../../i18n/core";
 import { WebCopy } from "../../web/WebCopy";
+import { useWebLayout } from "../../web/useWebLayout";
+import { ExtrasBarsWeb, ExtrasCardWeb, ExtrasStatsWeb } from "./extrasWeb";
 
 /**
  * Release 3 · W9 Insights › Vitals › Sleep (TR9 v5 "Sleep · stages" and
@@ -491,7 +493,10 @@ export const SleepView: React.FC<{
   today: string;
   winStart: string;
   firstName: string;
-}> = ({ nights, durationRows, duration, range, onRange, today, winStart, firstName }) => {
+  /** Website viewport (WP-CO-IN.8): the Extras Sleep cards (only the web Insights page passes it). */
+  web?: boolean;
+}> = ({ nights, durationRows, duration, range, onRange, today, winStart, firstName, web }) => {
+  const { rail } = useWebLayout();
   const stats = useMemo(() => (nights.data ?? []).map(nightStats), [nights.data]);
   const b = bucketsFor(range, today);
   const agg = stagesByBucket(b, stats);
@@ -542,6 +547,63 @@ export const SleepView: React.FC<{
       : []),
     { label: t("Nights under 6 h"), value: slept.some(([d]) => inWin(d)) ? String(short) : "–", delta: anyPrev && short !== shortPrev ? signedNum(short - shortPrev) : null, dir: !anyPrev || short === shortPrev ? null : short > shortPrev ? "down" : "up", sub: winDays === 1 ? t("Last night") : tn(winDays, "Last {n} days", "Last {n} days") },
   ];
+
+  if (web && nights.data !== undefined) {
+    // WP-CO-IN.8 Sleep (Extras): Sleep per night (h) across; Sleep stages | Bedtime and wake time (one column on the rail).
+    const win = stats.filter((x) => inWin(x.date));
+    const staged = win.filter((x) => x.hasStages);
+    const avgOf = (f: (x: NightStats) => number) => (staged.length ? staged.reduce((a, x) => a + f(x), 0) / staged.length : 0);
+    const st = { deep: avgOf((x) => x.deep ?? 0), rem: avgOf((x) => x.rem ?? 0), light: avgOf((x) => x.light ?? 0), awake: avgOf((x) => x.awake ?? 0) };
+    const total = st.deep + st.rem + st.light + st.awake;
+    const STAGE_INK: Record<SleepStage, string> = { deep: "#5F5093", rem: "#8F68F6", light: "#DCD6F0", awake: "#D9A441" };
+    const timed = win.filter((x) => x.bed != null && x.wake != null);
+    const spread = (a: number[]) => {
+      if (a.length < 2) return null;
+      const mu = a.reduce((s, x) => s + x, 0) / a.length;
+      return Math.round(Math.sqrt(a.reduce((s, x) => s + (x - mu) ** 2, 0) / a.length));
+    };
+    const usual = (a: number[]) => {
+      if (!a.length) return null;
+      const p = clockParts(Math.round(a.reduce((s, x) => s + x, 0) / a.length) % 1440);
+      const sd = spread(a);
+      return { value: `${p.hour}:${String(p.minute).padStart(2, "0")}`, unit: p.meridiem, sub: sd != null ? t("± {n} min", { n: sd }) : undefined };
+    };
+    const bedU = usual(timed.map((x) => x.bed as number));
+    const wakeU = usual(timed.map((x) => x.wake as number));
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: rail ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))", gap: 16, alignItems: "start" }}>
+        <ExtrasCardWeb span="1 / -1" plotPx={rail ? 140 : 160}>
+          {duration(durationChartRows)}
+        </ExtrasCardWeb>
+        <ExtrasCardWeb title={t("Sleep stages")} question={t("Is {firstName} getting enough deep and REM sleep?", { firstName })}>
+          {total > 0 ? (
+            <ExtrasBarsWeb
+              rows={STAGES.map((k) => ({
+                label: t(STAGE_LABEL[k]),
+                value: t("{time} · {pct}%", { time: hm(st[k]), pct: Math.round((st[k] / total) * 100) }),
+                pct: ((st[k] / total) * 100) / 0.6,
+                color: STAGE_INK[k],
+              }))}
+            />
+          ) : (
+            <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.5, color: INK.chF }}>{t("No sleep stages yet. They fill in when {firstName}'s sleep syncs with stages from a wearable.", { firstName })}</p>
+          )}
+        </ExtrasCardWeb>
+        <ExtrasCardWeb title={t("Bedtime and wake time")} question={t("How regular are bedtime and wake time?")}>
+          {bedU && wakeU ? (
+            <ExtrasStatsWeb
+              stats={[
+                { label: t("Usual bedtime"), value: bedU.value, unit: bedU.unit, sub: bedU.sub },
+                { label: t("Usual wake time"), value: wakeU.value, unit: wakeU.unit, sub: wakeU.sub },
+              ]}
+            />
+          ) : (
+            <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: 1.5, color: INK.chF }}>{t("No bedtimes in this range.")}</p>
+          )}
+        </ExtrasCardWeb>
+      </div>
+    );
+  }
 
   return (
     <>

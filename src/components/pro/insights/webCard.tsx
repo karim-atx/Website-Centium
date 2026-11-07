@@ -25,8 +25,10 @@ export const InsightsCardWeb: React.FC<{
   statCols?: number;
   /** The legend as a row under the question (the Extras sub-views) instead of at the title's right (Insights Web v2). */
   legendBelow?: boolean;
+  /** The chart title size inside (the Extras sub-views draw 15; Insights Web v2 17). */
+  titlePx?: number;
   children?: React.ReactNode;
-}> = ({ col, row, title, question, tip, plotPx = 200, statCols, legendBelow, children }) => (
+}> = ({ col, row, title, question, tip, plotPx = 200, statCols, legendBelow, titlePx, children }) => (
   <section aria-label={title} style={{ gridColumn: col, gridRow: row, minWidth: 0, boxSizing: "border-box", display: "flex", flexDirection: "column", borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, padding: "20px 24px" }}>
     {title && (
       <div style={{ flex: "none", minWidth: 0 }}>
@@ -34,7 +36,7 @@ export const InsightsCardWeb: React.FC<{
         {question && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: INK.chF }}>{question}</p>}
       </div>
     )}
-    <InsightsWebCard.Provider value={{ plotPx, statCols, legendBelow }}>{children}</InsightsWebCard.Provider>
+    <InsightsWebCard.Provider value={{ plotPx, statCols, legendBelow, titlePx }}>{children}</InsightsWebCard.Provider>
     {tip && <TipWeb>{tip}</TipWeb>}
   </section>
 );

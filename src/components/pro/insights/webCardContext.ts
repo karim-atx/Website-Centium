@@ -6,7 +6,7 @@ import { useWebLayout } from "../../web/useWebLayout";
  * card's plot height with the card's sizes (legend at the title's right, or under the question),
  * and StatBoxes draw the card's boxes `statCols` across.
  */
-export const InsightsWebCard = createContext<{ plotPx: number; statCols?: number; legendBelow?: boolean } | null>(null);
+export const InsightsWebCard = createContext<{ plotPx: number; statCols?: number; legendBelow?: boolean; titlePx?: number } | null>(null);
 export const useInsightsWebCard = () => useContext(InsightsWebCard);
 
 /** The frames' column spans: (1440, 1024 rail). */

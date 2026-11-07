@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CalendarRange, Clock, Dumbbell, FlaskConical, LineChart, ListOrdered, ThumbsDown, ThumbsUp, UtensilsCrossed } from "lucide-react";
+import { CalendarRange, Clock, Dumbbell, FlaskConical, LineChart, ListOrdered, ThumbsDown, ThumbsUp, TrendingDown, TrendingUp, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
@@ -40,7 +40,9 @@ import {
 } from "./insightsModel";
 import { DetailHead, Group, InsightLine, QuietLine, RangeTabs } from "./parts";
 import { readGate, useRead } from "./reads";
-import { PAGE_RANGE_DAYS, type PageRange } from "./panelProps";
+import { chartRangeFor, PAGE_RANGE_DAYS, type PageRange } from "./panelProps";
+import { ExtrasBarsWeb, ExtrasCardWeb, ExtrasGridWeb, ExtrasHeadWeb, ExtrasInsightWeb, ExtrasRowsWeb } from "./extrasWeb";
+import { useWebLayout } from "../../web/useWebLayout";
 import { appLocale } from "../../../i18n/format";
 import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 
@@ -92,7 +94,8 @@ function totals(entries: FoodEntry[]): DayTotals[] {
   return [...m.values()].map((d) => ({ day: d.day, kcal: d.kcal, p: d.p, c: d.c, f: d.f, meals: d.slots.size })).sort((a, b) => (a.day < b.day ? -1 : 1));
 }
 
-export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBack?: () => void }> = ({ clientId, lane, onBack }) => {
+/** `web` (website viewport, WP-CO-IN.6; only the web Insights page passes it): the Extras cards across the page, the range from the page header. */
+export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBack?: () => void; web?: { pageRange: PageRange } }> = ({ clientId, lane, onBack, web }) => {
   const { professionalClients } = useApp();
   const rel = professionalClients.find((c) => c.clientId === clientId) ?? null;
   const name = rel ? `${rel.prefix ? `${rel.prefix} ` : ""}${rel.name}` : "";
@@ -100,8 +103,10 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
   const access = useClientAccess(clientId);
   const deep = lane === "nutrition";
   const [tab, setTab] = useState<Tab>("macros");
-  const [range, setRange] = useState<PageRange>("month");
-  const [chartRange, setChartRange] = useState<ChartRange>("M");
+  const [ownRange, setRange] = useState<PageRange>("month");
+  const [ownChartRange, setChartRange] = useState<ChartRange>("M");
+  const range = web ? web.pageRange : ownRange;
+  const chartRange = web ? chartRangeFor(web.pageRange) : ownChartRange;
   const [open, setOpen] = useState<string | null>(null);
   const today = localIso(new Date());
   const on = access.has("food_diary");
@@ -118,7 +123,24 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
   const inWindow = days.filter((d) => d.day >= windowStart && d.day <= today);
   const entriesInWindow = (food.data ?? []).filter((e) => e.day >= windowStart && e.day <= today);
 
-  const header = (
+  const header = web ? (
+    // WP-CO-IN.6 (Extras): the head (back 20, the eyebrow 13 caps, the name 24/32 700), then the Macros | Intake tabs (40, 15); the range is the page header's.
+    <>
+      <ExtrasHeadWeb eyebrow={t("Nutrient analysis")} title={name} onBack={onBack} backLabel={t("Back")} />
+      <SegmentedTabs
+        className="mb-[16px]"
+        items={[{ key: "macros", label: t("Macros") }, { key: "intake", label: tx("Intake", "nutrition tab") }, ...(deep ? [{ key: "micros", label: t("Micros") }] : [])]}
+        activeKey={tab}
+        onChange={(k) => setTab(k as Tab)}
+        light={{ activeFill: "#FFFFFF", activeInk: "#5F5093", idleFill: "transparent", idleInk: "#5B5349" }}
+        trackStyle={{ background: "#F3F3FD", borderRadius: 12, padding: 4, gap: 4 }}
+        tabHeight={32}
+        tabRadius={9}
+        idleWeight={600}
+        labelSize={15}
+      />
+    </>
+  ) : (
     <>
       {onBack ? (
         <DetailHead eyebrow={t("Nutrient analysis")} title={name} onBack={onBack} />
@@ -157,9 +179,10 @@ export const NutrientAnalysis: React.FC<{ clientId: string; lane: ProLane; onBac
     <>
       {header}
       {food.offline && <OfflineLine />}
-      {tab === "macros" && <Macros days={days} inWindow={inWindow} today={today} n={n} pct={pct} tGrams={tGrams} kg={latestKg} weightOn={weightOn} open={open} toggle={toggle} />}
+      {tab === "macros" && <Macros web={!!web} days={days} inWindow={inWindow} today={today} n={n} pct={pct} tGrams={tGrams} kg={latestKg} weightOn={weightOn} open={open} toggle={toggle} />}
       {tab === "intake" && (
         <Intake
+          web={!!web}
           days={days}
           entries={entriesInWindow}
           allEntries={food.data ?? []}
@@ -202,6 +225,7 @@ const SplitBar: React.FC<{ label: string; split: [number, number, number] | null
 );
 
 const Macros: React.FC<{
+  web: boolean;
   days: DayTotals[];
   inWindow: DayTotals[];
   today: string;
@@ -212,8 +236,9 @@ const Macros: React.FC<{
   weightOn: boolean;
   open: string | null;
   toggle: (k: string) => void;
-}> = ({ days, inWindow, today, n, pct, tGrams, kg, weightOn, open, toggle }) => {
+}> = ({ web, days, inWindow, today, n, pct, tGrams, kg, weightOn, open, toggle }) => {
   const dark = useIsDark();
+  const { rail } = useWebLayout();
   const sum = (list: DayTotals[]) => list.reduce((a, d) => ({ p: a.p + d.p, c: a.c + d.c, f: a.f + d.f }), { p: 0, c: 0, f: 0 });
   const td = days.find((d) => d.day === today);
   const avg = sum(inWindow);
@@ -247,6 +272,113 @@ const Macros: React.FC<{
     .join(isRtl() ? "، " : ", ");
   const bw = tGrams ? bestWorst(inWindow, tGrams) : null;
   const ink = dark ? "#C3B3FB" : "#7D6BB5";
+
+  if (web) {
+    // WP-CO-IN.6 Macros (Extras): Macro split | Trends per macro (two rows high at 1440) | Best and worst days; one column on the rail.
+    const logged = inWindow.length;
+    const avgSplit = logged ? macroSplit(avg.p, avg.c, avg.f) : null;
+    const MACROS = [
+      [t("Protein"), "p", "#8F68F6"],
+      [t("Carbs"), "c", "#8175C2"],
+      [t("Fat"), "f", "#4274D7"],
+    ] as const;
+    // A day is over a macro's target when its share of calories is more than 2 points above it.
+    const over = pct
+      ? MACROS.map((_, i) => inWindow.filter((d) => {
+          const s = macroSplit(d.p, d.c, d.f);
+          return s != null && s[i] > pct[i] + 2;
+        }).length)
+      : null;
+    const most = over ? over.reduce((b, v, i) => (v > over[b] ? i : b), 0) : 0;
+    const dayLine = (d: DayTotals) => t("{kcal} kcal · protein {p} g · carbs {c} g · fat {f} g", { kcal: fmt(d.kcal), p: fmt(d.p), c: fmt(d.c), f: fmt(d.f) });
+    const worstOff = bw && tGrams
+      ? MACROS.map((m, i) => ({ label: m[0], d: (([bw.worst.p, bw.worst.c, bw.worst.f][i] - tGrams[i]) / (tGrams[i] || 1)) * 100 })).sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0]
+      : null;
+    const pkgOn = !!gkg && gkg.some((v) => v != null);
+    return (
+      <ExtrasGridWeb cols={2} gap="24px 16px" railGap="16px">
+        <ExtrasCardWeb title={t("Macro split")} question={t("Share of calories on logged days, against the targets you set")}>
+          {avgSplit ? (
+            <>
+              <ExtrasBarsWeb
+                rows={MACROS.map((m, i) => ({
+                  label: m[0],
+                  value: pct
+                    ? t("{pct}% · {g} g · target {target}%", { pct: avgSplit[i], g: fmt([avg.p, avg.c, avg.f][i] / logged), target: Math.round(pct[i]) })
+                    : t("{pct}% · {g} g", { pct: avgSplit[i], g: fmt([avg.p, avg.c, avg.f][i] / logged) }),
+                  pct: avgSplit[i] / 0.6,
+                  tick: pct ? pct[i] / 0.6 : null,
+                  color: m[2],
+                }))}
+              />
+              {over && over[most] > 0 ? (
+                <ExtrasInsightWeb>{t("{macro} above target on {n} of {m} logged days.", { macro: MACROS[most][0], n: over[most], m: logged })}</ExtrasInsightWeb>
+              ) : !pct ? (
+                <ExtrasInsightWeb>{t("No macro targets set yet.")}</ExtrasInsightWeb>
+              ) : null}
+            </>
+          ) : (
+            <ExtrasInsightWeb>{t("Nothing logged in this range.")}</ExtrasInsightWeb>
+          )}
+        </ExtrasCardWeb>
+        <ExtrasCardWeb row={rail ? undefined : "span 2"} group={{ icon: LineChart, title: t("Trends per macro"), line: trendLine || t("Needs two weeks of logs.") }} plotPx={170}>
+          <div style={{ marginTop: 12 }}>
+            {pkgOn ? (
+              <ProChart
+                title={t("Protein per kg")}
+                unit={t("g per kg body weight")}
+                x={weeks.map((w) => bucketLabel("3M", w))}
+                min={0}
+                max={Math.max(targetGkg ?? 0, ...gkg!.map((v) => v ?? 0), ...(gkgPrev ?? []).map((v) => v ?? 0)) * 1.3 || 2}
+                goal={targetGkg ?? undefined}
+                goalLegend={targetGkg ? t("Target {n}", { n: targetGkg }) : undefined}
+                series={[
+                  { key: "g", label: t("Protein (g per kg)"), type: "line", color: ink, values: gkg!, labels: [0, 1, 2, 3] },
+                  { key: "l", label: t("Last period"), type: "line", color: INK.chT, ghost: true, values: gkgPrev ?? [] },
+                ]}
+                tooltip={(i) => (gkg![i] == null ? null : { title: t("Week {n}", { n: i + 1 }), lines: [t("{gkg} g/kg · {g} g a day", { gkg: gkg![i] as number, g: fmt(pW[i] ?? 0) })] })}
+                summary={t("Protein {n} g per kg in the latest week.", { n: String(gkg![3] ?? gkg!.filter((v) => v != null).pop()) })}
+              />
+            ) : (
+              <ProChart
+                title={t("Grams per day")}
+                unit={t("grams per day")}
+                x={weeks.map((w) => bucketLabel("3M", w))}
+                min={0}
+                max={Math.max(50, ...[...pW, ...cW, ...fW].map((v) => v ?? 0)) * 1.15}
+                series={[
+                  { key: "p", label: t("Protein"), type: "line", color: "#8F68F6", values: pW },
+                  { key: "c", label: t("Carbs"), type: "line", color: "#8175C2", values: cW },
+                  { key: "f", label: t("Fat"), type: "line", color: "#4274D7", values: fW },
+                ]}
+                tooltip={(i) => ({ title: t("Week {n}", { n: i + 1 }), lines: [t("Protein {p} g · carbs {c} g · fat {f} g", { p: fmt(pW[i] ?? 0), c: fmt(cW[i] ?? 0), f: fmt(fW[i] ?? 0) })] })}
+                summary={trendLine ? t("{trends}, grams a day over 4 weeks.", { trends: trendLine }) : undefined}
+              />
+            )}
+            {!weightOn && <ExtrasInsightWeb>{t("Weight isn't shared, so protein per kg can't be worked out.")}</ExtrasInsightWeb>}
+          </div>
+        </ExtrasCardWeb>
+        <ExtrasCardWeb group={{ icon: CalendarRange, title: t("Best and worst days"), line: bw ? t("Best {best}, worst {worst}", { best: tipDay(bw.best.day), worst: tipDay(bw.worst.day) }) : tGrams ? t("Needs two logged days.") : t("Needs macro targets.") }}>
+          {bw ? (
+            <ExtrasRowsWeb
+              rows={[
+                { key: "b", icon: TrendingUp, title: t("Best · {day}", { day: tipDay(bw.best.day) }), sub: dayLine(bw.best), chip: bw.bestOnTarget ? { label: t("On target"), bg: "#E3F0EE", ink: "#3C6B65" } : undefined },
+                {
+                  key: "w",
+                  icon: TrendingDown,
+                  title: t("Worst · {day}", { day: tipDay(bw.worst.day) }),
+                  sub: dayLine(bw.worst),
+                  chip: worstOff && Math.round(worstOff.d) !== 0 ? { label: `${worstOff.label} ${worstOff.d > 0 ? "+" : "−"}${Math.abs(Math.round(worstOff.d))}%`, bg: "#FBE7E4", ink: "#C2453F" } : undefined,
+                },
+              ]}
+            />
+          ) : (
+            <ExtrasInsightWeb>{tGrams ? t("Best and worst days appear once two days are logged.") : t("Best and worst days compare each day with the macro targets, and none are set yet.")}</ExtrasInsightWeb>
+          )}
+        </ExtrasCardWeb>
+      </ExtrasGridWeb>
+    );
+  }
 
   return (
     <>
@@ -349,6 +481,7 @@ const Macros: React.FC<{
 const nutrientRow = (key: string): NutrientRow | undefined => NUTRIENT_SECTIONS.flatMap((s) => s.rows).find((r) => r.key === key);
 
 const Intake: React.FC<{
+  web: boolean;
   days: DayTotals[];
   entries: FoodEntry[];
   allEntries: FoodEntry[];
@@ -362,7 +495,8 @@ const Intake: React.FC<{
   deep: boolean;
   open: string | null;
   toggle: (k: string) => void;
-}> = ({ days, entries, allEntries, today, target, firstName, range, onRange, pageRange, fss, open, toggle }) => {
+}> = ({ web, days, entries, allEntries, today, target, firstName, range, onRange, pageRange, fss, open, toggle }) => {
+  const { rail } = useWebLayout();
   const b = bucketsFor(range, today);
   const g = bucketsFor(range, today, 1);
   const kcal = meanByBucket(b, days.map((d) => ({ day: d.day, value: d.kcal })));
@@ -405,6 +539,82 @@ const Intake: React.FC<{
       ? t("No nutrient detail in the foods logged yet.")
       : [naHigh ? t("Sodium high") : null, sHigh ? t("sugar high") : null, fLow ? t("fibre low") : null].filter(Boolean).join(semi()).replace(/^./, (c) => c.toUpperCase()) || t("Within the limits");
   const late = clock.late;
+
+  if (web) {
+    // WP-CO-IN.6 Intake (Extras): Calories in vs target across, then Meal timing | Top foods per macro (one column on the rail).
+    const timed = entries.filter((e) => e.eatenAt);
+    const lateAdded = (e: FoodEntry) => localIso(new Date(e.createdAt)) > e.day;
+    const lateN = timed.filter(lateAdded).length;
+    const MAC = [
+      ["p", t("Protein")],
+      ["c", t("Carbs")],
+      ["f", t("Fat")],
+    ] as const;
+    const foods = MAC.flatMap(([k, label]) => {
+      const by = new Map<string, number>();
+      let total = 0;
+      for (const e of entries) {
+        const v = Math.max(0, e[k]);
+        total += v;
+        by.set(e.name, (by.get(e.name) ?? 0) + v);
+      }
+      return [...by.entries()]
+        .filter(([, g]) => g > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 2)
+        .map(([name, g], i) => ({ key: `${k}${i}`, title: name, sub: t("{macro} · {pct}%", { macro: label, pct: Math.round((g / (total || 1)) * 100) }), value: t("{n} g", { n: fmt(g) }) }));
+    });
+    return (
+      <ExtrasGridWeb cols={2} gap="16px">
+        <ExtrasCardWeb span="1 / -1" plotPx={rail ? 190 : 210}>
+          <ProChart
+            title={t("Calories in vs target")}
+            question={t("How do {firstName}'s logged days compare with the target?", { firstName })}
+            unit={t("kcal per day")}
+            x={b.map((x) => bucketLabel(range, x))}
+            min={lo}
+            max={hi}
+            band={band ? { ...band, label: t("On target") } : undefined}
+            goal={target ?? undefined}
+            goalLegend={target ? t("Target {n}", { n: fmt(target) }) : undefined}
+            series={[{ key: "k", label: t("Calories"), type: "bar", color: "#8F68F6", values: kcal }]}
+            tooltip={(i) => {
+              const v = kcal[i];
+              if (v == null) return { title: bucketTitle(range, b[i]), lines: [t("Nothing logged")] };
+              const diff = target ? Math.round(v - target) : null;
+              return { title: bucketTitle(range, b[i]), lines: [`${t("{n} kcal", { n: fmt(v) })}${diff ? ` · ${diff > 0 ? t("{n} over", { n: fmt(Math.abs(diff)) }) : t("{n} under", { n: fmt(Math.abs(diff)) })}` : ""}`] };
+            }}
+            insight={band ? inBandLine(inRange.map((d) => ({ day: d.day, kcal: d.kcal })), band) ?? undefined : undefined}
+            summary={target ? tn(inRange.length, "Calories on {n} logged day, target {target} kcal.", "Calories on {n} logged days, target {target} kcal.", { target: fmt(target) }) : tn(inRange.length, "Calories on {n} logged day.", "Calories on {n} logged days.")}
+          />
+        </ExtrasCardWeb>
+        <ExtrasCardWeb group={{ icon: Clock, title: t("Meal timing"), line: timingLine }}>
+          {timed.length ? (
+            <div style={{ marginTop: 12 }}>
+              <div role="img" aria-label={tn(timed.length, "{n} entry with the time eaten, from 6 AM to midnight.", "{n} entries with the time eaten, from 6 AM to midnight.")} style={{ position: "relative", height: 34, borderRadius: 10, background: INK.soft }}>
+                {timed.map((e, i) => {
+                  const x = Math.min(100, (((localMinute(e.eatenAt as string) - 360 + 1440) % 1440) / 1080) * 100);
+                  return <span key={i} style={{ position: "absolute", top: 11, insetInlineStart: `calc(${x.toFixed(1)}% - 6px)`, width: 12, height: 12, borderRadius: 999, background: lateAdded(e) ? "#C2453F" : "#8F68F6", opacity: 0.85 }} />;
+                })}
+              </div>
+              <div aria-hidden style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: INK.chF, marginTop: 4 }}>
+                <span>{hourLabel12(6)}</span>
+                <span>{hourLabel12(12)}</span>
+                <span>{hourLabel12(18)}</span>
+                <span>{hourLabel12(0)}</span>
+              </div>
+              {lateN > 0 && <ExtrasInsightWeb>{tn(timed.length, "{late} of {n} entry was added a day or more after it was eaten (red).", "{late} of {n} entries was added a day or more after it was eaten (red).", { late: lateN })}</ExtrasInsightWeb>}
+            </div>
+          ) : (
+            <ExtrasInsightWeb>{t("Early data. The meal timing clock needs 3 days logged with the time eaten; {n} so far.", { n: clock.days })}</ExtrasInsightWeb>
+          )}
+        </ExtrasCardWeb>
+        <ExtrasCardWeb group={{ icon: ListOrdered, title: t("Top foods per macro"), line: topsLine }}>
+          {foods.length ? <ExtrasRowsWeb rows={foods} /> : <ExtrasInsightWeb>{t("Nothing logged in this range.")}</ExtrasInsightWeb>}
+        </ExtrasCardWeb>
+      </ExtrasGridWeb>
+    );
+  }
 
   return (
     <>
