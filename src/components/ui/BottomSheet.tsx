@@ -112,6 +112,8 @@ interface BottomSheetProps {
   closeOnScrim?: boolean;
   /** Let a long title wrap (centred, balanced) instead of truncating; the header grows from its height (AN5 sheets, Larger text: AN5-017 O1). */
   titleWrap?: boolean;
+  /** Website viewport: from 1024px open as a centred 440 popup instead of the right side sheet (Addendum A WC-EX.7.4, the two-step redeem). */
+  webCentred?: boolean;
 }
 
 const EXIT_MS = 350;
@@ -247,6 +249,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
   swipeToClose,
   closeOnScrim = true,
   titleWrap,
+  webCentred,
   panelRef,
 }) => {
   const titleId = useId();
@@ -330,7 +333,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
   // nothing here changes.
   if (web) {
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-stretch justify-end" style={{ pointerEvents: leaving ? "none" : undefined }} aria-hidden={leaving || undefined}>
+      <div className={`fixed inset-0 z-50 flex ${webCentred ? "items-center justify-center" : "items-stretch justify-end"}`} style={{ pointerEvents: leaving ? "none" : undefined }} aria-hidden={leaving || undefined}>
         <style>{WEB_SHEET_CSS}</style>
         <div
           className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
@@ -340,8 +343,12 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
         <div
           {...dialogProps}
           data-web-sheet
-          className={`web-sheet relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "web-sheet-leaving" : ""}`}
-          style={webSheetPanelStyle(hideHeader ? "rgb(var(--c-cream))" : band, hideHeader ? null : `${borderWidth}px solid ${border}`)}
+          className={webCentred ? `relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "" : "animate-fade-in"}` : `web-sheet relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "web-sheet-leaving" : ""}`}
+          style={
+            webCentred
+              ? { width: 440, maxWidth: "calc(100vw - 48px)", maxHeight: "calc(100dvh - 48px)", background: hideHeader ? "rgb(var(--c-cream))" : band, borderRadius: 32, border: hideHeader ? undefined : `${borderWidth}px solid ${border}` }
+              : webSheetPanelStyle(hideHeader ? "rgb(var(--c-cream))" : band, hideHeader ? null : `${borderWidth}px solid ${border}`)
+          }
         >
           {!hideHeader && (
             <div className="shrink-0 flex items-center justify-between" style={{ height: headerHeight, paddingInlineStart: 18, paddingInlineEnd: 18 }}>

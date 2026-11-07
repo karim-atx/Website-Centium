@@ -36,8 +36,10 @@ import { mailtoHref, telHref } from "../../../utils/safeHref";
  * (their profile isn't readable by staff). A pending invitation shows its
  * Accept / Decline card instead.
  */
-export default function BusinessDetail() {
-  const { id = "" } = useParams();
+/** `id`: Website viewport (WP-MO.1), the detail shown beside the list on web; on mobile it comes from the route. */
+export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
+  const params = useParams();
+  const id = idProp ?? params.id ?? "";
   const navigate = useNavigate();
   const back = useBack("/app/more/businesses");
   const access = useConsoleAccess();
@@ -52,7 +54,7 @@ export default function BusinessDetail() {
   const e = data?.employments.find((x) => x.businessId === id) ?? null;
   const ownSeat = access.seats.find((s) => s.businessId === id && s.isOwner) ?? null;
   const name = e?.businessName ?? ownSeat?.businessName ?? data?.facts[id]?.name ?? "";
-  if (data && !e && !ownSeat && access.ready) return <Navigate to="/app/more/businesses" replace />;
+  if (data && !e && !ownSeat && access.ready) return idProp ? null : <Navigate to="/app/more/businesses" replace />;
 
   const facts = data?.facts[id];
   const today = todayLocal();

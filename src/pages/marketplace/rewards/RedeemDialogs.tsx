@@ -90,6 +90,7 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
 
   return (
     <BottomSheet
+      webCentred
       open={open}
       onClose={() => !busy && onClose()}
       title={step === 1 ? t("Redeem this offer") : t("Confirm redemption")}

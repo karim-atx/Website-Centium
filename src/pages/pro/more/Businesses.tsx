@@ -8,6 +8,8 @@ import { ListSkeleton, OfflineLine, ProError } from "../../../components/pro/sta
 import { INK } from "../../../components/pro/proInk";
 import { BizCard, DeclinePopup, InvitationCard, JoinById, PageHead } from "../../../components/pro/businesses/BusinessParts";
 import { useBusinesses } from "../../../components/pro/businesses/useBusinesses";
+import { useIsWeb, useWebLayout } from "../../../components/web/useWebLayout";
+import BusinessDetail from "./BusinessDetail";
 import { useApp } from "../../../context/AppContext";
 import { useBack } from "../../../hooks/useBack";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
@@ -47,6 +49,10 @@ export default function Businesses() {
   const [decline, setDecline] = useState<MyEmployment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [refused, setRefused] = useState<Record<string, AcceptRefusalKind>>({});
+  // Website viewport (WP-MO.1): the list 5 | the open business 7 (4 | 4 on the rail); a card opens beside the list.
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
+  const [picked, setPicked] = useState<string | null>(null);
 
   if (user.accountType !== "professional") return null;
 
@@ -136,7 +142,7 @@ export default function Businesses() {
         }
   );
 
-  return (
+  const listNode = (
     <div data-pro-businesses="">
       <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />
       {offline && <OfflineLine />}
@@ -166,7 +172,7 @@ export default function Businesses() {
           <section aria-label={tx("Connected", "businesses")}>
             <SectionHead label={tx("Connected", "businesses")} />
             {[...owned, ...teams].map((e) => (
-              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => navigate(`/app/more/businesses/${e.businessId}`)} />
+              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => (web ? setPicked(e.businessId) : navigate(`/app/more/businesses/${e.businessId}`))} />
             ))}
             {owned.length + teams.length === 0 && (
               <div style={{ marginBottom: 12 }}>
@@ -193,4 +199,22 @@ export default function Businesses() {
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </div>
   );
+
+  if (web) {
+    const all = data ? [...data.employments] : [];
+    const sel = picked ?? all.find((x) => x.acceptedAt)?.businessId ?? all[0]?.businessId ?? null;
+    return (
+      <div style={{ maxWidth: 1600, boxSizing: "border-box", padding: rail ? 24 : 32 }}>
+        <div className="grid" style={{ gridTemplateColumns: rail ? "repeat(2,minmax(0,1fr))" : "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
+          <div className="min-w-0">{listNode}</div>
+          {sel && (
+            <section aria-label={t("Business")} className="min-w-0" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: 24 }}>
+              <BusinessDetail key={sel} id={sel} />
+            </section>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return listNode;
 }

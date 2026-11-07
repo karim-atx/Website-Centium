@@ -10,6 +10,7 @@ import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { marketPalette } from "../../theme/marketTokens";
 import { FOCUS_CSS, usePress } from "../../components/market/usePress";
 import { t, tk } from "../../i18n/core";
+import { useIsWeb } from "../../components/web/useWebLayout";
 
 // Market + Share 3.0 · W2 · the purchase / booking sheet (C-MO.4.2.2
 // `memberSheet`, C-MO.4.3.2 `classSheet`; HANDOVER §4 "Purchase / booking
@@ -257,6 +258,8 @@ export const BookingDone: React.FC<BookingDoneProps> = ({ open, title, body, row
   const navigate = useNavigate();
   const titleRef = useRef<HTMLHeadingElement>(null);
   const press = usePress();
+  // Website viewport (WC-EX.8): from 1024px the confirmation is a centred 440 popup over a scrim, not a full screen.
+  const web = useIsWeb();
   useBackCloses(open, onDone);
   useEffect(() => {
     if (!open) return;
@@ -272,12 +275,13 @@ export const BookingDone: React.FC<BookingDoneProps> = ({ open, title, body, row
       aria-modal="true"
       aria-labelledby="booking-done-title"
       className="fixed inset-0 overflow-y-auto"
-      style={{ zIndex: 70, background: m.page, color: m.ink, lineHeight: "normal" }}
+      style={web ? { zIndex: 70, background: "rgba(36,31,27,0.4)", color: m.ink, lineHeight: "normal", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 } : { zIndex: 70, background: m.page, color: m.ink, lineHeight: "normal" }}
+      onClick={web ? (e) => e.target === e.currentTarget && onDone() : undefined}
     >
       <style>{FOCUS_CSS}</style>
       <div
         className="mx-auto"
-        style={{ maxWidth: 430, minHeight: "100dvh", boxSizing: "border-box", padding: "max(47px, env(safe-area-inset-top)) 24px max(34px, calc(env(safe-area-inset-bottom) + 20px))", display: "flex", flexDirection: "column" }}
+        style={web ? { width: 440, maxWidth: "100%", boxSizing: "border-box", background: m.page, borderRadius: 24, padding: "32px 28px 28px", display: "flex", flexDirection: "column", gap: 24, boxShadow: "0 18px 50px rgba(36,31,27,0.18)" } : { maxWidth: 430, minHeight: "100dvh", boxSizing: "border-box", padding: "max(47px, env(safe-area-inset-top)) 24px max(34px, calc(env(safe-area-inset-bottom) + 20px))", display: "flex", flexDirection: "column" }}
       >
         <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 10 }}>
           <CentiumLockup width={104} />
