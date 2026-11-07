@@ -40,6 +40,8 @@ import {
 import { startThread } from "../../../services/messaging";
 import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { time12 } from "../../../utils/time12";
+import { useIsWeb } from "../../web/useWebLayout";
+import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
 import { t, tx } from "../../../i18n/core";
 
 const offline = () => t("You're offline. Try again when you're connected.");
@@ -78,6 +80,7 @@ export const CareNetworkScreen: React.FC = () => {
   const navigate = useNavigate();
   const back = useBack(PRO_ROUTES.more);
   const dark = useIsDark();
+  const web = useIsWeb();
   const [tab, setTab] = useState<Tab>("received");
   const [refs, setRefs] = useState<{ received: Referral[]; sent: Referral[] } | null>(null);
   const [links, setLinks] = useState<CareLink[] | null>(null);
@@ -210,14 +213,14 @@ export const CareNetworkScreen: React.FC = () => {
   const outgoing = network.filter((l) => l.status === "pending" && l.mine);
   const linked = network.filter((l) => l.status === "accepted");
 
-  const body = () => {
+  const body = (which: Tab = tab) => {
     if (state === "loading" && !refs) return <ListSkeleton rows={2} row={CardRow} />;
     if (!refs || !links) return <ProError onRetry={reload} />;
-    if (tab === "received") {
+    if (which === "received") {
       const list = refs.received.filter((x) => x.status !== "withdrawn");
       return list.length ? list.map(receivedCard) : <EmptyState icon={Users} title={t("No referrals yet")} line={t("When a colleague refers a client to you and the client agrees, it shows here.")} />;
     }
-    if (tab === "sent") {
+    if (which === "sent") {
       return refs.sent.length ? (
         <ListCard
           rows={refs.sent.map((x) => {
@@ -299,9 +302,53 @@ export const CareNetworkScreen: React.FC = () => {
     );
   };
 
+  // WP-CO-CN (WP-CO Care Network Web v2): the three lists side by side, Received 5 · Sent 4 · Network 3, each
+  // under its caps head; Refer a client is the header's primary button. Mobile keeps the tabs and the pinned CTA.
+  const webHead = (label: string) => (
+    <h2 style={{ margin: "0 0 12px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+  );
+  const page = web ? (
+    <div>
+      <ProPageHeaderWeb
+        title={t("Care network")}
+        actions={
+        <button
+          type="button"
+          onClick={() => setRefer(true)}
+          className="flex items-center shrink-0 hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+          style={{ height: 44, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+        >
+          <Send size={18} strokeWidth={2} aria-hidden />
+          {t("Refer a client")}
+        </button>
+        }
+      />
+      <ProPageBodyWeb>
+      {state === "offline" && refs && <OfflineLine />}
+      {err && <ErrorLine>{err}</ErrorLine>}
+      <div className="grid items-start" style={{ gridTemplateColumns: "minmax(0,5fr) minmax(0,4fr) minmax(0,3fr)", gap: 24 }}>
+        <section className="min-w-0" aria-label={tx("Received", "referrals tab")}>
+          {webHead(tx("Received", "referrals tab"))}
+          {body("received")}
+        </section>
+        <section className="min-w-0" aria-label={t("Sent")}>
+          {webHead(t("Sent"))}
+          {body("sent")}
+        </section>
+        <section className="min-w-0" aria-label={t("Network")}>
+          {webHead(t("Network"))}
+          {body("network")}
+        </section>
+      </div>
+      </ProPageBodyWeb>
+    </div>
+  ) : null;
+
   return (
-    <div style={{ paddingBottom: 172 }}>
-      <PageHeader title={t("Care network")} subtitle={t("Referrals between you and colleagues")} showBack onBack={back} />
+    <div style={{ paddingBottom: web ? 0 : 172 }}>
+      {page}
+      {!web && <PageHeader title={t("Care network")} subtitle={t("Referrals between you and colleagues")} showBack onBack={back} />}
+      {!web && (
       <div style={{ marginTop: -8 }}>
         <SegmentedTabs
           className="mb-[14px]"
@@ -319,7 +366,8 @@ export const CareNetworkScreen: React.FC = () => {
         {err && <ErrorLine>{err}</ErrorLine>}
         {body()}
       </div>
-      <PinnedCta primary={{ label: t("Refer a client"), icon: <Send size={15} />, onClick: () => setRefer(true) }} />
+      )}
+      {!web && <PinnedCta primary={{ label: t("Refer a client"), icon: <Send size={15} />, onClick: () => setRefer(true) }} />}
 
       <DeclineReferralPopup
         key={decline?.id ?? "none"}

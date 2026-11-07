@@ -15,6 +15,8 @@ import { BackTitle } from "./BackTitle";
 import { pickAchievements, streakNow } from "./howToEarnModel";
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn } from "../../i18n/core";
+import { ExploreWebPage } from "./ExploreWebPage";
+import { useWebLayout } from "../../components/web/useWebLayout";
 
 // Market + Share 3.0 · W2 · How to earn (C-MO.4.8 `earn`; Client Explore
 // Screens lines 635–677, script `daily`, `streaks`, `achievements`,
@@ -58,6 +60,7 @@ import { t, tk, tn } from "../../i18n/core";
 
 export default function HowToEarnPage() {
   const dark = useIsDark();
+  const { web } = useWebLayout();
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const { pointsSummary, pointTiers, achievements, streaks, refreshAchievements } = useApp();
@@ -109,10 +112,10 @@ export default function HowToEarnPage() {
   const picked = useMemo(() => (shownAchievements ? pickAchievements(shownAchievements) : null), [shownAchievements]);
   const earnedCount = shownAchievements ? shownAchievements.filter((a) => a.earnedAt).length : 0;
 
-  return (
-    <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
+  const page = (
+    <div className={web ? "wcex-earn" : undefined} style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackTitle title={t("How to earn")} parent="/app/marketplace" />
+      {!web && <BackTitle title={t("How to earn")} parent="/app/marketplace" />}
 
       <Section title={t("Daily logging")} aside={pointsSummary?.extras ? todayLine(pointsSummary.extras) : null} tier={tier} first bodyPadding="4px 14px 12px">
         {DAILY_RULES.map(([source, label]) => {
@@ -238,6 +241,14 @@ export default function HowToEarnPage() {
         {t("Points have no cash value.")}
       </p>
     </div>
+  );
+  // WC-EX.6 (WC-EX Points Web): the four cards in a 2-column grid, open by default; the expiry note under them.
+  return web ? (
+    <ExploreWebPage title={t("How to earn")} back="/app/marketplace" css=".wcex-earn{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;align-items:start}.wcex-earn>section{margin-top:0!important}.wcex-earn>p{grid-column:1/-1}">
+      {page}
+    </ExploreWebPage>
+  ) : (
+    page
   );
 }
 

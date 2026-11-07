@@ -14,6 +14,8 @@ import { BackTitle } from "./BackTitle";
 import { DoubledChip, DoublePointsLine } from "../../components/premium/PointsPerks";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
+import { ExploreWebPage } from "./ExploreWebPage";
+import { useWebLayout } from "../../components/web/useWebLayout";
 
 // Market + Share 3.0 · W2 · Points history (C-MO.4.7 `history`,
 // `historyReversal`, `historyEmpty`; Client Explore Screens lines 598–633,
@@ -45,6 +47,7 @@ const PAGE = 50;
 
 export default function PointsHistoryPage() {
   const dark = useIsDark();
+  const { web, rail } = useWebLayout();
   const m = marketPalette(dark);
   const { pointsSummary, pointTiers, achievements, refreshAchievements } = useApp();
   // Round D R7: streak rungs read as a neutral "Logging bonus" in recovery-sensitive mode.
@@ -95,10 +98,10 @@ export default function PointsHistoryPage() {
   const earnedInk = dark ? liftInk("#4F8F8A") : "#4F8F8A";
   const spentInk = dark ? m.accent : "#7D67D9";
 
-  return (
-    <div style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
+  const page = (
+    <div className={web ? "wcex-ph" : undefined} style={{ paddingBottom: 32, color: m.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      <BackTitle title={t("Points history")} parent="/app/marketplace" />
+      {!web && <BackTitle title={t("Points history")} parent="/app/marketplace" />}
 
       {pointsSummary ? (
         <>
@@ -165,6 +168,18 @@ export default function PointsHistoryPage() {
         </div>
       )}
     </div>
+  );
+  // WC-EX.5 (WC-EX Points Web): the balance card and its breakdown 4 (2 of 5 on the rail) beside the ledger 8 (3).
+  return web ? (
+    <ExploreWebPage
+      title={t("Points history")}
+      back="/app/marketplace"
+      css={`.wcex-ph{display:grid;grid-template-columns:${rail ? "2fr 3fr" : "4fr 8fr"};column-gap:24px;align-items:start;align-content:start}.wcex-ph>*{grid-column:1}.wcex-ph>:last-child{grid-column:2;grid-row:1 / span 8;margin-top:12px!important}`}
+    >
+      {page}
+    </ExploreWebPage>
+  ) : (
+    page
   );
 }
 

@@ -28,6 +28,7 @@ import { formatShortDate } from "../../utils/date";
 import { useImpression } from "../../services/marketplace/listingEvents";
 import { exploreSource, isLivePassState, viewerSpotsLeft, type ListingEvent } from "../../services/marketplace/listingLogic";
 import { ClassFilterPopup } from "./ClassFilterPopup";
+import { useIsWide, useWebLayout } from "../../components/web/useWebLayout";
 import { classCountLine, classFilterGroups, gymFilterGroups, stripDays } from "./classFilterModel";
 import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
 import RewardsTab from "./rewards/RewardsTab";
@@ -82,7 +83,11 @@ const PIN_SPACER = 9.9;
 const dayKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const atNoon = (key: string) => new Date(`${key}T12:00:00`);
 
-export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned: boolean) => void } = {}) {
+/**
+ * `web` (Addendum A, WC-EX Explore Web v4): the search 5 (4 on the rail) beside the tabs 7 (4), the tabs across on
+ * Rewards; the gym and class cards in a grid, 3 per row (2 on the rail, 4 at 1920), 16 apart. No pinned group.
+ */
+export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pinned: boolean) => void; web?: boolean } = {}) {
   const { authUserId, profileReady } = useApp();
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -207,6 +212,9 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
 
   // ---- S2: the two-step pin (unchanged mechanics): a sentinel before the
   // group, the header's published bottom, the Larger text 40% rule.
+  const { rail } = useWebLayout();
+  const wide = useIsWide();
+  const webGrid: React.CSSProperties = { display: "grid", gridTemplateColumns: `repeat(${rail ? 2 : wide ? 4 : 3},minmax(0,1fr))`, gap: 16, alignItems: "start" };
   const groupRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const [pinned, setPinned] = useState(false);
@@ -266,7 +274,27 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
   return (
     <div className="mb-6" style={{ lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
-      {tab !== "rewards" && (
+      {web && (
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, columnGap: 24, rowGap: 16 }}>
+          {tab !== "rewards" && (
+            <label className="min-w-0 flex items-center" style={{ gridColumn: `span ${rail ? 4 : 5}`, height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", padding: "0 14px", gap: 8 }}>
+              <Search size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("Search classes, places or a location")}
+                aria-label={t("Search classes, places or a location")}
+                className="flex-1 min-w-0 bg-transparent focus:outline-none"
+                style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B", border: 0 }}
+              />
+            </label>
+          )}
+          <div className="min-w-0" style={{ gridColumn: tab === "rewards" ? "1 / -1" : `span ${rail ? 4 : 7}` }}>
+            <SegmentedTabs items={TABS.map((x) => ({ ...x, label: t(x.label) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} labelSize={15} tabHeight={32} trackStyle={{ height: 40, boxSizing: "border-box", padding: 4, gap: 4, borderRadius: 14 }} tabRadius={10} />
+          </div>
+        </div>
+      )}
+      {!web && tab !== "rewards" && (
         <div className="relative" style={{ marginTop: 14 }}>
           <Search size={16} strokeWidth={1.75} className="absolute start-3.5 top-1/2 -translate-y-1/2" style={{ color: m.faint }} aria-hidden />
           <input
@@ -280,7 +308,8 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
         </div>
       )}
 
-      <div ref={sentinelRef} aria-hidden style={{ height: 1, marginBottom: -1, marginTop: tab === "rewards" ? 14 - PIN_SPACER : 10 - PIN_SPACER }} />
+      {!web && <div ref={sentinelRef} aria-hidden style={{ height: 1, marginBottom: -1, marginTop: tab === "rewards" ? 14 - PIN_SPACER : 10 - PIN_SPACER }} />}
+      {!web && (
       <div
         ref={groupRef}
         data-pin-group=""
@@ -298,6 +327,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           />
         </div>
       </div>
+      )}
 
       {error && <RetryLine className="mt-2.5" message={error} onRetry={retry} />}
 
@@ -315,7 +345,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
           ) : (
             <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>{t("Sorted by rating and distance")}</p>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
+          <div style={web ? { ...webGrid, marginTop: 12 } : { display: "flex", flexDirection: "column", gap: 10, marginTop: 10 }}>
             {shownGyms.map((v) => (
               <GymCard
                 key={v.id}
@@ -342,7 +372,7 @@ export default function Discover({ onPinnedChange }: { onPinnedChange?: (pinned:
         <>
           {!q && <DayStrip days={days} chosen={chosenDay} withClasses={classDays} onPick={setDay} />}
           <ClassFilterPopup countLine={classCountLine(dayLabel, shownClasses.length)} groups={groups} filter={filter} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
+          <div style={web ? { ...webGrid, marginTop: 14 } : { display: "flex", flexDirection: "column", gap: 16, marginTop: 14 }}>
             {shownClasses.map((c) => (
               <Seen key={c.classId} event={{ businessId: c.businessId, kind: "impression", source: exploreSource({ query, featured: c.isFeatured }), itemId: c.classId }}>
                 <ClassCard c={forViewer(c)} booked={booked.has(c.classId)} onOpen={openClass} />

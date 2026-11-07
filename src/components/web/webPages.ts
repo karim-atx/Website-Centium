@@ -32,6 +32,9 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/health\/checks\/?$/, // WC-HE.8 Your health checks (general plan; the other plans in a centred column)
   /^\/app\/messages\/?$/, // WC-MO.4 Messages (list and chat)
   /^\/app\/calendar\/?$/, // WC-MO.3 Calendar (month and day list)
+  /^\/app\/marketplace\/?$/, // WC-EX Discover and WC-EX.7 Rewards (the hero beside the tiles, card grids 3 / 2 / 4)
+  /^\/app\/marketplace\/rewards\/mine\/?$/, // WC-EX.4 My rewards (voucher grid 3 / 2 / 4)
+  /^\/app\/marketplace\/points\/(history|earn)\/?$/, // WC-EX.5 Points history (4 + 8) and WC-EX.6 How to earn (2 columns)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY, · CS and · ST Dashboards
@@ -61,6 +64,7 @@ export const PRO_PAGES: RegExp[] = [
   /^\/app\/pro\/meal-plans(\/(plans|journals|recipes|targets))?\/?$/, // WP-NU-MP.1 Plans home (the other areas: the centred column inside the page)
   /^\/app\/pro\/insights(\/(activity|nutrition|vitals|biomarkers))?\/?$/, // WP-CO-IN.1-.4 Insights
   /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
+  /^\/app\/more\/care-network\/?$/, // WP-CO-CN Care network (Received 5 · Sent 4 · Network 3)
   /^\/app\/pro\/clients\/[^/]+(\/(overview|plan|progress|sessions|notes|files|care-plan|health-records|trends|appointments))?\/?$/, // WP-CL.1 / · NU / WP-CO-CL.1 client and patient page (Client insights keeps its column)
 ];
 

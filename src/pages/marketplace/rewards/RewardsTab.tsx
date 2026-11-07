@@ -30,6 +30,7 @@ import { exploreSource, type ListingEvent } from "../../../services/marketplace/
 import { typeLabel } from "../venueTypes";
 import { businessesForCategory } from "./rewardsModel";
 import { CapsLabel, OwnerTile, RowChevron } from "./rewardsParts";
+import { useIsWide, useWebLayout } from "../../../components/web/useWebLayout";
 import { t, tk } from "../../../i18n/core";
 
 /** REWARD_CATEGORIES' and REWARD_SORTS' English names, translated where shown. */
@@ -326,6 +327,9 @@ const OffersList: React.FC<{
   onRetry: () => void;
   onOpen: (o: CatalogOffer) => void;
 }> = ({ state, adult, sort, affordable, balance, onRetry, onOpen }) => {
+  // WC-EX.7 Rewards (WC-EX Rewards Web): the offer grid, 3 per row at 1440, 2 on the rail, 4 at 1920.
+  const { web, rail } = useWebLayout();
+  const wide = useIsWide();
   if (state.state === "loading") return <MarketSkeleton radius={18} count={3} rows={2} label={tk("Loading rewards")} />;
   const r = state.result;
   if (!r.ok) {
@@ -337,7 +341,7 @@ const OffersList: React.FC<{
   const shown = arrangeOffers(list, sort, affordable, balance);
   if (shown.length === 0) return <MarketEmptyCard title={tk("Nothing you can redeem yet")} body={tk("Turn off Affordable now to see every reward and how many points each needs.")} />;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={web ? { display: "grid", gridTemplateColumns: `repeat(${rail ? 2 : wide ? 4 : 3},minmax(0,1fr))`, gap: 16, alignItems: "start" } : { display: "flex", flexDirection: "column", gap: 10 }}>
       {shown.map((o) => (
         <OfferCard
           key={o.offerId}
