@@ -346,7 +346,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
           className={webCentred ? `relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "" : "animate-fade-in"}` : `web-sheet relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "web-sheet-leaving" : ""}`}
           style={
             webCentred
-              ? { width: 440, maxWidth: "calc(100vw - 48px)", maxHeight: "calc(100dvh - 48px)", background: hideHeader ? "rgb(var(--c-cream))" : band, borderRadius: 32, border: hideHeader ? undefined : `${borderWidth}px solid ${border}` }
+              ? { width: 440, maxWidth: "calc(100vw - 48px)", maxHeight: "calc(100dvh - 48px)", background: hideHeader ? body : band, borderRadius: hideHeader ? 24 : 32, border: hideHeader ? undefined : `${borderWidth}px solid ${border}`, boxShadow: hideHeader ? "0 24px 60px rgba(36,31,27,0.2)" : undefined }
               : webSheetPanelStyle(hideHeader ? "rgb(var(--c-cream))" : band, hideHeader ? null : `${borderWidth}px solid ${border}`)
           }
         >
