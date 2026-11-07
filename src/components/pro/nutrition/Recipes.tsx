@@ -99,7 +99,7 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
     const shown = detail ? recipes.find((r) => r.id === detail) ?? null : null;
     if (shown)
       return (
-        <WebRecipesPage query={query} onQuery={setQuery} sortOn={sort !== "newest"} onSort={(el) => setSortAnchor(sortAnchor ? null : el)} onNew={() => setCreating(true)} tabs={webTabs}>
+        <WebRecipesPage detail query={query} onQuery={setQuery} sortOn={sort !== "newest"} onSort={(el) => setSortAnchor(sortAnchor ? null : el)} onNew={() => setCreating(true)} tabs={webTabs}>
           <RecipeDetailWeb recipe={shown} onBack={() => setDetail(null)} onEdit={() => setEditing(true)} />
           {sheets}
         </WebRecipesPage>
@@ -211,8 +211,10 @@ const WebRecipesPage: React.FC<{
   onSort: (el: HTMLElement) => void;
   onNew: () => void;
   tabs: React.ReactNode;
+  /** A recipe is open: the header holds the title alone (WP-NU-MP.3.1, hasSearch off). */
+  detail?: boolean;
   children: React.ReactNode;
-}> = ({ query, onQuery, sortOn, onSort, onNew, tabs, children }) => {
+}> = ({ query, onQuery, sortOn, onSort, onNew, tabs, detail, children }) => {
   const { rail } = useWebLayout();
   const m = rail ? 24 : 32;
   const ring = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
@@ -222,6 +224,8 @@ const WebRecipesPage: React.FC<{
         <h1 className="flex-1 min-w-0 truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>
           {t("Meal plans")}
         </h1>
+        {!detail && (
+        <>
         <label className="flex items-center shrink-0" style={{ width: rail ? 260 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 14px", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
           <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
           <input type="search" value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t("Search recipes")} aria-label={t("Search recipes")} className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]" style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }} />
@@ -233,6 +237,8 @@ const WebRecipesPage: React.FC<{
           <Plus size={20} strokeWidth={2} aria-hidden />
           {t("New recipe")}
         </button>
+        </>
+        )}
       </header>
       <div style={{ maxWidth: WEB_READING_MAX, margin: "0 auto", boxSizing: "border-box", padding: `32px ${m}px` }}>
         <div style={{ marginBottom: 16 }}>{tabs}</div>

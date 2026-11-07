@@ -59,8 +59,9 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
   const qty = (i: PrepItem) => `${i.quantity} ${i.unit ?? t("serving")}`;
 
   return (
-    <div className="grid" style={{ gridTemplateColumns: "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
-      <section aria-label={t("Recipe")} className="flex flex-col min-w-0" style={{ boxSizing: "border-box", gap: 16, borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", padding: 20 }}>
+    // The left card fills the page height (the 64 header, 32 + 32 padding and the 56 tabs row), its photo taking what is left (min 120), as drawn.
+    <div className="grid" style={{ gridTemplateColumns: "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start", minHeight: "calc(100dvh - 184px)" }}>
+      <section aria-label={t("Recipe")} className="flex flex-col min-w-0" style={{ alignSelf: "stretch", boxSizing: "border-box", gap: 16, borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", padding: 20 }}>
         <div className="flex items-center" style={{ gap: 12 }}>
           <button
             type="button"
@@ -73,7 +74,7 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
           </button>
           <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C8378" }}>{t("Recipe")}</span>
         </div>
-        <span className="flex items-center justify-center" style={{ minHeight: 160, borderRadius: 16, background: "#F5F5F6" }}>
+        <span className="flex items-center justify-center" style={{ flex: 1, minHeight: 120, borderRadius: 16, background: "#F5F5F6" }}>
           <ChefHat size={48} strokeWidth={1.5} aria-hidden style={{ color: "#7D6BB5" }} />
         </span>
         <div>

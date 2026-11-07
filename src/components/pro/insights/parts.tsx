@@ -286,6 +286,8 @@ export const NotShared: React.FC<{ icon: LucideIcon; title: string; line: string
 
 export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clientId: string; firstName: string; onSent: (message: string) => void }> = ({ open, onClose, clientId, firstName, onSent }) => {
   const [kind, setKind] = useState<"share" | "new">("share");
+  // Website viewport (WP-CO-IN.9, Insights Extras askSeg): the open tab is white on the #F3F3FD track.
+  const web = useIsWeb();
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -319,8 +321,9 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
         ]}
         activeKey={kind}
         onChange={(k) => setKind(k as "share" | "new")}
-        tabHeight={36}
-        labelSize={12}
+        tabHeight={web ? 32 : 36}
+        labelSize={web ? 15 : 12}
+        {...(web ? { light: { activeFill: "#FFFFFF", activeInk: "#5F5093", idleFill: "transparent", idleInk: "#5B5349" }, trackStyle: { background: "#F3F3FD", padding: 4, gap: 4, borderRadius: 12 } } : {})}
       />
       {kind === "new" ? (
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>{t("Booking new blood tests isn't in Centium yet. You can ask {firstName} to share a past test.", { firstName })}</p>
