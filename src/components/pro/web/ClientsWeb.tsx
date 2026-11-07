@@ -14,10 +14,13 @@ import { t } from "../../../i18n/core";
 // keeps its 1440 width (section 2.1). Mobile keeps its own page.
 
 /** The page body: 32 (24 on the rail) padding, the two columns 24 apart. */
-export const ClientsSplit: React.FC<{ list: React.ReactNode; detail: React.ReactNode }> = ({ list, detail }) => {
+/** `head` (the 64 page header) sits above the padded area; `tabs` (the status tabs) spans the list and the preview. */
+export const ClientsSplit: React.FC<{ list: React.ReactNode; detail: React.ReactNode; head?: React.ReactNode; tabs?: React.ReactNode }> = ({ list, detail, head, tabs }) => {
   const { rail } = useWebLayout();
   const margin = rail ? 24 : 32;
   return (
+    <>
+    {head}
     <div
       data-pro-web="clients"
       style={{
@@ -31,11 +34,13 @@ export const ClientsSplit: React.FC<{ list: React.ReactNode; detail: React.React
         alignItems: "start",
       }}
     >
+      {tabs && <div style={{ gridColumn: "1 / -1", minWidth: 0 }}>{tabs}</div>}
       <section aria-label={t("Client list")} style={{ minWidth: 0 }}>
         {list}
       </section>
       {detail}
     </div>
+    </>
   );
 };
 

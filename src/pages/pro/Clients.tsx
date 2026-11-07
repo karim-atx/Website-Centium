@@ -19,7 +19,7 @@ import { AddClientFlows } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
 import { SentInvitesSection } from "../../components/pro/addclient/SentInvitesSection";
 import { CtaButton } from "../../components/ui/PinnedCta";
-import { useIsWeb } from "../../components/web/useWebLayout";
+import { useIsWeb, useWebLayout } from "../../components/web/useWebLayout";
 import { ClientDetailPanel, ClientsEmptyWeb, ClientsSplit } from "../../components/pro/web/ClientsWeb";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Toast } from "../../components/ui/Toast";
@@ -142,6 +142,7 @@ export default function Clients() {
   // detail pane beside the list (the first one by default) instead of opening
   // the client page; the pane's Open does that. Mobile is unchanged.
   const web = useIsWeb();
+  const webRail = useWebLayout().rail;
   const [webSel, setWebSel] = useState<string | null>(null);
 
   const today = localIso(new Date());
@@ -486,12 +487,69 @@ export default function Clients() {
     </>
   );
 
+  // Website viewport (WP-CL, WP-CL Clients Web v2): the 64 page header (the title 28/36, search 360 / 280 on the
+  // rail, Add client and Filter 40 r12), then the status tabs across the page (36, r10, 15/24 600 with the count
+  // 13/800; 8 apart; equal at 1440, scrolling on the rail), above the list and the preview.
+  const webHead = web ? (
+    <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 12, padding: `0 ${webRail ? 24 : 32}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+      <h1 className="flex-1 min-w-0 truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>
+        {patients ? t("Patients") : t("Clients")}
+      </h1>
+      <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: webRail ? 280 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 4px 0 14px", borderRadius: 12, background: "#F5F5F6", border: `1px solid ${query ? INK.pr : "rgba(36,31,27,0.10)"}` }}>
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={patients ? t("Search patients") : t("Search clients")}
+          aria-label={patients ? t("Search patients") : t("Search clients")}
+          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]"
+          style={{ fontSize: 15, lineHeight: "24px", color: INK.ch }}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")} aria-label={t("Clear search")} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
+            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />
+          </button>
+        )}
+      </label>
+      <button type="button" onClick={() => setAddOpen(true)} aria-label={patients ? t("Add patient") : t("Add client")} className="flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
+        <UserPlus size={20} strokeWidth={1.75} aria-hidden style={{ color: "#5B5349" }} />
+      </button>
+      {!empty && (
+        <button type="button" onClick={() => setPanelOpen((v) => !v)} aria-label={t("Filter")} aria-pressed={panelOpen || filtering} className="relative flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: panelOpen || filtering ? "#F0EDF9" : "#F5F5F6", border: `1px solid ${panelOpen || filtering ? "#AEA1DC" : "rgba(36,31,27,0.10)"}` }}>
+          <SlidersHorizontal size={20} strokeWidth={1.75} aria-hidden style={{ color: "#5B5349" }} />
+        </button>
+      )}
+    </header>
+  ) : null;
+  const webTabs = web ? (
+    <div role="tablist" aria-label={t("Status")} className={webRail ? "flex no-scrollbar" : "flex"} style={{ gap: 8, marginBottom: 16, overflowX: webRail ? "auto" : undefined, overflowY: webRail ? "hidden" : undefined }}>
+      {STATUS_ORDER.map((key) => {
+        const on = status === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => setStatus(key)}
+            className="flex items-center justify-center whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#FFFFFF" : "#6D50D3" }}
+          >
+            {t(STATUS_LABEL[key])}
+            <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>{counts[key]}</span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
   if (!lane) return null;
 
   if (empty && web)
     return (
       <div>
-        {head}
+        {webHead}
         <ClientsEmptyWeb patients={patients} onAdd={() => setAddOpen(true)} />
         <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />
         <AddClientFlows
@@ -532,8 +590,8 @@ export default function Clients() {
 
   const page = (
     <div style={{ paddingBottom: selecting ? 96 : 0 }}>
-      {head}
-      <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />
+      {!web && head}
+      {!web && <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />}
       <ScrollRow label={t("Filters")}>
         {groups.map((g) => (
           <QuickFilter
@@ -814,6 +872,8 @@ export default function Clients() {
   if (web && webEntry)
     return (
       <ClientsSplit
+        head={webHead}
+        tabs={webTabs}
         list={page}
         detail={
           <ClientDetailPanel
