@@ -74,20 +74,23 @@ export function StatusTabs<K extends string>({ tabs, active, onChange, k }: { ta
   );
 }
 
-export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean }> = ({ label, on, onClick, k, expanded }) => (
+export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean; web?: boolean }> = ({ label, on, onClick, k, expanded, web }) => (
   <button
     type="button"
     aria-haspopup="menu"
     aria-expanded={expanded}
     onClick={(e) => onClick(e.currentTarget)}
-    className="tap relative inline-flex items-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']"
+    className={web ? "inline-flex min-w-0 items-center justify-center whitespace-nowrap hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" : "tap relative inline-flex items-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']"}
     style={{
       flex: "none",
       gap: 5,
-      height: Math.round(34 * k),
-      padding: "0 11px",
+      height: web ? 40 : Math.round(34 * k),
+      width: web ? "100%" : undefined,
+      padding: web ? "0 8px" : "0 11px",
+      boxSizing: "border-box",
       borderRadius: 10,
-      fontSize: textPx(12),
+      fontSize: web ? 15 : textPx(12),
+      lineHeight: web ? "20px" : undefined,
       fontWeight: on ? 700 : 600,
       background: on ? INK.fill : INK.card,
       color: on ? INK.onFill : INK.chS,
@@ -95,7 +98,7 @@ export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: H
     }}
   >
     {label}
-    <ChevronDown size={12} strokeWidth={2.2} aria-hidden style={{ color: on ? INK.onFill : INK.chF }} />
+    <ChevronDown size={web ? 16 : 12} strokeWidth={2.2} aria-hidden style={{ color: on ? INK.onFill : INK.chF }} />
   </button>
 );
 

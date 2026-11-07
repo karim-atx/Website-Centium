@@ -592,22 +592,31 @@ export default function Clients() {
     <div style={{ paddingBottom: selecting ? 96 : 0 }}>
       {!web && head}
       {!web && <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />}
-      <ScrollRow label={t("Filters")}>
-        {groups.map((g) => (
+      {(() => {
+        const chips = groups.map((g) => (
           <QuickFilter
             key={g.key}
             label={g.title}
             on={(filters[g.key] ?? []).length > 0}
             expanded={quick?.group === g.key}
             k={k}
+            web={web}
             onClick={(el) => setQuick((cur) => (cur?.group === g.key ? null : { group: g.key, el }))}
           />
-        ))}
-      </ScrollRow>
+        ));
+        // WP-CL Clients Web v2: the quick filters as a grid of 40 boxes, 4 across (2 on the rail), 8 apart.
+        return web ? (
+          <div role="group" aria-label={t("Filters")} style={{ display: "grid", gridTemplateColumns: `repeat(${webRail ? 2 : 4},minmax(0,1fr))`, gap: 8 }}>
+            {chips}
+          </div>
+        ) : (
+          <ScrollRow label={t("Filters")}>{chips}</ScrollRow>
+        );
+      })()}
 
       {stages.offline && <OfflineLine />}
 
-      <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 10, minHeight: 32 }}>
+      <div className="flex items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
         {selecting ? (
           <>
             <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{t("{n} selected", { n: picked.size })}</span>
@@ -629,16 +638,16 @@ export default function Clients() {
               aria-expanded={!!sortEl}
               onClick={(e) => setSortEl(e.currentTarget)}
               className="tap inline-flex items-center relative before:absolute before:-inset-3 before:content-['']"
-              style={{ gap: 4, fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}
+              style={web ? { gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5B5349", whiteSpace: "nowrap" } : { gap: 4, fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}
             >
-              <ArrowUpDown size={13} strokeWidth={2} aria-hidden />
+              <ArrowUpDown size={web ? 16 : 13} strokeWidth={2} aria-hidden />
               {t("Sort: {sort}", { sort: SORTS.find((s) => s.value === sort)?.label ?? "" })}
-              <ChevronDown size={12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+              <ChevronDown size={web ? 16 : 12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
-            <span className="flex items-center" style={{ gap: 12 }}>
-              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
+            <span className="flex items-center" style={{ gap: web ? 16 : 12 }}>
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
               {clients.length > 0 && (
-                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
+                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
               )}
             </span>
           </>
@@ -680,6 +689,7 @@ export default function Clients() {
                     line={t("Asked to work with you {ago}", { ago: agoLabel(e.req.requestedAt) ?? "" }).trim()}
                     ring={null}
                     lane={lane}
+                    web={web ? { open: false } : undefined}
                     onClick={() => setStatus("requests")}
                   />
                 )}
@@ -689,7 +699,6 @@ export default function Clients() {
                 role="listitem"
                 key={e.clientId}
                 aria-current={web && webEntry?.clientId === e.clientId ? "true" : undefined}
-                style={web && webEntry?.clientId === e.clientId ? { borderRadius: 20, background: "#F0EDF9", boxShadow: "0 0 0 1px #AEA1DC" } : undefined}
               >
                 <ClientRow
                   name={e.name}
@@ -701,6 +710,7 @@ export default function Clients() {
                   single={single}
                   selecting={selecting}
                   picked={picked.has(e.clientId)}
+                  web={web ? { open: webEntry?.clientId === e.clientId } : undefined}
                   onClick={() => {
                     if (!selecting) return web ? setWebSel(e.clientId) : navigate(proClientPath(e.clientId));
                     setPicked((p) => {

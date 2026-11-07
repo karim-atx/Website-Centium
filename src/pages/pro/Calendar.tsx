@@ -11,7 +11,7 @@ import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { YearScroll } from "../../components/calendar/YearScroll";
 import { useWebLayout } from "../../components/web/useWebLayout";
-import { CalendarBodyWeb, CalendarTopBarWeb, SplitWeb, WeekTimeGridWeb } from "../../components/pro/web/CalendarWeb";
+import { AgendaCardWeb, AgendaEmptyWeb, CalendarBodyWeb, CalendarTopBarWeb, EyebrowWeb, MonthCardWeb, MonthSplitWeb, PeriodCardWeb, RequestCardWeb, WeekEmptyWeb, WeekTimeGridWeb } from "../../components/pro/web/CalendarWeb";
 import { ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 import { dayBefore } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
@@ -762,7 +762,7 @@ export default function Calendar() {
     </>
   );
 
-  // Website viewport (WP-CA.1-.4): from 1024px the page header, the view tabs and the views laid out across the page.
+  // Website viewport (WP-CA.1-.4, WP-CA Calendar Web v4): from 1024px the page header, the view tabs across the page and the views in the page's height.
   if (web) {
     const changeView = (k: string) => {
       if (k === "year" && view === "year") {
@@ -773,26 +773,18 @@ export default function Calendar() {
       if (k === "month") setCursor({ year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) - 1 });
       setView(k as View);
     };
-    const period =
-      view === "month" ? (
-        <HeaderCard label={monthTitle(cursor.year, cursor.month)} onPrev={() => goMonth(-1)} onNext={() => goMonth(1)} prevLabel={t("Previous month")} nextLabel={t("Next month")} jump={jump.show ? jump.jump : null} />
-      ) : view === "week" ? (
-        <HeaderCard label={dateRange(weekDays[0], weekDays[6])} onPrev={() => setSelected(addDays(selected, -7))} onNext={() => setSelected(addDays(selected, 7))} prevLabel={t("Previous week")} nextLabel={t("Next week")} jump={jump.show ? jump.jump : null} />
-      ) : view === "day" ? (
-        <HeaderCard label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel={t("Previous day")} nextLabel={t("Next day")} jump={jump.show ? jump.jump : null} />
-      ) : null;
+    const jumpFn = jump.show ? jump.jump : null;
+    const agendaCard = (i: CalItem) => (i.kind === "class" ? <AgendaRow key={i.key} item={i} onOpen={openItem} notchBg="#FFFFFF" /> : <AgendaCardWeb key={i.key} item={i} onOpen={openItem} />);
     const agenda = (
       <>
-        <Eyebrow mt={0} mb={8}>{[longDay(selected), hoursLine(selected) ? t("Working {v}", { v: hoursLine(selected) ?? "" }) : hasHours || offToday ? t("Day off") : null].filter(Boolean).join(" · ")}</Eyebrow>
+        <EyebrowWeb>{[longDay(selected), hoursLine(selected) ? t("Working {v}", { v: hoursLine(selected) ?? "" }) : hasHours || offToday ? t("Day off") : null].filter(Boolean).join(" · ")}</EyebrowWeb>
         {!data.loaded ? (
           skeletonRows
         ) : dayItems.length === 0 ? (
-          <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No sessions")}</p>
+          <AgendaEmptyWeb newLabel={clinical ? t("New appointment") : t("New session")} onNew={() => setAddOpen({ date: selected < todayIso ? todayIso : selected })} />
         ) : (
-          <div className="flex flex-col" style={{ gap: 8 }}>
-            {dayItems.map((i) => (
-              <AgendaRow key={i.key} item={i} onOpen={openItem} />
-            ))}
+          <div className="flex min-h-0 flex-col overflow-y-auto" style={{ gap: 10, scrollbarWidth: "thin" }}>
+            {dayItems.map(agendaCard)}
           </div>
         )}
       </>
@@ -801,12 +793,13 @@ export default function Calendar() {
       <div>
         <CalendarTopBarWeb clinical={clinical} onAvailability={() => navigate(`${PRO_ROUTES.calendar}/availability`)} onNew={() => setAddOpen({ date: selected < todayIso ? todayIso : selected })} />
         <CalendarBodyWeb>
-          <div style={{ display: "grid", gridTemplateColumns: period ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,1fr)", columnGap: 24, alignItems: "start" }}>
-            <ClientTabsWeb label={t("Calendar view")} items={VIEWS.map((v) => ({ key: v, label: t(VIEW_LABEL[v]) }))} active={view} onChange={changeView} />
-            {period && <div style={{ marginBottom: 24 }}>{period}</div>}
+          <div className="shrink-0">
+            <ClientTabsWeb label={t("Calendar view")} items={VIEWS.map((v) => ({ key: v, label: t(VIEW_LABEL[v]) }))} active={view} onChange={changeView} mb={16} idleInk="#5B5349" />
           </div>
+          {view === "week" && <PeriodCardWeb label={dateRange(weekDays[0], weekDays[6])} onPrev={() => setSelected(addDays(selected, -7))} onNext={() => setSelected(addDays(selected, 7))} prevLabel={t("Previous week")} nextLabel={t("Next week")} jump={jumpFn} mb={16} />}
+          {view === "day" && <PeriodCardWeb label={longDay(selected)} onPrev={() => setSelected(addDays(selected, -1))} onNext={() => setSelected(addDays(selected, 1))} prevLabel={t("Previous day")} nextLabel={t("Next day")} jump={jumpFn} mb={16} />}
           {strip && sync.strip && (
-            <div style={{ marginBottom: 16 }} data-sync-strip>
+            <div className="shrink-0" style={{ marginBottom: 16 }} data-sync-strip>
               <ConfirmationStrip
                 compact
                 still={reducedMotion}
@@ -824,11 +817,15 @@ export default function Calendar() {
               />
             </div>
           )}
-          {statusLine}
+          {statusLine && <div className="shrink-0">{statusLine}</div>}
           {view === "month" && (
-            <SplitWeb
+            <MonthSplitWeb
               left={
-                <MonthGrid
+                <MonthCardWeb
+                  label={monthTitle(cursor.year, cursor.month)}
+                  onPrev={() => goMonth(-1)}
+                  onNext={() => goMonth(1)}
+                  jump={jumpFn}
                   year={cursor.year}
                   month={cursor.month}
                   todayIso={todayIso}
@@ -856,64 +853,62 @@ export default function Calendar() {
                   setView("day");
                 }}
                 onOpen={openItem}
+                empty={data.loaded && weekDays.every((d) => (items[d] ?? []).length === 0) ? <WeekEmptyWeb newLabel={clinical ? t("New appointment") : t("New session")} onNew={() => setAddOpen({ date: selected < todayIso ? todayIso : selected })} /> : null}
               />
               {noClasses && <HiredEmpty onBrowse={() => navigate("/app/pro/marketplace/opportunities")} />}
             </>
           )}
           {view === "year" && (
-            <YearScroll
-              year={cursor.year}
-              todayIso={todayIso}
-              eventDays={Object.keys(items).filter((d) => (items[d] ?? []).length > 0)}
-              jumpSignal={yearJump}
-              columns={rail ? 4 : 6}
-              onOpenMonth={(y, m) => {
-                setCursor({ year: y, month: m });
-                setView("month");
-              }}
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <YearScroll
+                year={cursor.year}
+                todayIso={todayIso}
+                eventDays={Object.keys(items).filter((d) => (items[d] ?? []).length > 0)}
+                jumpSignal={yearJump}
+                columns={rail ? 4 : 6}
+                onOpenMonth={(y, m) => {
+                  setCursor({ year: y, month: m });
+                  setView("month");
+                }}
+              />
+            </div>
           )}
           {view === "day" && (
-            <SplitWeb
-              left={
-                !data.loaded ? (
-                  skeletonRows
-                ) : (
-                  <DayTimeline
-                    from={bounds.from}
-                    to={bounds.to}
-                    windows={hasHours ? windows : [{ start: `${String(bounds.from).padStart(2, "0")}:00`, end: `${String(bounds.to).padStart(2, "0")}:00` }]}
-                    items={dayTimed}
-                    breaks={breaks}
-                    open={openNow}
-                    nowMinutes={nowMinutes}
-                    clinical={clinical}
-                    hiredLive={data.hiredLive}
-                    onOpen={openItem}
-                    onBreak={(e) => setOffSheet({ entry: e, day: selected })}
-                    onOpenSlot={(start) => setAddOpen({ date: selected, start })}
-                  />
-                )
-              }
-              right={
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {dayRequests.length > 0 && (
                 <>
-                  <Eyebrow mt={0}>{t("Requests")}</Eyebrow>
-                  {dayRequests.length === 0 && <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378", marginBottom: 16 }}>{t("No requests")}</p>}
+                  <EyebrowWeb>{t("Requests")}</EyebrowWeb>
                   {dayRequests.map((i) => (
-                    <RequestCard key={i.key} item={i} busy={requestBusy === i.request?.id} onAccept={() => void answerRequest(i, true)} onDecline={() => void answerRequest(i, false)} />
+                    <RequestCardWeb key={i.key} item={i} busy={requestBusy === i.request?.id} onAccept={() => void answerRequest(i, true)} onDecline={() => void answerRequest(i, false)} />
                   ))}
-                  {offToday && <DayOffRow entry={offToday} onOpen={() => setOffSheet({ entry: offToday, day: selected })} />}
-                  {dayAllDay.length > 0 && (
-                    <div className="flex flex-col" style={{ gap: 8, marginTop: 16 }}>
-                      <Eyebrow mb={2}>{t("All day")}</Eyebrow>
-                      {dayAllDay.map((i) => (
-                        <AgendaRow key={i.key} item={i} onOpen={openItem} />
-                      ))}
-                    </div>
-                  )}
                 </>
-              }
-            />
+              )}
+              {offToday && <DayOffRow entry={offToday} onOpen={() => setOffSheet({ entry: offToday, day: selected })} />}
+              {dayAllDay.length > 0 && (
+                <div className="flex flex-col" style={{ gap: 10, marginBottom: 16 }}>
+                  <EyebrowWeb>{t("All day")}</EyebrowWeb>
+                  {dayAllDay.map(agendaCard)}
+                </div>
+              )}
+              {!data.loaded ? (
+                skeletonRows
+              ) : (
+                <DayTimeline
+                  from={bounds.from}
+                  to={bounds.to}
+                  windows={hasHours ? windows : [{ start: `${String(bounds.from).padStart(2, "0")}:00`, end: `${String(bounds.to).padStart(2, "0")}:00` }]}
+                  items={dayTimed}
+                  breaks={breaks}
+                  open={openNow}
+                  nowMinutes={nowMinutes}
+                  clinical={clinical}
+                  hiredLive={data.hiredLive}
+                  onOpen={openItem}
+                  onBreak={(e) => setOffSheet({ entry: e, day: selected })}
+                  onOpenSlot={(start) => setAddOpen({ date: selected, start })}
+                />
+              )}
+            </div>
           )}
         </CalendarBodyWeb>
         {overlays}

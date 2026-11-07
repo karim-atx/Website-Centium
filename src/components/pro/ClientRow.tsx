@@ -37,6 +37,8 @@ export interface ClientRowProps {
   picked?: boolean;
   onClick?: () => void;
   onLongPress?: () => void;
+  /** Website viewport (WP-CL Clients Web v2 rowsWeb): the web row sizes; `open` is the row shown in the detail pane. */
+  web?: { open: boolean };
 }
 
 const DOT: Record<ClientStatusTone, string> = {
@@ -54,13 +56,13 @@ function initialsOf(name: string): string {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
 }
 
-export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, line, ring, lane, single, selecting, picked, onClick, onLongPress }) => {
+export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, line, ring, lane, single, selecting, picked, onClick, onLongPress, web }) => {
   const { accessibility, theme } = useApp();
   const dark = theme === "dark";
   // Larger text: the frame's 120% check (k 1.2; the avatar stops at 1.1).
   const k = accessibility.largerText ? 1.2 : 1;
   const att = status.tone === "att";
-  const avatar = Math.round(40 * Math.min(k, 1.1));
+  const avatar = web ? 44 : Math.round(40 * Math.min(k, 1.1));
   const tone = status.tone === "onb" ? "sky" : status.tone === "att" || status.tone === "req" ? "gold" : "pr";
   const avatarBg = tone === "sky" ? INK.skyPale : tone === "gold" ? INK.goldPale : INK.prPale;
   const avatarInk = tone === "sky" ? INK.sky : tone === "gold" ? INK.goldInk : INK.prDeep;
@@ -74,6 +76,8 @@ export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, l
 
   const border = picked
     ? INK.pr
+    : web?.open
+      ? "#AEA1DC"
     : att && !single
       ? dark
         ? "rgba(240,154,142,0.30)"
@@ -108,11 +112,11 @@ export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, l
       aria-pressed={selecting ? !!picked : undefined}
       className="tap w-full text-start flex items-center"
       style={{
-        gap: 12,
-        minHeight: 76,
-        padding: 14,
+        gap: web ? 14 : 12,
+        minHeight: web ? 72 : 76,
+        padding: web ? "4px 16px" : 14,
         borderRadius: 20,
-        background: picked ? (dark ? "#2B2C3A" : "#F7F5FB") : INK.card,
+        background: picked || web?.open ? (dark ? "#2B2C3A" : "#F7F5FB") : INK.card,
         border: `1px solid ${border}`,
       }}
     >
@@ -132,18 +136,18 @@ export const ClientRow: React.FC<ClientRowProps> = ({ name, avatarUrl, status, l
       <span
         aria-hidden
         className="rounded-full flex items-center justify-center shrink-0 overflow-hidden"
-        style={{ width: avatar, height: avatar, background: avatarBg, color: avatarInk, fontSize: Math.round(avatar * 0.33), fontWeight: 800 }}
+        style={{ width: avatar, height: avatar, background: avatarBg, color: avatarInk, fontSize: web ? 15 : Math.round(avatar * 0.33), fontWeight: 800 }}
       >
         {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initialsOf(name)}
       </span>
       <span className="flex-1 min-w-0">
         <span className="flex items-start" style={{ gap: 7 }}>
-          <span style={{ fontSize: 15 * k, fontWeight: 700, lineHeight: 1.3, color: INK.ch, overflowWrap: "anywhere" }}>{name}</span>
+          <span style={{ fontSize: 15 * k, fontWeight: 700, lineHeight: web ? "22px" : 1.3, color: INK.ch, overflowWrap: "anywhere" }}>{name}</span>
           {!single && (
             <span aria-hidden className="rounded-full shrink-0" style={{ width: 8, height: 8, background: DOT[status.tone], marginTop: Math.round(7 * k) }} />
           )}
         </span>
-        <span className="block" style={{ fontSize: 12 * k, lineHeight: 1.4, color: INK.chF, marginTop: 3 }}>
+        <span className="block" style={web ? { fontSize: 13, lineHeight: "20px", color: INK.chF, marginTop: 2 } : { fontSize: 12 * k, lineHeight: 1.4, color: INK.chF, marginTop: 3 }}>
           {!single && (
             <>
               <span style={{ fontWeight: att ? 700 : 600, color: att ? INK.hi : INK.chS }}>{status.label}</span>

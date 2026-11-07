@@ -139,11 +139,12 @@ export const ClientHeroWeb: React.FC<{
 };
 
 /** The six page tabs: equal segments on the #F3F3FD track (40, padding 5, r14), 15/24 600; selected #A79AD5 with white text. */
-export const ClientTabsWeb: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (key: string) => void; label: string }> = ({ items, active, onChange, label }) => (
+/** mb: the space below (24; the calendar's 16); idleInk: the idle label colour (the calendar's #5B5349). */
+export const ClientTabsWeb: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (key: string) => void; label: string; mb?: number; idleInk?: string }> = ({ items, active, onChange, label, mb = 24, idleInk = "#5F5093" }) => (
   <div
     role="tablist"
     aria-label={label}
-    style={{ height: 40, boxSizing: "border-box", display: "grid", gridTemplateColumns: `repeat(${items.length},minmax(0,1fr))`, gap: 4, padding: 5, borderRadius: 14, background: "#F3F3FD", marginBottom: 24 }}
+    style={{ height: 40, boxSizing: "border-box", display: "grid", gridTemplateColumns: `repeat(${items.length},minmax(0,1fr))`, gap: 4, padding: 5, borderRadius: 14, background: "#F3F3FD", marginBottom: mb }}
   >
     {items.map((it) => {
       const on = it.key === active;
@@ -167,7 +168,7 @@ export const ClientTabsWeb: React.FC<{ items: { key: string; label: string }[]; 
           }}
           data-key={it.key}
           className="flex items-center justify-center truncate focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-          style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5F5093", paddingInline: 8 }}
+          style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : idleInk, paddingInline: 8 }}
         >
           {it.label}
         </button>
