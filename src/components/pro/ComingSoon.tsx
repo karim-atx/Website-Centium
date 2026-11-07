@@ -23,8 +23,12 @@ export const ComingSoon: React.FC<{ line?: string; children?: React.ReactNode }>
 
 // Website viewport (ST Settings Web, a row's value): in a spanning More / Settings pane "Coming soon" is the plain
 // 13/20 #8C8378 value text the frames draw, not a pill.
-export const ComingSoonPill: React.FC = () =>
-  usePaneSpan() ? (
+// web: the web Targets page (WP-NU-MP.4) draws a 12/16 700 #F0EDF9 pill, no caps.
+export const ComingSoonPill: React.FC<{ web?: boolean }> = ({ web }) => {
+  const span = usePaneSpan();
+  return web ? (
+    <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#F0EDF9", color: "#5F5093", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
+  ) : span ? (
     <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
   ) : (
   <span
@@ -32,3 +36,4 @@ export const ComingSoonPill: React.FC = () =>
     style={{ fontSize: textPx(10), fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", padding: "2px 8px", background: INK.soft, color: INK.chF }}
   >{t("Coming soon")}</span>
   );
+};

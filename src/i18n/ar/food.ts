@@ -538,6 +538,9 @@ const food: Catalogue = {
   // note: health wording (weight goals, the whole section)
   "Maintain|weight goal": "الحفاظ على الوزن",
   "Gain weight": "زيادة الوزن",
+  // Web Targets (WP-NU-MP.4): the weight goal buttons, short.
+  Lose: "خسارة",
+  Gain: "زيادة",
   "Goals & macros": "الأهداف والعناصر الكبرى",
   "Targets are hidden in recovery-sensitive mode.": "الأهداف مخفية في الوضع المراعي للتعافي.",
   "Weight goal": "هدف الوزن",

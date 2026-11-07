@@ -262,7 +262,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
               <div style={card}>
                 <div className="flex items-center justify-between" style={{ gap: 8 }}>
                   <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" }}>{t("Micronutrient targets")}</p>
-                  <ComingSoonPill />
+                  <ComingSoonPill web />
                 </div>
                 <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
               </div>
