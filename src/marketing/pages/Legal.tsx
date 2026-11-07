@@ -197,11 +197,19 @@ export const Legal: React.FC = () => {
   const refund = refundLang === "ar" ? arRefund : EN_REFUND;
   const toc = [...legalTocFor(docs), ...(refund ? refundToc(refund) : [])];
 
+  // Round K: ?lang=ar shows every section in Arabic, as /delete-account's does
+  // (the app's Arabic links, e.g. Health Connect's /legal?lang=ar#privacy).
+  // The address is left as it is, so its hash still lands on the section.
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("lang") === "ar" && language !== "ar") setLanguage("ar");
+    // Once per arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   // The old refund address: /legal/refund-policy?lang=ar arrives here as
   // /legal?lang=ar#refund-policy (public/_redirects keeps the query), and
   // ?lang=ar sets the language to Arabic. ?section=refund-policy (the D3
   // fallback redirect, should Cloudflare drop the fragment) becomes the hash.
-  // Only for section 04: the site has no language parameter otherwise.
   useEffect(() => {
     const q = new URLSearchParams(location.search),
       section = q.get("section"),
