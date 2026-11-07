@@ -176,6 +176,8 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
   const [nonce, setNonce] = useState(0);
   const [conflicts, setConflicts] = useState<Record<string, ConflictRow[] | null>>({});
   const [composer, setComposer] = useState<{ entry: DiaryEntry; kind: "swap" | "comment"; choices?: DiaryEntry[] } | null>(null);
+  // Web meal cards: Great choice on a meal with several foods asks which one, like Swap and Comment.
+  const [likePick, setLikePick] = useState<{ entry: DiaryEntry; choices: DiaryEntry[] } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   // Website viewport (WP-NU-MP.2.1): the web journal's "Jump to a date" popup.
   const [dateOpen, setDateOpen] = useState(false);
@@ -299,10 +301,27 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
     />
   );
 
+  const likePickEl = (
+    <LikePicker
+      open={!!likePick}
+      choices={likePick?.choices ?? []}
+      picked={likePick?.entry.id}
+      onPick={(id) => setLikePick((c) => (c ? { ...c, entry: c.choices.find((x) => x.id === id) ?? c.entry } : c))}
+      onClose={() => setLikePick(null)}
+      onLike={async () => {
+        if (!likePick) return null;
+        const r = await commentOnEntry(likePick.entry.id, null, "like");
+        if (!r.ok) return r.message;
+        reload();
+        return null;
+      }}
+    />
+  );
+
   if (pane) {
     // WP-NU-MP.2 (web): one card per meal, 2 across (1 on the rail). Feedback stays per food in
-    // the database; a meal card shows its foods' feedback, else the actions: Great choice likes
-    // each food in the meal without feedback, Swap and Comment ask which food when there are several.
+    // the database; a meal card shows its foods' feedback, else the actions: Great choice, Swap and
+    // Comment each ask which food when there are several.
     const meals = SLOT_ORDER.map((slot) => ({ slot, items: entries.filter((e) => e.slot === slot) })).filter((m) => m.items.length > 0);
     const sum = (xs: DiaryEntry[]) => xs.reduce((a, e) => ({ kcal: a.kcal + e.kcal, protein: a.protein + e.protein, carbs: a.carbs + e.carbs, fat: a.fat + e.fat }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
     const actBtn = "inline-flex items-center whitespace-nowrap hover:bg-[#F0EDF9] hover:text-[#5F5093] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
@@ -325,6 +344,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
                   const fb = m.items.flatMap((e) => fbFor(e.id));
                   const open = m.items.filter((e) => fbFor(e.id).length === 0);
                   const ask = (kind: "swap" | "comment") => setComposer({ entry: open[0] ?? m.items[0], kind, choices: m.items.length > 1 ? m.items : undefined });
+                  const like = () => (m.items.length > 1 ? setLikePick({ entry: open[0] ?? m.items[0], choices: m.items }) : void react(m.items[0], "like"));
                   return (
                     <MealCardWeb
                       key={m.slot}
@@ -338,7 +358,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
                           <div className="flex flex-wrap" style={{ gap: 8 }}>
                             {(
                               [
-                                [ThumbsUp, t("Great choice"), () => void Promise.all(open.map((e) => react(e, "like")))],
+                                [ThumbsUp, t("Great choice"), like],
                                 [Repeat, t("Swap"), () => ask("swap")],
                                 [MessageCircle, t("Comment"), () => ask("comment")],
                               ] as const
@@ -368,6 +388,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
           </>
         )}
         {composerEl}
+        {likePickEl}
       </>
     );
   }
@@ -520,6 +541,59 @@ const FeedbackBox: React.FC<{ f: Feedback; first: string; dark: boolean; web?: b
   );
 };
 
+/** Web meal cards: the foods of the meal, to pick which one the feedback is about. */
+const FoodChoices: React.FC<{ name: string; choices: DiaryEntry[]; picked?: string; onPick?: (id: string) => void }> = ({ name, choices, picked, onPick }) => (
+  <div role="radiogroup" aria-label={t("Which food")} className="flex flex-col" style={{ gap: 6, marginBottom: 10 }}>
+    {choices.map((c) => (
+      <label key={c.id} className="flex items-center cursor-pointer" style={{ gap: 8, fontSize: 15, lineHeight: "22px", color: INK.ch }}>
+        <input type="radio" name={name} checked={picked === c.id} onChange={() => onPick?.(c.id)} />
+        <span style={{ overflowWrap: "anywhere" }}>{c.name}</span>
+      </label>
+    ))}
+  </div>
+);
+
+/** Web meal cards: Great choice on a meal with several foods, liking the food picked. */
+const LikePicker: React.FC<{ open: boolean; choices: DiaryEntry[]; picked?: string; onPick: (id: string) => void; onClose: () => void; onLike: () => Promise<string | null> }> = ({ open, choices, picked, onPick, onClose, onLike }) => {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const close = () => {
+    setErr(null);
+    onClose();
+  };
+  return (
+    <BottomSheet
+      open={open}
+      onClose={close}
+      title={t("Great choice")}
+      footer={
+        <CtaButton
+          className="w-full"
+          size="sheet"
+          icon={<ThumbsUp size={15} />}
+          label={t("Great choice")}
+          loading={busy}
+          disabled={!picked}
+          onClick={async () => {
+            setBusy(true);
+            const e = await onLike();
+            setBusy(false);
+            if (e) setErr(e);
+            else close();
+          }}
+        />
+      }
+    >
+      <FoodChoices name="journal-like" choices={choices} picked={picked} onPick={onPick} />
+      {err && (
+        <p role="alert" style={{ marginTop: 8, fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
+          {err}
+        </p>
+      )}
+    </BottomSheet>
+  );
+};
+
 /** `choices` (web meal cards only): the foods of the meal, to pick which one the note is about. */
 const Composer: React.FC<{ open: boolean; title: string; entryName: string; choices?: DiaryEntry[]; picked?: string; onPick?: (id: string) => void; onClose: () => void; onSend: (body: string) => Promise<string | null> }> = ({ open, title, entryName, choices, picked, onPick, onClose, onSend }) => {
   const [v, setV] = useState("");
@@ -555,14 +629,7 @@ const Composer: React.FC<{ open: boolean; title: string; entryName: string; choi
       }
     >
       {choices && choices.length > 1 ? (
-        <div role="radiogroup" aria-label={t("Which food")} className="flex flex-col" style={{ gap: 6, marginBottom: 10 }}>
-          {choices.map((c) => (
-            <label key={c.id} className="flex items-center cursor-pointer" style={{ gap: 8, fontSize: 15, lineHeight: "22px", color: INK.ch }}>
-              <input type="radio" name="journal-food" checked={picked === c.id} onChange={() => onPick?.(c.id)} />
-              <span style={{ overflowWrap: "anywhere" }}>{c.name}</span>
-            </label>
-          ))}
-        </div>
+        <FoodChoices name="journal-food" choices={choices} picked={picked} onPick={onPick} />
       ) : (
         <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8, overflowWrap: "anywhere" }}>{entryName}</p>
       )}
