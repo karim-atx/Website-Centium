@@ -35,6 +35,8 @@ import {
   type StageChange,
 } from "./practiceModel";
 import { appLocale } from "../../../../i18n/format";
+import { useWebLayout } from "../../../web/useWebLayout";
+import { PracticeEmptyWeb, PracticeHeaderWeb, PracticeInsightsWeb, PracticeShellWeb } from "../../web/PracticeInsightsWeb";
 import { t, tk, tn, tx } from "../../../../i18n/core";
 
 interface Session {
@@ -76,6 +78,7 @@ export const PracticeInsightsScreen: React.FC = () => {
   const dark = useIsDark();
   const navigate = useNavigate();
   const back = useBack(PRO_ROUTES.more);
+  const { web, rail } = useWebLayout();
   const today = localIso(new Date());
   const nowIso = new Date().toISOString();
   const [range, setRange] = useState<PageRange>("month");
@@ -135,7 +138,24 @@ export const PracticeInsightsScreen: React.FC = () => {
   const pipe = useMemo(() => (enquiries && history ? funnel(enquiries.filter((e) => e.requestedAt >= new Date(`${shiftIso(today, -pipeDays)}T00:00:00`).toISOString()), history, nowIso) : null), [enquiries, history, today, pipeDays, nowIso]);
   const ratings = useMemo(() => (reviews ? ratingsByMonth(reviews, today, rateRange === "1Y" ? 12 : 6) : null), [reviews, today, rateRange]);
 
-  if (state !== "ok" && totals === undefined) return <ProError onRetry={reload} />;
+  if (state !== "ok" && totals === undefined)
+    return web ? (
+      <PracticeShellWeb header={<PracticeHeaderWeb />}>
+        <ProError onRetry={reload} />
+      </PracticeShellWeb>
+    ) : (
+      <ProError onRetry={reload} />
+    );
+  if ((totals === undefined || history === null) && web)
+    return (
+      <PracticeShellWeb header={<PracticeHeaderWeb />}>
+        <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 16 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <ProCardSkeleton key={i} lines={2} height={112} />
+          ))}
+        </div>
+      </PracticeShellWeb>
+    );
   if (totals === undefined || history === null)
     return (
       <div>
@@ -149,6 +169,12 @@ export const PracticeInsightsScreen: React.FC = () => {
     );
 
   const empty = (totals?.clientsCoached ?? 0) === 0 && history.length === 0 && professionalClients.length === 0;
+  if (empty && web)
+    return (
+      <PracticeShellWeb header={<PracticeHeaderWeb />}>
+        <PracticeEmptyWeb onAdd={() => navigate(PRO_ROUTES.clients)} />
+      </PracticeShellWeb>
+    );
   if (empty)
     return (
       <div>
@@ -206,31 +232,24 @@ export const PracticeInsightsScreen: React.FC = () => {
 
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k));
   const rCol = dark ? "#C3B3FB" : "#5F5093";
+  // WP-MO.9: the web charts are 300 high (260 on the rail); mobile keeps ProChart's own height.
+  const chartH = web ? (rail ? 260 : 300) : undefined;
 
-  return (
-    <div style={{ paddingBottom: 120 }}>
-      <CHead title={t("Practice insights")} sub={t("How your practice is doing")} onBack={back} />
-      <div className="flex justify-end" style={{ marginBottom: 10 }}>
-        <RangeTabs value={range} onChange={setRange} />
-      </div>
-      {state === "offline" && <OfflineLine />}
-      {/* W8 SH4: the milestone with Share, and the latest reviews with Share (below the boxes). */}
-      <MilestoneShareCard totals={totals} />
-      <NumBoxes boxes={boxes} />
-      <LatestReviewsShare />
-      {early && weeksIn != null && (
+  const earlyNote = early && weeksIn != null && (
         <div className="flex" style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", marginBottom: 12, gap: 10 }}>
           <Sprout size={16} strokeWidth={2} aria-hidden style={{ color: "#4F8F8A", flexShrink: 0, marginTop: 2 }} />
           <span style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5 }}>{weeksIn === 0
               ? t("You started this week. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.")
               : tn(weeksIn, "You started {n} week ago. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.", "You started {n} weeks ago. Trends fill in as you work: sessions after 4 weeks, retention after 3 months.")}</span>
         </div>
-      )}
+      );
 
-      <Group id="ret" icon={Users} title={t("Retention")} line={lines.ret} open={open === "ret"} onToggle={() => toggle("ret")}>
+  const retBody = (
+    <>
         {curve && curve.some((p) => p.pct != null) ? (
           <ProChart
             flat
+            height={chartH}
             title={t("Still active after")}
             question={t("How long do clients stay with you?")}
             questionIcon
@@ -249,6 +268,7 @@ export const PracticeInsightsScreen: React.FC = () => {
         {roster && (
           <ProChart
             flat
+            height={chartH}
             title={t("Active clients")}
             question={t("Is the roster growing faster than clients finish?")}
             questionIcon
@@ -267,16 +287,18 @@ export const PracticeInsightsScreen: React.FC = () => {
             scrubHint={t(SCRUB_HINT)}
           />
         )}
-      </Group>
+    </>
+  );
 
-      <Group id="out" icon={TrendingUp} title={t("Client outcomes")} line={lines.out} open={open === "out"} onToggle={() => toggle("out")}>
-        <ComingSoon line={activeCount < OUTCOME_MIN_CLIENTS ? t("Client progress shows once you have {n} active clients.", { n: OUTCOME_MIN_CLIENTS }) : t("Client progress needs each client's goal measure, which Centium doesn't keep yet.")} />
-      </Group>
+  const outLine = activeCount < OUTCOME_MIN_CLIENTS ? t("Client progress shows once you have {n} active clients.", { n: OUTCOME_MIN_CLIENTS }) : t("Client progress needs each client's goal measure, which Centium doesn't keep yet.");
+  const outBody = <ComingSoon line={outLine} />;
 
-      <Group id="ses" icon={CalendarCheck} title={t("Sessions")} line={lines.ses} open={open === "ses"} onToggle={() => toggle("ses")}>
+  const sesBody = (
+    <>
         {perWeek ? (
           <ProChart
             flat
+            height={chartH}
             title={t("Sessions per week")}
             question={t("Are clients turning up?")}
             questionIcon
@@ -300,9 +322,10 @@ export const PracticeInsightsScreen: React.FC = () => {
         ) : (
           <ProCardSkeleton lines={3} />
         )}
-      </Group>
+    </>
+  );
 
-      <Group id="pip" icon={Filter} title={t("Enquiries to clients")} line={lines.pip} open={open === "pip"} onToggle={() => toggle("pip")}>
+  const pipBody = (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
           <div className="flex items-center justify-between" style={{ gap: 8 }}>
             <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("From enquiry to active client")}</p>
@@ -311,9 +334,10 @@ export const PracticeInsightsScreen: React.FC = () => {
           <p className="flex" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, margin: "4px 0 12px" }}>{t("Where do people drop off?")}</p>
           {pipe ? <FunnelBars pipe={pipe} dark={dark} /> : <ProCardSkeleton lines={3} />}
         </div>
-      </Group>
+  );
 
-      <Group id="mon" icon={Banknote} title={t("Earnings and ratings")} line={lines.mon} open={open === "mon"} onToggle={() => toggle("mon")}>
+  const monBody = (
+    <>
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 14, marginBottom: 12 }}>
           <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch }}>{t("Payments confirmed")}</p>
           <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 1 }}>{t("Is income growing month to month?")}</p>
@@ -326,6 +350,7 @@ export const PracticeInsightsScreen: React.FC = () => {
         {ratings && reviewCount > 0 && (
           <ProChart
             flat
+            height={chartH}
             title={t("Ratings")}
             question={t("Are clients happier over time?")}
             questionIcon
@@ -352,7 +377,51 @@ export const PracticeInsightsScreen: React.FC = () => {
             scrubHint={t(SCRUB_HINT)}
           />
         )}
-      </Group>
+    </>
+  );
+
+  const groups = [
+    { id: "ret", icon: Users, title: t("Retention"), line: lines.ret, body: retBody },
+    { id: "out", icon: TrendingUp, title: t("Client outcomes"), line: lines.out, body: outBody },
+    { id: "ses", icon: CalendarCheck, title: t("Sessions"), line: lines.ses, body: sesBody },
+    { id: "pip", icon: Filter, title: t("Enquiries to clients"), line: lines.pip, body: pipBody },
+    { id: "mon", icon: Banknote, title: t("Earnings and ratings"), line: lines.mon, body: monBody },
+  ];
+
+  if (web)
+    return (
+      <PracticeInsightsWeb
+        header={<PracticeHeaderWeb range={range} onRange={setRange} />}
+        offline={state === "offline"}
+        milestone={<MilestoneShareCard totals={totals} web />}
+        boxes={boxes}
+        note={earlyNote}
+        groups={groups}
+        open={open ?? "ret"}
+        onOpen={setOpen}
+        reviews={<LatestReviewsShare web />}
+        outLine={outLine}
+      />
+    );
+
+  return (
+    <div style={{ paddingBottom: 120 }}>
+      <CHead title={t("Practice insights")} sub={t("How your practice is doing")} onBack={back} />
+      <div className="flex justify-end" style={{ marginBottom: 10 }}>
+        <RangeTabs value={range} onChange={setRange} />
+      </div>
+      {state === "offline" && <OfflineLine />}
+      {/* W8 SH4: the milestone with Share, and the latest reviews with Share (below the boxes). */}
+      <MilestoneShareCard totals={totals} />
+      <NumBoxes boxes={boxes} />
+      <LatestReviewsShare />
+      {earlyNote}
+
+      {groups.map((g) => (
+        <Group key={g.id} id={g.id} icon={g.icon} title={g.title} line={g.line} open={open === g.id} onToggle={() => toggle(g.id)}>
+          {g.body}
+        </Group>
+      ))}
     </div>
   );
 };

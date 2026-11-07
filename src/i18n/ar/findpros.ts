@@ -180,6 +180,8 @@ const findpros: Catalogue = {
   "Hire a plan below or send a message first.": "اختر خطة أدناه للتوظيف أو أرسل رسالة أولًا.",
   "Client since {date}": "عميل منذ {date}",
   "Hire {name}": "توظيف {name}",
+  // Website viewport (WP-MO.13): the Where column of the web preview.
+  "Where you'll see {name}": "أين تجد {name}",
   "Hire {name}. Sign in to hire": "توظيف {name}. سجّل الدخول للتوظيف",
   "{name}'s profile": "الملف الشخصي لـ{name}",
   "Hired {name} · {status}": "تم توظيف {name} · {status}",

@@ -64,6 +64,8 @@ export const PRO_PAGES: RegExp[] = [
   /^\/app\/pro\/meal-plans(\/(plans|journals|recipes|targets))?\/?$/, // WP-NU-MP.1 Plans home (the other areas: the centred column inside the page)
   /^\/app\/pro\/insights(\/(activity|nutrition|vitals|biomarkers))?\/?$/, // WP-CO-IN.1-.4 Insights
   /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
+  /^\/app\/pro\/invite\/?$/, // WP-HO.1 Invite clients (QR card 5 | message, settings, joined 7)
+  /^\/app\/more\/practice-insights\/?$/, // WP-MO.9 Practice insights (range, milestone + 3 boxes, groups | the open group)
   /^\/app\/more\/care-network\/?$/, // WP-CO-CN Care network (Received 5 · Sent 4 · Network 3)
   /^\/app\/messages\/?$/, // WP-MO.18 Messages (conversations 400 | the open chat)
   /^\/app\/more\/businesses\/?$/, // WP-MO.1 Businesses (list 5 | the open business 7)

@@ -131,7 +131,8 @@ export function ChoiceChips<V extends string>({ items, value, onChange, label }:
   );
 }
 
-export const Spark: React.FC<{ values: number[] }> = ({ values }) => {
+/** `drawW` / `drawH`: the drawn size (WP-MO.9 web: 72 × 26 over the same 64 × 22 box); unset, the box size. */
+export const Spark: React.FC<{ values: number[]; drawW?: number; drawH?: number }> = ({ values, drawW, drawH }) => {
   const dark = useIsDark();
   if (values.length < 2) return null;
   const W = 64;
@@ -142,7 +143,7 @@ export const Spark: React.FC<{ values: number[] }> = ({ values }) => {
   const Y = (v: number) => 2 + ((mx - v) / (mx - mn || 1)) * (H - 4);
   const col = dark ? "#C3B3FB" : "#7D6BB5";
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="shrink-0">
+    <svg width={drawW ?? W} height={drawH ?? H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="shrink-0">
       <path d={`M${values.map((v, i) => `${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(" L")}`} fill="none" stroke={col} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={X(values.length - 1)} cy={Y(values[values.length - 1])} r={2.6} fill={col} />
     </svg>

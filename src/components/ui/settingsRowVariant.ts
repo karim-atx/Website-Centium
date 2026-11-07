@@ -5,5 +5,9 @@ import { createContext } from "react";
  * rows (Storage, Use device time zone) as BizMoreV8 sub-page rows (12/700, 10
  * desc, 36 r11 tile, 17 / 1.75 glyph) inside its list cards. Provide
  * "business" around them; every other caller is unchanged.
+ *
+ * Website viewport (Professional handover v1, WP-MO.10): "pane" draws the
+ * sections and rows of a page shown in a spanning Settings pane at the web
+ * sizes (WP-MO Practice Settings Web). Only provided from 1024px.
  */
-export const SettingsRowVariant = createContext<"default" | "business">("default");
+export const SettingsRowVariant = createContext<"default" | "business" | "pane">("default");

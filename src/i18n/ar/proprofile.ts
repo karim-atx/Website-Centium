@@ -209,6 +209,8 @@ const proprofile: Catalogue = {
 
   // == More · Public profile and reviews ==
   "Preview as client": "معاينة كعميل",
+  // Website viewport (WP-MO.13): the pane title.
+  "What clients see": "ما يراه العملاء",
   "Clients use these buttons. You can't book or hire yourself.": "يستخدم العملاء هذه الأزرار. لا يمكنك حجز نفسك أو توظيفها.",
   "{n} out of 5 stars": "{n} من 5 نجوم",
   "From clients who worked with you": "من عملاء عملوا معك",

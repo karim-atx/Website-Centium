@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { Handshake, Link2, Lock } from "lucide-react";
+import { BadgeCheck, Building2, Handshake, House, Link2, Lock, MapPin, Phone, Video } from "lucide-react";
 import { PinnedSlot } from "../../components/ui/PinnedCta";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useOpenThread } from "../../components/messages/useOpenThread";
@@ -61,7 +61,7 @@ import { BookSheet, type BookedResult } from "./profile/BookSheet";
 import { fetchConnectedSocials } from "./profile/connectedSocials";
 import { averageOf, typeLabel, profileRatingLine, reviewLines, serviceRows, sessionWhen, socialLinks, summaryFigure, summaryLine } from "./profile/profileModel";
 import { appLocale } from "../../i18n/format";
-import { t, tk, tx } from "../../i18n/core";
+import { t, tk, tn, tx } from "../../i18n/core";
 
 // Market + Share 3.0 · W5 · C-MO.4.9 Professional profile (Client
 // Professional Screens lines 52–158; HANDOVER §4 "C-MO.4.9"). Literal values:
@@ -118,7 +118,25 @@ export interface ProfessionalDetailPreview {
   pinned?: ReactNode;
   /** Where "See all reviews" goes (the directory reviews page needs a listing). */
   reviewsHref?: string;
+  /**
+   * Website viewport (Professional handover v1, WP-MO.13; WP-MO Public Profile
+   * Web): from 1024px the preview in the More pane: the header card (cover
+   * band, the 96 avatar straddling it, name 24/32, the type and rating 15/24,
+   * Hire / Book a session 44 in the card), the note under it, the equal tab
+   * track 40 and the About tab in two columns (About and Specialties | Where;
+   * one column on the rail). Set only on web by PublicProfile, whose pane
+   * header carries Preview as client, Edit and Share.
+   */
+  web?: { note: ReactNode; onHire: () => void; onBook: () => void; rail: boolean };
 }
+
+const WHERE_WEB_ICONS: Record<WhereRow["icon"], React.FC<{ size?: number; style?: React.CSSProperties; "aria-hidden"?: boolean }>> = {
+  place: MapPin,
+  business: Building2,
+  online: Video,
+  home: House,
+  phone: Phone,
+};
 
 type Tab = "about" | "services" | "work" | "reviews";
 const TABS: { key: Tab; label: string }[] = [
@@ -628,6 +646,153 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
         </div>
       </section>
     ) : null;
+
+  if (preview?.web) {
+    const pw = preview.web;
+    const whereRows = withWorkplaces(where ?? [], workplaces && workplaces.id === proId ? workplaces.list : []) ?? [];
+    const caps: React.CSSProperties = { margin: "0 0 8px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#7D67D9" };
+    return (
+      <div className="flex flex-col" style={{ gap: 24, lineHeight: "normal" }}>
+        {preview.above}
+        <section style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, overflow: "hidden" }}>
+          <div style={{ height: 96, background: "linear-gradient(120deg,#EEEAFB,#D8D0F3)" }} />
+          <div className="flex items-start" style={{ padding: "16px 24px 20px", gap: 20 }}>
+            <span className="shrink-0 flex" style={{ marginTop: -56, borderRadius: 999, border: "4px solid #FFFFFF" }}>
+              <MarketAvatar id={listing.profileId} name={name} photoUrl={listing.avatarUrl} size={88} fontSize={34} />
+            </span>
+            <div className="flex-1 min-w-0 flex items-center flex-wrap" style={{ gap: "12px 20px" }}>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <h1 className="flex items-center" style={{ margin: 0, gap: 8, fontSize: 24, lineHeight: "32px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B" }}>
+                  <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{name}</span>
+                  {listing.hasVerifiedLicence && (
+                    <span className="inline-flex items-center" style={{ gap: 3, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#3F9165" }}>
+                      <BadgeCheck size={16} aria-hidden />
+                      {t("Verified")}
+                    </span>
+                  )}
+                </h1>
+                <p className="flex flex-wrap" style={{ margin: 0, gap: "4px 12px", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
+                  <span>{[specialty, area].filter(Boolean).join(" · ")}</span>
+                  {avg != null && count > 0 && (
+                    <span className="inline-flex items-center" style={{ gap: 4, fontWeight: 700, color: "#241F1B" }}>
+                      <Star size={15} />
+                      {avg.toFixed(1)}
+                      <span style={{ fontWeight: 500, color: "#8C8378" }}>· {tn(count, "{n} review", "{n} reviews")}</span>
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex shrink-0" style={{ gap: 8, marginInlineStart: "auto" }}>
+                <button type="button" onClick={pw.onHire} className="flex items-center hover:bg-[#E7E2F7]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#F0EDF9", color: "#5F5093", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+                  {t("Hire {name}", { name: first })}
+                </button>
+                <button type="button" onClick={pw.onBook} className="flex items-center hover:bg-[#8E7FD0]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+                  {t("Book a session")}
+                </button>
+              </div>
+            </div>
+          </div>
+          {pw.note}
+        </section>
+        <div role="tablist" aria-label={t("{name}'s profile", { name: first })} className="grid" style={{ height: 40, boxSizing: "border-box", gridTemplateColumns: `repeat(${TABS.length},minmax(0,1fr))`, gap: 4, padding: 4, borderRadius: 12, background: "#F5F5F6" }}>
+          {TABS.map((x, i) => {
+            const on = x.key === tab;
+            return (
+              <button
+                key={x.key}
+                type="button"
+                role="tab"
+                id={`pro-tab-${x.key}`}
+                aria-selected={on}
+                aria-controls={`pro-panel-${x.key}`}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setTab(x.key)}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                  e.preventDefault();
+                  const rtl = document.documentElement.dir === "rtl";
+                  const step = (e.key === "ArrowRight") !== rtl ? 1 : -1;
+                  const next = TABS[(i + step + TABS.length) % TABS.length];
+                  setTab(next.key);
+                  (e.currentTarget.parentElement?.children[TABS.indexOf(next)] as HTMLElement | undefined)?.focus();
+                }}
+                className="flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                style={{ borderRadius: 9, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#FFFFFF" : "transparent", color: on ? "#5F5093" : "#5B5349", boxShadow: on ? "0 1px 3px rgba(36,31,27,0.10)" : "none" }}
+              >
+                {t(x.label)}
+              </button>
+            );
+          })}
+        </div>
+        <div role="tabpanel" id={`pro-panel-${tab}`} aria-labelledby={`pro-tab-${tab}`}>
+          {tab === "about" ? (
+            <div className="grid" style={{ gridTemplateColumns: pw.rail ? "minmax(0,1fr)" : "minmax(0,1.4fr) minmax(0,1fr)", gap: 24, alignItems: "start" }}>
+              <div className="flex flex-col" style={{ gap: 24, minWidth: 0 }}>
+                <div>
+                  <h2 style={caps}>{t("About")}</h2>
+                  {listing.headline && <p style={{ margin: 0, fontSize: 17, lineHeight: "26px", fontWeight: 700, color: "#241F1B" }}>{listing.headline}</p>}
+                  {bio && <p style={{ margin: "6px 0 0", maxWidth: 720, fontSize: 15, lineHeight: "24px", color: "#5B5349", whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{bio}</p>}
+                </div>
+                {pills.length > 0 && (
+                  <div>
+                    <h2 style={{ ...caps, margin: "0 0 12px" }}>{t("Specialties")}</h2>
+                    <ul className="flex flex-wrap" style={{ margin: 0, padding: 0, listStyle: "none", gap: 8 }}>
+                      {pills.map((p) => (
+                        <li key={p} className="flex items-center" style={{ height: 36, padding: "0 14px", boxSizing: "border-box", borderRadius: 999, background: "#F0EDF9", color: "#5F5093", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+                          {p}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h2 style={caps}>{t("Where you'll see {name}", { name: first })}</h2>
+                {whereRows.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("{name} hasn't said where they work yet.", { name: first })}</p>
+                ) : (
+                  <div style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "0 16px" }}>
+                    {whereRows.map((w, i) => {
+                      const Icon = WHERE_WEB_ICONS[w.icon];
+                      return (
+                        <div key={`${w.icon}${i}`} className="flex items-center" style={{ minHeight: 64, gap: 12, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : "none" }}>
+                          <span className="flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: "#F0EDF9" }}>
+                            <Icon size={18} aria-hidden style={{ color: "#7D67D9" }} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B", overflowWrap: "anywhere" }}>{w.title}</span>
+                            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{w.line}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : tab === "services" ? (
+            <ServicesTab rows={rows} error={!!services?.error} onRetry={() => setSvcReload((n) => n + 1)} onBook={() => pw.onBook()} onHire={() => pw.onHire()} inert={inert} firstName={first} top={null} />
+          ) : tab === "work" ? (
+            <WorkTab state={workState} firstName={first} today={today} onRetry={() => setPubReload((n) => n + 1)} />
+          ) : (
+            <ReviewsTab
+              signedOut={false}
+              loading={false}
+              error={reviewError}
+              onRetry={() => void reloadReviews()}
+              lines={lines}
+              figure={figure}
+              stars={figure === "New" ? 0 : Math.round(Number(figure))}
+              countLine={tabCount > 0 ? summaryLine(tabCount, classOnly) : t("No reviews yet")}
+              firstName={first}
+              onSeeAll={otherReviews.length > 0 ? () => navigate(preview.reviewsHref ?? `/app/professionals/${listing.profileId}/reviews`) : undefined}
+              mine={null}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={preview?.pinned ? "pb-[228px]" : ""} style={{ lineHeight: "normal", color: m.ink }}>

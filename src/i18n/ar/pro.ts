@@ -43,6 +43,7 @@ export const FILES: string[] = [
   "components/pro/addclient/sentInvitesModel.ts",
   "components/pro/addclient/SentInvitesSection.tsx",
   "pages/pro/InviteClients.tsx",
+  "components/pro/web/InviteWeb.tsx",
 ];
 
 // note (whole file): professional «مختص», client «عميل» / «العملاء», patient
@@ -282,6 +283,9 @@ const pro: Catalogue = {
   "Couldn't load your invites. Check your connection and try again.": "تعذّر تحميل دعواتك. تحقق من اتصالك وحاول مرة أخرى.",
   "Couldn't refresh your invites. Check your connection and try again.": "تعذّر تحديث دعواتك. تحقق من اتصالك وحاول مرة أخرى.",
   "Share your link or QR code": "شارك رابطك أو رمز QR",
+  // Website viewport (WP-HO.1): the web invite page's labels.
+  "Create your invite link": "أنشئ رابط دعوتك",
+  "Invite link": "رابط الدعوة",
   "Create your invite link. Anyone who opens it can see your page and ask to work with you.": "أنشئ رابط دعوتك. يمكن لأي شخص يفتحه أن يرى صفحتك ويطلب العمل معك.",
   "Create invite link": "إنشاء رابط الدعوة",
   "Invite link QR code": "رمز QR لرابط الدعوة",

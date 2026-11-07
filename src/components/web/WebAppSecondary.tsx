@@ -6,6 +6,7 @@ import {
   Banknote,
   Bug,
   Building2,
+  CalendarClock,
   ClipboardList,
   CreditCard,
   Dumbbell,
@@ -21,12 +22,13 @@ import {
   MapPin,
   Mic,
   Music2,
+  Phone,
   QrCode,
+  Receipt,
   ScrollText,
   Send,
   ShieldCheck,
   Star,
-  Stethoscope,
   Sun,
   Tag,
   Users,
@@ -36,6 +38,7 @@ import { useApp } from "../../context/AppContext";
 import { useProSubtype } from "../../hooks/useProSubtype";
 import { useMyVenues } from "../../hooks/useMyVenues";
 import { fetchMoreSummary, type MoreSummary } from "../../services/pro/more";
+import { fetchPracticeSettings, saveCallsWithHiredClients } from "../../services/pro/practice";
 import { useCareNetworkPending } from "../pro/care/useCareNetworkPending";
 import { serviceAreaLine } from "../pro/profile/profileModel";
 import { PRO_ROUTES } from "../pro/subtypeLanes";
@@ -124,7 +127,7 @@ function useProMoreGroups(openReferral: () => void): SecondaryGroup[] {
     {
       label: tk("Practice"),
       items: [
-        { key: "publicprofile", label: tk("Public profile"), desc: t("Preview it as clients see it"), icon: Globe2, to: "/app/more/public-profile", ext: true },
+        { key: "publicprofile", label: tk("Public profile"), desc: t("Preview it as clients see it"), icon: Globe2, to: "/app/more/public-profile" },
         { key: "credentials", label: co ? tk("Registration and licence") : tk("Credentials and licence"), desc: t("Licence number and verification"), icon: BadgeCheck, to: "/app/more/credentials", trailing: sum?.verified ? <VerifiedChip /> : undefined },
         { key: "services", label: tk("Services and pricing"), desc: co ? t("Appointment types & fees") : t("Session types, packages & offers"), icon: Tag, to: "/app/more/services" },
         { key: "where", label: tk("Where you work"), desc: where, icon: Building2, to: "/app/more/where-you-work" },
@@ -216,9 +219,45 @@ export const ProMoreLayout: React.FC<{ secW: number; banners: React.ReactNode; c
  * lit; Contact us, Report a bug and Rate this app are centred popups; the
  * refund policy is a link to the Legal page's refund section in a new tab.
  */
+/** Settings › Practice › Calls with hired clients, switched from the Settings column (the PracticeSection switch, the same reader and writer). */
+function useCallsSetting(on: boolean): { on: boolean | null; error: string | null; toggle: () => void } {
+  const { authUserId, t } = useApp();
+  const [calls, setCalls] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!on || !authUserId) return;
+    let live = true;
+    void fetchPracticeSettings(authUserId).then((r) => {
+      if (!live) return;
+      if (r.ok) setCalls(r.data.callsWithHiredClients);
+      else setError(r.offline ? t("Offline, showing last update") : t("Couldn't load this setting."));
+    });
+    return () => {
+      live = false;
+    };
+  }, [on, authUserId, t]);
+  const toggle = () => {
+    if (!authUserId || busy || calls === null) return;
+    const prev = calls;
+    setCalls(!prev);
+    setBusy(true);
+    setError(null);
+    void saveCallsWithHiredClients(authUserId, !prev).then((r) => {
+      setBusy(false);
+      if (!r.ok) {
+        setCalls(prev);
+        setError(t(r.message));
+      }
+    });
+  };
+  return { on: calls, error, toggle };
+}
+
 function useSettingsGroups(): SecondaryGroup[] {
-  const { user } = useApp();
+  const { user, t } = useApp();
   const pro = user.accountType === "professional";
+  const calls = useCallsSetting(pro);
   const customer = user.accountType === "customer";
   const sec = (s: string) => `/app/settings?section=${s}`;
   return [
@@ -227,7 +266,28 @@ function useSettingsGroups(): SecondaryGroup[] {
     { label: tk("Permissions"), items: [{ key: "permissions", label: tk("Permissions"), icon: Mic, to: sec("permissions") }] },
     ...(customer ? [{ label: tk("Connected devices"), items: [{ key: "devices", label: tk("Connected devices"), icon: HeartPulse, to: sec("devices") }] }] : []),
     { label: tk("Security"), items: [{ key: "twofactor", label: tk("Two-factor authentication"), icon: ShieldCheck, to: "/app/settings/two-factor" }] },
-    ...(pro ? [{ label: tk("Practice"), items: [{ key: "practice", label: tk("Practice"), icon: Stethoscope, to: sec("practice") }] }] : []),
+    // WP-MO.10 (WP-MO Pane List, page "settings"): the Practice rows themselves, each page opening in the pane; Calls with hired clients switches in place.
+    ...(pro
+      ? [
+          {
+            label: tk("Practice"),
+            items: [
+              { key: "p-booking", label: tk("Booking defaults"), desc: t("Notice, buffers and cancellation window"), icon: CalendarClock, to: "/app/more/practice/booking-defaults" },
+              { key: "p-data", label: tk("Default data requests"), desc: t("What new clients are asked to share"), icon: ShieldCheck, to: "/app/more/practice/data-requests" },
+              { key: "p-invoice", label: tk("Invoice details"), desc: t("Name on invoices, tax number, numbering"), icon: Receipt, to: "/app/more/practice/invoice" },
+              {
+                key: "p-calls",
+                label: tk("Calls with hired clients"),
+                desc: calls.error ?? t("Voice and video in client chats"),
+                icon: Phone,
+                onClick: calls.toggle,
+                switchOn: calls.on,
+              },
+              { key: "p-listing", label: tk("Public listing"), desc: t("Whether clients can find you in Explore"), icon: Globe2, to: "/app/more/practice/listing" },
+            ],
+          },
+        ]
+      : []),
     { label: tk("Data & account"), items: [{ key: "data", label: tk("Data & account"), icon: KeyRound, to: sec("data") }] },
     {
       label: tk("General"),
@@ -268,7 +328,10 @@ function settingsSelected(pathname: string, search: string): string {
   if (under(pathname, "/app/settings/devices")) return "devices";
   if (under(pathname, "/app/settings/two-factor")) return "twofactor";
   if (under(pathname, "/app/settings/account")) return "data";
-  if (under(pathname, "/app/more/practice")) return "practice";
+  if (under(pathname, "/app/more/practice/booking-defaults")) return "p-booking";
+  if (under(pathname, "/app/more/practice/data-requests")) return "p-data";
+  if (under(pathname, "/app/more/practice/invoice")) return "p-invoice";
+  if (under(pathname, "/app/more/practice/listing")) return "p-listing";
   if (pathname === "/app/get-support") return "crisis";
   for (const k of ["language", "music", "accessibility", "terms", "privacy"]) if (under(pathname, `/app/settings/${k}`)) return k;
   const popup = new URLSearchParams(search).get("popup");

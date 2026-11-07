@@ -33,7 +33,8 @@ export function clientSidebarActive(pathname: string): ClientNavKey | null {
 
 
 /** Professional More items that are sidebar pages or open a page of their own (↗). */
-const PRO_MORE_OWN_PAGES = ["/app/more/practice-insights", "/app/more/businesses", "/app/more/public-profile", "/app/more/care-network"];
+// WP-MO.13: Public profile is a pane of More (WP-MO Public Profile Web), not a page of its own.
+const PRO_MORE_OWN_PAGES = ["/app/more/practice-insights", "/app/more/businesses", "/app/more/care-network"];
 
 export type ProNavKey =
   | "home" | "clients" | "calendar" | "slot4"

@@ -70,6 +70,8 @@ export interface SecondaryItem {
   ext?: boolean;
   /** A marker before the chevron (the Verified chip, review stars). */
   trailing?: React.ReactNode;
+  /** A row that is a switch (WP-MO.10 Calls with hired clients): its state; null while loading. The click (onClick) flips it. */
+  switchOn?: boolean | null;
 }
 export interface SecondaryGroup {
   label: string;
@@ -87,6 +89,9 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
       type="button"
       onClick={onSelect}
       aria-current={selected ? "page" : undefined}
+      role={item.switchOn !== undefined ? "switch" : undefined}
+      aria-checked={item.switchOn !== undefined ? !!item.switchOn : undefined}
+      disabled={item.switchOn === null}
       className="relative w-full flex items-center text-start shrink-0 transition-colors duration-150 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:-outline-offset-2"
       style={{ minHeight: 60, gap: 14, paddingBlock: 8, paddingInlineStart: 14, paddingInlineEnd: 16, borderRadius: 14, background: selected ? "#F0EDF9" : undefined }}
     >
@@ -122,7 +127,11 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
             {item.badge}
           </span>
         )}
-        {item.ext ? (
+        {item.switchOn !== undefined ? (
+          <span aria-hidden className="flex shrink-0" style={{ width: 44, height: 26, boxSizing: "border-box", borderRadius: 999, background: item.switchOn ? "#9A8CD6" : "#E4E2EA", padding: 3, justifyContent: item.switchOn ? "flex-end" : "flex-start", opacity: item.switchOn === null ? 0.4 : 1 }}>
+            <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 2px rgba(36,31,27,0.2)" }} />
+          </span>
+        ) : item.ext ? (
           <ExternalLink size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />
         ) : (
           <ChevronRight size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />

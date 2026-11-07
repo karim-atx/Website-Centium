@@ -558,7 +558,7 @@ export default function ProMessages() {
     <div data-pro-messages="">
       <MessagesHead
         title={view === "archived" ? t("Archived") : t("Messages")}
-        onBack={view === "archived" ? () => setView("list") : back}
+        onBack={view === "archived" ? () => setView("list") : web ? undefined : back}
         right={
           view === "list" ? (
             <>

@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type FC, type ReactNode } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import {
   Activity,
   Banknote,
   Bell,
+  Check,
   CalendarRange,
   CalendarX,
   ClipboardList,
@@ -51,6 +52,9 @@ import { fetchGoLiveStatus } from "../../../services/professional-onboarding";
 import { isRegulated, proKindOf } from "../../onboarding/pro/proModel";
 import type { LicenceStatus } from "../../../services/professional-cv";
 import { textPx } from "../../../theme/textSize";
+import { SettingsRowVariant } from "../../../components/ui/settingsRowVariant";
+import { usePaneSpan } from "../../../components/web/paneFill";
+import { useWebLayout } from "../../../components/web/useWebLayout";
 import { t, tk, tn } from "../../../i18n/core";
 
 /**
@@ -71,9 +75,34 @@ export default function PracticeSettings() {
   );
 }
 
-const Note = ({ children }: { children: ReactNode }) => (
-  <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 12 }}>{children}</p>
-);
+const Note = ({ children }: { children: ReactNode }) =>
+  usePaneSpan() ? (
+    <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{children}</p>
+  ) : (
+    <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 12 }}>{children}</p>
+  );
+
+/**
+ * Website viewport (Professional handover v1, WP-MO.10; WP-MO Practice
+ * Settings Web): in the spanning Settings pane each page takes the Practice
+ * kicker (13/20 caps) over its title 28/36 and the intro 15/24, 24 above the
+ * first section, and its sections and rows the pane sizes. Mobile: the
+ * PageHeader as before.
+ */
+const PracticeHead: FC<{ title: string; intro?: string }> = ({ title, intro }) =>
+  usePaneSpan() ? (
+    <div style={{ marginBottom: 24 }}>
+      <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Practice")}</p>
+      <h2 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h2>
+      {intro && <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{intro}</p>}
+    </div>
+  ) : (
+    <PageHeader title={title} showBack tightBack />
+  );
+
+/** The pane row sizes for the page inside the spanning Settings pane; nothing below 1024. */
+const PaneRows: FC<{ children: ReactNode }> = ({ children }) =>
+  usePaneSpan() ? <SettingsRowVariant.Provider value="pane">{children}</SettingsRowVariant.Provider> : <>{children}</>;
 
 // ---------------------------------------------------------------------------
 // Booking defaults (MO23 v3): the practice-wide booking policy
@@ -123,8 +152,9 @@ function BookingDefaults() {
 
   const p = policy ?? DEFAULT_POLICY;
   return (
+    <PaneRows>
     <div>
-      <PageHeader title={t("Booking defaults")} showBack tightBack />
+      <PracticeHead title={t("Booking defaults")} />
       <SettingsBody className="-mt-3">
         {state === "loading" && !policy ? (
           <ListSkeleton rows={4} />
@@ -136,7 +166,7 @@ function BookingDefaults() {
             <SettingsSection label={t("New bookings")}>
               <SettingsRow icon={Clock} title={t("Minimum notice")} value={hours(p.minNoticeHours)} onClick={() => setSheet("notice")} />
               <SettingsRow icon={CalendarRange} title={t("How far ahead")} value={t(windowLabel(p.windowDays).replace(" ahead", ""))} onClick={() => setSheet("window")} />
-              <SettingsRow icon={Timer} title={t("Buffer between sessions")} subtitle={t("Set on each session type")} onClick={() => navigate("/app/pro/calendar/availability")} />
+              <SettingsRow icon={Timer} title={t("Buffer between sessions")} subtitle={t("Set on each session type")} onClick={() => navigate("/app/pro/calendar/availability")} paneExternal />
               <SettingsRow icon={Users} title={t("Who can book")} value={t(AUDIENCE[p.whoCanBook].title)} onClick={() => setSheet("who")} />
             </SettingsSection>
             <SettingsSection label={t("Changes and cancellations")}>
@@ -166,6 +196,7 @@ function BookingDefaults() {
       )}
       <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
+    </PaneRows>
   );
 }
 
@@ -217,13 +248,18 @@ function DataRequests() {
     }
   };
 
+  const pane = usePaneSpan();
+  const intro = t("Asked of every new client when they hire you. Each client chooses what to share and can change it any time.");
   return (
+    <PaneRows>
     <div>
-      <PageHeader title={t("Default data requests")} showBack tightBack />
+      <PracticeHead title={t("Default data requests")} intro={pane ? intro : undefined} />
       <SettingsBody className="-mt-3">
+        {!pane && (
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 8 }}>
-          {t("Asked of every new client when they hire you. Each client chooses what to share and can change it any time.")}
+          {intro}
         </p>
+        )}
         {state === "loading" ? (
           <ListSkeleton rows={5} />
         ) : !cats ? (
@@ -239,6 +275,7 @@ function DataRequests() {
       </SettingsBody>
       <Toast open={!!toast} message={toast ? t(toast) : ""} onExpire={() => setToast(null)} />
     </div>
+    </PaneRows>
   );
 }
 
@@ -255,6 +292,8 @@ function InvoicePage() {
   const [state, setState] = useState<"loading" | "ok" | "error" | "offline">("loading");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const pane = usePaneSpan();
+  const { rail } = useWebLayout();
 
   const load = useCallback(async () => {
     if (!me) return;
@@ -276,6 +315,22 @@ function InvoicePage() {
     setMsg(r.ok ? "Saved" : r.message);
   };
 
+  const paneField = (key: keyof InvoiceDetails, label: string, placeholder: string, max: number, span: string) => (
+    <label className="block" key={key} style={{ gridColumn: span }}>
+      <span className="block" style={{ marginBottom: 8, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5B5349" }}>
+        {label}
+      </span>
+      <input
+        value={draft?.[key] ?? ""}
+        maxLength={max}
+        onChange={(e) => setDraft((d) => (d ? { ...d, [key]: e.target.value } : d))}
+        placeholder={placeholder}
+        className="w-full outline-none placeholder:text-[#9A94B3] focus:border-[#AEA1DC]"
+        style={{ height: 44, boxSizing: "border-box", borderRadius: 12, background: "#F7F7FC", border: "1px solid rgba(36,31,27,0.10)", padding: "0 14px", fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
+      />
+    </label>
+  );
+
   const field = (key: keyof InvoiceDetails, label: string, placeholder: string, max: number) => (
     <label className="block" key={key}>
       <span className="block mb-1.5 text-charcoal-soft" style={{ fontSize: textPx(12), fontWeight: 600 }}>
@@ -290,6 +345,45 @@ function InvoicePage() {
       />
     </label>
   );
+
+  // WP-MO.10 invoice (web pane): the fields 2 across (1 on the rail; the name spans the row), labels 13/20 700, inputs 44 r12 #F7F7FC 15/24; Save 44 r14 at the end.
+  if (pane)
+    return (
+      <div>
+        <PracticeHead title={t("Invoice details")} />
+        {state === "loading" ? (
+          <ListSkeleton rows={3} />
+        ) : !draft ? (
+          state === "offline" ? <OfflineLine /> : <ProError onRetry={() => void load()} />
+        ) : (
+          <>
+            <div className="grid" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: "16px 24px" }}>
+              {paneField("name", t("Name on invoices"), t("Your name or business name"), 120, "1 / -1")}
+              {paneField("taxNumber", t("Tax number"), t("Optional"), 40, "auto")}
+              {paneField("prefix", t("Invoice numbering"), t("Prefix, for example INV-"), 10, "auto")}
+            </div>
+            <Note>{t("Shown on invoices and receipts once payments in the app launch.")}</Note>
+            {msg && (
+              <p role="status" style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: msg === "Saved" ? "#3F9165" : "#B3261E" }}>
+                {t(msg)}
+              </p>
+            )}
+            <div className="flex justify-end" style={{ marginTop: 24 }}>
+              <button
+                type="button"
+                onClick={() => void save()}
+                disabled={saving}
+                className="flex items-center justify-center hover:bg-[#8E7FD0] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+                style={{ height: 44, minWidth: 160, padding: "0 24px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+              >
+                <Check size={18} aria-hidden />
+                {saving ? t("Saving…") : t("Save")}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
 
   return (
     <div>
@@ -391,13 +485,18 @@ function ListingPage() {
           ? t("Add your licence in Edit public profile. You can be listed once we've checked it.")
           : t("Add your certificate in Edit public profile. You can be listed once we've checked it.");
 
+  const pane = usePaneSpan();
+  const intro = t("Clients browsing Explore can find you once you're listed. Your public profile is what they see.");
   return (
+    <PaneRows>
     <div>
-      <PageHeader title={t("Public listing")} showBack tightBack />
+      <PracticeHead title={t("Public listing")} intro={pane ? intro : undefined} />
       <SettingsBody className="-mt-3">
+        {!pane && (
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 8 }}>
-          {t("Clients browsing Explore can find you once you're listed. Your public profile is what they see.")}
+          {intro}
         </p>
+        )}
         {loading ? (
           <ListSkeleton rows={2} />
         ) : loadError ? (
@@ -418,7 +517,7 @@ function ListingPage() {
               }
               toggle={{ checked: listed, onChange: (v) => void toggle(v), disabled: !profile || busy || waiting, label: t("Show me in Explore") }}
             />
-            <SettingsRow icon={Globe2} title={t("Edit public profile")} onClick={() => navigate("/app/more/edit-profile")} />
+            <SettingsRow icon={Globe2} title={t("Edit public profile")} onClick={() => navigate("/app/more/edit-profile")} paneExternal />
           </SettingsSection>
         )}
         {error && (
@@ -450,5 +549,6 @@ function ListingPage() {
         </div>
       </SettingsBody>
     </div>
+    </PaneRows>
   );
 }

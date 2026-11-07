@@ -17,6 +17,7 @@ export const FILES: string[] = [
   "components/pro/insights/ClientInsightsRoute.tsx",
   "components/pro/insights/biomarkerMatch.ts",
   "components/pro/insights/practice/PracticeInsightsScreen.tsx",
+  "components/pro/web/PracticeInsightsWeb.tsx",
   "components/pro/insights/practice/practiceModel.ts",
   "pages/pro/Insights.tsx",
   "pages/pro/more/PracticeInsights.tsx",

@@ -15,9 +15,11 @@ import { t } from "../../../i18n/core";
  * messages19's head: the back 36 (-7 in, chevron 18 / 2 text.soft), 8 to the
  * title 24 / 700 -0.03em; the round buttons on the right; 16 below.
  */
-export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?: React.ReactNode }> = ({ title, onBack, right }) => (
+/** `onBack` unset: no back chevron (the web list head, WP-MO.18, where the sidebar is the way back). */
+export const MessagesHead: React.FC<{ title: string; onBack?: () => void; right?: React.ReactNode }> = ({ title, onBack, right }) => (
   <div className="flex items-center justify-between" style={{ marginBottom: 16, gap: 8 }}>
     <div className="flex items-center min-w-0" style={{ gap: 8 }}>
+      {onBack && (
       <button
         type="button"
         onClick={onBack}
@@ -27,6 +29,7 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
       >
         <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
       </button>
+      )}
       <h1 className="truncate" style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, lineHeight: 1.25 }}>
         {title}
       </h1>

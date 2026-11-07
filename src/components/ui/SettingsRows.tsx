@@ -1,6 +1,6 @@
 import React, { useContext, useId } from "react";
 import clsx from "clsx";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { ChevronRight, ExternalLink, type LucideIcon } from "lucide-react";
 import { Toggle } from "./Toggle";
 import { BizRow } from "../business-more/kit";
 
@@ -36,6 +36,22 @@ export const SettingsSection: React.FC<{
   labelClassName?: string;
 }> = ({ label, children, className, id, labelClassName }) => {
   const labelId = useId();
+  const variant = useContext(SettingsRowVariant);
+  if (variant === "pane") {
+    // WP-MO.10 (web pane): the label 13/20 700 caps #7D67D9 over the 1.5 #AEA1DC rule 8 below, 32 above (0 for the first), 8 under; the rows in a white r16 card (0 16).
+    return (
+      <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
+        <h2
+          id={labelId}
+          className="rtl:tracking-normal"
+          style={{ margin: "0 0 8px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#7D67D9" }}
+        >
+          {label}
+        </h2>
+        <div style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, overflow: "hidden" }}>{children}</div>
+      </section>
+    );
+  }
   return (
     <section id={id} aria-labelledby={labelId} className={clsx("mt-8 first:mt-0", className)}>
       {/* MO1.8.5.1: Arabic drops the small caps' letter-spacing. MO1.8 #4:
@@ -61,9 +77,11 @@ export const SettingsSection: React.FC<{
  * `className` carries the page's own top offset: a negative margin that
  * collapses with the header's 20 pt bottom margin to the frame's gap.
  */
-export const SettingsBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => (
-  <div className={clsx("px-2", className)}>{children}</div>
-);
+export const SettingsBody: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) => {
+  // The web pane (WP-MO.10) draws its own header and spacing: no inset, no offset.
+  const pane = useContext(SettingsRowVariant) === "pane";
+  return <div className={pane ? undefined : clsx("px-2", className)}>{children}</div>;
+};
 
 type RowBase = {
   icon?: LucideIcon;
@@ -88,6 +106,8 @@ type RowBase = {
    * rows (#49, #53, #60, #69).
    */
   iconTone?: "accent" | "dark";
+  /** The web pane row (WP-MO.10) ends in the external-link glyph: the row opens another page. Ignored elsewhere. */
+  paneExternal?: boolean;
 };
 
 type RowProps = RowBase &
@@ -139,6 +159,7 @@ export const SettingsRow: React.FC<RowProps> = ({
   valueTight,
   toggle,
   iconTone = "accent",
+  paneExternal,
 }) => {
   const variant = useContext(SettingsRowVariant);
   if (variant === "business") {
@@ -156,6 +177,25 @@ export const SettingsRow: React.FC<RowProps> = ({
         danger={destructive}
         dim={dimmed}
         chevron={onClick ? value === undefined || value === null : undefined}
+      />
+    );
+  }
+  if (variant === "pane") {
+    return (
+      <PaneRow
+        id={id}
+        className={className}
+        icon={Icon}
+        tile={tile}
+        title={title}
+        subtitle={subtitle}
+        srDescription={srDescription}
+        destructive={destructive}
+        dimmed={dimmed}
+        value={value}
+        onClick={onClick}
+        toggle={toggle}
+        external={paneExternal}
       />
     );
   }
@@ -244,6 +284,87 @@ export const SettingsRow: React.FC<RowProps> = ({
 
   return (
     <div id={id} className={clsx(settingsRowClass, dim, className)}>
+      {body}
+    </div>
+  );
+};
+
+/**
+ * Website viewport (Professional handover v1, WP-MO.10; WP-MO Practice
+ * Settings Web): a row of a page in the spanning Settings pane. 56 high (64
+ * with a subtitle), 16 in, the 32 r10 tile with an 18 glyph, the title 15/24
+ * 600, the subtitle and value 13/20 #8C8378, the 18 chevron #9A94B3 (the 16
+ * external-link glyph for a row that opens another page), the 44 × 26 switch;
+ * rows divided by a full-width hairline, hover #FAFAFB.
+ */
+const PaneRow: React.FC<{
+  id?: string;
+  className?: string;
+  icon?: LucideIcon;
+  tile?: React.ReactNode;
+  title: string;
+  subtitle?: React.ReactNode;
+  srDescription?: string;
+  destructive?: boolean;
+  dimmed?: boolean;
+  value?: React.ReactNode;
+  onClick?: () => void;
+  toggle?: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string };
+  external?: boolean;
+}> = ({ id, className, icon: Icon, tile, title, subtitle, srDescription, destructive, dimmed, value, onClick, toggle, external }) => {
+  const style: React.CSSProperties = { minHeight: subtitle ? 64 : 56, boxSizing: "border-box", gap: 12, padding: "0 16px" };
+  const cls = clsx("relative w-full flex items-center text-start [&+&]:border-t [&+&]:border-[rgba(36,31,27,0.06)]", dimmed && "opacity-40", className);
+  const body = (
+    <>
+      {(Icon || tile) && (
+        <span aria-hidden className="flex items-center justify-center shrink-0 overflow-hidden" style={{ width: 32, height: 32, borderRadius: 10, background: tile ? undefined : destructive ? "#FBEAEA" : "#F0EDF9" }}>
+          {tile ?? (Icon && <Icon size={18} strokeWidth={1.75} style={{ color: destructive ? "#B3261E" : "#7D67D9" }} />)}
+        </span>
+      )}
+      <span className="flex-1 min-w-0">
+        <span className="block break-words" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: destructive ? "#B3261E" : "#241F1B" }}>{title}</span>
+        {subtitle && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{subtitle}</span>}
+        {srDescription && <span className="sr-only">{srDescription}</span>}
+      </span>
+      {value !== undefined && value !== null && (
+        <span className="shrink-0 max-w-[45%] truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>
+      )}
+    </>
+  );
+  if (toggle) {
+    const on = toggle.checked;
+    return (
+      <div id={id} inert={dimmed || undefined} aria-disabled={dimmed || undefined} className={cls} style={style}>
+        {body}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={on}
+          aria-label={toggle.label ?? title}
+          disabled={toggle.disabled}
+          onClick={() => toggle.onChange(!on)}
+          className="flex shrink-0 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+          style={{ width: 44, height: 26, boxSizing: "border-box", borderRadius: 999, background: on ? "#9A8CD6" : "#E4E2EA", padding: 3, justifyContent: on ? "flex-end" : "flex-start" }}
+        >
+          <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 2px rgba(36,31,27,0.2)" }} />
+        </button>
+      </div>
+    );
+  }
+  if (onClick) {
+    return (
+      <button id={id} type="button" onClick={onClick} inert={dimmed || undefined} disabled={dimmed} className={clsx(cls, "hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#AEA1DC]")} style={style}>
+        {body}
+        {external ? (
+          <ExternalLink size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ color: "#9A94B3" }} />
+        ) : (
+          <ChevronRight size={18} aria-hidden className="shrink-0" style={{ color: "#9A94B3" }} />
+        )}
+      </button>
+    );
+  }
+  return (
+    <div id={id} className={cls} style={style}>
       {body}
     </div>
   );
