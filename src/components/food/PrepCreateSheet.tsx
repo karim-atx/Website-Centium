@@ -21,8 +21,10 @@ export const PrepCreateSheet: React.FC<{
   onBack?: () => void;
   /** A professional's own recipe screen: numbers stay whatever their recovery setting. */
   professional?: boolean;
-}> = ({ kind, open, onClose, editMeal, editRecipe, onBack, professional = false }) => {
-  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, professional, onDone: () => (onBack ?? onClose)() });
+  /** Website viewport v1 (WP-NU-MP.9): the recipe form as drawn for the side sheet. */
+  web?: boolean;
+}> = ({ kind, open, onClose, editMeal, editRecipe, onBack, professional = false, web = false }) => {
+  const form = usePrepForm({ kind, active: open, editMeal, editRecipe, professional, web, onDone: () => (onBack ?? onClose)() });
   // Round G2: a new recipe past the free plan's recipes opens the prompt
   // instead of a form that would fail (nothing while the switch is off).
   const { recipes } = useApp();
@@ -43,6 +45,7 @@ export const PrepCreateSheet: React.FC<{
         onClose();
       }}
       title={form.title}
+      footer={form.footer ?? undefined}
       onBack={
         form.searchBack ??
         (onBack

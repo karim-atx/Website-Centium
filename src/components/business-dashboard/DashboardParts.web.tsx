@@ -48,6 +48,7 @@ import { bellBadge, unreadBadge } from "../../services/notifications/notificatio
 import { appLocale } from "../../i18n/format";
 import { isRtl, t, tk, tn, tx } from "../../i18n/core";
 import { WebMenu } from "../../pages/business-ops/frontdesk/FrontDeskParts.web";
+import { WEB_CONTENT_MAX } from "../web/useWebLayout";
 
 // Website viewport v1 · WB-HO · GY Dashboard (WB-HO Dashboard Web v4, the
 // "web" token set W): the dashboard's header actions, the anchored "Needs your
@@ -1047,7 +1048,7 @@ export function WebActivityScreen({
         }}
       />
 
-      <div style={{ flex: 1, minHeight: 0, boxSizing: "border-box", maxWidth: 1280, width: "100%", padding: 32, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div style={{ flex: 1, minHeight: 0, boxSizing: "border-box", maxWidth: WEB_CONTENT_MAX, width: "100%", padding: 32, display: "flex", flexDirection: "column", gap: 24 }}>
         <div data-band="kpis" style={{ flex: "none", display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 24 }}>
           {KPIS.map(({ k, label }) => {
             const col = badgeOf(c, k);

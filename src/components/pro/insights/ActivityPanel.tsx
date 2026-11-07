@@ -14,8 +14,10 @@ import { t, tk, tn } from "../../../i18n/core";
 import { weekdayLong, weekdayNarrow, weekdayShort } from "../proDates";
 import { addDays, bucketLabel, bucketTitle, bucketsFor, dayLabel, mondayOf, RANGE_DAYS, streakOf, sumByBucket, meanByBucket, weekdayIndex, type ChartRange } from "./insightsModel";
 import { InsightCard, InsightLine, NotShared, QuietLine, StatBoxes, type StatBox } from "./parts";
-import { readGate, useRead } from "./reads";
+import { readGate, useRead, type ReadState } from "./reads";
 import type { PanelProps } from "./panelProps";
+import { BarsListWeb, InsightsCardWeb, InsightsGridWeb, StatBoxesWeb, StreakWeb } from "./webCard";
+import { useSpan } from "./webCardContext";
 import { appLocale } from "../../../i18n/format";
 
 /**
@@ -80,6 +82,8 @@ export const ActivityPanel: React.FC<PanelProps> = (p) => {
       />
     );
 
+  if (p.webPage) return <ActivityWeb {...p} days={days} hours={hours} workouts={workouts} />;
+
   return (
     <>
       {(days.offline || workouts.offline) && <OfflineLine />}
@@ -103,6 +107,79 @@ export const ActivityPanel: React.FC<PanelProps> = (p) => {
 };
 
 // ---------------------------------------------------------------------------
+// Website viewport (WP-CO-IN.1, WP-CO Insights Web v2 activity): Daily activity 8 beside Activity
+// types 4, then Weekly pattern 4, Activity streak 4 and Training 4 (rail: 5 | 3, then 3 | 2 | 3).
+// ---------------------------------------------------------------------------
+
+type Rows<T> = ReadState<T[]>;
+const ActivityWeb: React.FC<PanelProps & { days: Rows<{ day: string; steps: number | null; activeMinutes: number | null }>; hours: Rows<{ day: string; hour: number; steps: number }>; workouts: Rows<Workout> }> = (p) => {
+  const { firstName, access, today } = p;
+  const span = useSpan();
+  const vitalsOn = access.has("health_metrics");
+  const workoutsOn = access.has("workout_activity");
+  const W8 = span("1 / span 8", "1 / span 5");
+  const W4 = span("9 / span 4", "6 / span 3");
+  const done = useMemo(() => new Set([...(p.days.data ?? []).filter((d) => (d.activeMinutes ?? 0) > 0).map((d) => d.day), ...(p.workouts.data ?? []).map((w) => w.day)]), [p.days.data, p.workouts.data]);
+  const streak = useMemo(() => streakOf(done, today), [done, today]);
+  const parts = useMemo(() => {
+    const sum = PARTS.map(() => 0);
+    for (const r of p.hours.data ?? []) {
+      const h = r.hour < 5 ? r.hour + 24 : r.hour;
+      const pi = PARTS.findIndex((x) => h >= x.from && h < x.to);
+      if (pi >= 0) sum[pi] += r.steps;
+    }
+    const all = sum.reduce((a, b) => a + b, 0);
+    return all > 0 ? sum.map((v) => Math.round((v / all) * 100)) : null;
+  }, [p.hours.data]);
+  const wkStart = mondayOf(today);
+  const list = p.workouts.data ?? [];
+  const thisWeek = list.filter((w) => w.day >= wkStart && w.day <= today);
+  const lastWeek = list.filter((w) => w.day >= addDays(wkStart, -7) && w.day < wkStart);
+  const early = !list[0] || list[0].day > addDays(today, -7);
+  const rpes = thisWeek.map(sessionRpe).filter((x): x is number => x != null);
+  const lock = (what: string) => <div style={{ marginTop: 12 }}><LockLine what={what} clientFirstName={firstName} /></div>;
+  return (
+    <InsightsGridWeb>
+      {(p.days.offline || p.workouts.offline) && <div style={{ gridColumn: "1 / -1" }}><OfflineLine /></div>}
+      <InsightsCardWeb col={W8} row="1" plotPx={150}>
+        {vitalsOn ? readGate(p.days) ?? <DailyActivity {...p} rows={p.days.data ?? []} workouts={list} /> : lock(t("Activity and vitals"))}
+      </InsightsCardWeb>
+      <InsightsCardWeb col={W4} row="1" title={t("Activity types")} question={t("What does {firstName} do most?", { firstName })}>
+        <div style={{ marginTop: 12 }}>
+          <QuietLine>{t("Coming soon. Centium doesn't store the type of each activity yet.")}</QuietLine>
+        </div>
+      </InsightsCardWeb>
+      <InsightsCardWeb col={span("1 / span 4", "1 / span 3")} row="2" title={t("Weekly pattern")} question={t("When is {firstName} usually active?", { firstName })}>
+        {!vitalsOn ? lock(t("Activity and vitals")) : parts ? (
+          <BarsListWeb cols="80px minmax(0,1fr) 52px" rows={PARTS.map((x, i) => ({ label: t(x.label), pct: parts[i] * 2, value: `${parts[i]}%`, color: "#AEA1DC" }))} />
+        ) : (
+          <div style={{ marginTop: 12 }}><QuietLine>{t("Nothing shared in the last 4 weeks.")}</QuietLine></div>
+        )}
+      </InsightsCardWeb>
+      <InsightsCardWeb col={span("5 / span 4", "4 / span 2")} row="2" title={t("Activity streak")}>
+        <StreakWeb current={streak.current} label={t("days active")} bestLine={tn(streak.best, "Best {n} day · last 14 days shown", "Best {n} days · last 14 days shown")} done={done} today={today} />
+      </InsightsCardWeb>
+      <InsightsCardWeb col={W4} row="2" title={t("Training")}>
+        {!workoutsOn ? lock(t("Workout activity")) : (
+          <StatBoxesWeb
+            cols={1}
+            boxes={
+              early
+                ? [
+                    { label: t("Workouts"), value: "–", sub: t("After a week of logs") },
+                    { label: t("Average RPE"), value: "–", sub: t("After a week of logs") },
+                  ]
+                : [
+                    { label: t("Workouts"), value: String(thisWeek.length), delta: thisWeek.length !== lastWeek.length ? signedNum(thisWeek.length - lastWeek.length) : null, dir: thisWeek.length > lastWeek.length ? "up" : thisWeek.length < lastWeek.length ? "down" : null, sub: t("This week") },
+                    { label: t("Average RPE"), value: rpes.length ? (Math.round((rpes.reduce((x, y) => x + y, 0) / rpes.length) * 10) / 10).toString() : "–", sub: t("This week") },
+                  ]
+            }
+          />
+        )}
+      </InsightsCardWeb>
+    </InsightsGridWeb>
+  );
+};
 
 const DailyActivity: React.FC<PanelProps & { rows: { day: string; steps: number | null; activeMinutes: number | null }[]; workouts: Workout[]; range: ChartRange; onRange: (r: ChartRange) => void }> = ({ rows, workouts, range, onRange, today, firstName }) => {
   const dark = useIsDark();

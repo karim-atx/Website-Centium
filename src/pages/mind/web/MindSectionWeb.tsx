@@ -1,7 +1,7 @@
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Plus } from "lucide-react";
-import { useWebLayout } from "../../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
 import { t } from "../../../i18n/core";
 import { MIND_WEB_CSS, mindPrimary } from "./mindWebStyles";
 
@@ -55,7 +55,7 @@ export const MindSectionWeb: React.FC<{
       </header>
       <div
         className="flex flex-col"
-        style={{ width: "100%", maxWidth: 1280, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", gap: 20, ...(fill ? { flex: 1, minHeight: 0 } : null) }}
+        style={{ width: "100%", maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", gap: 20, ...(fill ? { flex: 1, minHeight: 0 } : null) }}
       >
         {children}
       </div>

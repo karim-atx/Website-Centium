@@ -75,6 +75,8 @@ export interface TrendRingProps {
   monthShort: string;
   children?: React.ReactNode;
   emptyCta?: React.ReactNode;
+  /** The widest the ring draws (320 on mobile; the web Home card passes its own). */
+  maxW?: number;
 }
 
 type Point = { key: string; angle: number; status: "done" | "next" | ""; r?: number; session: RangeSession; count?: number };
@@ -93,12 +95,12 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
   useLayoutEffect(() => {
     const el = hostRef.current;
     if (!el) return;
-    const measure = () => setW(Math.min(320, Math.max(240, el.clientWidth)));
+    const measure = () => setW(Math.min(p.maxW ?? 320, Math.max(240, el.clientWidth)));
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [p.maxW]);
 
   const k = Math.min(1, (W / 330) * 1.04);
   const model = p.model;
@@ -378,7 +380,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
   return (
     <div
       className="relative"
-      style={{ borderRadius: 24, background: INK.card, border: `1px solid rgba(143,104,246,${dark ? 0.28 : 0.16})`, padding: "16px 16px 14px", marginBottom: 24 }}
+      style={{ borderRadius: 24, background: INK.card, border: `1px solid rgba(143,104,246,${dark ? 0.28 : 0.16})`, padding: p.maxW ? 24 : "16px 16px 14px", marginBottom: p.maxW ? 0 : 24 }}
     >
       <div className="flex flex-wrap items-center justify-between" style={{ gap: 8 }}>
         <button

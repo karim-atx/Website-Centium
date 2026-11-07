@@ -30,6 +30,8 @@ import {
 } from "../../services/pro/invites";
 import { t } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { InviteWeb } from "../../components/pro/web/InviteWeb";
 
 /**
  * Release 3 · HO2 v6 "Invite clients" (/app/pro/invite; gen/r18.js invite18).
@@ -64,6 +66,7 @@ export default function InviteClients() {
   const [full, setFull] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+  const web = useIsWeb();
 
   useEffect(() => {
     if (!authUserId) return;
@@ -153,6 +156,52 @@ export default function InviteClients() {
   };
 
   const header = <PageHeader title={t("Invite clients")} subtitle={t("Share your link or QR code")} showBack sub tightBack bottomGap={16} />;
+
+  // WP-HO.1: from 1024px the web layout (QR card 5 | message, settings, joined 7).
+  if (web) {
+    const all = joins ?? [];
+    return (
+      <InviteWeb
+        state={link.state}
+        code={code}
+        locked={
+          allowed === false ? (
+            <p className="flex items-start" style={{ margin: 0, gap: 10, borderRadius: 16, background: "#F5F5F6", padding: "16px 20px", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
+              <Info size={20} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2 }} />
+              {t(INVITE_LOCKED_MESSAGE)}
+            </p>
+          ) : null
+        }
+        verifiedNote={verified === false}
+        creating={creating}
+        createError={createError}
+        onCreate={() => void create()}
+        onRetry={() => setNonce((n) => n + 1)}
+        copied={copied}
+        onCopy={copy}
+        onShare={() => void share()}
+        onFull={() => setFull(true)}
+        onSaveImage={saveImage}
+        qrRef={qrRef}
+        text={text}
+        editing={editing}
+        onEditToggle={() => setEditing((e) => !e)}
+        onMessage={setMessage}
+        joins={joins}
+        shownJoins={showAll ? all : all.slice(0, JOINED_SHOWN)}
+        seeAll={all.length > JOINED_SHOWN ? (showAll ? t("Show less") : t("See all {n}", { n: all.length })) : undefined}
+        onSeeAll={() => setShowAll((s) => !s)}
+        emptyJoins={
+          link.data?.openedAt
+            ? t("Opened {date}. Nobody has joined yet. People who join appear here with their status.", { date: shortDate(link.data.openedAt) })
+            : t("Nobody yet. People who open your link appear here with their status.")
+        }
+        joinedLine={(iso) => t("{date} · joined", { date: shortDate(iso) })}
+      >
+        {full && code && <FullScreenQr web code={code} name={(user.firstName ?? "").trim()} type={user.professionalSubtype ? upperFirst(SUBTYPE_SINGULAR[user.professionalSubtype]) : null} first={first} onClose={() => setFull(false)} />}
+      </InviteWeb>
+    );
+  }
 
   if (allowed === false) {
     return (
@@ -310,13 +359,44 @@ const SectionHead: React.FC<{ label: string; right?: string; onRight?: () => voi
   </div>
 );
 
-const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; first: string; onClose: () => void }> = ({ code, name, type, first, onClose }) => {
+// WP-HO.1 invite-full (web): white, close 44 at 32, avatar 96, name 40/48, type 17/24, QR box 400 (code 344), line 15/24, 20 apart.
+const FULL_WEB = { gap: 20, x: 32, xs: 44, xi: 20, av: 96, n: 40, nl: 48, ty: 17, tyl: 24, q: 400, qr: 344, p: 15, pl: 24 };
+
+const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; first: string; onClose: () => void; web?: boolean }> = ({ code, name, type, first, onClose, web }) => {
   useBackCloses(true, onClose);
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", k);
     return () => document.removeEventListener("keydown", k);
   }, [onClose]);
+  if (web) {
+    const f = FULL_WEB;
+    return createPortal(
+      <div role="dialog" aria-modal="true" aria-label={t("Invite QR code")} className="fixed inset-0 z-[60] flex flex-col items-center justify-center" style={{ background: "#FFFFFF", gap: f.gap, padding: 24 }}>
+        <button
+          type="button"
+          aria-label={t("Close")}
+          title={t("Close")}
+          onClick={onClose}
+          autoFocus
+          className="absolute flex items-center justify-center hover:bg-[#ECECEE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+          style={{ top: f.x, insetInlineEnd: f.x, width: f.xs, height: f.xs, borderRadius: 9999, background: "#F5F5F6" }}
+        >
+          <X size={f.xi} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
+        </button>
+        <Initials text={initialsOf(name || first)} size={f.av} tone="teal" />
+        <div className="flex flex-col items-center">
+          <p style={{ margin: 0, fontSize: f.n, lineHeight: `${f.nl}px`, fontWeight: 800, color: "#241F1B" }}>{name || first}</p>
+          {type && <p style={{ margin: 0, fontSize: f.ty, lineHeight: `${f.tyl}px`, color: "#8C8378" }}>{type}</p>}
+        </div>
+        <div className="flex items-center justify-center" style={{ width: f.q, height: f.q, boxSizing: "border-box", borderRadius: 24, border: "1px solid rgba(36,31,27,0.1)", background: "#FFFFFF" }}>
+          <PassQr value={inviteHref(code)} size={f.qr} label={t("Invite link QR code")} failedText={t("Couldn't draw the QR code. Try again.")} />
+        </div>
+        <p className="text-center" style={{ margin: 0, fontSize: f.p, lineHeight: `${f.pl}px`, color: "#5B5349" }}>{t("Scan with a phone camera to open {first}'s page in Centium", { first })}</p>
+      </div>,
+      document.body
+    );
+  }
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label={t("Invite QR code")} className="fixed inset-0 z-[60] flex flex-col items-center justify-center" style={{ background: INK.cream, gap: 16, padding: 24 }}>
       <button

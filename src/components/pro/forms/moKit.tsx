@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { ArrowDown, ArrowUp, ChevronLeft, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
+import { usePaneSpan } from "../../web/paneFill";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { INK } from "../proInk";
 import { t } from "../../../i18n/core";
@@ -29,7 +30,17 @@ import { t } from "../../../i18n/core";
  *   the sheet shadow, pad 12 14, icon 18, 13 / 600 line 1.4.
  */
 
-export const CHead: React.FC<{ title: string; sub?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, sub, onBack, right }) => (
+export const CHead: React.FC<{ title: string; sub?: string; onBack: () => void; right?: React.ReactNode }> = ({ title, sub, onBack, right }) =>
+  // Website viewport: in a spanning More pane, the pane header (as SubPage's).
+  usePaneSpan() ? (
+    <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
+      <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
+        <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
+        {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{sub}</p>}
+      </div>
+      {right}
+    </header>
+  ) : (
   <div className="flex items-start" style={{ gap: 6, marginBottom: 16 }}>
     <button type="button" onClick={onBack} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0 relative before:absolute before:-inset-1 before:content-['']" style={{ width: 36, height: 36, marginInlineStart: -7, borderRadius: 9999 }}>
       <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
@@ -120,7 +131,8 @@ export function ChoiceChips<V extends string>({ items, value, onChange, label }:
   );
 }
 
-export const Spark: React.FC<{ values: number[] }> = ({ values }) => {
+/** `drawW` / `drawH`: the drawn size (WP-MO.9 web: 72 × 26 over the same 64 × 22 box); unset, the box size. */
+export const Spark: React.FC<{ values: number[]; drawW?: number; drawH?: number }> = ({ values, drawW, drawH }) => {
   const dark = useIsDark();
   if (values.length < 2) return null;
   const W = 64;
@@ -131,7 +143,7 @@ export const Spark: React.FC<{ values: number[] }> = ({ values }) => {
   const Y = (v: number) => 2 + ((mx - v) / (mx - mn || 1)) * (H - 4);
   const col = dark ? "#C3B3FB" : "#7D6BB5";
   return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="shrink-0">
+    <svg width={drawW ?? W} height={drawH ?? H} viewBox={`0 0 ${W} ${H}`} aria-hidden className="shrink-0">
       <path d={`M${values.map((v, i) => `${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(" L")}`} fill="none" stroke={col} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
       <circle cx={X(values.length - 1)} cy={Y(values[values.length - 1])} r={2.6} fill={col} />
     </svg>

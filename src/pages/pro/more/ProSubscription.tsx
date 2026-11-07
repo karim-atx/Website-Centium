@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gift, Mail, Smartphone } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gift, Mail, Smartphone } from "lucide-react";
+import { SegmentedTabs } from "../../../components/ui/SegmentedTabs";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -22,6 +23,7 @@ import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { useProPlanInApp, useSwitches } from "../../../services/premium/hooks";
 import { premiumOn, proPlanBoughtLine, proPlanPath } from "../../../services/premium/model";
 import { BuyInApp } from "../../../components/premium/BuyInApp";
+import { usePaneSpan } from "../../../components/web/paneFill";
 
 /** A box's horizontal middle on screen. */
 const centreX = (r: DOMRect) => r.left + r.width / 2;
@@ -141,6 +143,7 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
 
 export default function ProSubscription() {
   const back = useBack();
+  const inPane = usePaneSpan();
   const dark = useIsDark();
   const { professionalClients } = useApp();
   const { tiers: all, loading, error } = useSubscriptionTiers("professional");
@@ -198,7 +201,11 @@ export default function ProSubscription() {
     setCentred(best);
   };
 
-  const target = centred != null && centred > curIdx ? tiers[centred] : recIdx >= 0 ? tiers[recIdx] : null;
+  const [picked, setPicked] = useState<number | null>(null);
+  // Website viewport: the pane's plan rows pick the plan to ask for (the carousel's centred card on mobile).
+  const target = inPane
+    ? picked != null && picked > curIdx ? tiers[picked] : recIdx >= 0 ? tiers[recIdx] : null
+    : centred != null && centred > curIdx ? tiers[centred] : recIdx >= 0 ? tiers[recIdx] : null;
   const ask = () => {
     // Round G5: never an emailed request while the plan is bought in the app.
     if (!target || viaApp) return;
@@ -214,19 +221,179 @@ export default function ProSubscription() {
   const segs = cap == null ? 0 : Math.min(cap, 10);
   const filled = cap == null ? 0 : cap <= 10 ? Math.min(used, cap) : Math.round((Math.min(used, cap) / cap) * 10);
   const tone = atCap ? INK.hi : INK.prDeep;
+  const limitLine = atCap
+    ? t("You're at your limit. New hire requests can't be accepted until you upgrade.")
+    : seat
+      ? t("This plan comes with your business seat. Your own plan would replace it.")
+      : left != null && next
+        ? tn(left, "{n} place left. {plan} takes you to {limit}.", "{n} places left. {plan} takes you to {limit}.", { plan: next.name, limit: next.maxClients ?? t("no limit") })
+        : left != null
+          ? tn(left, "{n} place left.", "{n} places left.")
+          : t("No client limit on your plan.");
+
+  if (inPane) {
+    // Website viewport (WP-MO.12, ST Settings Web's blocks; copy as the repo): the pane header, the plan pill,
+    // the Monthly / Yearly tabs, the plans as rows (CURRENT and the check on the plan in force, the saving chip),
+    // the ask as the block CTA and the notes. The carousel and "All plans at a glance" are mobile only: the
+    // rows already list every plan with its limit and price.
+    const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", maxWidth: "72ch", textWrap: "pretty" } as const;
+    return (
+      <div className="flex flex-col" style={{ gap: 28 }}>
+        <header className="flex flex-col" style={{ gap: 2 }}>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Centium Professional")}</h1>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Your plan, client limit & upgrades")}</p>
+        </header>
+        {planLoading ? (
+          <ProCardSkeleton lines={2} />
+        ) : planError ? (
+          <p style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: INK.hi }}>{t(planError)}</p>
+        ) : current ? (
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            <span style={{ alignSelf: "flex-start", borderRadius: 16, background: atCap ? INK.hiBg : "#F0EDF9", padding: "8px 16px", fontSize: 15, lineHeight: "24px", color: atCap ? INK.hi : "#5F5093" }}>
+              <Slot text={t("You're on {plan}")} slot="plan">
+                {seat && effective?.viaBusinessName ? t("{plan} (via {business})", { plan: current.name, business: effective.viaBusinessName }) : current.name}
+              </Slot>
+              {" · "}
+              {cap == null ? clientsWord(used) : tn(cap, "{used} of {n} client", "{used} of {n} clients", { used })}
+            </span>
+            <p style={{ ...note, color: atCap ? INK.hi : "#8C8378", fontWeight: atCap ? 700 : 400 }}>{limitLine}</p>
+          </div>
+        ) : (
+          <p style={note}>{t("Your plan couldn't be identified.")}</p>
+        )}
+        {boughtLine && (
+          <div data-pro-plan-bought className="flex items-center" style={{ maxWidth: 640, gap: 12, minHeight: 56, borderRadius: 16, padding: "12px 16px", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}>
+            <Smartphone size={18} strokeWidth={1.9} style={{ color: "#7D67D9" }} aria-hidden />
+            <span className="flex-1 min-w-0">
+              <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Bought in the Centium app")}</span>
+              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{boughtLine}</span>
+            </span>
+          </div>
+        )}
+        <ProBusinessBilling />
+        {passesOn && (
+          <button
+            type="button"
+            onClick={() => navigate("/app/more/premium-passes")}
+            className="tap flex items-center text-start"
+            style={{ maxWidth: 640, gap: 12, minHeight: 56, borderRadius: 16, padding: "12px 16px", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}
+          >
+            <Gift size={18} strokeWidth={1.9} style={{ color: "#7D67D9" }} aria-hidden />
+            <span className="flex-1 min-w-0">
+              <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Premium passes")}</span>
+              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{t("Include Centium Premium for your clients")}</span>
+            </span>
+            <ChevronRight size={16} strokeWidth={2} style={{ color: "#8C8378" }} aria-hidden />
+          </button>
+        )}
+        <SegmentedTabs
+          items={[
+            { key: "monthly", label: t("Monthly") },
+            { key: "yearly", label: bestSave > 0 ? `${t("Yearly")} −${bestSave}%` : t("Yearly") },
+          ]}
+          activeKey={period}
+          onChange={(k) => setPeriod(k as BillingPeriod)}
+        />
+        {error ? (
+          <ProError onRetry={() => window.location.reload()} message={t(error)} />
+        ) : loading ? (
+          <ProCardSkeleton lines={4} height={160} />
+        ) : (
+          <div role="radiogroup" aria-label={t("All plans at a glance")} className="flex flex-col" style={{ maxWidth: 640, gap: 10 }}>
+            {tiers.map((tier, i) => {
+              const cur = i === curIdx;
+              const on = !cur && target?.id === tier.id;
+              const free = tier.monthlyPrice === 0;
+              const save = yearly ? savePct(tier) : 0;
+              const price = free
+                ? t("Free")
+                : yearly && tier.yearlyPrice != null
+                  ? `${t("{price} a year", { price: money2(tier.yearlyPrice) })} · ${t("{price} a month", { price: money2(tier.yearlyPrice / 12) })}`
+                  : t("{price} a month", { price: money2(tier.monthlyPrice) });
+              return (
+                <button
+                  key={tier.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={cur || on}
+                  disabled={i <= curIdx}
+                  onClick={() => setPicked(i)}
+                  className="tap flex items-center text-start"
+                  style={{ gap: 12, borderRadius: 16, border: `2px solid ${cur || on ? "#AEA1DC" : "rgba(36,31,27,0.1)"}`, background: cur ? "#F7F5FD" : "#FFFFFF", padding: "14px 16px", cursor: i <= curIdx ? "default" : "pointer" }}
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center flex-wrap" style={{ gap: 8 }}>
+                      <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{tier.name}</span>
+                      {cur && (
+                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                          {t("Current")}
+                        </span>
+                      )}
+                      {save > 0 && (
+                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#E4F0EE", color: "#2F5F58", fontSize: 11, lineHeight: "16px", fontWeight: 800 }}>
+                          {t("Save {percent}%", { percent: save })}
+                        </span>
+                      )}
+                    </span>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{price}</span>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                      {tier.maxClients == null ? t("Unlimited active clients") : tn(tier.maxClients, "Up to {n} active client", "Up to {n} active clients")}
+                    </span>
+                  </span>
+                  {cur && (
+                    <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: 999, background: "#9A8CD6", flex: "none" }} aria-hidden>
+                      <Check size={12} strokeWidth={3} color="#FFFFFF" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {viaApp ? (
+          <div style={{ maxWidth: 640 }}>
+            <BuyInApp product="professional_plan" line={buyLine} />
+          </div>
+        ) : (
+          <>
+            {target && (
+              <button
+                type="button"
+                onClick={ask}
+                className="tap inline-flex items-center"
+                style={{ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#FFFFFF" }}
+              >
+                <Mail size={18} strokeWidth={2} aria-hidden />
+                {t("Ask to upgrade to {plan}", { plan: target.name })}
+              </button>
+            )}
+            <div className="flex flex-col" style={{ gap: 4 }}>
+              <p style={note}>{t("Payments in the app are coming soon. Upgrades are confirmed by email.")}</p>
+              <p style={note}>
+                <RefundPolicyLink />
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: target && !viaApp ? 72 : 0 }}>
-      <button
-        type="button"
-        onClick={back}
-        aria-label={t("Back")}
-        className="tap flex items-center justify-center"
-        style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
-      >
-        <ChevronLeft size={20} strokeWidth={2} />
-      </button>
-      <div className="text-center" style={{ margin: "-30px 0 14px" }}>
+      {/* Website viewport (WP-MO.12): in the spanning More pane there is no back row (the column is the way back). */}
+      {!inPane && (
+        <button
+          type="button"
+          onClick={back}
+          aria-label={t("Back")}
+          className="tap flex items-center justify-center"
+          style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
+        >
+          <ChevronLeft size={20} strokeWidth={2} />
+        </button>
+      )}
+      <div className="text-center" style={{ margin: inPane ? "0 0 14px" : "-30px 0 14px" }}>
         <CentiumLockup width={64} className="mx-auto" style={{ marginBottom: 10 }} />
         <p style={{ fontSize: textPx(25), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.15, color: INK.ch }}>{t("Grow your client roster.")}</p>
         <p style={{ fontSize: textPx(13.5), color: INK.chS, margin: "6px auto 0", maxWidth: 300, lineHeight: 1.5 }}>

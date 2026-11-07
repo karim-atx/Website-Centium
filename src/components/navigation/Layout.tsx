@@ -103,11 +103,11 @@ export const Layout: React.FC = () => {
   // the same 430 column beside it.
   const { user } = useApp();
   const isClient = user.accountType !== "professional" && user.accountType !== "business";
-  // Website viewport v1: from 1024px wide, client and business accounts get
-  // the web shell (sidebar, web pages, More / Settings columns). Professionals
-  // keep the layout below. Nothing under 1024px changes.
+  // Website viewport v1: from 1024px wide, every account gets the web shell
+  // (sidebar, web pages, More / Settings columns); professionals since the
+  // Professional handover v1. Nothing under 1024px changes.
   const web = useIsWeb();
-  if (web && user.accountType !== "professional") return <WebLayout />;
+  if (web) return <WebLayout />;
 
   return (
     // Wrapping the shell rather than the app: this is the smallest scope that

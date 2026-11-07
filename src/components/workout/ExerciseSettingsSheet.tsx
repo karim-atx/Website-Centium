@@ -16,6 +16,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import type { LoggedSet, PrescribedSetType } from "../../types";
 import { setTargetText, setTargetsColumn, withSetTarget } from "../../services/workout/setTargets";
 import { t, tk, tx } from "../../i18n/core";
+import { WebCopy } from "../web/WebCopy";
 import { muscleLabel } from "./muscleLabel";
 
 /**
@@ -240,7 +241,7 @@ export const ExerciseSettingsSheet: React.FC<{
             </button>
           </div>
           <p className="text-[11px] text-charcoal-faint -mt-3">
-            {t("Tap the exercise name to replace it from the exercise database.")}
+            <WebCopy mobile={t("Tap the exercise name to replace it from the exercise database.")} web={t("Click the exercise name to replace it from the exercise database.")} />
           </p>
 
           {(exercise.muscleGroups?.length || exercise.secondaryMuscleGroups?.length || exercise.classification) && (

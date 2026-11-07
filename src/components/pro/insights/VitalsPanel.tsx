@@ -32,6 +32,8 @@ import {
   type ChartRange,
 } from "./insightsModel";
 import { ChipRow, InsightCard, NotShared, StatBoxes, type StatBox } from "./parts";
+import { InsightsCardWeb, InsightsGridWeb, StatBoxesWeb } from "./webCard";
+import { useInsightsWebCard, useSpan } from "./webCardContext";
 import { readGate, useRead, type ReadState } from "./reads";
 import { PAGE_RANGE_DAYS } from "./panelProps";
 import type { PanelProps } from "./panelProps";
@@ -117,16 +119,19 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
   const ask = (c: "health_metrics" | "weight" | "blood_pressure") => ({ asked: p.asked.includes(c), onAsk: () => p.onAsk(c), askLabel: t("Ask {firstName} to share", { firstName }) });
   const shift = (r: ChartRange) => onRange(r);
   const winStart = addDays(today, -(PAGE_RANGE_DAYS[pageRange] - 1));
+  // Website viewport (WP-CO-IN.3, .8): each view is one drawn card, its chart (200 high), its stat boxes 3 across and its insight inside.
+  const wrapWeb = (view: React.ReactNode) => (p.webPage && !(sub === "bp" && bpOn) && sub !== "sleep" ? <InsightsCardWeb col="1 / -1" plotPx={200} statCols={3} legendBelow titlePx={15}>{view}</InsightsCardWeb> : view);
 
   return (
     <>
       {(bp.offline || vit.offline || weight.offline || sleep.offline) && <OfflineLine />}
       <ChipRow label={t("Vitals")} items={subs} active={sub} onChange={(k) => setChosen(k as Sub)} />
+      {wrapWeb(<>
       {sub === "bp" &&
         (!bpOn ? (
           <NotShared icon={HeartPulse} title={t("No blood pressure shared yet")} line={t("This fills in when {firstName} shares blood pressure with you.", { firstName })} {...ask("blood_pressure")} />
         ) : (
-          <BpView readings={bp.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} />
+          <BpView readings={bp.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} web={p.webPage ? { period: pageRange === "today" ? t("Today") : pageRange === "week" ? t("This week") : t("This month") } : undefined} />
         ))}
       {sub === "hr" &&
         (!hmOn ? (
@@ -154,12 +159,14 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
               today={today}
               winStart={winStart}
               firstName={firstName}
+              web={p.webPage}
             />
           )
         ))}
       {sub === "steps" && (readGate(vit) ?? <SimpleView kind="steps" rows={stepRows(vit.data ?? [], daily.data ?? [])} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "water" && (readGate(vit) ?? <SimpleView kind="water" rows={(vit.data ?? []).filter((r) => r.type === "water")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "calories" && (readGate(vit) ?? <SimpleView kind="calories" rows={(vit.data ?? []).filter((r) => r.type === "calories_burned")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
+      </>)}
     </>
   );
 };
@@ -168,8 +175,9 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
 // Blood pressure
 // ---------------------------------------------------------------------------
 
-const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string }> = ({ readings, range, onRange, today, winStart }) => {
+const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string; web?: { period: string } }> = ({ readings, range, onRange, today, winStart, web }) => {
   const dark = useIsDark();
+  const span = useSpan();
   const b = bucketsFor(range, today);
   const rows = readings.map((r) => ({ day: localDay(r.recordedAt), systolic: r.systolic, diastolic: r.diastolic }));
   const agg = bpByBucket(b, rows);
@@ -209,8 +217,7 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
       </>
     );
   }
-  return (
-    <>
+  const chart = (
       <ProChart
         title={t("Blood pressure")}
         question={latestCat === "stage1" || latestCat === "stage2" ? t("Is blood pressure coming down out of Stage {n}?", { n: latestCat === "stage1" ? 1 : 2 }) : t("Is blood pressure staying within a healthy range?")}
@@ -254,6 +261,26 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
         }
         summary={avg ? tn(inWin.length, "Blood pressure {value} mmHg on average, {n} readings.", "Blood pressure {value} mmHg on average, {n} readings.", { value: `${avg.systolic}/${avg.diastolic}` }) : undefined}
       />
+  );
+  // Website viewport (WP-CO-IN.3, WP-CO Insights Web v2 vitals): the chart 8 over three rows beside one card per box 4
+  // (This week / Normal band / Time of day; rail 5 | 3).
+  if (web) {
+    const W4 = span("9 / span 4", "6 / span 3");
+    const titles = [web.period, t("Normal band"), t("Time of day")];
+    return (
+      <InsightsGridWeb>
+        <InsightsCardWeb col={span("1 / span 8", "1 / span 5")} row="1 / span 3" plotPx={340}>{chart}</InsightsCardWeb>
+        {boxes.map((box, i) => (
+          <InsightsCardWeb key={box.label} col={W4} row={String(i + 1)} title={titles[i]}>
+            <StatBoxesWeb boxes={[box]} cols={1} />
+          </InsightsCardWeb>
+        ))}
+      </InsightsGridWeb>
+    );
+  }
+  return (
+    <>
+      {chart}
       <StatBoxes boxes={boxes} />
     </>
   );
@@ -294,24 +321,33 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
   const filled = rest.map((v, i) => (v != null ? i : -1)).filter((i) => i >= 0);
   const f0 = filled[0];
   const f1 = filled[filled.length - 1];
+  const wc = useInsightsWebCard();
+  // WP-CO-IN.8 (Extras) boxes: the latest resting reading, the average daily range, and days resting 60 to 100.
+  const winDays = list.filter((x) => x.day >= winStart && x.day <= today);
+  const restNow = [...winDays].reverse().find((x) => x.resting != null)?.resting ?? null;
+  const ranged = winDays.filter((x) => x.min != null && x.max != null);
+  const top = ranged.length ? ranged.reduce((a, x) => ((x.max as number) > (a.max as number) ? x : a)) : null;
+  const days = daysBetween(winStart, today) + 1;
   return (
     <>
       <ProChart
         title={t("Heart rate")}
         question={t("Is resting heart rate settling while daily range stays healthy?")}
+        unit={t("beats per minute")}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={lo}
         max={hi}
         height={150}
-        refs={[
+        refs={wc ? undefined : [
           { value: 60, label: "60", side: "left" },
           { value: 100, label: "100", side: "left" },
         ]}
-        goalLegend={t("Normal resting 60 to 100")}
+        band={wc ? { low: 60, high: 100, label: t("Normal resting 60 to 100") } : undefined}
+        goalLegend={wc ? undefined : t("Normal resting 60 to 100")}
         series={[
-          { key: "band", label: t("Min to max"), type: "range", color: dark ? "rgba(169,145,254,0.16)" : "#ECE8F8", values: maxs, low: mins, swatch: "fill" },
+          { key: "band", label: wc ? t("Daily range") : t("Min to max"), type: "range", color: dark ? "rgba(169,145,254,0.16)" : "#ECE8F8", values: maxs, low: mins, swatch: "fill" },
           { key: "prev", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: ghost },
           { key: "rest", label: t("Resting"), type: "line", color: line, values: rest.map(r) },
         ]}
@@ -319,6 +355,15 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
         insight={f0 != null && f1 != null && f0 !== f1 && r(rest[f0]) !== r(rest[f1]) ? t((rest[f1] as number) < (rest[f0] as number) ? "Resting down {n} bpm since {date}." : "Resting up {n} bpm since {date}.", { n: Math.abs((r(rest[f1]) as number) - (r(rest[f0]) as number)), date: dayLabel(b[f0].start) }) : undefined}
         summary={restAvg != null ? t("Resting heart rate {n} bpm on average.", { n: restAvg }) : undefined}
       />
+      {wc ? (
+        <StatBoxes
+          boxes={[
+            { label: t("Resting now"), value: restNow != null ? String(Math.round(restNow)) : "–", unit: restNow != null ? t("bpm") : undefined, sub: restAvg != null && restPrev != null && restAvg !== restPrev ? t("{delta} vs previous {n} days", { delta: signedNum(restAvg - restPrev), n: days }) : t("{n}-day average", { n: days }) },
+            { label: t("Average daily range"), value: ranged.length ? `${Math.round(ranged.reduce((a, x) => a + (x.min as number), 0) / ranged.length)}–${Math.round(ranged.reduce((a, x) => a + (x.max as number), 0) / ranged.length)}` : "–", unit: ranged.length ? t("bpm") : undefined, sub: top ? t("Highest {n} on {date}", { n: Math.round(top.max as number), date: dayLabel(top.day) }) : t("From shared readings") },
+            { label: t("Days in normal range"), value: String(winDays.filter((x) => x.resting != null && x.resting >= 60 && x.resting <= 100).length), unit: t("of {n}", { n: days }), sub: t("Resting 60 to 100") },
+          ]}
+        />
+      ) : (
       <StatBoxes
         boxes={[
           { label: t("Resting heart rate"), value: restAvg != null ? String(restAvg) : "–", unit: restAvg != null ? t("bpm") : undefined, delta: restAvg != null && restPrev != null && restAvg !== restPrev ? signedNum(restAvg - restPrev) : null, dir: restAvg != null && restPrev != null ? (restAvg < restPrev ? "up" : restAvg > restPrev ? "down" : null) : null, sub: t("{n}-day average", { n: daysBetween(winStart, today) + 1 }) },
@@ -326,6 +371,7 @@ const HrView: React.FC<{ rows: MetricRow[]; daily: { day: string; restingBpm: nu
           { label: t("Lowest this week"), value: weekMins.length ? String(Math.min(...weekMins)) : "–", unit: weekMins.length ? t("bpm") : undefined, sub: t("From shared readings") },
         ]}
       />
+      )}
     </>
   );
 };
@@ -362,6 +408,7 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
     const before = [...l].reverse().find((r) => r.day <= addDays(last.day, -30)) ?? l[0];
     return { v: last.value, d: last === before ? null : Math.round((last.value - before.value) * 10) / 10 };
   };
+  const wc = useInsightsWebCard();
   const waist = latestOf("waist");
   const fat = latestOf("body_fat_pct");
   const signed = (n: number) => signedNum(n);
@@ -371,6 +418,7 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
       {shown.length ? (
         <ProChart
           title={t("Weight")}
+          unit={t("kilograms")}
           question={goalKg != null ? t("Is weight trending toward the {n} kg goal?", { n: goalKg }) : t("How is weight changing over time?")}
           range={range}
           onRangeChange={onRange}
@@ -399,6 +447,21 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
           <p style={{ fontSize: textPx(12), color: INK.chF }}>{t("No weigh-ins in this range.")}</p>
         </InsightCard>
       )}
+      {wc ? (
+        // WP-CO-IN.8 (Extras): Now | Change since the first weigh-in in range | To goal.
+        <StatBoxes
+          boxes={[
+            { label: t("Now"), value: latest ? String(latest.kg) : "–", unit: latest ? t("kg") : undefined, sub: latest ? dayLabel(latest.day) : t(NO_READINGS) },
+            {
+              label: tx("Change", "weight change"),
+              value: latest && shown.length > 1 ? signed(Math.round((latest.kg - shown[0].kg) * 10) / 10) : "–",
+              unit: latest && shown.length > 1 ? t("kg") : undefined,
+              sub: shown.length > 1 ? (rate != null && Math.abs(rate) >= 0.05 ? t("Since {date} · about {kg} kg a week", { date: dayLabel(shown[0].day), kg: Math.round(Math.abs(rate) * 10) / 10 }) : t("Since {date}", { date: dayLabel(shown[0].day) })) : t(NO_READINGS),
+            },
+            { label: t("To goal"), value: latest && goalKg != null ? String(Math.round(Math.abs(latest.kg - goalKg) * 10) / 10) : "–", unit: latest && goalKg != null ? t("kg") : undefined, sub: goalKg != null ? t("Goal {n} kg", { n: goalKg }) : t("No goal set") },
+          ]}
+        />
+      ) : (
       <StatBoxes
         boxes={[
           { label: t("Weight"), value: latest ? String(latest.kg) : "–", unit: latest ? t("kg") : undefined, delta: latest && earlier && earlier !== latest ? signed(Math.round((latest.kg - earlier.kg) * 10) / 10) : null, dir: null, sub: latest ? t("Since {date}", { date: dayLabel(earlier?.day ?? latest.day) }) : t(NO_READINGS) },
@@ -406,6 +469,7 @@ export const WeightView: React.FC<{ rows: MetricRow[]; body: MetricRow[]; bodyOn
           { label: t("Body fat"), value: bodyOn && fat ? String(Math.round(fat.v)) : "–", unit: bodyOn && fat ? "%" : undefined, delta: bodyOn && fat?.d ? signed(fat.d) : null, dir: null, sub: bodyOn ? t("From body measurements") : t("Body measurements, if shared") },
         ]}
       />
+      )}
     </>
   );
 };
@@ -440,21 +504,43 @@ const SIMPLE: Record<"sleep" | "steps" | "water" | "calories", { title: string; 
   calories: { title: tk("Calories burned"), unit: tk("kcal"), icon: Flame },
 };
 
+/** Website viewport (WP-CO-IN.8): the unit caption over each chart (English keys). */
+const SIMPLE_UNIT: Record<"sleep" | "steps" | "water" | "calories", string> = { sleep: tk("hours asleep"), steps: tk("steps per day"), water: tk("litres per day"), calories: tk("kcal per day") };
+
+/** Website viewport (WP-CO-IN.8): the Extras titles and questions (English keys). */
+const SIMPLE_WEB: Record<"sleep" | "steps" | "water" | "calories", { title: string; q: string }> = {
+  sleep: { title: tk("Sleep per night (h)"), q: tk("Is {firstName} getting enough sleep, night after night?") },
+  steps: { title: tk("Steps"), q: tk("Is {firstName} moving enough on most days?") },
+  water: { title: tk("Water"), q: tk("Is {firstName} drinking enough through the day?") },
+  calories: { title: tk("Calories burned"), q: tk("How much energy does {firstName} use on active days?") },
+};
+
+/** Website viewport (WP-CO-IN.8): each view's bar colour (steps and sleep primary, water sky, calories gold). */
+const SIMPLE_INK: Record<"sleep" | "steps" | "water" | "calories", string> = { sleep: "#8F68F6", steps: "#8F68F6", water: "#5B8DB8", calories: "#D9A441" };
+
 const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; rows: MetricRow[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string; firstName: string }> = ({ kind, rows, range, onRange, today, winStart, firstName }) => {
   const raw = SIMPLE[kind];
+  const wc = useInsightsWebCard();
   // English keys (tk) in SIMPLE, shown in the active language.
   const meta = { ...raw, title: t(raw.title), unit: t(raw.unit) };
   // One value a day: sleep and steps are the day's total reading; water and calories add up.
   const perDay = new Map<string, number>();
   for (const r of rows) perDay.set(r.day, kind === "water" || kind === "calories" ? (perDay.get(r.day) ?? 0) + r.value : r.value);
-  const list = [...perDay.entries()].map(([day, value]) => ({ day, value }));
+  // Website viewport (WP-CO-IN.8): water in litres on web, as the frame draws it.
+  const litres = !!wc && kind === "water";
+  const list = [...perDay.entries()].map(([day, value]) => ({ day, value: litres ? value / 1000 : value }));
   const b = bucketsFor(range, today);
   const g = bucketsFor(range, today, 1);
   const v = meanByBucket(b, list);
   const gv = meanByBucket(g, list);
   const max = Math.max(1, ...v.map((x) => x ?? 0), ...gv.map((x) => x ?? 0)) * 1.15;
-  const show = (x: number) => (kind === "sleep" ? hm(x * 60) : `${fmt(x)} ${meta.unit}`);
-  const win = list.filter((x) => x.day >= winStart && x.day <= today).map((x) => x.value);
+  const fmtV = (x: number) => (litres ? (Math.round(x * 10) / 10).toLocaleString(appLocale("en-GB")) : fmt(x));
+  const unitV = litres ? t("L") : meta.unit;
+  const show = (x: number) => (kind === "sleep" ? hm(x * 60) : `${fmtV(x)} ${unitV}`);
+  const winRows = list.filter((x) => x.day >= winStart && x.day <= today);
+  const win = winRows.map((x) => x.value);
+  const days = daysBetween(winStart, today) + 1;
+  const best = winRows.length ? winRows.reduce((a, x) => (x.value > a.value ? x : a)) : null;
   const prev = list.filter((x) => x.day < winStart && x.day >= addDays(winStart, -(daysBetween(winStart, today) + 1))).map((x) => x.value);
   const mean = (a: number[]) => (a.length ? a.reduce((s, x) => s + x, 0) / a.length : null);
   const m = mean(win);
@@ -463,21 +549,34 @@ const SimpleView: React.FC<{ kind: "sleep" | "steps" | "water" | "calories"; row
   return (
     <>
       <ProChart
-        title={meta.title}
-        question={kind === "sleep" ? t("How long does {firstName} sleep?", { firstName }) : undefined}
+        title={wc ? t(SIMPLE_WEB[kind].title) : meta.title}
+        question={wc ? t(SIMPLE_WEB[kind].q, { firstName }) : kind === "sleep" ? t("How long does {firstName} sleep?", { firstName }) : undefined}
+        unit={t(SIMPLE_UNIT[kind])}
         range={range}
         onRangeChange={onRange}
         x={b.map((x) => bucketLabel(range, x))}
         min={0}
         max={max}
         series={[
-          { key: "v", label: meta.title, type: "bar", color: INK.pr, values: v },
-          { key: "g", label: t("Previous period"), type: "line", color: INK.chT, ghost: true, values: gv },
+          { key: "v", label: wc && kind === "sleep" ? t("Asleep") : meta.title, type: "bar", color: wc ? SIMPLE_INK[kind] : INK.pr, values: v },
+          { key: "g", label: t("Previous period"), type: "line", color: wc ? "#B9B3C9" : INK.chT, ghost: true, values: gv },
         ]}
         tooltip={(i) => ({ title: bucketTitle(range, b[i]), lines: [v[i] != null ? (kind === "sleep" ? t("{time} asleep", { time: show(v[i] as number) }) : show(v[i] as number)) : t("No reading")] })}
         summary={m != null ? t("{title} {value} on average.", { title: meta.title, value: show(m) }) : undefined}
+        insight={wc && kind === "sleep" && m != null ? (delta != null && Math.round(delta * 60) !== 0 ? t(delta > 0 ? "{avg} a night on average, {diff} more than the previous {n} days." : "{avg} a night on average, {diff} less than the previous {n} days.", { avg: hm(m * 60), diff: hm(Math.abs(delta) * 60), n: days }) : t("{avg} a night on average.", { avg: hm(m * 60) })) : undefined}
       />
-      {kind !== "sleep" && (
+      {wc && kind !== "sleep" ? (
+        // WP-CO-IN.8 (Extras): Daily average | Best day (Highest) | Days over 7,000 (steps) or Days logged.
+        <StatBoxes
+          boxes={[
+            { label: t("Daily average"), value: m != null ? fmtV(m) : "–", unit: m != null ? unitV : undefined, sub: delta != null && Math.abs(delta) > 1e-9 ? t("{delta} vs previous {n} days", { delta: signedNum(delta, fmtV), n: days }) : t("{n}-day average", { n: days }) },
+            { label: kind === "calories" ? t("Highest") : t("Best day"), value: best ? fmtV(best.value) : "–", unit: best ? unitV : undefined, sub: best ? dayLabel(best.day) : t("No readings yet") },
+            kind === "steps"
+              ? { label: t("Days over {n}", { n: fmt(7000) }), value: String(winRows.filter((x) => x.value > 7000).length), unit: t("of {n}", { n: days }), sub: tn(days, "Last {n} days", "Last {n} days") }
+              : { label: t("Days logged"), value: String(winRows.length), unit: t("of {n}", { n: days }), sub: tn(days, "Last {n} days", "Last {n} days") },
+          ]}
+        />
+      ) : kind !== "sleep" && (
         <StatBoxes
           boxes={[
             {

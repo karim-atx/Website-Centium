@@ -6,7 +6,7 @@ import { usePoll } from "../../../hooks/usePoll";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { useBizToast } from "../../../components/business-more/useBizToast";
 import { offerPromotionUsed } from "../../../components/promotions/promotionUsed";
-import { useWebLayout } from "../../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
 import { startMemberThread } from "../../../services/messaging";
 import { endGymMembership, markDeskSalePaid, renewMembership } from "../../../services/front-desk";
 import {
@@ -168,7 +168,7 @@ export const FrontDeskPageWeb: React.FC<{
       </header>
 
       <div style={{ flex: "none", height: "calc(100dvh - 64px)", minHeight: 480, boxSizing: "border-box" }}>
-        <div style={{ maxWidth: 1280, height: "100%", boxSizing: "border-box", padding: "32px", display: "flex", flexDirection: "column" }}>
+        <div style={{ maxWidth: WEB_CONTENT_MAX, height: "100%", boxSizing: "border-box", padding: "32px", display: "flex", flexDirection: "column" }}>
           <WebUnderlineTabs tabs={tabs.map((x) => ({ ...x, label: t(x.label) }))} value={tab} onChange={setTab} label={t("Front desk")} idPrefix="fd" />
           {offlineLine && (
             <p role="status" style={{ margin: "-12px 2px 12px", fontSize: 13, lineHeight: "20px", color: MUTED }}>

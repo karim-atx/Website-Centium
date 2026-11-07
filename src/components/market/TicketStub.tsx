@@ -32,10 +32,12 @@ export type { StubTone };
 // the ink), or a custom triple.
 
 export interface TicketStubProps {
-  /** 30 (calendar event), 46 (status card), 72 (price stub / strip). */
-  stubWidth: 30 | 46 | 72;
+  /** 30 (calendar event), 46 (status card), 72 (price stub / strip), 84 (the web class card, WC-EX Gym Web). */
+  stubWidth: 30 | 46 | 72 | 84;
   /** The stub's text: rotated when `vertical`, else the price (18 / 800). */
   stubLabel?: string;
+  /** The price's size when not `vertical` (default 18; the web class card's is 20). */
+  priceSize?: number;
   /** Custom stub content (an icon, a button label); replaces `stubLabel`. */
   stub?: React.ReactNode;
   vertical?: boolean;
@@ -68,6 +70,7 @@ export interface TicketStubProps {
 export const TicketStub: React.FC<TicketStubProps> = ({
   stubWidth,
   stubLabel,
+  priceSize = 18,
   stub,
   vertical,
   tone = "pale",
@@ -112,7 +115,7 @@ export const TicketStub: React.FC<TicketStubProps> = ({
           {stubLabel}
         </span>
       ) : (
-        <span style={{ fontSize: textPx(18), fontWeight: 800, color: c.ink, whiteSpace: "nowrap" }}>{stubLabel}</span>
+        <span style={{ fontSize: textPx(priceSize), fontWeight: 800, color: c.ink, whiteSpace: "nowrap" }}>{stubLabel}</span>
       )
     ) : null);
   const stubStyle: React.CSSProperties = {

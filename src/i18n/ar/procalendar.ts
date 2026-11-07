@@ -36,6 +36,7 @@ const procalendar: Catalogue = {
   "Next {date}": "التالي {date}",
   "Couldn't load your calendar. Check your connection and try again.": "تعذّر تحميل تقويمك. تحقق من اتصالك وحاول مرة أخرى.",
   "Availability and session types": "التوفّر وأنواع الجلسات",
+  "Day agenda": "جدول اليوم",
   "Previous month": "الشهر السابق",
   "Next month": "الشهر التالي",
   "Previous week": "الأسبوع السابق",

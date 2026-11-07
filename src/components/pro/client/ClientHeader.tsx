@@ -41,8 +41,6 @@ export const ClientHeader: React.FC<{
   onConfirmPayment: (h: ClientPendingHire) => Promise<string | null>;
 }> = ({ name, avatarUrl, patient, status, isNew, joinedAt, next, tags, pendingHires, onBack, onMessage, onSchedule, onMore, onTags, onConfirmPayment }) => {
   const moreRef = useRef<HTMLButtonElement | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const sinceLine = isNew
     ? t("Joined {date} · {next}", { date: fmtDay(joinedAt, true), next: next ? t("Next {when}", { when: next }) : t("Not booked yet") })
     : `${patient ? t("Patient since {date}", { date: fmtDay(joinedAt, true) }) : t("Client since {date}", { date: fmtDay(joinedAt, true) })}${next ? ` · ${t("Next {when}", { when: next })}` : ""}`;
@@ -82,6 +80,17 @@ export const ClientHeader: React.FC<{
         >
           <Plus size={10} strokeWidth={2.6} aria-hidden />{t("Tag")}</button>
       </div>
+      <PendingPaymentBanners pendingHires={pendingHires} onConfirmPayment={onConfirmPayment} />
+    </>
+  );
+};
+
+/** The Release 2 Pending payment banners (Confirm payment), shared by the mobile header and the web hero. */
+export const PendingPaymentBanners: React.FC<{ pendingHires: ClientPendingHire[]; onConfirmPayment: (h: ClientPendingHire) => Promise<string | null> }> = ({ pendingHires, onConfirmPayment }) => {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <>
       {pendingHires.map((h) => (
         <div key={h.id} role="status" className="flex items-start" style={{ gap: 12, borderRadius: 20, background: INK.goldPale, padding: "12px 14px", marginBottom: 12 }}>
           <Clock3 size={18} strokeWidth={2} aria-hidden style={{ color: INK.goldInk, flexShrink: 0, marginTop: 2 }} />

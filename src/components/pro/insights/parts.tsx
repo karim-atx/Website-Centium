@@ -10,6 +10,9 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { EmptyState } from "../EmptyState";
 import { askWithMessage, ASK_MESSAGE_MAX } from "../../../services/pro/insights";
+import { useIsWeb } from "../../web/useWebLayout";
+import { StatBoxesWeb } from "./webCard";
+import { useInsightsWebCard } from "./webCardContext";
 import { t } from "../../../i18n/core";
 
 /**
@@ -57,14 +60,14 @@ export const InsightLine: React.FC<{ children: React.ReactNode; top?: number }> 
 /** A card's quiet line (early data, no data in range): 12 text.faint. */
 export const QuietLine: React.FC<{ children: React.ReactNode }> = ({ children }) => <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{children}</p>;
 
-export const SharedBadges: React.FC<{ items: { label: string; on: boolean }[] }> = ({ items }) => {
+export const SharedBadges: React.FC<{ items: { label: string; on: boolean }[]; web?: boolean }> = ({ items, web }) => {
   const dark = useIsDark();
   const onInk = dark ? "#B2D4CF" : "#3C6B65";
   return (
-    <div className="flex flex-wrap" style={{ gap: 5, marginBottom: 12 }}>
+    <div className="flex flex-wrap" style={web ? { gap: 6, marginBottom: 16 } : { gap: 5, marginBottom: 12 }}>
       {items.map((c) => (
-        <span key={c.label} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF }}>
-          {c.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
+        <span key={c.label} className="inline-flex items-center whitespace-nowrap" style={web ? { gap: 5, height: 28, padding: "0 10px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF } : { gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF }}>
+          {c.on ? <ShieldCheck size={web ? 13 : 11} strokeWidth={2.2} aria-hidden /> : <Lock size={web ? 13 : 11} strokeWidth={2.2} aria-hidden />}
           {c.label}
           <span className="sr-only">{c.on ? t(", shared") : t(", not shared")}</span>
         </span>
@@ -83,7 +86,12 @@ export interface StatBox {
   sub: string;
 }
 
-export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
+export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => {
+  // Website viewport (WP-CO-IN.8): inside an Insights page card, the drawn boxes in one row.
+  const wc = useInsightsWebCard();
+  const web = useIsWeb();
+  if (wc && web) return <StatBoxesWeb boxes={boxes} cols={wc.statCols} />;
+  return (
   <div className="flex flex-wrap justify-center" style={{ gap: 8, marginBottom: 12 }}>
     {boxes.map((b) => {
       const dc = b.dir === "up" ? INK.good : b.dir === "down" ? INK.hi : INK.chF;
@@ -110,7 +118,8 @@ export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
       );
     })}
   </div>
-);
+  );
+};
 
 export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open, onToggle, children }) => {
   const dark = useIsDark();
@@ -140,8 +149,11 @@ export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line
 };
 
 /** The scrolling sub-tab chips (vitals, filters): r10, pad 7 12, 12 / 700 on, 600 off. */
-export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (k: string) => void; label: string }> = ({ items, active, onChange, label }) => (
-  <div role="tablist" aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: 6, marginBottom: 12, paddingBottom: 2 }}>
+export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (k: string) => void; label: string }> = ({ items, active, onChange, label }) => {
+  // Website viewport (WP-CO-IN.8): the chips are 36 high on web (15/24), 8 apart, 16 below; mobile unchanged.
+  const web = useIsWeb();
+  return (
+  <div role="tablist" aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: web ? 8 : 6, marginBottom: web ? 16 : 12, paddingBottom: 2 }}>
     {items.map((c) => {
       const on = c.key === active;
       return (
@@ -152,18 +164,39 @@ export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active
           aria-selected={on}
           onClick={() => onChange(c.key)}
           className="tap shrink-0 whitespace-nowrap relative before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']"
-          style={{ borderRadius: 10, padding: "7px 12px", fontSize: textPx(12), fontWeight: on ? 700 : 600, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}
+          style={{ borderRadius: 10, ...(web ? { height: 36, boxSizing: "border-box" as const, padding: "0 14px", fontSize: 15, lineHeight: "24px" } : { padding: "7px 12px", fontSize: textPx(12) }), fontWeight: on ? 700 : 600, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}
         >
           {c.label}
         </button>
       );
     })}
   </div>
-);
+  );
+};
 
 import type { PageRange } from "./panelProps";
 
-export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) => void }> = ({ value, onChange }) => (
+export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) => void; web?: { width: number } }> = ({ value, onChange, web }) =>
+  web ? (
+    <div role="tablist" aria-label={t("Range")} className="grid shrink-0" style={{ width: web.width, height: 40, boxSizing: "border-box", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 3, padding: 5, borderRadius: 14, background: "#F3F3FD" }}>
+      {(["today", "week", "month"] as const).map((k) => {
+        const on = value === k;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(k)}
+            className="flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+            style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5B5349" }}
+          >
+            {k === "today" ? t("Today") : k === "week" ? t("Week") : t("Month")}
+          </button>
+        );
+      })}
+    </div>
+  ) : (
   <SegmentedTabs
     items={[
       { key: "today", label: t("Today") },
@@ -178,7 +211,7 @@ export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) =>
     tabRadius={9}
     labelSize={11.5}
   />
-);
+  );
 
 export interface PickerClient {
   clientId: string;
@@ -186,7 +219,7 @@ export interface PickerClient {
   avatarUrl: string | null;
 }
 
-export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | null; onChange: (id: string) => void; allLabel?: string; patient: boolean }> = ({ clients, value, onChange, allLabel, patient }) => {
+export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | null; onChange: (id: string) => void; allLabel?: string; patient: boolean; web?: { width: number } }> = ({ clients, value, onChange, allLabel, patient, web }) => {
   const [el, setEl] = useState<HTMLElement | null>(null);
   const cur = clients.find((c) => c.clientId === value) ?? null;
   const label = cur ? cur.name : allLabel ?? "";
@@ -198,12 +231,12 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
         aria-haspopup="listbox"
         aria-expanded={!!el}
         aria-label={patient ? t("Patient: {label}", { label }) : t("Client: {label}", { label })}
-        className="tap flex-1 min-w-0 flex items-center"
-        style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
+        className={web ? "flex min-w-0 shrink-0 items-center hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" : "tap flex-1 min-w-0 flex items-center"}
+        style={web ? { width: web.width, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)", padding: "0 14px", gap: 10, fontSize: 15, lineHeight: "24px", color: "#241F1B" } : { height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
       >
-        {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={24} />}
+        {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={web ? 28 : 24} />}
         <span className="flex-1 min-w-0 truncate text-start">{label}</span>
-        <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
+        <ChevronDown size={web ? 16 : 14} strokeWidth={2} aria-hidden style={{ color: web ? "#8C8378" : INK.chF, flexShrink: 0 }} />
       </button>
       <PopupMenu
         open={!!el}
@@ -250,6 +283,8 @@ export const NotShared: React.FC<{ icon: LucideIcon; title: string; line: string
 
 export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clientId: string; firstName: string; onSent: (message: string) => void }> = ({ open, onClose, clientId, firstName, onSent }) => {
   const [kind, setKind] = useState<"share" | "new">("share");
+  // Website viewport (WP-CO-IN.9, Insights Extras askSeg): the open tab is white on the #F3F3FD track.
+  const web = useIsWeb();
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -283,8 +318,9 @@ export const AskShareSheet: React.FC<{ open: boolean; onClose: () => void; clien
         ]}
         activeKey={kind}
         onChange={(k) => setKind(k as "share" | "new")}
-        tabHeight={36}
-        labelSize={12}
+        tabHeight={web ? 32 : 36}
+        labelSize={web ? 15 : 12}
+        {...(web ? { light: { activeFill: "#FFFFFF", activeInk: "#5F5093", idleFill: "transparent", idleInk: "#5B5349" }, trackStyle: { background: "#F3F3FD", padding: 4, gap: 4, borderRadius: 12 } } : {})}
       />
       {kind === "new" ? (
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.5, marginBottom: 12 }}>{t("Booking new blood tests isn't in Centium yet. You can ask {firstName} to share a past test.", { firstName })}</p>

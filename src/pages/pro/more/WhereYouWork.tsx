@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Building2, Check, Globe, MapPin, Store, Video } from "lucide-react";
 import { SettingsRow } from "../../../components/pro/calendar/calendarFields";
+import { usePaneSpan } from "../../../components/web/paneFill";
 import { SectionHead } from "../../../components/pro/client/kit";
 import { CtaButton, ErrorLine, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { RADIUS_DEFAULT_KM, RADIUS_STEPS, WORK_TAB_TO_DB, radiusAtPosition, radiusFill, radiusPosition, workTabOf, type WorkTab } from "../../../components/pro/profile/profileModel";
@@ -71,6 +72,14 @@ export default function WhereYouWork() {
   const [dobAsk, setDobAsk] = useState<null | { retry: () => void }>(null);
   const [teamBusy, setTeamBusy] = useState(false);
   const areaRef = useRef<HTMLDivElement>(null);
+  // WP-MO.17 web (ST Settings Web, `where`): in the spanning More pane the places and Teams are labelled sections of
+  // rows (no cards), Teams always offering Businesses. The app's newer controls (how you work, the service area) stay
+  // as they are; the frame draws neither.
+  const inPane = usePaneSpan();
+  const paneLabel = (label: string) => (
+    <h2 className="rtl:tracking-normal" style={{ margin: "0 0 0", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+  );
+  const listBox: React.CSSProperties = inPane ? { marginBottom: 32 } : { background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 };
 
   useEffect(() => {
     if (!authUserId) return;
@@ -162,17 +171,33 @@ export default function WhereYouWork() {
             className="mb-3"
           />
 
-          <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
-            {own && <SettingsRow icon={MapPin} title={listing?.location || t("Your own space")} sub={t("Your own space")} last={!(jobs ?? []).length && !online} />}
+          <div style={listBox}>
+            {inPane && paneLabel(t("Where you work"))}
+            {own && <SettingsRow web={inPane} icon={MapPin} title={listing?.location || t("Your own space")} sub={t("Your own space")} last={!(jobs ?? []).length && !online} />}
             {(jobs ?? []).map((j, i) => (
-              <SettingsRow key={j.businessId} icon={Store} title={j.businessName} sub={t("Connected business")} onClick={() => navigate(`/app/more/businesses/${j.businessId}`)} last={i === jobs!.length - 1 && !online} />
+              <SettingsRow web={inPane} key={j.businessId} icon={Store} title={j.businessName} sub={t("Connected business")} onClick={() => navigate(`/app/more/businesses/${j.businessId}`)} last={i === jobs!.length - 1 && !online} />
             ))}
-            {online && <SettingsRow icon={Video} title={t("Online")} sub={t("Video sessions")} last />}
+            {online && <SettingsRow web={inPane} icon={Video} title={t("Online")} sub={t("Video sessions")} last />}
             {!own && !online && !(jobs ?? []).length && (
               <StateLine>{shownTab === "business" ? t("You're not working at a business yet. Join one from Businesses.") : t("Choose how you work above.")}</StateLine>
             )}
           </div>
-          {(jobs ?? []).length > 0 && facts && (
+          {inPane && (
+            <div style={listBox}>
+              {paneLabel(t("Teams"))}
+              {(jobs ?? []).length > 0 && facts && (
+                <SettingsRow
+                  web
+                  icon={Globe}
+                  title={t("Show on your public profile")}
+                  sub={t("Teams you joined. A business that hired you through Centium always shows.")}
+                  right={<Toggle checked={facts.showTeamWorkplaces} onChange={(v) => void setShowTeam(v)} disabled={teamBusy} label={t("Show on your public profile")} />}
+                />
+              )}
+              <SettingsRow web icon={Building2} title={t("Businesses")} sub={t("Join a business or answer an invitation")} onClick={() => navigate("/app/more/businesses")} last />
+            </div>
+          )}
+          {!inPane && (jobs ?? []).length > 0 && facts && (
             <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px", marginBottom: 12 }}>
               <SettingsRow
                 icon={Globe}
@@ -183,7 +208,7 @@ export default function WhereYouWork() {
               />
             </div>
           )}
-          {shownTab === "business" && !(jobs ?? []).length && (
+          {!inPane && shownTab === "business" && !(jobs ?? []).length && (
             <SettingsRow icon={Building2} title={t("Businesses")} sub={t("Join a business or answer an invitation")} onClick={() => navigate("/app/more/businesses")} last />
           )}
 

@@ -3,6 +3,9 @@ import { BookOpenCheck, MessageCircle, Repeat, Send, ThumbsUp } from "lucide-rea
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
+import { JournalDateButton, JournalDatePickerWeb } from "../web/JournalDatePickerWeb";
+import { DayTabsWeb, DayTotalsWeb, JournalCardWeb, MealCardWeb, type MacroTargets } from "../web/JournalDayWeb";
+import { useWebLayout } from "../../web/useWebLayout";
 import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
@@ -48,7 +51,8 @@ import { t, tk, tn, tx } from "../../../i18n/core";
  * the database has no review state of its own ("Mark reviewed" and the note
  * for the whole day are a backend gap, Coming soon).
  */
-export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string, day: string) => void }> = ({ lane, onBack, onOpen }) => {
+/** `pane` (website viewport, WP-NU-MP.2): the queue column of the web list-detail: no head, the open client tinted. */
+export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string, day: string) => void; pane?: { selected: string | null } }> = ({ lane, onBack, onOpen, pane }) => {
   const o = useNutritionOverview(lane);
   const [tab, setTab] = useState<"waiting" | "reviewed">("waiting");
   const today = todayLocal();
@@ -57,11 +61,12 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
   const targetOf = (id: string) => o.targets[id] ?? null;
   return (
     <div>
-      <NuHead eyebrow={t("To review")} title={t("Food journals")} onBack={onBack} />
+      {!pane && <NuHead eyebrow={t("To review")} title={t("Food journals")} onBack={onBack} />}
       <SegmentedTabs
         className="mb-3"
-        tabHeight={36}
-        labelSize={12}
+        tabHeight={pane ? 40 : 36}
+        labelSize={pane ? 15 : 12}
+        {...(pane ? { trackStyle: { padding: 4, gap: 4, borderRadius: 14, width: "100%" }, tabRadius: 10 } : {})}
         items={[
           { key: "waiting", label: o.loading ? t("Waiting") : t("Waiting {n}", { n: o.waiting.length }) },
           { key: "reviewed", label: tx("Reviewed", "journal") },
@@ -87,18 +92,40 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
         rows.map((r) => {
           const c = byId.get(r.clientId);
           if (!c) return null;
-          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} />;
+          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} selected={pane?.selected === r.clientId} web={!!pane} />;
         })
+      )}
+      {pane && !o.loading && tab === "waiting" && rows.length > 0 && (
+        <p style={{ margin: 0, padding: "12px 16px", borderRadius: 14, border: "1px dashed rgba(36,31,27,0.12)", fontSize: 13, lineHeight: "20px", color: INK.chF, textAlign: "center" }}>{t("Days you leave feedback on move to Reviewed.")}</p>
       )}
     </div>
   );
 };
 
-const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void }> = ({ row, name, avatarUrl, today, hasTarget, onOpen }) => {
+/** `web` (WP-NU-MP.2, WP-NU Meal Plans Web v3): 72 min, padding 12 18, avatar 44, the name 17/24, the lines 13/20, 12 apart. */
+const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void; selected?: boolean; web?: boolean }> = ({ row, name, avatarUrl, today, hasTarget, onOpen, selected, web }) => {
   const flagged = (row.proteinUnder ?? 0) > 0;
   const n = row.days.length;
+  if (web)
+    return (
+      <button type="button" onClick={onOpen} aria-current={selected || undefined} className="w-full flex items-center text-start hover:border-[#AEA1DC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ minHeight: 72, boxSizing: "border-box", background: selected ? INK.prPale : INK.card, border: selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 18px", marginBottom: 12, gap: 14 }}>
+        <Avatar name={name} url={avatarUrl} size={44} tone={flagged ? "gold" : "pr"} />
+        <span className="flex-1 min-w-0">
+          <span className="flex justify-between" style={{ gap: 8 }}>
+            <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{name}</span>
+            <span className="shrink-0" style={{ fontSize: 13, lineHeight: "24px", color: INK.chT }}>{daysAgo(row.lastDay, today)}</span>
+          </span>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: INK.chS }}>{tn(n, "{n} day logged · {range}", "{n} days logged · {range}", { range: dayRange(row.days[0], row.lastDay) })}</span>
+          {hasTarget && row.proteinUnder !== null && (
+            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: flagged ? INK.hi : INK.chF, fontWeight: flagged ? 600 : 500 }}>
+              {flagged ? tn(n, "Protein under target {under} of {n} day", "Protein under target {under} of {n} days", { under: row.proteinUnder ?? 0 }) : t("Protein on target")}
+            </span>
+          )}
+        </span>
+      </button>
+    );
   return (
-    <button type="button" onClick={onOpen} className="tap w-full flex text-start" style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
+    <button type="button" onClick={onOpen} aria-current={selected || undefined} className="tap w-full flex text-start" style={{ background: selected ? INK.prPale : INK.card, border: selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
       <Avatar name={name} url={avatarUrl} size={38} tone={flagged ? "gold" : "pr"} />
       <span className="flex-1 min-w-0">
         <span className="flex justify-between" style={{ gap: 8 }}>
@@ -134,7 +161,8 @@ const REACTION_LABEL: Record<Reaction, string> = { like: tk("Great choice"), lov
  * Targets: the ones you set (my_client_nutrition_targets), else the client's
  * own when Progress is shared, else "No target set".
  */
-export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: string | null; onBack: () => void; onDay: (day: string) => void }> = ({ lane, clientId, day, onBack, onDay }) => {
+/** `pane` (website viewport, WP-NU-MP.2): the entry column of the web list-detail, without its back button. */
+export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: string | null; onBack: () => void; onDay: (day: string) => void; pane?: boolean }> = ({ lane, clientId, day, onBack, onDay, pane }) => {
   const { authUserId } = useApp();
   const dark = useIsDark();
   const today = todayLocal();
@@ -143,11 +171,14 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
   const access = useClientAccess(clientId);
   const diet = useDietaryNeeds(clientId, access);
   const diaryShared = access.has("food_diary");
-  const [data, setData] = useState<{ entries: DiaryEntry[]; feedback: Feedback[]; target: { kcal: number; protein: number } | null; error: boolean; offline: boolean } | null>(null);
+  const [data, setData] = useState<{ entries: DiaryEntry[]; feedback: Feedback[]; target: (MacroTargets & { protein: number }) | null; error: boolean; offline: boolean } | null>(null);
+  const { rail } = useWebLayout();
   const [nonce, setNonce] = useState(0);
   const [conflicts, setConflicts] = useState<Record<string, ConflictRow[] | null>>({});
-  const [composer, setComposer] = useState<{ entry: DiaryEntry; kind: "swap" | "comment" } | null>(null);
+  const [composer, setComposer] = useState<{ entry: DiaryEntry; kind: "swap" | "comment"; choices?: DiaryEntry[] } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // Website viewport (WP-NU-MP.2.1): the web journal's "Jump to a date" popup.
+  const [dateOpen, setDateOpen] = useState(false);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
@@ -157,8 +188,10 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
       if (!live) return;
       const mine = t.ok ? t.data : null;
       const own = g && g.ok ? g.data : null;
-      const src = mine ? { calories: mine.calories, proteinPct: mine.proteinPct } : own ? { calories: own.calories, proteinPct: own.proteinPct } : null;
-      const target = src ? { kcal: src.calories, protein: Math.round((src.calories * src.proteinPct) / 100 / 4) } : null;
+      const src = mine ? { calories: mine.calories, proteinPct: mine.proteinPct, carbsPct: mine.carbsPct, fatPct: mine.fatPct } : own ? { calories: own.calories, proteinPct: own.proteinPct, carbsPct: own.carbsPct, fatPct: own.fatPct } : null;
+      // Carbs and fat feed only the web day totals (WP-NU-MP.2); null when the goal has no split.
+      const grams = (pct: number | null | undefined, per: number) => (src && pct != null ? Math.round((src.calories * pct) / 100 / per) : null);
+      const target = src ? { kcal: src.calories, protein: Math.round((src.calories * src.proteinPct) / 100 / 4), carbs: grams(src.carbsPct, 4), fat: grams(src.fatPct, 9) } : null;
       if (!d.ok || !f.ok) {
         setData((prev) => ({ entries: prev?.entries ?? [], feedback: prev?.feedback ?? [], target, error: true, offline: (!d.ok && d.offline) || (!f.ok && f.offline) }));
         return;
@@ -193,13 +226,38 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
 
   const first = client?.firstName ?? "";
   const name = client?.name ?? "";
-  const head = <NuHead eyebrow={t("Food journal · {date}", { date: dayDate(current) })} title={name || t("Food journal")} onBack={onBack} />;
+  const head = (
+    <NuHead
+      eyebrow={t("Food journal · {date}", { date: dayDate(current) })}
+      title={name || t("Food journal")}
+      onBack={pane ? undefined : onBack}
+      right={pane && diaryShared && days.length > 0 ? <JournalDateButton open={dateOpen} onOpen={() => setDateOpen(true)} /> : undefined}
+    />
+  );
+  const picker = pane ? (
+    <JournalDatePickerWeb key={String(dateOpen)} open={dateOpen} onClose={() => setDateOpen(false)} current={current} today={today} logged={days} firstName={client?.firstName ?? ""} onPick={onDay} />
+  ) : null;
 
-  if (access.loading) return <div>{head}<ProCardSkeleton lines={3} /></div>;
-  if (!diaryShared) {
-    return (
+  // Website viewport (WP-NU-MP.2): the whole entry column sits in the drawn white section.
+  const wrap = (body: React.ReactNode) =>
+    pane ? (
+      <>
+        {picker}
+        <JournalCardWeb eyebrow={t("Food journal · {date}", { date: dayDate(current) })} title={name || t("Food journal")} right={diaryShared && days.length > 0 ? <JournalDateButton open={dateOpen} onOpen={() => setDateOpen(true)} /> : undefined}>
+          {body}
+        </JournalCardWeb>
+      </>
+    ) : (
       <div>
         {head}
+        {body}
+      </div>
+    );
+
+  if (access.loading) return wrap(<ProCardSkeleton lines={3} />);
+  if (!diaryShared) {
+    return wrap(
+      <>
         <LockLine
           what={t("Food diary")}
           clientFirstName={first || t("Your client")}
@@ -210,7 +268,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
           }
         />
         {msg && <p style={{ marginTop: 8, fontSize: textPx(12), color: INK.chF }}>{msg}</p>}
-      </div>
+      </>
     );
   }
 
@@ -222,9 +280,102 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
     reload();
   };
 
+  const composerEl = (
+    <Composer
+      open={!!composer}
+      title={composer?.kind === "swap" ? t("Swap suggestion") : t("Comment")}
+      entryName={composer?.entry.name ?? ""}
+      choices={composer?.choices}
+      picked={composer?.entry.id}
+      onPick={(id) => setComposer((c) => (c ? { ...c, entry: c.choices?.find((x) => x.id === id) ?? c.entry } : c))}
+      onClose={() => setComposer(null)}
+      onSend={async (body) => {
+        if (!composer) return null;
+        const r = await commentOnEntry(composer.entry.id, body, null);
+        if (!r.ok) return r.message;
+        reload();
+        return null;
+      }}
+    />
+  );
+
+  if (pane) {
+    // WP-NU-MP.2 (web): one card per meal, 2 across (1 on the rail). Feedback stays per food in
+    // the database; a meal card shows its foods' feedback, else the actions: Great choice likes
+    // each food in the meal without feedback, Swap and Comment ask which food when there are several.
+    const meals = SLOT_ORDER.map((slot) => ({ slot, items: entries.filter((e) => e.slot === slot) })).filter((m) => m.items.length > 0);
+    const sum = (xs: DiaryEntry[]) => xs.reduce((a, e) => ({ kcal: a.kcal + e.kcal, protein: a.protein + e.protein, carbs: a.carbs + e.carbs, fat: a.fat + e.fat }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+    const actBtn = "inline-flex items-center whitespace-nowrap hover:bg-[#F0EDF9] hover:text-[#5F5093] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
+    return wrap(
+      <>
+        <DietStrip name={name} {...diet} web />
+        {data?.error && data.offline && <OfflineLine />}
+        {data?.error && !data.offline && <ProError onRetry={reload} />}
+        {days.length > 1 && <DayTabsWeb days={days.map((d) => ({ key: d, label: dayDate(d) }))} current={current} onDay={onDay} />}
+        {!data ? (
+          <ProCardSkeleton lines={4} height={180} />
+        ) : (
+          <>
+            <DayTotalsWeb rail={rail} totals={sum(entries)} target={data.target} />
+            {meals.length === 0 ? (
+              <EmptyState icon={BookOpenCheck} title={t("Nothing logged")} line={t("{name} hasn't logged anything on this day.", { name: first || t("Your client") })} />
+            ) : (
+              <div className="grid" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gridAutoRows: "1fr", gap: 12 }}>
+                {meals.map((m) => {
+                  const fb = m.items.flatMap((e) => fbFor(e.id));
+                  const open = m.items.filter((e) => fbFor(e.id).length === 0);
+                  const ask = (kind: "swap" | "comment") => setComposer({ entry: open[0] ?? m.items[0], kind, choices: m.items.length > 1 ? m.items : undefined });
+                  return (
+                    <MealCardWeb
+                      key={m.slot}
+                      slot={SLOT_LABEL[m.slot] === "Snacks" ? t("Snack") : t(SLOT_LABEL[m.slot])}
+                      totals={sum(m.items)}
+                      items={m.items.map((e) => ({ id: e.id, name: e.name, kcal: e.kcal, flag: <Flag row={worstConflict(conflicts[e.id] ?? [])} /> }))}
+                      footer={
+                        fb.length > 0 ? (
+                          fb.map((x) => <FeedbackBox key={x.id} f={x} first={first} dark={dark} web />)
+                        ) : (
+                          <div className="flex flex-wrap" style={{ gap: 8 }}>
+                            {(
+                              [
+                                [ThumbsUp, t("Great choice"), () => void Promise.all(open.map((e) => react(e, "like")))],
+                                [Repeat, t("Swap"), () => ask("swap")],
+                                [MessageCircle, t("Comment"), () => ask("comment")],
+                              ] as const
+                            ).map(([Icon, label, act]) => (
+                              <button key={label} type="button" onClick={act} className={actBtn} style={{ gap: 6, height: 36, padding: "0 12px", borderRadius: 10, background: "#F5F5F6", fontSize: 13, fontWeight: 700, color: "#5B5349" }}>
+                                <Icon size={14} strokeWidth={2} aria-hidden />
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex items-center justify-between" style={{ gap: 12, borderRadius: 14, background: "#F5F5F6", padding: "12px 14px" }}>
+              <span style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{t("A note for the whole day and Mark reviewed. A day counts as reviewed once you've left feedback on it.")}</span>
+              <ComingSoonPill />
+            </div>
+            {msg && (
+              <p role="alert" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: INK.hi }}>
+                {msg}
+              </p>
+            )}
+          </>
+        )}
+        {composerEl}
+      </>
+    );
+  }
+
   return (
     <div>
       {head}
+      {picker}
       <DietStrip name={name} {...diet} />
       {data?.error && data.offline && <OfflineLine />}
       {data?.error && !data.offline && (
@@ -347,20 +498,21 @@ const JBox: React.FC<{ label: string; value: string; unit: string; target: numbe
   );
 };
 
-const FeedbackBox: React.FC<{ f: Feedback; first: string; dark: boolean }> = ({ f, first, dark }) => {
+/** `web` (WP-NU-MP.2): 10 12, the title 13/20 800 with a 14 icon, the lines 13/20. */
+const FeedbackBox: React.FC<{ f: Feedback; first: string; dark: boolean; web?: boolean }> = ({ f, first, dark, web }) => {
   const great = f.reaction === "like" || f.reaction === "love" || f.reaction === "strong";
   const title = f.reaction ? t(REACTION_LABEL[f.reaction]) : t("Comment");
   const Icon = great ? ThumbsUp : MessageCircle;
   const ink = great ? INK.good : INK.prDeep;
   return (
-    <div style={{ marginTop: 10, borderRadius: 12, background: dark ? "#2B2C3A" : "#F6F5FB", padding: "9px 12px" }}>
-      <p className="flex items-center" style={{ gap: 5, fontSize: textPx(11), fontWeight: 800, color: ink }}>
-        <Icon size={12} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
+    <div style={{ marginTop: web ? 0 : 10, marginBottom: web ? 8 : 0, borderRadius: 12, background: dark ? "#2B2C3A" : "#F6F5FB", padding: web ? "10px 12px" : "9px 12px" }}>
+      <p className="flex items-center" style={{ gap: 5, fontSize: web ? 13 : textPx(11), lineHeight: web ? "20px" : undefined, fontWeight: 800, color: ink }}>
+        <Icon size={web ? 14 : 12} strokeWidth={2.2} aria-hidden style={NO_ICON_SCALE} />
         {t("{title} · You", { title })}
       </p>
-      {f.body && <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.45, marginTop: 3, overflowWrap: "anywhere" }}>{f.body}</p>}
+      {f.body && <p style={{ fontSize: web ? 13 : textPx(12.5), color: INK.chS, lineHeight: web ? "20px" : 1.45, marginTop: web ? 2 : 3, overflowWrap: "anywhere" }}>{f.body}</p>}
       {f.clientReply && (
-        <p style={{ fontSize: textPx(12.5), color: INK.ch, lineHeight: 1.45, marginTop: 6, overflowWrap: "anywhere" }}>
+        <p style={{ fontSize: web ? 13 : textPx(12.5), color: INK.ch, lineHeight: web ? "20px" : 1.45, marginTop: web ? 2 : 6, overflowWrap: "anywhere" }}>
           <b>{t("{name}:", { name: first || t("Client") })}</b> {f.clientReply}
         </p>
       )}
@@ -368,7 +520,8 @@ const FeedbackBox: React.FC<{ f: Feedback; first: string; dark: boolean }> = ({ 
   );
 };
 
-const Composer: React.FC<{ open: boolean; title: string; entryName: string; onClose: () => void; onSend: (body: string) => Promise<string | null> }> = ({ open, title, entryName, onClose, onSend }) => {
+/** `choices` (web meal cards only): the foods of the meal, to pick which one the note is about. */
+const Composer: React.FC<{ open: boolean; title: string; entryName: string; choices?: DiaryEntry[]; picked?: string; onPick?: (id: string) => void; onClose: () => void; onSend: (body: string) => Promise<string | null> }> = ({ open, title, entryName, choices, picked, onPick, onClose, onSend }) => {
   const [v, setV] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -401,7 +554,18 @@ const Composer: React.FC<{ open: boolean; title: string; entryName: string; onCl
         />
       }
     >
-      <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8, overflowWrap: "anywhere" }}>{entryName}</p>
+      {choices && choices.length > 1 ? (
+        <div role="radiogroup" aria-label={t("Which food")} className="flex flex-col" style={{ gap: 6, marginBottom: 10 }}>
+          {choices.map((c) => (
+            <label key={c.id} className="flex items-center cursor-pointer" style={{ gap: 8, fontSize: 15, lineHeight: "22px", color: INK.ch }}>
+              <input type="radio" name="journal-food" checked={picked === c.id} onChange={() => onPick?.(c.id)} />
+              <span style={{ overflowWrap: "anywhere" }}>{c.name}</span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p style={{ fontSize: textPx(12.5), color: INK.chS, marginBottom: 8, overflowWrap: "anywhere" }}>{entryName}</p>
+      )}
       <textarea
         value={v}
         maxLength={FEEDBACK_MAX}

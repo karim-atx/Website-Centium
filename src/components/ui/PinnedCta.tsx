@@ -1,6 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
+import { PinnedInline } from "./pinnedInline";
 import { Loader2 } from "lucide-react";
 
 // Mobile v5.1 handover, Foundations 2.5 "Pinned CTA" and "Pinned CTA row".
@@ -159,7 +160,9 @@ export const PinnedCta: React.FC<{
  * open, since the panel holds a text field.
  */
 export const PinnedSlot: React.FC<{ aboveKeyboard?: boolean; children: React.ReactNode }> = ({ aboveKeyboard, children }) =>
-  createPortal(
+  React.useContext(PinnedInline) ? (
+    <div className="flex flex-col gap-2">{children}</div>
+  ) : createPortal(
     <div
       className={clsx(
         "fixed z-20 flex flex-col gap-2",

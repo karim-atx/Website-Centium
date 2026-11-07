@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useWebLayout } from "../../../components/web/useWebLayout";
+import MyRewardsPage from "../MyRewardsPage";
+import OfferDetailPage from "./OfferDetailPage";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -41,6 +44,17 @@ export default function VoucherPage() {
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const close = useBack("/app/marketplace/rewards/mine");
+  // Addendum A (WC-EX.7.3): on web the voucher is a centred popup over the page it was opened from.
+  const { web } = useWebLayout();
+  const location = useLocation();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!web) return;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [web, close]);
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [copied, setCopied] = useState<boolean | null>(null);
   const copyTimer = useRef<number | null>(null);
@@ -84,13 +98,56 @@ export default function VoucherPage() {
     </div>
   );
 
-  const shell = (content: React.ReactNode) => (
-    <div style={{ paddingBottom: 34 }}>
-      <style>{FOCUS_CSS}</style>
-      {header}
-      <div style={{ marginTop: 12 }}>{content}</div>
-    </div>
-  );
+  // WC-EX Rewards Web: the 440 popup (r24, padding 24, the shadow) on the
+  // 0.4 scrim; VOUCHER 12/16 0.1em and the 32 close ring; the opener page
+  // (an offer, else My rewards) stays drawn underneath.
+  const webPopup = (content: React.ReactNode) => {
+    const under = (location.state as { under?: string } | null)?.under ?? "";
+    const offerId = /^\/app\/marketplace\/rewards\/(?!mine\/?$)([^/]+)\/?$/.exec(under)?.[1];
+    return (
+      <>
+        <div aria-hidden inert>
+          {offerId ? <OfferDetailPage offerId={decodeURIComponent(offerId)} /> : <MyRewardsPage />}
+        </div>
+        <div
+          onMouseDown={(e) => e.target === e.currentTarget && close()}
+          style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(36,31,27,0.4)" }}
+        >
+          <div role="dialog" aria-modal="true" aria-label={t("Voucher")} data-voucher-web="" style={{ width: 440, maxHeight: "calc(100dvh - 48px)", overflowY: "auto", boxSizing: "border-box", background: "#FFFFFF", borderRadius: 24, padding: 24, boxShadow: "0 24px 60px rgba(36,31,27,0.2)", lineHeight: "normal", color: m.ink }}>
+            <style>{FOCUS_CSS}</style>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8C8378" }}>{t("Voucher")}</span>
+              <button
+                ref={closeRef}
+                type="button"
+                onClick={close}
+                aria-label={t("Close")}
+                className="market-focus"
+                style={{ width: 32, height: 32, boxSizing: "border-box", borderRadius: 999, border: "1.5px solid rgba(36,31,27,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#5B5349", background: "none", padding: 0, cursor: "pointer" }}
+              >
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" aria-hidden>
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </div>
+            {content}
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  const shell = (content: React.ReactNode) =>
+    web ? (
+      webPopup(<div style={{ marginTop: 12 }}>{content}</div>)
+    ) : (
+      <div style={{ paddingBottom: 34 }}>
+        <style>{FOCUS_CSS}</style>
+        {header}
+        <div style={{ marginTop: 12 }}>{content}</div>
+      </div>
+    );
 
   if (load.state === "loading") return shell(<MarketSkeleton radius={24} count={1} rows={3} height={320} label={tk("Loading your voucher")} />);
   const r = load.result;
@@ -102,6 +159,32 @@ export default function VoucherPage() {
 
   const status = liveStatus(v);
   const steps = howToUse(v.where, v.onlineUrl);
+
+  if (web)
+    return webPopup(
+      <>
+        <h2 style={{ margin: "6px 0 0", fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{v.offerHeadline}</h2>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#7D67D9" }}>{v.ownerSubtitle}</p>
+        <VoucherCard code={v.code} qr={v.qrPayload} validUntil={v.expiresAt} status={status} usedAt={v.usedAt} onCopied={onCopied} style={{ marginTop: 14 }} />
+        {status === "issued" ? (
+          <>
+            <h3 style={{ margin: "16px 0 0", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("How to use")}</h3>
+            <ol style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8, fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
+              {steps.map((s, i) => (
+                <li key={s} style={{ display: "flex", gap: 10 }}>
+                  <span aria-hidden style={{ width: 24, height: 24, borderRadius: 999, background: "#F0EDF9", color: "#7D6BB5", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {i + 1}
+                  </span>
+                  {s}
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : null}
+        {copied !== null ? <ConfirmationStrip tone={copied ? "success" : "error"} text={copied ? t("Code copied") : t("Couldn't copy the code. Copy it by hand.")} style={{ marginTop: 16 }} /> : null}
+        {isNew ? <ConfirmationStrip tone="teal" text={t("Saved to My Rewards")} action={t("View")} onAction={() => navigate("/app/marketplace/rewards/mine")} style={{ marginTop: 16 }} /> : null}
+      </>
+    );
 
   return (
     <div style={{ paddingBottom: 34, lineHeight: "normal", color: m.ink }}>

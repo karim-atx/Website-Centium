@@ -39,7 +39,10 @@ import { returnsSummary } from "../../pages/business-more/storePolicyText";
 import { formatShortDate } from "../../utils/date";
 import { tk, tn } from "../../i18n/core";
 import { bizSettingsSection, type BizSettingsSection, type SecondaryKind } from "./webNav";
-import { PaneFillContext } from "./paneFill";
+import { AppSettingsLayout, ProMoreLayout } from "./WebAppSecondary";
+import { PaneFillContext, PaneSpanContext } from "./paneFill";
+import { PinnedInline } from "../ui/pinnedInline";
+import { useWebLayout, WEB_READING_MAX } from "./useWebLayout";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
@@ -66,6 +69,10 @@ export interface SecondaryItem {
   badge?: number;
   /** Opens a page of its own, outside this layout (↗). */
   ext?: boolean;
+  /** A marker before the chevron (the Verified chip, review stars). */
+  trailing?: React.ReactNode;
+  /** A row that is a switch (WP-MO.10 Calls with hired clients): its state; null while loading. The click (onClick) flips it. */
+  switchOn?: boolean | null;
 }
 export interface SecondaryGroup {
   label: string;
@@ -83,6 +90,9 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
       type="button"
       onClick={onSelect}
       aria-current={selected ? "page" : undefined}
+      role={item.switchOn !== undefined ? "switch" : undefined}
+      aria-checked={item.switchOn !== undefined ? !!item.switchOn : undefined}
+      disabled={item.switchOn === null}
       className="relative w-full flex items-center text-start shrink-0 transition-colors duration-150 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:-outline-offset-2"
       style={{ minHeight: 60, gap: 14, paddingBlock: 8, paddingInlineStart: 14, paddingInlineEnd: 16, borderRadius: 14, background: selected ? "#F0EDF9" : undefined }}
     >
@@ -109,6 +119,7 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
         )}
       </span>
       <span className="flex items-center shrink-0" style={{ gap: 8 }}>
+        {item.trailing}
         {item.badge != null && item.badge > 0 && (
           <span
             className="flex items-center justify-center tabular-nums"
@@ -117,7 +128,11 @@ const SecondaryRow: React.FC<{ item: SecondaryItem; selected: boolean; rule: boo
             {item.badge}
           </span>
         )}
-        {item.ext ? (
+        {item.switchOn !== undefined ? (
+          <span aria-hidden className="flex shrink-0" style={{ width: 44, height: 26, boxSizing: "border-box", borderRadius: 999, background: item.switchOn ? "#9A8CD6" : "#E4E2EA", padding: 3, justifyContent: item.switchOn ? "flex-end" : "flex-start", opacity: item.switchOn === null ? 0.4 : 1 }}>
+            <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 2px rgba(36,31,27,0.2)" }} />
+          </span>
+        ) : item.ext ? (
           <ExternalLink size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />
         ) : (
           <ChevronRight size={16} strokeWidth={2} style={{ color: "#9A94B3" }} aria-hidden />
@@ -160,7 +175,7 @@ export const SecondaryGroups: React.FC<{ title: string; groups: SecondaryGroup[]
 };
 
 /** The dark plan card pinned under the business More list (Centium Business). */
-const PlanCard: React.FC<{ title: string; line: string; selected: boolean; onClick: () => void }> = ({ title, line, selected, onClick }) => (
+export const PlanCard: React.FC<{ title: string; line: string; selected: boolean; onClick: () => void }> = ({ title, line, selected, onClick }) => (
   <div className="shrink-0" style={{ padding: "12px 24px 24px", borderTop: "1px solid rgba(36,31,27,0.06)" }}>
     <button
       type="button"
@@ -348,7 +363,7 @@ const BIZ_SETTINGS: { key: BizSettingsSection; label: string; icon: LucideIcon }
 /** The Settings section a sub-page belongs to. */
 function settingsSectionFor(pathname: string): string | null {
   if (under(pathname, "/app/settings/two-factor") || under(pathname, "/app/business/more/security")) return "security";
-  if (under(pathname, "/app/business/more/deactivate")) return "data";
+  if (under(pathname, "/app/business/more/deactivate") || under(pathname, "/app/settings/account")) return "data";
   if (pathname !== "/app/settings" && (under(pathname, "/app/settings") || under(pathname, "/app/business/more"))) return "general";
   return null;
 }
@@ -358,8 +373,14 @@ function settingsSectionFor(pathname: string): string | null {
  * screen inside it (pinned buttons, toasts), whose --app-gutter is the pane's
  * so they sit on the pane's centred column. A page shows in a centred 430
  * column (its mobile screen) unless it fills the pane (usePaneFill).
+ * Professional handover v1 (section 4) and Addendum A (WC-SE): the professional
+ * More and the Client / Professional Settings panes span the pane instead
+ * (`span`): 32 padding (24 on the rail), the reading width of about 1280, values
+ * and chevrons at the right edge. The Business panes keep their 430 column.
  */
-const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string }> = ({ banners, children, scrollKey }) => {
+export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scrollKey: string; span?: boolean }> = ({ banners, children, scrollKey, span }) => {
+  const { rail } = useWebLayout();
+  const pad = rail ? 24 : 32;
   const wrap = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [gutter, setGutter] = useState(0);
@@ -367,22 +388,28 @@ const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNode; scro
   useLayoutEffect(() => {
     const el = wrap.current;
     if (!el) return;
-    const update = () => setGutter(Math.max(0, (el.clientWidth - 430) / 2));
+    const update = () => setGutter(span ? pad : Math.max(0, (el.clientWidth - 430) / 2));
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [span, pad]);
   useEffect(() => {
     scroller.current?.scrollTo({ top: 0 });
   }, [scrollKey]);
   return (
     <div ref={wrap} className="relative flex-1 min-w-0 h-full" style={{ contain: "layout", ["--app-gutter" as string]: `${gutter}px` }}>
       <div ref={scroller} className="h-full overflow-y-auto" style={{ scrollbarWidth: "thin" }} data-web-pane={fill ? "fill" : ""}>
-        <div className={fill ? undefined : "max-w-[430px] mx-auto px-4 pt-6 pb-12"}>
+        <div
+          className={fill || span ? undefined : "max-w-[430px] mx-auto px-4 pt-6 pb-12"}
+          style={!fill && span ? { maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: `${pad}px ${pad}px 48px` } : undefined}
+        >
           <PaneFillContext.Provider value={setFill}>
-            {banners}
-            {children}
+            <PaneSpanContext.Provider value={!!span && !fill}>
+              {banners}
+              {/* A spanning pane draws a page's pinned buttons under its content (the panes draw them inline), not over the window. */}
+              <PinnedInline.Provider value={!!span && !fill}>{children}</PinnedInline.Provider>
+            </PaneSpanContext.Provider>
           </PaneFillContext.Provider>
         </div>
       </div>
@@ -472,6 +499,14 @@ export const WebSecondaryHost: React.FC<{ kind: SecondaryKind; sidebarW: number;
         <BusinessMoreLayout secW={secW} banners={banners}>
           {children}
         </BusinessMoreLayout>
+      ) : kind === "pro-more" ? (
+        <ProMoreLayout secW={secW} banners={banners}>
+          {children}
+        </ProMoreLayout>
+      ) : kind === "settings" ? (
+        <AppSettingsLayout secW={secW} banners={banners}>
+          {children}
+        </AppSettingsLayout>
       ) : (
         <BusinessSettingsLayout secW={secW} banners={banners}>
           {children}

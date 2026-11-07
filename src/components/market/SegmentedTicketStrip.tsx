@@ -47,6 +47,9 @@ export interface SegmentedTicketStripProps<K extends string> {
   idPrefix?: string;
   className?: string;
   style?: React.CSSProperties;
+  /** Website viewport (WC-EX.7.2, the tile drawing only): every item on its step's tint with the ink icon and label, the
+   * active one 700 with a 3 px bar of its ink along the bottom, 58 tall, no notches. Off: the mobile drawing. */
+  web?: boolean;
 }
 
 export const DIVIDER = "1.5px dashed rgba(36,31,27,0.16)";
@@ -63,12 +66,14 @@ export function SegmentedTicketStrip<K extends string>({
   idPrefix,
   className,
   style,
+  web,
 }: SegmentedTicketStripProps<K>) {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const asTabs = tabs ?? variant === "tab";
   const tile = variant === "tile";
+  const webTile = tile && !!web && !dark;
 
   // Arrow keys move between items (tabs pattern, roving focus).
   const onKey = (e: React.KeyboardEvent, i: number) => {
@@ -136,14 +141,26 @@ export function SegmentedTicketStrip<K extends string>({
               borderInlineStart: i ? (dark ? DIVIDER_DARK : DIVIDER) : 0,
               font: "inherit",
               cursor: "pointer",
-              background: on ? activeBg : idleBg,
-              color: on ? "#FFFFFF" : idleInk,
-              ...(tile
+              background: webTile ? tint : on ? activeBg : idleBg,
+              color: webTile ? ink : on ? "#FFFFFF" : idleInk,
+              ...(webTile
+                ? { height: 58, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 2, boxShadow: on ? `inset 0 -3px 0 ${ink}` : "none" }
+                : null),
+              ...(webTile ? null : tile
                 ? { height: 78, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6 }
                 : { flex: 1, minWidth: 0, height: 44, display: "flex", alignItems: "center", justifyContent: "center", fontSize: textPx(12), fontWeight: 700, whiteSpace: "nowrap" }),
             }}
           >
-            {tile ? (
+            {webTile ? (
+              <>
+                {Icon ? (
+                  <span style={{ display: "flex" }}>
+                    <Icon size={16} strokeWidth={1.9} color={ink} aria-hidden style={{ display: "block", ...NO_ICON_SCALE }} />
+                  </span>
+                ) : null}
+                <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: on ? 700 : 500 }}>{it.label}</span>
+              </>
+            ) : tile ? (
               <>
                 {Icon ? (
                   <span style={{ display: "flex" }}>
@@ -158,7 +175,7 @@ export function SegmentedTicketStrip<K extends string>({
           </button>
         );
       })}
-      {tile ? (
+      {tile && !webTile ? (
         <>
           <span aria-hidden style={{ ...notch, insetInlineStart: -7, top: -7 }} />
           <span aria-hidden style={{ ...notch, insetInlineEnd: -7, top: -7 }} />

@@ -81,8 +81,44 @@ export const BizCard: React.FC<{
   facts?: BusinessFacts;
   upcoming: MyClass[];
   onOpen: () => void;
-}> = ({ e, facts, upcoming, onOpen }) => {
+  /**
+   * Website viewport (WP-MO.1, WP-MO Businesses Web): the list card r16, padding 12 16, 8 apart; the 44 logo
+   * (r12), the name 15/24 700 and "type · role" 13/20, the 18 chevron; the next classes under a rule (13/20,
+   * the 16 calendar). The open one #FBFAFE with the 1.5 #AEA1DC border. The console areas are in the detail.
+   */
+  web?: { selected: boolean };
+}> = ({ e, facts, upcoming, onOpen, web }) => {
   const role = roleName(e.role);
+  if (web)
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-current={web.selected || undefined}
+        aria-label={t("Open {name}", { name: e.businessName })}
+        className="w-full text-start hover:!bg-[#FBFAFE] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+        style={{ boxSizing: "border-box", background: web.selected ? "#FBFAFE" : INK.card, border: web.selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 16, padding: "12px 16px", marginBottom: 8 }}
+      >
+        <span className="flex items-center" style={{ gap: 12 }}>
+          <LogoTile name={e.businessName} logoUrl={facts?.logoUrl} size={44} />
+          <span className="flex-1 min-w-0">
+            <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: INK.ch }}>
+              {e.businessName}
+            </span>
+            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: INK.chF }}>
+              {[facts ? typeLine(facts) : null, role].filter(Boolean).join(" · ")}
+            </span>
+          </span>
+          <ChevronRight size={18} strokeWidth={2} style={{ color: INK.chF }} aria-hidden />
+        </span>
+        {upcoming.length > 0 && (
+          <span className="flex items-center" style={{ gap: 8, marginTop: 8, paddingTop: 8, borderTop: `1px solid ${INK.b06}`, fontSize: 13, lineHeight: "20px", color: INK.chS }}>
+            <CalendarDays size={16} strokeWidth={2} style={{ color: INK.chF, flexShrink: 0 }} aria-hidden />
+            <span className="min-w-0 truncate">{upcoming.slice(0, 2).map((c) => `${c.title} ${classWhen(c)}`).join(" · ")}</span>
+          </span>
+        )}
+      </button>
+    );
   const lines = [
     { icon: Briefcase, text: [role, e.acceptedAt ? t("Since {date}", { date: monthYear(e.acceptedAt) }) : null].filter(Boolean).join(" · ") },
     ...(upcoming.length ? [{ icon: CalendarDays, text: upcoming.slice(0, 2).map((c) => `${c.title} ${classWhen(c)}`).join(" · ") }] : []),

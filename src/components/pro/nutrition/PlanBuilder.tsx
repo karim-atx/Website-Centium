@@ -39,8 +39,16 @@ import { DietStrip, Flag, NuHead } from "./kit";
 import { MACRO_COLOUR, conflictBody, conflictTitle } from "./nuFormat";
 import { useDietaryNeeds, useNuRoster, useTileBg } from "./hooks";
 import { itemLine, itemMacros } from "./itemFacts";
-import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
+import { SLOT_LABEL, SLOT_ORDER, dayLabels, dayTotalView, planDayFor, shiftDate, sumMacros, worstConflict, type ConflictRow, type MealSlot } from "./nutritionModel";
+import { weekdayLong } from "../proDates";
+import { mondayIndex } from "../../../utils/week";
 import { appLocale } from "../../../i18n/format";
+import { useSearchParams } from "react-router-dom";
+import { useIsWeb } from "../../web/useWebLayout";
+import { PlanHeaderWeb, WeekBuilderWeb, type MealIO } from "../web/WeekBuilderWeb";
+import { convertUnit } from "../web/planUnits";
+import { PlanDayWeb } from "../web/PlanDayWeb";
+import { planTargets, servingGrams, targetsLine } from "../web/weekBuilderModel";
 import { t } from "../../../i18n/core";
 
 /**
@@ -65,11 +73,25 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const dark = useIsDark();
   const tile = useTileBg();
   const today = todayLocal();
+  // Website viewport (WP-LI.7.3 / WP-NU-MP.7, decision 6): the builder opens in Week view on web; ?view=day is the Day view.
+  const web = useIsWeb();
+  const [params, setParams] = useSearchParams();
+  const webView: "day" | "week" = params.get("view") === "day" ? "day" : "week";
+  const setView = (v: "day" | "week") =>
+    setParams(
+      (p) => {
+        const n = new URLSearchParams(p);
+        if (v === "day") n.set("view", "day");
+        else n.delete("view");
+        return n;
+      },
+      { replace: true }
+    );
   const [state, setState] = useState<{ plan: MealPlan | null; error: boolean; offline: boolean } | null>(null);
   const [assignment, setAssignment] = useState<(Assignment & { endedAt: string | null }) | null>(null);
   const [nonce, setNonce] = useState(0);
   const [day, setDay] = useState<number | null>(null);
-  const [adding, setAdding] = useState<{ slot: MealSlot; swap: PlanItem | null } | null>(null);
+  const [adding, setAdding] = useState<{ slot: MealSlot; swap: PlanItem | null; query?: string } | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [itemMenu, setItemMenu] = useState<{ item: PlanItem; anchor: HTMLElement } | null>(null);
   const [flagged, setFlagged] = useState<{ item: PlanItem; row: ConflictRow } | null>(null);
@@ -117,10 +139,11 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const theDay = days.find((d) => d.dayIndex === current) ?? null;
   const src = useMemo(() => ({ recipes, customMeals }), [recipes, customMeals]);
 
-  // food_conflicts for the day's items (a client's copy only).
+  // food_conflicts for the day's items (a client's copy only); on web the week builder shows every day.
+  const scanned = useMemo(() => (web ? (plan?.days ?? []).flatMap((d) => d.items) : theDay?.items ?? null), [web, plan, theDay]);
   useEffect(() => {
-    if (!clientId || !theDay) return;
-    const todo = theDay.items.filter((i) => i.kind && i.refId && !asked.current.has(`${i.kind}:${i.refId}`));
+    if (!clientId || !scanned) return;
+    const todo = scanned.filter((i) => i.kind && i.refId && !asked.current.has(`${i.kind}:${i.refId}`));
     if (!todo.length) return;
     todo.forEach((i) => asked.current.add(`${i.kind}:${i.refId}`));
     let live = true;
@@ -130,7 +153,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
     return () => {
       live = false;
     };
-  }, [clientId, theDay]);
+  }, [clientId, scanned]);
 
   if (!state) {
     return (
@@ -203,11 +226,75 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
     isCopy ? { value: "end", label: firstName ? t("End {name}'s plan", { name: firstName }) : t("End this plan"), destructive: true } : { value: "delete", label: t("Delete template"), destructive: true },
   ];
 
+  const notices = (
+    <>
+      {state.error && state.offline && <OfflineLine />}
+      {state.error && !state.offline && (
+        <div style={{ marginBottom: 12 }}>
+          <ProError onRetry={reload} />
+        </div>
+      )}
+      {isCopy && !(web && webView === "day") && <DietStrip name={clientName} {...diet} />}
+      {isCopy && assignment?.endedAt && (
+        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("This plan has ended. Changes won't reach the client.")}</p>
+      )}
+    </>
+  );
+  const kicker = isCopy ? t("{name}'s copy", { name: clientName }) : t("Template");
+
+  // Website viewport: the week builder and the web Day view (WP-LI.7 / .7.3, WP-NU-MP.7).
+  const webDays = days.map((d) => ({ id: d.id, dayIndex: d.dayIndex, name: startsOn ? weekdayLong(mondayIndex(new Date(`${shiftDate(startsOn, d.dayIndex - 1)}T00:00:00`).getDay())) : labels(d.dayIndex).tab, short: labels(d.dayIndex).short, items: d.items }));
+  const saveItem = async (item: PlanItem, portion: { grams: number | null; servings: number | null }) => {
+    if (!item.kind || !item.refId) return;
+    const r = await replaceItem(item.id, { ref: { kind: item.kind, refId: item.refId }, slot: item.slot, ...portion });
+    if (!r.ok) setMsg(r.message);
+    reload();
+  };
+  const webIO: MealIO = {
+    src,
+    readOnly: !!(isCopy && assignment?.endedAt),
+    clientId,
+    onItemMenu: (item, dayIndex, anchor) => {
+      setDay(dayIndex);
+      setItemMenu({ item, anchor });
+    },
+    onQty: (item, value) => saveItem(item, item.grams != null ? { grams: value, servings: null } : { grams: null, servings: value }),
+    onUnit: (item, unit) => saveItem(item, convertUnit(item, servingGrams(item), unit)),
+    onPick: async (dayIndex, draft) => {
+      const d = days.find((x) => x.dayIndex === dayIndex);
+      if (!d) return;
+      const r = await addItem(d.id, draft);
+      if (!r.ok) setMsg(r.message);
+      reload();
+    },
+    onFlagged: (dayIndex, slot, query) => {
+      setDay(dayIndex);
+      setAdding({ slot, swap: null, query });
+    },
+    flag: (it) => {
+      const f = flagOf(it);
+      return <Flag row={f} onClick={f && f.kind !== "preference" ? () => setFlagged({ item: it, row: f }) : undefined} />;
+    },
+  };
+
   return (
     <div>
+      {web ? (
+        <PlanHeaderWeb
+          kicker={kicker}
+          title={plan.name}
+          line={webView === "week" ? targetsLine(planTargets(plan)) : null}
+          compact={webView === "day"}
+          view={webView}
+          onView={setView}
+          onBack={onBack}
+          onMore={(el) => setMenuAnchor(el)}
+          moreOpen={!!menuAnchor}
+        />
+      ) : (
       <NuHead
         title={plan.name}
-        eyebrow={isCopy ? t("{name}'s copy", { name: clientName }) : t("Template")}
+        eyebrow={kicker}
         onBack={onBack}
         right={
           <div className="flex shrink-0" style={{ gap: 8 }}>
@@ -216,16 +303,40 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           </div>
         }
       />
-      {state.error && state.offline && <OfflineLine />}
-      {state.error && !state.offline && (
-        <div style={{ marginBottom: 12 }}>
-          <ProError onRetry={reload} />
-        </div>
       )}
-      {isCopy && <DietStrip name={clientName} {...diet} />}
-      {isCopy && assignment?.endedAt && (
-        <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("This plan has ended. Changes won't reach the client.")}</p>
-      )}
+      {web && webView === "week" ? (
+        <>
+          {(state.error || isCopy) && <div style={{ padding: "16px 32px 0" }}>{notices}</div>}
+          <WeekBuilderWeb days={webDays} targets={planTargets(plan)} io={webIO} />
+          {msg && (
+            <p role="alert" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.hi, padding: "8px 32px" }}>
+              {msg}
+            </p>
+          )}
+        </>
+      ) : (
+      web ? (
+        <>
+          {(state.error || isCopy) && <div style={{ padding: "16px 32px 0" }}>{notices}</div>}
+          <PlanDayWeb
+            days={webDays}
+            current={current}
+            onDay={setDay}
+            targets={planTargets(plan)}
+            needs={isCopy ? <DietStrip name={clientName} {...diet} /> : null}
+            io={webIO}
+            recipeLine={(it) => itemLine(it, itemMacros(it, src)).replace(/ · [^·]*kcal$/, "")}
+            flag={webIO.flag}
+          />
+          {msg && (
+            <p role="alert" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.hi, padding: "8px 32px" }}>
+              {msg}
+            </p>
+          )}
+        </>
+      ) : (
+      <DayFrame web={web}>
+      {notices}
 
       {/* Day tabs (r6b tabsScroll6, h 34) */}
       <div role="tablist" aria-label={t("Day")} className="flex items-center scroll-row no-scrollbar" style={{ background: "rgb(var(--c-seg-track))", borderRadius: 16, padding: 6, gap: 5, marginBottom: 12 }}>
@@ -312,6 +423,8 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           {msg}
         </p>
       )}
+      </DayFrame>
+      ))}
 
       <PopupMenu
         open={!!menuAnchor}
@@ -350,7 +463,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       />
 
       {addCtx && (
-        <AddItemSheet open={!!adding} onClose={() => setAdding(null)} ctx={addCtx} needs={isCopy ? diet : null} onSubmit={submitItem} />
+        <AddItemSheet open={!!adding} onClose={() => setAdding(null)} ctx={addCtx} needs={isCopy ? diet : null} onSubmit={submitItem} initialQuery={adding?.query} />
       )}
 
       {/* NU11 / NU12 on an item already in the copy */}
@@ -674,3 +787,13 @@ const PlanTargetsSheet: React.FC<{ open: boolean; plan: MealPlan; onClose: () =>
     </BottomSheet>
   );
 };
+
+/** Website viewport: the Day view keeps its mobile screen in the centred column below the web header (WP-LI.7 is not built yet); on mobile it adds nothing. */
+const DayFrame: React.FC<{ web: boolean; children: React.ReactNode }> = ({ web, children }) =>
+  web ? (
+    <div data-web-frame="mobile" className="max-w-[430px] mx-auto px-4 pt-6 pb-12">
+      {children}
+    </div>
+  ) : (
+    <>{children}</>
+  );

@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
+import { useWebLayout } from "../../web/useWebLayout";
 import { INK } from "../proInk";
 import { t } from "../../../i18n/core";
 
@@ -74,20 +75,23 @@ export function StatusTabs<K extends string>({ tabs, active, onChange, k }: { ta
   );
 }
 
-export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean }> = ({ label, on, onClick, k, expanded }) => (
+export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean; /** The web box; a number is its font size (WP-CL Patients Web qFs 13). */ web?: boolean | number }> = ({ label, on, onClick, k, expanded, web }) => (
   <button
     type="button"
     aria-haspopup="menu"
     aria-expanded={expanded}
     onClick={(e) => onClick(e.currentTarget)}
-    className="tap relative inline-flex items-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']"
+    className={web ? "inline-flex min-w-0 items-center justify-center whitespace-nowrap hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" : "tap relative inline-flex items-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[5px] before:content-['']"}
     style={{
       flex: "none",
       gap: 5,
-      height: Math.round(34 * k),
-      padding: "0 11px",
+      height: web ? 40 : Math.round(34 * k),
+      width: web ? "100%" : undefined,
+      padding: web ? "0 8px" : "0 11px",
+      boxSizing: "border-box",
       borderRadius: 10,
-      fontSize: textPx(12),
+      fontSize: web ? (typeof web === "number" ? web : 15) : textPx(12),
+      lineHeight: web ? "20px" : undefined,
       fontWeight: on ? 700 : 600,
       background: on ? INK.fill : INK.card,
       color: on ? INK.onFill : INK.chS,
@@ -95,7 +99,7 @@ export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: H
     }}
   >
     {label}
-    <ChevronDown size={12} strokeWidth={2.2} aria-hidden style={{ color: on ? INK.onFill : INK.chF }} />
+    <ChevronDown size={web ? 16 : 12} strokeWidth={2.2} aria-hidden style={{ color: on ? INK.onFill : INK.chF }} />
   </button>
 );
 
@@ -115,24 +119,48 @@ export const FilterPanel: React.FC<{
   showLabel: string;
 }> = ({ open, groups, selected, onToggle, onClear, onClose, showLabel }) => {
   const dark = useIsDark();
+  // WP-CL.5 on web: the frame's floating card under the header's Filter
+  // button (top 60, the page margin from the right, 420 wide, no scrim),
+  // chips 15/20 and 40 buttons. Mobile as before.
+  const { web, rail } = useWebLayout();
+  // Web keyboard: focus moves into the card on open, Esc closes it and focus
+  // returns to the Filter button.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    if (!open || !web) return;
+    const back = document.activeElement as HTMLElement | null;
+    cardRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      back?.focus?.({ preventScroll: true });
+    };
+  }, [open, web]);
   if (!open) return null;
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
-      <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: "rgba(36,31,27,0.18)" }} onClick={onClose} />
+      <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: web ? "transparent" : "rgba(36,31,27,0.18)" }} onClick={onClose} />
       <div
+        ref={cardRef}
         role="dialog"
         aria-label={t("Filter")}
         className="absolute overflow-y-auto"
         style={{
-          top: 116,
-          insetInlineStart: "max(16px, calc(50% - 199px))",
-          insetInlineEnd: "max(16px, calc(50% - 199px))",
-          maxHeight: "calc(100vh - 220px)",
+          ...(web
+            ? { top: 60, insetInlineEnd: rail ? 24 : 32, width: 420, maxHeight: "calc(100vh - 92px)" }
+            : { top: 116, insetInlineStart: "max(16px, calc(50% - 199px))", insetInlineEnd: "max(16px, calc(50% - 199px))", maxHeight: "calc(100vh - 220px)" }),
           background: INK.card,
           border: "1px solid rgba(174,161,220,0.5)",
           borderRadius: 14,
           boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
-          padding: "8px 10px 10px",
+          padding: web ? "8px 16px 16px" : "8px 10px 10px",
         }}
       >
         {groups.map((g) => (
@@ -152,7 +180,8 @@ export const FilterPanel: React.FC<{
                       minHeight: 36,
                       borderRadius: 8,
                       padding: "7px 10px",
-                      fontSize: textPx(12),
+                      fontSize: web ? 15 : textPx(12),
+                      lineHeight: web ? "20px" : undefined,
                       border: `1px solid ${on ? (dark ? "#9A8CD6" : "#AEA1DC") : dark ? "#31343C" : "#E5E6EB"}`,
                       background: on ? (dark ? "#303141" : "#F0EDF9") : dark ? "#262932" : "#FAFAFB",
                       color: INK.ch,
@@ -167,8 +196,17 @@ export const FilterPanel: React.FC<{
           </div>
         ))}
         <div className="flex" style={{ gap: 8, marginTop: 14 }}>
-          <CtaButton className="flex-1" variant="secondary" size="base" label={t("Clear")} onClick={onClear} />
-          <CtaButton className="flex-1" size="base" label={showLabel} onClick={onClose} />
+          {web ? (
+            <>
+              <button type="button" onClick={onClear} className="tap flex-1" style={{ height: 40, borderRadius: 12, background: "#F0EDF9", color: "#5F5093", fontSize: 15, fontWeight: 600 }}>{t("Clear")}</button>
+              <button type="button" onClick={onClose} className="tap flex-1 whitespace-nowrap" style={{ height: 40, borderRadius: 12, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, fontWeight: 600 }}>{showLabel}</button>
+            </>
+          ) : (
+            <>
+              <CtaButton className="flex-1" variant="secondary" size="base" label={t("Clear")} onClick={onClear} />
+              <CtaButton className="flex-1" size="base" label={showLabel} onClick={onClose} />
+            </>
+          )}
         </div>
       </div>
     </div>

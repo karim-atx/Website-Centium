@@ -112,7 +112,7 @@ export default function SessionPageWeb() {
           <WebPageHeader title={api.loading ? "" : t("Class")} kicker={kicker} back={back} />
         </div>
         <div style={{ padding: 32 }}>
-          <div className="max-w-[1280px]">
+          <div className="max-w-[1600px]">
             {api.loading ? (
               <MarketSkeleton radius={20} rows={3} count={2} label={t("Loading this class")} />
             ) : api.error ? (
@@ -247,7 +247,7 @@ export default function SessionPageWeb() {
       </div>
 
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] grid" style={{ gridTemplateColumns: "repeat(12,minmax(0,1fr))", gap: 24, alignItems: "start" }}>
+        <div className="max-w-[1600px] grid" style={{ gridTemplateColumns: "repeat(12,minmax(0,1fr))", gap: 24, alignItems: "start" }}>
           <div className="flex flex-col" style={{ gridColumn: "1 / -1", margin: "-8px 0 -8px", gap: 8 }}>
             {offline && api.loadedAt !== null && <MarketOffline loaded />}
             <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>

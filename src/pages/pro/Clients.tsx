@@ -19,6 +19,8 @@ import { AddClientFlows } from "../../components/pro/addclient/AddClientFlows";
 import { AcceptRequestPopup, DeclineRequestPopup } from "../../components/pro/addclient/RequestPopups";
 import { SentInvitesSection } from "../../components/pro/addclient/SentInvitesSection";
 import { CtaButton } from "../../components/ui/PinnedCta";
+import { useIsWeb, useWebLayout } from "../../components/web/useWebLayout";
+import { ClientDetailPanel, ClientsEmptyWeb, ClientsSplit } from "../../components/pro/web/ClientsWeb";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { Toast } from "../../components/ui/Toast";
 import { time12 } from "../../utils/time12";
@@ -136,6 +138,12 @@ export default function Clients() {
   const { authUserId, professionalClients, rosterLoading, refreshRoster, removeProfessionalClient, accessibility } = useApp();
   const k = accessibility.largerText ? 1.2 : 1;
   const patients = lane === "clinical_overview";
+  // Website viewport (WP-CL): from 1024px a row selects the client shown in the
+  // detail pane beside the list (the first one by default) instead of opening
+  // the client page; the pane's Open does that. Mobile is unchanged.
+  const web = useIsWeb();
+  const webRail = useWebLayout().rail;
+  const [webSel, setWebSel] = useState<string | null>(null);
 
   const today = localIso(new Date());
 
@@ -308,6 +316,9 @@ export default function Clients() {
   }, [clients, requests, inbox.declined, status, passes, q, sort, filtering]);
 
   const shownCount = visible.filter((e) => e.kind !== "declined").length;
+  // WP-CL: the client in the detail pane, the first shown by default.
+  const webClients = visible.filter((e): e is ClientEntry => e.kind === "client");
+  const webEntry: ClientEntry | null = web ? (webClients.find((e) => e.clientId === webSel) ?? webClients[0] ?? null) : null;
 
   const SORTS: { value: SortKey; label: string }[] = [
     { value: "next", label: t("Next session") },
@@ -476,7 +487,83 @@ export default function Clients() {
     </>
   );
 
+  // Website viewport (WP-CL, WP-CL Clients Web v2): the 64 page header (the title 28/36, search 360 / 280 on the
+  // rail, Add client and Filter 40 r12), then the status tabs across the page (36, r10, 15/24 600 with the count
+  // 13/800; 8 apart; equal at 1440, scrolling on the rail), above the list and the preview.
+  const webHead = web ? (
+    <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 12, padding: `0 ${webRail ? 24 : 32}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+      <h1 className="flex-1 min-w-0 truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>
+        {patients ? t("Patients") : t("Clients")}
+      </h1>
+      <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: webRail ? 280 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 4px 0 14px", borderRadius: 12, background: "#F5F5F6", border: `1px solid ${query ? INK.pr : "rgba(36,31,27,0.10)"}` }}>
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={patients ? t("Search patients") : t("Search clients")}
+          aria-label={patients ? t("Search patients") : t("Search clients")}
+          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]"
+          style={{ fontSize: 15, lineHeight: "24px", color: INK.ch }}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")} aria-label={t("Clear search")} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
+            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />
+          </button>
+        )}
+      </label>
+      <button type="button" onClick={() => setAddOpen(true)} aria-label={patients ? t("Add patient") : t("Add client")} className="flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
+        <UserPlus size={20} strokeWidth={1.75} aria-hidden style={{ color: "#5B5349" }} />
+      </button>
+      {!empty && (
+        <button type="button" onClick={() => setPanelOpen((v) => !v)} aria-label={t("Filter")} aria-pressed={panelOpen || filtering} className="relative flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: panelOpen || filtering ? "#F0EDF9" : "#F5F5F6", border: `1px solid ${panelOpen || filtering ? "#AEA1DC" : "rgba(36,31,27,0.10)"}` }}>
+          <SlidersHorizontal size={20} strokeWidth={1.75} aria-hidden style={{ color: "#5B5349" }} />
+        </button>
+      )}
+    </header>
+  ) : null;
+  const webTabs = web ? (
+    <div role="tablist" aria-label={t("Status")} className={webRail ? "flex no-scrollbar" : "flex"} style={{ gap: 8, marginBottom: 16, overflowX: webRail ? "auto" : undefined, overflowY: webRail ? "hidden" : undefined }}>
+      {STATUS_ORDER.map((key) => {
+        const on = status === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => setStatus(key)}
+            className="flex items-center justify-center whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#FFFFFF" : "#6D50D3" }}
+          >
+            {t(STATUS_LABEL[key])}
+            <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>{counts[key]}</span>
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
   if (!lane) return null;
+
+  if (empty && web)
+    return (
+      <div>
+        {webHead}
+        <ClientsEmptyWeb patients={patients} onAdd={() => setAddOpen(true)} />
+        <SentInvitesSection reloadKey={`${nonce}:${invitesKey}`} />
+        <AddClientFlows
+          open={addOpen}
+          onClose={closeAdd}
+          invitesAllowed={invitesAllowed}
+          pendingCount={requests.length}
+          onInviteClients={() => navigate(`${PRO_ROUTES.home}/invite`)}
+          onPendingRequests={() => setStatus("requests")}
+          onOfflineAdded={(name) => setToast(t("{name} added.", { name }))}
+        />
+        <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      </div>
+    );
 
   if (empty) {
     return (
@@ -501,26 +588,35 @@ export default function Clients() {
     );
   }
 
-  return (
+  const page = (
     <div style={{ paddingBottom: selecting ? 96 : 0 }}>
-      {head}
-      <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />
-      <ScrollRow label={t("Filters")}>
-        {groups.map((g) => (
+      {!web && head}
+      {!web && <StatusTabs tabs={STATUS_ORDER.map((key) => ({ key, label: t(STATUS_LABEL[key]), count: counts[key] }))} active={status} onChange={setStatus} k={k} />}
+      {(() => {
+        const chips = groups.map((g) => (
           <QuickFilter
             key={g.key}
             label={g.title}
             on={(filters[g.key] ?? []).length > 0}
             expanded={quick?.group === g.key}
             k={k}
+            web={web && patients ? 13 : web}
             onClick={(el) => setQuick((cur) => (cur?.group === g.key ? null : { group: g.key, el }))}
           />
-        ))}
-      </ScrollRow>
+        ));
+        // WP-CL Clients Web v2: the quick filters as a grid of 40 boxes, 4 across (2 on the rail), 8 apart; Patients Web: 4 across at both widths, 13.
+        return web ? (
+          <div role="group" aria-label={t("Filters")} style={{ display: "grid", gridTemplateColumns: `repeat(${webRail && !patients ? 2 : 4},minmax(0,1fr))`, gap: 8 }}>
+            {chips}
+          </div>
+        ) : (
+          <ScrollRow label={t("Filters")}>{chips}</ScrollRow>
+        );
+      })()}
 
       {stages.offline && <OfflineLine />}
 
-      <div className="flex items-center justify-between" style={{ gap: 12, marginBottom: 10, minHeight: 32 }}>
+      <div className="flex items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
         {selecting ? (
           <>
             <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{t("{n} selected", { n: picked.size })}</span>
@@ -542,16 +638,16 @@ export default function Clients() {
               aria-expanded={!!sortEl}
               onClick={(e) => setSortEl(e.currentTarget)}
               className="tap inline-flex items-center relative before:absolute before:-inset-3 before:content-['']"
-              style={{ gap: 4, fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}
+              style={web ? { gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5B5349", whiteSpace: "nowrap" } : { gap: 4, fontSize: textPx(12), fontWeight: 600, color: INK.chS, whiteSpace: "nowrap" }}
             >
-              <ArrowUpDown size={13} strokeWidth={2} aria-hidden />
+              <ArrowUpDown size={web ? 16 : 13} strokeWidth={2} aria-hidden />
               {t("Sort: {sort}", { sort: SORTS.find((s) => s.value === sort)?.label ?? "" })}
-              <ChevronDown size={12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
+              <ChevronDown size={web ? 16 : 12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
-            <span className="flex items-center" style={{ gap: 12 }}>
-              <span style={{ fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
+            <span className="flex items-center" style={{ gap: web ? 16 : 12 }}>
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
               {clients.length > 0 && (
-                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
+                <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
               )}
             </span>
           </>
@@ -593,12 +689,17 @@ export default function Clients() {
                     line={t("Asked to work with you {ago}", { ago: agoLabel(e.req.requestedAt) ?? "" }).trim()}
                     ring={null}
                     lane={lane}
+                    web={web ? { open: false } : undefined}
                     onClick={() => setStatus("requests")}
                   />
                 )}
               </div>
             ) : (
-              <div role="listitem" key={e.clientId}>
+              <div
+                role="listitem"
+                key={e.clientId}
+                aria-current={web && webEntry?.clientId === e.clientId ? "true" : undefined}
+              >
                 <ClientRow
                   name={e.name}
                   avatarUrl={e.rel.avatarUrl}
@@ -609,8 +710,9 @@ export default function Clients() {
                   single={single}
                   selecting={selecting}
                   picked={picked.has(e.clientId)}
+                  web={web ? { open: webEntry?.clientId === e.clientId } : undefined}
                   onClick={() => {
-                    if (!selecting) return navigate(proClientPath(e.clientId));
+                    if (!selecting) return web ? setWebSel(e.clientId) : navigate(proClientPath(e.clientId));
                     setPicked((p) => {
                       const n = new Set(p);
                       if (n.has(e.clientId)) n.delete(e.clientId);
@@ -667,6 +769,8 @@ export default function Clients() {
         open={!!quick}
         onClose={() => setQuick(null)}
         anchor={quick?.el ?? null}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={groups.find((g) => g.key === quick?.group)?.title}
         options={(groups.find((g) => g.key === quick?.group)?.options ?? []).map((o) => ({ value: o.value, label: o.label }))}
         selected={quick ? filters[quick.group] ?? [] : []}
@@ -680,6 +784,8 @@ export default function Clients() {
         open={!!sortEl}
         onClose={() => setSortEl(null)}
         anchor={sortEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={t("Sort by")}
         options={SORTS}
         selected={sort}
@@ -688,7 +794,8 @@ export default function Clients() {
         align="left"
       />
 
-      {preview && (
+      {/* On web the preview is the detail pane (WP-CL); its ⋮ sets the entry for the menus below. */}
+      {preview && !web && (
         <ClientPreview
           entry={preview}
           lane={lane}
@@ -705,6 +812,8 @@ export default function Clients() {
         open={!!menuEl && !!preview}
         onClose={() => setMenuEl(null)}
         anchor={menuEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         options={[
           { value: "message", label: t("Message"), icon: <MessageCircle size={15} /> },
           { value: "stage", label: t("Change stage"), icon: <ClipboardList size={15} /> },
@@ -726,6 +835,8 @@ export default function Clients() {
         open={!!stageEl && !!preview}
         onClose={() => setStageEl(null)}
         anchor={stageEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={t("Stage")}
         options={CLIENT_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s] }))}
         selected={preview?.stage ?? null}
@@ -775,6 +886,48 @@ export default function Clients() {
       />
     </div>
   );
+
+  // On web the header and status tabs stay on every segment; Requests (no client to preview) leaves the pane empty.
+  if (web)
+    return (
+      <ClientsSplit
+        head={webHead}
+        tabs={webTabs}
+        list={page}
+        detail={
+          webEntry && <ClientDetailPanel
+            lane={lane}
+            facts={{
+              name: webEntry.name,
+              avatarUrl: webEntry.rel.avatarUrl ?? null,
+              statusLabel: t(STATUS_LABEL[webEntry.status]),
+              attention: webEntry.status === "attention",
+              onboarding: webEntry.status === "onboarding",
+              ring: webEntry.numbers ? webEntry.numbers.ring : null,
+              nextLabel: patients ? t("Next appointment") : t("Next session"),
+              next: nextLabel(webEntry.next, today) ?? t("Not booked"),
+              planTitle,
+              plan: webEntry.plan
+                ? webEntry.plan.week
+                  ? webEntry.plan.week.of
+                    ? t("{name}, week {n} of {of}", { name: webEntry.plan.name, n: webEntry.plan.week.n, of: webEntry.plan.week.of })
+                    : t("{name}, week {n}", { name: webEntry.plan.name, n: webEntry.plan.week.n })
+                  : webEntry.plan.name
+                : t("None yet"),
+              tags: webEntry.tags.length ? webEntry.tags.join(t(", ")) : t("No tags"),
+              unread: webEntry.unread ? t("{n} unread", { n: webEntry.unread }) : t("No unread messages"),
+            }}
+            onMessage={() => void message(webEntry.clientId)}
+            onOpen={() => navigate(proClientPath(webEntry.clientId))}
+            onMenu={(el) => {
+              setPreview(webEntry);
+              setMenuEl(el);
+            }}
+          />
+        }
+      />
+    );
+  return page;
 
   function rowLine(e: ClientEntry): string {
     if (e.status === "onboarding" && !e.plan) return t("Joined {date}", { date: new Date(e.joinedAt).toLocaleDateString(appLocale("en-US"), { month: "short", day: "numeric" }) });

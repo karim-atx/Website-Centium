@@ -24,6 +24,7 @@ import { INK } from "../../../components/pro/proInk";
 import { ProCardSkeleton } from "../../../components/pro/states";
 import { textPx } from "../../../theme/textSize";
 import { t, tn } from "../../../i18n/core";
+import { useIsWeb } from "../../../components/web/useWebLayout";
 
 // Batch 2 · CS, Karim's decision (21 Oct): a PROFESSIONAL who owns a business
 // and holds its business plan gets the same monthly / yearly choice as a
@@ -49,6 +50,7 @@ export function ProBusinessBilling() {
   const [ask, setAsk] = useState<{ to: SubscriptionPeriod; price: number; at: Date } | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ tone: "done" | "error"; text: string } | null>(null);
+  const web = useIsWeb();
 
   const sub = own.sub;
   if (!own.ready) return null;
@@ -108,7 +110,54 @@ export function ProBusinessBilling() {
         </div>
       )}
       {!prices && !own.error && <ProCardSkeleton lines={2} />}
-      {prices && (
+      {/* Website viewport (WP-MO.11, WP-MO Business Billing Web): the two choices as 72 radio cards side by side (12
+          apart, r14, 12 16), the 20 ring, the period 15/24 700 with Current / the saving chip, the price a month
+          13/20 under it, the price 15/24 700 at the end. */}
+      {prices && web && (
+        <div style={{ marginTop: 16 }}>
+          <p style={{ margin: "0 0 8px", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5B5349" }}>{t("How your business plan is billed")}</p>
+          <div role="radiogroup" aria-label={t("How your business plan is billed")} className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 12 }}>
+            {options.map((o) => {
+              const off = !o.current && !o.selectable;
+              return (
+                <button
+                  key={o.period}
+                  type="button"
+                  role="radio"
+                  aria-checked={o.current}
+                  aria-disabled={off}
+                  disabled={off}
+                  onClick={() => {
+                    setNote(null);
+                    if (o.selectable && o.price !== null) setAsk({ to: o.period, price: o.price, at: renewalAfterSwitch(new Date(), o.period) });
+                  }}
+                  className="flex items-center text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+                  style={{ minHeight: 72, boxSizing: "border-box", gap: 12, borderRadius: 14, padding: "12px 16px", background: o.current ? "#F0EDF9" : "#FFFFFF", border: `1px solid ${o.current ? "#AEA1DC" : "rgba(36,31,27,0.11)"}`, opacity: off ? 0.6 : 1, cursor: off ? "default" : "pointer", color: "#241F1B" }}
+                >
+                  <span className="flex items-center justify-center shrink-0" style={{ width: 20, height: 20, boxSizing: "border-box", borderRadius: 999, border: `2px solid ${o.current ? "#5F5093" : "rgba(36,31,27,0.25)"}` }}>
+                    {o.current && <span style={{ width: 10, height: 10, borderRadius: 999, background: "#5F5093" }} />}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center flex-wrap" style={{ gap: 8 }}>
+                      <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700 }}>{periodName(o.period)}</span>
+                      {o.current && <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: "#FFFFFF", color: "#5F5093" }}>{t("Current")}</span>}
+                      {o.period === "yearly" && saving && <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: "#E3F1E8", color: "#3F9165" }}>{savingLabel(saving)}</span>}
+                    </span>
+                    {o.period === "yearly" && o.price !== null && saving && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{perMonthText(o.price, formatPrice)}</span>}
+                  </span>
+                  <span className="whitespace-nowrap" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: o.price === null ? "#8C8378" : "#241F1B" }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            {options.find((o) => !o.current && o.price === null)
+              ? noPriceText(options.find((o) => !o.current && o.price === null)!.period)
+              : t("Seat blocks follow your plan's billing. Switching charges nothing now.")}
+          </p>
+        </div>
+      )}
+      {prices && !web && (
         <div role="radiogroup" aria-label={t("How your business plan is billed")} style={{ marginTop: 10, display: "grid", gap: 8 }}>
           {options.map((o) => (
             <button

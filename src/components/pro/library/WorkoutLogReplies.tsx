@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Send, Trash2 } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton, PinnedCta } from "../../ui/PinnedCta";
@@ -30,7 +31,12 @@ import {
  *   with "Undo" (mark_workout_log_reviewed false).
  * - ATX08 at any step: the workout is no longer shared ("gone").
  */
-export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: string }> = ({ sessionId, clientFirstName }) => {
+export const WorkoutLogReplies: React.FC<{
+  sessionId: string;
+  clientFirstName: string;
+  /** Website viewport (WP-LI.3.3): Mark as reviewed / Reviewed render here, in the web header, instead of the pinned button. */
+  webReviewSlot?: HTMLElement | null;
+}> = ({ sessionId, clientFirstName, webReviewSlot }) => {
   const [state, setState] = useState<"loading" | "ok" | "none" | "error">("loading");
   const [review, setReview] = useState<ReviewState | null>(null);
   const [replies, setReplies] = useState<WorkoutLogReply[]>([]);
@@ -137,7 +143,7 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
   const left = REPLY_MAX - draft.trim().length;
 
   return (
-    <div style={{ marginTop: 16, paddingBottom: reviewed ? 0 : 96 }}>
+    <div style={{ marginTop: 16, paddingBottom: reviewed || webReviewSlot ? 0 : 96 }}>
       {replies.length > 0 && (
         <div className="flex flex-col" style={{ gap: 8, marginBottom: 12 }}>
           {replies.map((r) => (
@@ -189,7 +195,7 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
         </p>
       )}
 
-      {reviewed && (
+      {reviewed && !webReviewSlot && (
         <p className="flex items-center mt-4" style={{ gap: 6, fontSize: textPx(12.5), fontWeight: 700, color: INK.good }}>
           <Check size={14} aria-hidden /> {tx("Reviewed", "log review")}
           <button
@@ -203,9 +209,33 @@ export const WorkoutLogReplies: React.FC<{ sessionId: string; clientFirstName: s
           </button>
         </p>
       )}
-      {!reviewed && (
+      {!reviewed && !webReviewSlot && (
         <PinnedCta primary={{ label: t("Mark as reviewed"), icon: <Check size={15} />, onClick: () => void setReviewed(true), loading: busy === "review" }} />
       )}
+      {webReviewSlot &&
+        createPortal(
+          reviewed ? (
+            <span className="flex items-center" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#3F9165" }}>
+              <Check size={20} strokeWidth={2} aria-hidden />
+              {tx("Reviewed", "log review")}
+              <button type="button" onClick={() => void setReviewed(false)} disabled={busy === "review"} className="hover:underline disabled:opacity-40" style={{ marginInlineStart: 4, fontSize: 13, fontWeight: 600, color: "#5B5349" }}>
+                {t("Undo")}
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void setReviewed(true)}
+              disabled={busy === "review"}
+              className="flex items-center whitespace-nowrap hover:bg-[#8E7FD0] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+              style={{ height: 40, padding: "0 18px", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+            >
+              <Check size={20} strokeWidth={2} aria-hidden />
+              {t("Mark as reviewed")}
+            </button>
+          ),
+          webReviewSlot
+        )}
     </div>
   );
 };

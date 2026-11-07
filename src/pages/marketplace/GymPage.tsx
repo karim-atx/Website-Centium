@@ -60,6 +60,9 @@ import { BookingDone, PlanSummary, PurchaseSheet, confirmLabel } from "./Purchas
 import { areaOf, gymHoursRows, includesText, longDay, planExpiryIso, planRowLine, sheetPlanName, startsToday } from "./gymDetailModel";
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn, tx } from "../../i18n/core";
+import { useWebLayout } from "../../components/web/useWebLayout";
+import { VenueWebBody, VenueWebHeader, WebCaps, WebMapCard, WebPinnedCta, WebSoftButton, WebTabs, WebTextSection, WebWideRow } from "./venueWeb";
+import { WEB_FAINT, WEB_INK2 } from "./venueWebTokens";
 
 // Market + Share 3.0 · W2 · C-MO.4.2.1 Gym detail (`gymDetail`) and
 // C-MO.4.2.2 Membership purchase (`memberSheet`, `memberDone`). Literal
@@ -135,6 +138,9 @@ export function GymPage({ gymId }: { gymId: string }) {
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const back = useBack("/app/marketplace?tab=gyms");
+  // Addendum A (WC-EX.1): the web layout from 1024px, and the header slot the Reviews tab puts its CTA in.
+  const { web, rail } = useWebLayout();
+  const [ctaSlot, setCtaSlot] = useState<HTMLElement | null>(null);
   const online = useOnline();
   const [params, setParams] = useSearchParams();
   const tabParam = params.get("tab");
@@ -410,6 +416,23 @@ export function GymPage({ gymId }: { gymId: string }) {
 
   const closeDone = useCallback(() => setDone(null), []);
 
+  // On web: the header, then the loading skeleton or the missing line in the body.
+  if (web && !gym) {
+    return (
+      <div aria-busy={gym === undefined || undefined} style={{ lineHeight: "normal" }}>
+        <VenueWebHeader rail={rail} title="" onBack={back} />
+        <div style={{ padding: `24px ${rail ? 24 : 32}px` }}>
+          {gym === undefined ? (
+            <MarketSkeleton radius={18} rows={4} label={tk("Loading this gym")} />
+          ) : loadFailed ? (
+            <MarketError thing={tk("this gym")} onRetry={retry} />
+          ) : (
+            <p style={{ margin: 0, textAlign: "center", fontSize: 15, lineHeight: "24px", color: WEB_FAINT }}>{t("This gym isn't listed on Explore right now.")}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
   // D-04 loading: the hero's fallback and skeletons shaped like the page.
   if (gym === undefined) {
     return (
@@ -476,6 +499,10 @@ export function GymPage({ gymId }: { gymId: string }) {
           ? { label: t("View memberships"), icon: <CalendarPlus size={16} strokeWidth={1.75} aria-hidden />, onClick: () => viewPlans(), className: ctaClass }
           : null;
 
+  // The pinned CTA on mobile; on web the same action as the header button (WC-EX Gym Web: 40, the 18 icon).
+  const Cta = web ? WebPinnedCta : PinnedCta;
+  const ctaEl = cta ? <Cta primary={cta} /> : null;
+
   const join = (p: VenuePlan) => {
     if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: p.id });
     setPlanId(p.id);
@@ -537,6 +564,405 @@ export function GymPage({ gymId }: { gymId: string }) {
       ]
     : [];
 
+  const overlays = (
+    <>
+      {/* MO1.4.2.4 (S4): Directions, shared with the class page's Location. */}
+      <DirectionsMenu
+        open={dirOpen}
+        onClose={() => setDirOpen(false)}
+        anchor={dirAnchor}
+        address={gym.location}
+        coords={hasCoords ? { lat: gym.lat as number, lng: gym.lng as number } : null}
+        onCopied={flash}
+        onMapOpen={() => gym.businessId && recordListingEvent({ businessId: gym.businessId, kind: "map_open", source })}
+      />
+
+      {/* MO1.4.2.5 (S5, D-26): the gym's numbers (public_phones, in order) and Copy number. */}
+      <PopupMenu<string>
+        open={callOpen}
+        onClose={() => setCallOpen(false)}
+        anchor={callAnchor}
+        align="left"
+        width={220}
+        options={[
+          ...gym.phones.map((p, i) => ({ value: String(i), label: p, icon: <Phone size={16} strokeWidth={1.75} /> })),
+          ...(gym.phones.length > 0 ? [{ value: "copy", label: t("Copy number"), icon: <Copy size={16} strokeWidth={1.75} /> }] : []),
+        ]}
+        onSelect={call}
+      />
+
+      {/* C-MO.4.2.2 memberSheet: "Join {gym}", the plan box, cash at the front desk. */}
+      <PurchaseSheet
+        open={checkoutOpen && !!sheetPlan}
+        onClose={() => setCheckoutOpen(false)}
+        title={t("Join {gym}", { gym: gym.name })}
+        summary={sheetPlan ? <PlanSummary name={sheetPlanName(sheetPlan.name)} price={priceOf(sheetPlan)} rows={sheetRows} /> : null}
+        cashHint={t("Pay at the front desk on your first visit")}
+        ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : t("Confirm")}
+        busy={busy}
+        disabled={!online || (!!entrySystem && !shareAgreed)}
+        error={checkoutError}
+        note={
+          <>
+            {entrySystem && <EntrySharingCheck gymName={gym.name} system={entrySystem} checked={shareAgreed} onChange={setShareAgreed} />}
+            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>{t("Your pass works once the gym marks it paid.")}</p>
+            {!online && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
+          </>
+        }
+        onConfirm={() => void confirm()}
+      />
+
+      {/* C-MO.4.2.2 memberDone, in place of the old confirmed screen. */}
+      <BookingDone
+        open={!!done}
+        title={t("You're a member")}
+        body={done ? t("Your {plan} at {gym} starts today.", { plan: sheetPlanName(done.planName), gym: gym.name }) : ""}
+        rows={done ? [{ k: t("Plan"), v: done.planName }, { k: t("Valid until"), v: longDay(done.until) }, { k: tx("Payment", "how it is paid"), v: t("{price} · Cash at the front desk", { price: done.price }) }] : []}
+        bookingsTab="memberships"
+        onDone={closeDone}
+      />
+
+      {/* MO1.4.2.2.3 (K10): Show membership pass, a centred popup. */}
+      <CentredPopup open={passOpen && !!mine} onClose={() => setPassOpen(false)} title={gym.name} geometry="ours">
+        {mine && <MembershipPass membership={mine} gymLocation={gym.location} memberName={user.firstName} />}
+        <button type="button" onClick={() => setPassOpen(false)} className="tap market-focus" style={{ marginTop: 8, width: "100%", height: 48, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.ink2 }}>
+          {t("Done")}
+        </button>
+      </CentredPopup>
+
+      {/* MO1.4.2.1.1 (K12): Book a class, this week's classes at this venue. */}
+      <CentredPopup
+        open={bookOpen}
+        onClose={() => !busy && !booking.busy && setBookOpen(false)}
+        title={t("Book a class")}
+        icon={<CalendarPlus size={22} strokeWidth={1.75} />}
+        body={t("{gym} · this week's classes", { gym: gym.name })}
+        bodyWeight={400}
+        geometry="ours"
+      >
+        <div className="text-start">
+          <Caps m={m}>{t("This week")}</Caps>
+          {week === null ? (
+            <MarketSkeleton radius={18} rows={2} label={tk("Loading this week's classes")} style={{ marginTop: 10 }} />
+          ) : week.length === 0 ? (
+            <p role={weekError ? "alert" : undefined} style={{ margin: "10px 0 0", fontSize: textPx(12.5), fontWeight: weekError ? 600 : 400, color: weekError ? m.high : m.faint }}>
+              {weekError ?? t("No classes here this week.")}
+            </p>
+          ) : (
+            <div role="radiogroup" aria-label={t("This week")} style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+              {week.map((c) => {
+                const on = c.classId === classId;
+                const full = c.seatsLeft <= 0;
+                const tm = time12Split(c.startTime);
+                return (
+                  <button
+                    key={c.classId}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    disabled={full}
+                    onClick={() => setClassId(c.classId)}
+                    className="hit market-focus"
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: 10,
+                      borderRadius: 14,
+                      background: m.card,
+                      border: on ? `1.5px solid ${m.segactive}` : `0.5px solid ${m.border}`,
+                      textAlign: "start",
+                      font: "inherit",
+                      color: m.ink,
+                      opacity: full ? 0.4 : 1,
+                      cursor: full ? "default" : "pointer",
+                    }}
+                  >
+                    <span aria-hidden style={{ width: 39, height: 36, borderRadius: 10, background: m.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
+                      <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? c.startTime}</span>
+                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{tm?.meridiem}</span>
+                    </span>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span className="truncate" style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>
+                        {c.title}
+                      </span>
+                      <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{full ? t("Full") : tn(c.seatsLeft, "{n} spot left", "{n} spots left")}</span>
+                    </span>
+                    <span style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap" }}>{c.price}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {bookError && (
+            <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12), fontWeight: 600, color: m.high }}>
+              {bookError}
+            </p>
+          )}
+        </div>
+        {week && week.length > 0 && (
+          <CtaButton
+            size="page"
+            label={t("Confirm booking")}
+            loading={booking.busy}
+            disabled={!classId || !online}
+            className={`mt-5 ${ctaClass}`}
+            onClick={async () => {
+              if (!classId || booking.busy) return;
+              if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: classId });
+              setBookError(null);
+              settleBooking(await booking.start(), classId);
+            }}
+          />
+        )}
+        {week && week.length > 0 && !online && <p style={{ margin: "8px 0 0", textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
+        <button
+          type="button"
+          onClick={() => {
+            setBookOpen(false);
+            selectTab("classes");
+          }}
+          className="tap market-focus"
+          style={{ marginTop: 8, width: "100%", height: 36, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.accent }}
+        >
+          {t("See all classes")}
+        </button>
+      </CentredPopup>
+
+      {/* OURS-class-terms (B9, ATXE4): the venue's terms before the first booking. */}
+      <ClassTermsSheet
+        docs={booking.terms}
+        businessName={gym.name}
+        busy={booking.busy}
+        online={online}
+        error={booking.termsError}
+        onAgree={async () => {
+          if (!classId) return;
+          settleBooking(await booking.agree(), classId);
+        }}
+        onClose={booking.closeTerms}
+      />
+
+      <Toast open={!!copied} message={copied ?? ""} onExpire={() => setCopied(null)} duration={1600} />
+      {/* O-TOAST: a write that failed for no stated reason; nothing changed on screen. */}
+      <Toast open={saveFailed} message={t("Couldn't save. Try again.")} tone="error" onExpire={() => setSaveFailed(false)} />
+    </>
+  );
+
+  // Addendum A, WC-EX.1 (WC-EX Gym Web): from 1024px the page is the header
+  // (back, name, Member tag, the page CTA in the pinned CTA's place), then
+  // the left 8 (cover, rating + Directions · Call · Message, tabs, the tab)
+  // and the right 4 (Location and hours, Amenities, First visit); 5 | 3 on
+  // the rail. The sheets and popups are the page's own (side sheets and
+  // centred popups from 1024px).
+  if (web) {
+    const messageVenue = async () => {
+      setMsgBusy(true);
+      setMsgError(null);
+      const r = await startVenueThread(gym.id);
+      if (!r.ok) {
+        setMsgBusy(false);
+        setMsgError(r.message);
+        return;
+      }
+      navigate("/app/messages", { state: { threadId: r.threadId } });
+    };
+    const hoursTag = openNowTag(openNow);
+    const hoursLines = hours ? gymHoursRows(hours) : [];
+    const coverPhotos = heroPhotos(gym.coverUrl, photos);
+    const twoCols = `repeat(${rail ? 1 : 2},minmax(0,1fr))`;
+    return (
+      <div data-gym-web="" style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader
+          rail={rail}
+          title={gym.name}
+          onBack={back}
+          after={tag ? <MemberTag label={t(tag.label)} tone={tag.tone} /> : null}
+          actions={
+            <>
+              {ctaEl}
+              <span ref={setCtaSlot} style={{ display: "contents" }} />
+            </>
+          }
+        />
+        <VenueWebBody
+          rail={rail}
+          left={
+            <>
+              <div data-gym-cover="" style={{ position: "relative", height: rail ? 140 : 168, borderRadius: 20, overflow: "hidden", background: "#E9E5F5" }}>
+                <div aria-hidden style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(135deg,rgba(125,103,217,0.08) 0 14px,transparent 14px 28px)" }} />
+                {coverPhotos.length > 0 && <HeroGallery photos={coverPhotos} />}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                {ratingLine && (
+                  <span data-rating-line="" style={{ flex: "none", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6, fontSize: 15, lineHeight: "24px", color: WEB_INK2 }}>
+                    {summary && summary.total > 0 && (
+                      <svg width={15} height={15} viewBox="0 0 24 24" fill="#C08A1E" stroke="#C08A1E" strokeWidth={1.5} strokeLinejoin="round" aria-hidden>
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                    )}
+                    {ratingLine}
+                  </span>
+                )}
+                <span style={{ flex: 1 }} />
+                <WebSoftButton label={t("Directions")} Icon={Navigation} menu onClick={gym.location || hasCoords ? (e) => openDirections(e.currentTarget) : null} />
+                <WebSoftButton
+                  label={t("Call")}
+                  Icon={Phone}
+                  menu
+                  onClick={
+                    gym.phones.length > 0
+                      ? (e) => {
+                          setCallAnchor(e.currentTarget);
+                          setCallOpen(true);
+                        }
+                      : null
+                  }
+                />
+                <WebSoftButton label={t("Message")} Icon={MessageCircle} onClick={owner && !msgBusy && online ? () => void messageVenue() : null} />
+              </div>
+              {msgError && (
+                <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.high }}>
+                  {msgError}
+                </p>
+              )}
+              <BusinessClosedNote status={bizStatus} />
+              <MarketOffline loaded />
+              <WebTabs tabs={TABS.map((x) => ({ ...x, label: t(x.label) }))} active={tab} onChange={selectTab} />
+              {tab === "about" && (
+                <>
+                  {gym.bio && <WebTextSection label={t("About")}>{gym.bio}</WebTextSection>}
+                  {housePlaylist && (
+                    <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <WebCaps>{t("Music")}</WebCaps>
+                      <PlaylistCard url={housePlaylist} heading={t("House playlist")} />
+                    </section>
+                  )}
+                  <section ref={setPlansEl} data-gym-plans="" aria-labelledby="gym-plans-label" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <WebCaps id="gym-plans-label">{t("Memberships and day passes")}</WebCaps>
+                    {plans === null ? (
+                      <MarketSkeleton radius={18} rows={2} count={2} gap={8} label={tk("Loading memberships")} />
+                    ) : plansError ? (
+                      <MarketError thing={tk("memberships")} onRetry={retry} />
+                    ) : (
+                      <>
+                        {mine && <MyPlanRow m={m} membership={mine} web />}
+                        {!mine && !takesNew ? (
+                          <MarketEmptyCard title={tk("No new memberships")} body={closedLine(bizStatus, "bookings") ?? undefined} />
+                        ) : !buyable ? (
+                          <MarketEmptyCard title={tk("No memberships yet")} body={tk("This gym doesn't sell memberships on Centium yet.")} />
+                        ) : plans.length === 0 ? (
+                          !mine && <MarketEmptyCard title={tk("No memberships yet")} body={tk("Plans from this gym will show here.")} />
+                        ) : (
+                          <div style={{ display: "grid", gridTemplateColumns: twoCols, gap: 8 }}>
+                            {plans.map((p) => (
+                              <PlanRow key={p.id} m={m} plan={p} save={planSaving(p, plans)} onJoin={!mine && takesNew ? () => join(p) : null} web />
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </section>
+                  <WebWideRow label={t("Classes at this gym")} onClick={() => selectTab("classes")} />
+                </>
+              )}
+              {tab === "classes" && (
+                <>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: WEB_INK2 }}>{t("Upcoming classes at {gym}.", { gym: gym.name })}</p>
+                  {classes === null ? (
+                    <MarketSkeleton radius={18} rows={3} count={3} label={tk("Loading classes")} />
+                  ) : classesFailed && classes.length === 0 ? (
+                    <MarketError
+                      thing={tk("classes")}
+                      onRetry={() => {
+                        setClasses(null);
+                        setClassesFailed(false);
+                      }}
+                    />
+                  ) : classes.length === 0 ? (
+                    <MarketEmptyCard title={tk("No classes coming up")} body={tk("Classes at this gym will show here.")} />
+                  ) : (
+                    groups.map((g) => (
+                      <section key={g.day} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <WebCaps>{dayLabel(g.day, today)}</WebCaps>
+                        <div style={{ display: "grid", gridTemplateColumns: twoCols, gap: 12, alignItems: "start" }}>
+                          {g.items.map((c) => (
+                            <ClassCard
+                              key={c.classId}
+                              c={(() => {
+                                const left = viewerSpotsLeft(c.spotsRemaining, c.centiumSpotsLeft, !!mine && isLivePassState(mine.passState));
+                                return left === c.spotsRemaining ? c : { ...c, spotsRemaining: left, isFull: c.isFull || left <= 0 };
+                              })()}
+                              booked={bookedIds.has(c.classId)}
+                              hideVenue
+                              web
+                              onOpen={(x) => navigate(`/app/marketplace/class?id=${encodeURIComponent(x.classId)}`)}
+                              onBook={(x) => recordListingEvent({ businessId: x.businessId, kind: "book_tap", source, itemId: x.classId })}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    ))
+                  )}
+                </>
+              )}
+              {tab === "reviews" && <GymReviews gymId={gym.id} gymName={gym.name} summary={summary} onChanged={() => void loadSummary()} web={{ ctaSlot, cols: rail ? 1 : 2 }} />}
+            </>
+          }
+          right={
+            <>
+              <section aria-labelledby="gym-hours-label" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <WebCaps id="gym-hours-label">{t("Location and hours")}</WebCaps>
+                  {hoursTag && <MemberTag label={t(hoursTag.label)} tone={hoursTag.tone} />}
+                </div>
+                <WebMapCard
+                  height={120}
+                  address={gym.location || null}
+                  onOpen={gym.location || hasCoords ? openDirections : undefined}
+                  label={gym.location ? t("Directions to {address}", { address: gym.location }) : t("Directions")}
+                >
+                  {hours === undefined ? (
+                    <span role="status" aria-busy="true" aria-label={t("Loading opening hours")} className="animate-skeleton-pulse" style={{ display: "block", height: 20, borderRadius: 999, background: m.soft }} />
+                  ) : hoursError ? (
+                    <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.high }}>
+                      {hoursError}
+                    </p>
+                  ) : hoursLines.length === 0 ? (
+                    <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{t("This gym hasn't published its opening hours yet.")}</p>
+                  ) : (
+                    hoursLines.map((l) => (
+                      <div key={l.key} data-hours-row="" style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13, lineHeight: "20px", color: WEB_INK2 }}>
+                        <span style={{ minWidth: 0 }}>{l.label}</span>
+                        <span style={{ textAlign: "end", whiteSpace: "nowrap" }}>{t(l.value)}</span>
+                      </div>
+                    ))
+                  )}
+                </WebMapCard>
+              </section>
+              {amenities.length > 0 && (
+                <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <WebCaps>{t("Amenities")}</WebCaps>
+                  <ul data-amenities="" style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {amenities.map((k) => (
+                      <li key={k} data-amenity={k} style={{ padding: "4px 12px", borderRadius: 999, background: "#F0EDF9", color: "#7D6BB5", fontSize: 13, lineHeight: "20px", fontWeight: 700 }}>
+                        {t(AMENITY_LABELS[k])}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {firstVisit && <WebTextSection label={t("First visit")}>{firstVisit}</WebTextSection>}
+            </>
+          }
+        />
+        {overlays}
+      </div>
+    );
+  }
   return (
     <div style={{ lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
@@ -775,195 +1201,14 @@ export function GymPage({ gymId }: { gymId: string }) {
         {tab === "reviews" && <GymReviews gymId={gym.id} gymName={gym.name} summary={summary} onChanged={() => void loadSummary()} />}
       </div>
 
-      {cta && (
+      {ctaEl && (
         <>
           <div aria-hidden style={{ height: 60 }} />
-          <PinnedCta primary={cta} />
+          {ctaEl}
         </>
       )}
 
-      {/* MO1.4.2.4 (S4): Directions, shared with the class page's Location. */}
-      <DirectionsMenu
-        open={dirOpen}
-        onClose={() => setDirOpen(false)}
-        anchor={dirAnchor}
-        address={gym.location}
-        coords={hasCoords ? { lat: gym.lat as number, lng: gym.lng as number } : null}
-        onCopied={flash}
-        onMapOpen={() => gym.businessId && recordListingEvent({ businessId: gym.businessId, kind: "map_open", source })}
-      />
-
-      {/* MO1.4.2.5 (S5, D-26): the gym's numbers (public_phones, in order) and Copy number. */}
-      <PopupMenu<string>
-        open={callOpen}
-        onClose={() => setCallOpen(false)}
-        anchor={callAnchor}
-        align="left"
-        width={220}
-        options={[
-          ...gym.phones.map((p, i) => ({ value: String(i), label: p, icon: <Phone size={16} strokeWidth={1.75} /> })),
-          ...(gym.phones.length > 0 ? [{ value: "copy", label: t("Copy number"), icon: <Copy size={16} strokeWidth={1.75} /> }] : []),
-        ]}
-        onSelect={call}
-      />
-
-      {/* C-MO.4.2.2 memberSheet: "Join {gym}", the plan box, cash at the front desk. */}
-      <PurchaseSheet
-        open={checkoutOpen && !!sheetPlan}
-        onClose={() => setCheckoutOpen(false)}
-        title={t("Join {gym}", { gym: gym.name })}
-        summary={sheetPlan ? <PlanSummary name={sheetPlanName(sheetPlan.name)} price={priceOf(sheetPlan)} rows={sheetRows} /> : null}
-        cashHint={t("Pay at the front desk on your first visit")}
-        ctaLabel={sheetPlan && sheetPlan.price > 0 ? confirmLabel(priceOf(sheetPlan)) : t("Confirm")}
-        busy={busy}
-        disabled={!online || (!!entrySystem && !shareAgreed)}
-        error={checkoutError}
-        note={
-          <>
-            {entrySystem && <EntrySharingCheck gymName={gym.name} system={entrySystem} checked={shareAgreed} onChange={setShareAgreed} />}
-            <p style={{ margin: 0, fontSize: textPx(12), lineHeight: linePx(17), color: m.faint }}>{t("Your pass works once the gym marks it paid.")}</p>
-            {!online && <p style={{ margin: 0, fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
-          </>
-        }
-        onConfirm={() => void confirm()}
-      />
-
-      {/* C-MO.4.2.2 memberDone, in place of the old confirmed screen. */}
-      <BookingDone
-        open={!!done}
-        title={t("You're a member")}
-        body={done ? t("Your {plan} at {gym} starts today.", { plan: sheetPlanName(done.planName), gym: gym.name }) : ""}
-        rows={done ? [{ k: t("Plan"), v: done.planName }, { k: t("Valid until"), v: longDay(done.until) }, { k: tx("Payment", "how it is paid"), v: t("{price} · Cash at the front desk", { price: done.price }) }] : []}
-        bookingsTab="memberships"
-        onDone={closeDone}
-      />
-
-      {/* MO1.4.2.2.3 (K10): Show membership pass, a centred popup. */}
-      <CentredPopup open={passOpen && !!mine} onClose={() => setPassOpen(false)} title={gym.name} geometry="ours">
-        {mine && <MembershipPass membership={mine} gymLocation={gym.location} memberName={user.firstName} />}
-        <button type="button" onClick={() => setPassOpen(false)} className="tap market-focus" style={{ marginTop: 8, width: "100%", height: 48, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.ink2 }}>
-          {t("Done")}
-        </button>
-      </CentredPopup>
-
-      {/* MO1.4.2.1.1 (K12): Book a class, this week's classes at this venue. */}
-      <CentredPopup
-        open={bookOpen}
-        onClose={() => !busy && !booking.busy && setBookOpen(false)}
-        title={t("Book a class")}
-        icon={<CalendarPlus size={22} strokeWidth={1.75} />}
-        body={t("{gym} · this week's classes", { gym: gym.name })}
-        bodyWeight={400}
-        geometry="ours"
-      >
-        <div className="text-start">
-          <Caps m={m}>{t("This week")}</Caps>
-          {week === null ? (
-            <MarketSkeleton radius={18} rows={2} label={tk("Loading this week's classes")} style={{ marginTop: 10 }} />
-          ) : week.length === 0 ? (
-            <p role={weekError ? "alert" : undefined} style={{ margin: "10px 0 0", fontSize: textPx(12.5), fontWeight: weekError ? 600 : 400, color: weekError ? m.high : m.faint }}>
-              {weekError ?? t("No classes here this week.")}
-            </p>
-          ) : (
-            <div role="radiogroup" aria-label={t("This week")} style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
-              {week.map((c) => {
-                const on = c.classId === classId;
-                const full = c.seatsLeft <= 0;
-                const tm = time12Split(c.startTime);
-                return (
-                  <button
-                    key={c.classId}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    disabled={full}
-                    onClick={() => setClassId(c.classId)}
-                    className="hit market-focus"
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: 10,
-                      borderRadius: 14,
-                      background: m.card,
-                      border: on ? `1.5px solid ${m.segactive}` : `0.5px solid ${m.border}`,
-                      textAlign: "start",
-                      font: "inherit",
-                      color: m.ink,
-                      opacity: full ? 0.4 : 1,
-                      cursor: full ? "default" : "pointer",
-                    }}
-                  >
-                    <span aria-hidden style={{ width: 39, height: 36, borderRadius: 10, background: m.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 1 }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
-                      <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? c.startTime}</span>
-                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{tm?.meridiem}</span>
-                    </span>
-                    <span style={{ minWidth: 0, flex: 1 }}>
-                      <span className="truncate" style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>
-                        {c.title}
-                      </span>
-                      <span style={{ display: "block", fontSize: textPx(11.5), color: m.faint }}>{full ? t("Full") : tn(c.seatsLeft, "{n} spot left", "{n} spots left")}</span>
-                    </span>
-                    <span style={{ fontSize: textPx(14), fontWeight: 800, whiteSpace: "nowrap" }}>{c.price}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {bookError && (
-            <p role="alert" style={{ margin: "10px 0 0", fontSize: textPx(12), fontWeight: 600, color: m.high }}>
-              {bookError}
-            </p>
-          )}
-        </div>
-        {week && week.length > 0 && (
-          <CtaButton
-            size="page"
-            label={t("Confirm booking")}
-            loading={booking.busy}
-            disabled={!classId || !online}
-            className={`mt-5 ${ctaClass}`}
-            onClick={async () => {
-              if (!classId || booking.busy) return;
-              if (gym.businessId) recordListingEvent({ businessId: gym.businessId, kind: "book_tap", source, itemId: classId });
-              setBookError(null);
-              settleBooking(await booking.start(), classId);
-            }}
-          />
-        )}
-        {week && week.length > 0 && !online && <p style={{ margin: "8px 0 0", textAlign: "center", fontSize: textPx(12), fontWeight: 600, color: m.ink2 }}>{t("You're offline.")}</p>}
-        <button
-          type="button"
-          onClick={() => {
-            setBookOpen(false);
-            selectTab("classes");
-          }}
-          className="tap market-focus"
-          style={{ marginTop: 8, width: "100%", height: 36, border: 0, background: "none", font: "inherit", fontSize: textPx(14), fontWeight: 700, color: m.accent }}
-        >
-          {t("See all classes")}
-        </button>
-      </CentredPopup>
-
-      {/* OURS-class-terms (B9, ATXE4): the venue's terms before the first booking. */}
-      <ClassTermsSheet
-        docs={booking.terms}
-        businessName={gym.name}
-        busy={booking.busy}
-        online={online}
-        error={booking.termsError}
-        onAgree={async () => {
-          if (!classId) return;
-          settleBooking(await booking.agree(), classId);
-        }}
-        onClose={booking.closeTerms}
-      />
-
-      <Toast open={!!copied} message={copied ?? ""} onExpire={() => setCopied(null)} duration={1600} />
-      {/* O-TOAST: a write that failed for no stated reason; nothing changed on screen. */}
-      <Toast open={saveFailed} message={t("Couldn't save. Try again.")} tone="error" onExpire={() => setSaveFailed(false)} />
+      {overlays}
     </div>
   );
 }
@@ -1219,9 +1464,32 @@ function LocationHours({
  * --onfill 12 / 800 (a 44 hit box). Kept: "Save N%" and the commitment
  * lines on a second --faint line. No Join for a member or a closed business.
  */
-function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan; save: number | null; onJoin: (() => void) | null }) {
+function PlanRow({ m, plan, save, onJoin, web }: { m: MarketPalette; plan: VenuePlan; save: number | null; onJoin: (() => void) | null; web?: boolean }) {
   const press = usePress();
   const extra = [save !== null ? t("Save {n}%", { n: save }) : null, ...commitmentLines(plan.minimumTermMonths, plan.noticeDays)].filter(Boolean).join(" · ");
+  // WC-EX Gym Web: min 60, r16, padding 10 12 10 16, gap 12; the name 15/22 700, the lines 13/20; the price 15 / 800; Join 36, padding 0 16, r10 #AEA1DC, 15/24 600.
+  if (web)
+    return (
+      <div data-plan-row="" style={{ minWidth: 0, minHeight: 60, boxSizing: "border-box", borderRadius: 16, border: "0.5px solid rgba(36,31,27,0.1)", background: m.card, paddingBlock: "10px", paddingInline: "16px 12px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{plan.name}</div>
+          <div style={{ fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{planRowLine(plan)}</div>
+          {extra && <div style={{ fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>{extra}</div>}
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 800, whiteSpace: "nowrap", color: m.ink, fontVariantNumeric: "tabular-nums" }}>{priceOf(plan)}</div>
+        {onJoin && (
+          <button
+            type="button"
+            onClick={onJoin}
+            aria-label={t("Join: {plan}, {price}", { plan: plan.name, price: priceOf(plan) })}
+            className="market-focus"
+            style={{ height: 36, padding: "0 16px", borderRadius: 10, border: 0, background: "#AEA1DC", color: "#FFFFFF", display: "flex", alignItems: "center", flexShrink: 0, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer" }}
+          >
+            {t("Join")}
+          </button>
+        )}
+      </div>
+    );
   return (
     <div data-plan-row="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1262,8 +1530,22 @@ function PlanRow({ m, plan, save, onJoin }: { m: MarketPalette; plan: VenuePlan;
 }
 
 /** The member's own plan (kept, not drawn): a plan row with its Member / "Pay on your first visit" tag in place of Join. */
-function MyPlanRow({ m, membership }: { m: MarketPalette; membership: GymMembership }) {
+function MyPlanRow({ m, membership, web }: { m: MarketPalette; membership: GymMembership; web?: boolean }) {
   const tag = memberTag(membership.passState);
+  // WC-EX Gym Web: min 60, padding 10 14 10 16, gap 14; 15/22 700 and 13/20.
+  if (web)
+    return (
+      <div data-my-plan="" style={{ minHeight: 60, boxSizing: "border-box", borderRadius: 16, border: "0.5px solid rgba(36,31,27,0.1)", background: m.card, paddingBlock: "10px", paddingInline: "16px 14px", display: "flex", alignItems: "center", gap: 14 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{membership.planName || tx("Membership", "subscription")}</div>
+          <div style={{ fontSize: 13, lineHeight: "20px", color: WEB_FAINT }}>
+            {membership.expiresOn ? t("Your plan · valid until {date}", { date: longDay(membership.expiresOn) }) : t("Your plan · no end date")}
+          </div>
+        </div>
+        <div style={{ fontSize: 15, fontWeight: 800, whiteSpace: "nowrap", color: m.ink, fontVariantNumeric: "tabular-nums" }}>{formatPrice(membership.priceAgreed) || "$0"}</div>
+        <MemberTag label={t(tag.label)} tone={tag.tone} />
+      </div>
+    );
   return (
     <div data-my-plan="" style={{ borderRadius: 16, border: `0.5px solid ${m.hair}`, background: m.card, paddingBlock: "12px", paddingInline: "14px 12px", display: "flex", alignItems: "center", gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>

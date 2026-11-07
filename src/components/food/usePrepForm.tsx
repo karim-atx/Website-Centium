@@ -23,6 +23,8 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { textPx } from "../../theme/textSize";
 import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 import { t } from "../../i18n/core";
+import { WebCopy } from "../web/WebCopy";
+import { RecipeFormWeb, RecipeFormWebFooter } from "../pro/web/RecipeFormWeb";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
@@ -82,6 +84,12 @@ export interface PrepFormOptions {
    * change for recovery-sensitive mode, so this turns the hiding off.
    */
   professional?: boolean;
+  /**
+   * Website viewport v1 (WP-NU-MP.9): the professional recipe form as drawn
+   * for the 440 side sheet, with the food search docked in the form and
+   * Save in the pinned footer (`footer`). Recipes only; mobile never passes it.
+   */
+  web?: boolean;
 }
 
 /**
@@ -89,7 +97,7 @@ export interface PrepFormOptions {
  * component per item type). PrepCreateSheet wraps it in a sheet; the Custom
  * tab's detail popup renders the same body in place when editing.
  */
-export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDeleteRequest, professional = false }: PrepFormOptions) {
+export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDeleteRequest, professional = false, web: webOpt = false }: PrepFormOptions) {
   const open = active;
   const dark = useIsDark();
   // Round D (R3, D18): in recovery-sensitive mode no kcal on result rows, no
@@ -99,6 +107,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
   const containerStyle = dark ? containerStyleDark : containerStyleLight;
   const fieldStyle = dark ? fieldStyleDark : fieldStyleLight;
   const isR = kind === "recipes";
+  const web = webOpt && isR;
   const editing = isR ? editRecipe ?? null : editMeal ?? null;
   const {
     addCustomMeal,
@@ -134,7 +143,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
     if (!open) return;
     setStep("form");
     setTitle(editing?.title ?? "");
-    setServings(isR ? String(editRecipe?.servings ?? 4) : "4");
+    // WP-NU-MP.9 rc-create-empty: a new recipe starts at 1 serving on web.
+    setServings(isR ? String(editRecipe?.servings ?? (web ? 1 : 4)) : "4");
     setSteps(isR ? editRecipe?.steps ?? "" : "");
     setPlaylist(isR ? editRecipe?.playlistUrl ?? "" : "");
     setItems(editing ? (editing.items as PrepItem[]) : []);
@@ -148,7 +158,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
 
   // Same service Add Food searches with; an empty box lists everything.
   useEffect(() => {
-    if (!open || step !== "search") return;
+    // On web the search is docked in the form: it runs once something is typed.
+    if (!open || (web ? !query.trim() : step !== "search")) return;
     let cancelled = false;
     const term = query.trim();
     setSearching(true);
@@ -167,7 +178,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, open, step]);
+  }, [query, open, step, web]);
 
   const servingsN = Math.max(1, Number(servings) || 1);
   const total = useMemo(() => sumItems(items), [items]);
@@ -244,13 +255,20 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
 
   const doDelete = async () => {
     if (!editing) return;
-    if (onDeleteRequest) {
+    // On web (WP-NU-MP.9 rc-edit-armed, then rc-delete) the trash arms first
+    // and the second click asks the caller.
+    if (onDeleteRequest && !web) {
       onDeleteRequest();
       return;
     }
     if (!confirmDelete) {
       setConfirmDelete(true);
       window.setTimeout(() => setConfirmDelete(false), 3000);
+      return;
+    }
+    if (onDeleteRequest) {
+      setConfirmDelete(false);
+      onDeleteRequest();
       return;
     }
     if (isR) await removeRecipe(editing.id);
@@ -282,6 +300,33 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           className="w-full rounded-[10px] bg-cream-card px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
         />
       ))}
+    </div>
+  );
+
+  const createFoodForm = (
+    <div className="flex flex-col gap-2" style={containerStyle}>
+      <input
+        value={foodDraft.name}
+        onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
+        placeholder={t("Food name")}
+        className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+      />
+      <input
+        value={foodDraft.serving}
+        onChange={(e) => setFoodDraft((d) => ({ ...d, serving: e.target.value }))}
+        placeholder={t("Serving size")}
+        className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+      />
+      {hide ? <NutritionDetails>{draftMacros}</NutritionDetails> : draftMacros}
+      <button
+        onClick={() => void saveFood()}
+        disabled={!foodDraft.name.trim() || (!hide && !foodDraft.calories)}
+        className="tap h-10 rounded-[12px] text-[13px] font-bold text-on-primary-fill disabled:opacity-40"
+        // The board's #A198DF in light, primary-fill in dark.
+        style={{ background: "rgb(var(--c-fill-cta))" }}
+      >
+        {isR ? t("Add to recipe") : t("Add to meal")}
+      </button>
     </div>
   );
 
@@ -343,32 +388,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           >
             <Plus size={13} /> {t("Create a new food")}
           </button>
-          {creatingFood && (
-            <div className="flex flex-col gap-2" style={containerStyle}>
-              <input
-                value={foodDraft.name}
-                onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
-                placeholder={t("Food name")}
-                className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-              />
-              <input
-                value={foodDraft.serving}
-                onChange={(e) => setFoodDraft((d) => ({ ...d, serving: e.target.value }))}
-                placeholder={t("Serving size")}
-                className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-              />
-              {hide ? <NutritionDetails>{draftMacros}</NutritionDetails> : draftMacros}
-              <button
-                onClick={() => void saveFood()}
-                disabled={!foodDraft.name.trim() || (!hide && !foodDraft.calories)}
-                className="tap h-10 rounded-[12px] text-[13px] font-bold text-on-primary-fill disabled:opacity-40"
-                // The board's #A198DF in light, primary-fill in dark.
-                style={{ background: "rgb(var(--c-fill-cta))" }}
-              >
-                {isR ? t("Add to recipe") : t("Add to meal")}
-              </button>
-            </div>
-          )}
+          {creatingFood && createFoodForm}
         </div>
       ) : (
         <div className="flex flex-col gap-2.5 animate-fade-slide-up">
@@ -518,7 +538,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
           </div>
           {confirmDelete && (
             <p className="text-[12px] font-semibold text-status-high text-center">
-              {isR ? t("Tap again to delete this recipe") : t("Tap again to delete this meal")}
+              {isR ? <WebCopy mobile={t("Tap again to delete this recipe")} web={t("Click again to delete this recipe")} /> : t("Tap again to delete this meal")}
             </p>
           )}
         </div>
@@ -526,12 +546,68 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, onDone, onDele
     </>
   );
 
+  if (web) {
+    const disabled = !title.trim() || items.length === 0 || saving || !playlistOk;
+    return {
+      title: title_,
+      searchBack: null,
+      leaveForm: () => setStep("form"),
+      body: (
+        <RecipeFormWeb
+          title={title}
+          onTitle={setTitle}
+          servings={servings}
+          onServings={(v) => setServings(v.replace(/D/g, ""))}
+          onServingsBlur={() => setServings(String(servingsN))}
+          items={items}
+          qtyDraft={(i) => qtyDrafts[i] ?? String(items[i].quantity)}
+          onQty={typeQuantity}
+          onQtyBlur={(i) =>
+            setQtyDrafts((prev) => {
+              const next = { ...prev };
+              delete next[i];
+              return next;
+            })
+          }
+          onUnit={(i, u) => patchItem(i, { unit: u })}
+          onRemove={removeItem}
+          query={query}
+          onQuery={setQuery}
+          searching={searching}
+          results={results}
+          emptyLine={searchEmptyLine(searchFailed, online) ?? t("Nothing matches that search.")}
+          onAdd={(r) => addFood(toFood(r), r.source === "catalog" ? "catalog" : "custom")}
+          createFood={creatingFood ? createFoodForm : null}
+          onCreateFood={() => setCreatingFood((v) => !v)}
+          strip={strip}
+          steps={steps}
+          onSteps={setSteps}
+          error={saveError}
+        />
+      ),
+      footer: (
+        <RecipeFormWebFooter
+          editing={!!editing}
+          armed={confirmDelete}
+          disabled={disabled}
+          saving={saving}
+          onDelete={() => void doDelete()}
+          onSave={() => void save()}
+          deleteLabel={t("Delete recipe")}
+          armedLine={t("Click again to delete this recipe")}
+        />
+      ),
+      dirty,
+    };
+  }
+
   return {
     title: step === "search" ? t("Add food") : title_,
     /** The search step's back returns to the form; otherwise the caller's back applies. */
     searchBack: step === "search" ? () => setStep("form") : null,
     leaveForm: () => setStep("form"),
     body,
+    footer: null as React.ReactNode,
     dirty,
   };
 }

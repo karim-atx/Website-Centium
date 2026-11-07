@@ -70,6 +70,10 @@ const promessages: Catalogue = {
   "No meal plans yet. Make one in Meal plans first.": "لا خطط وجبات بعد. أنشئ واحدة في خطط الوجبات أولًا.",
   "Members see its name, its length and your note, never calories or macros.": "يرى الأعضاء اسمها ومدتها وملاحظتك، ولا يرون السعرات أو العناصر الغذائية الكبرى أبدًا.",
   Announcement: "إعلان",
+
+  // == Website viewport · Messages (WP-MO.18) ==
+  "Pick a chat": "اختر محادثة",
+  "Your conversation opens here.": "تُفتح محادثتك هنا.",
 };
 
 export default promessages;

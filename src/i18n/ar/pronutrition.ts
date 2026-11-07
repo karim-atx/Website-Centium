@@ -21,6 +21,8 @@ export const FILES: string[] = [
   "components/pro/nutrition/Recipes.tsx",
   "components/pro/nutrition/Targets.tsx",
   "components/pro/nutrition/useNutritionOverview.ts",
+  "components/pro/web/JournalDayWeb.tsx",
+  "components/pro/web/RecipeFormWeb.tsx",
   "pages/pro/MealPlans.tsx",
   "services/pro/nutrition.ts",
 ];
@@ -171,6 +173,7 @@ const pronutrition: Catalogue = {
   "Nothing reviewed yet": "لم تُراجَع أي أيام بعد",
   "Days your clients log show here when they share their food diary with you.": "تظهر هنا الأيام التي يسجّلها عملاؤك عندما يشاركون يوميات طعامهم معك.",
   "Days you've left feedback on show here.": "تظهر هنا الأيام التي تركت عليها ملاحظاتك.",
+  "Days you leave feedback on move to Reviewed.": "تنتقل الأيام التي تترك عليها ملاحظاتك إلى «تمت المراجعة».", // note: web only (WP-NU-MP.2)
   "{n} days logged · {range}": { zero: "لا أيام مسجّلة · {range}", one: "يوم واحد مسجّل · {range}", two: "يومان مسجّلان · {range}", few: "{n} أيام مسجّلة · {range}", many: "{n} يومًا مسجّلًا · {range}", other: "{n} يوم مسجّل · {range}" },
   "Protein under target {under} of {n} days": { zero: "البروتين دون الهدف في {under} من {n} يوم", one: "البروتين دون الهدف في {under} من يوم واحد", two: "البروتين دون الهدف في {under} من يومين", few: "البروتين دون الهدف في {under} من {n} أيام", many: "البروتين دون الهدف في {under} من {n} يومًا", other: "البروتين دون الهدف في {under} من {n} يوم" }, // note: health-related; a count of logged days, no judgement
   "Protein on target": "البروتين ضمن الهدف", // note: health-related
@@ -247,6 +250,7 @@ const pronutrition: Catalogue = {
 
   // == Shared words these screens use (the same Arabic as the food, member and business areas) ==
   "Recipes": "الوصفات",
+  Journals: "اليوميات",
   "Foods": "الأطعمة",
   "Swap": "استبدال",
   "Add anyway": "إضافة رغم ذلك",
@@ -281,6 +285,51 @@ const pronutrition: Catalogue = {
   Day: "اليوم",
   kcal: "سعرة",
   Unit: "الوحدة",
+  // Website viewport: the meal-plan week builder (WP-LI.7.3 / WP-NU-MP.7).
+  "Food item · Qty": "الصنف · الكمية",
+  "Cals": "سعرات",
+  "Search food": "ابحث عن طعام",
+  "Totals": "المجموع",
+  "Week planner": "مخطط الأسبوع",
+  // Website viewport (Professional v1, session 5): the inline food search and the web Day view.
+  "Foods matching {q}": "أطعمة تطابق {q}",
+  "↑↓ to move": "↑↓ للتنقل",
+  "↵ to add": "↵ للإضافة",
+  "Esc to close": "Esc للإغلاق",
+  Days: "الأيام",
+  "of {target} kcal": "من {target} سعرة",
+  "Your recipe": "وصفتك",
+  "Your meal": "وجبتك",
+  "Jump to a date": "الانتقال إلى تاريخ",
+  "{date}, logged": "{date}، مسجَّل",
+  "Days {name} logged food": "أيام تسجيل الطعام لدى {name}",
+  "Days with food logged": "أيام فيها طعام مسجَّل",
+  "Back to recipes": "العودة إلى الوصفات",
+  "{n} kcal total": "{n} سعرة إجمالًا",
+  "Per serving {kcal} kcal, protein {p}, carbs {c}, fat {f}": "للحصة {kcal} سعرة، بروتين {p}، كربوهيدرات {c}، دهون {f}",
+  "Per serving. Totals ÷ {n} servings.": { zero: "للحصة. المجموع ÷ {n} حصص.", one: "للحصة. المجموع ÷ حصة واحدة.", two: "للحصة. المجموع ÷ حصتين.", few: "للحصة. المجموع ÷ {n} حصص.", many: "للحصة. المجموع ÷ {n} حصة.", other: "للحصة. المجموع ÷ {n} حصة." },
+  "{name}, no meaningful macros": "{name}، بلا عناصر غذائية تُذكر",
+  "{name}, protein {p}, carbs {c}, fat {f}": "{name}، بروتين {p}، كربوهيدرات {c}، دهون {f}",
+  // Website viewport (WP-NU-MP.2): the web journal day.
+  "Which food": "أيّ طعام",
+  "Food, day totals": "الطعام، مجموع اليوم",
+  "Calories {n} of {target}": "السعرات {n} من {target}",
+  "Calories {n}": "السعرات {n}",
+  "{n} g left": "متبقٍّ {n} غ",
+  "{n} g over": "{n} غ فوق الهدف",
+  "{slot}: {kcal} kcal, protein {p} g, carbs {c} g, fat {f} g": "{slot}: {kcal} سعرة، بروتين {p} غ، كربوهيدرات {c} غ، دهون {f} غ",
+  "C {n}g": "ك {n} غ",
+  "F {n}g": "د {n} غ",
+  "e.g. Chicken and rice bowl": "مثلًا: وعاء دجاج وأرز",
+  "One step per line": "خطوة في كل سطر",
+  // Website viewport (WP-CO-IN.7; the Extras targets)
+  "Weekly rate": "المعدّل الأسبوعي",
+  "{n} kg a week": "{n} كغ في الأسبوع",
+  "About {date} at this rate": "نحو {date} بهذا المعدّل",
+  "Last logged {date}": "آخر تسجيل {date}",
+  "{delta} kg since {date}": "{delta} كغ منذ {date}",
+  "Maintenance": "الحفاظ",
+  "{n} a day": "{n} في اليوم",
 };
 
 export default pronutrition;

@@ -209,6 +209,8 @@ const proprofile: Catalogue = {
 
   // == More · Public profile and reviews ==
   "Preview as client": "معاينة كعميل",
+  // Website viewport (WP-MO.13): the pane title.
+  "What clients see": "ما يراه العملاء",
   "Clients use these buttons. You can't book or hire yourself.": "يستخدم العملاء هذه الأزرار. لا يمكنك حجز نفسك أو توظيفها.",
   "{n} out of 5 stars": "{n} من 5 نجوم",
   "From clients who worked with you": "من عملاء عملوا معك",
@@ -300,6 +302,7 @@ const proprofile: Catalogue = {
   "You're not working at a business yet. Join one from Businesses.": "لا تعمل في نشاط تجاري بعد. انضم إلى واحد من «الأنشطة التجارية».",
   "Choose how you work above.": "اختر طريقة عملك في الأعلى.",
   "Show on your public profile": "الإظهار في ملفك العام",
+  Teams: "الفِرق",
   "Teams you joined. A business that hired you through Centium always shows.": "الفرق التي انضممت إليها. يظهر دائمًا النشاط التجاري الذي وظّفك عبر Centium.",
   "Join a business or answer an invitation": "انضم إلى نشاط تجاري أو أجب عن دعوة",
   Radius: "النطاق",

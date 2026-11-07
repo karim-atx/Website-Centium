@@ -112,7 +112,7 @@ export default function OrdersListPageWeb() {
         <ExtrasHeader kicker={kicker} title={title} backLabel={t("Back")} onBack={back} />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col">
+        <div className="max-w-[1600px] flex flex-col">
           {s.status === "error" ? (
             <ErrorCard text={which === "returns" ? t("Couldn't load returns.") : which === "completed" ? t("Couldn't load completed orders.") : t("Couldn't load your orders.")} onRetry={live.reload} />
           ) : !ready || s.status === "loading" ? (

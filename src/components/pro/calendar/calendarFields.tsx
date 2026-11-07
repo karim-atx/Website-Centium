@@ -137,15 +137,39 @@ export const SwitchRow: React.FC<{ title: string; sub?: string; checked: boolean
   </div>
 );
 
-/** ui.js sSection: a section label over its rows, 32 above (0 for the first). */
-export const SettingsSection: React.FC<{ label: string; first?: boolean; children: React.ReactNode }> = ({ label, first, children }) => (
-  <section style={{ marginTop: first ? 0 : 32 }}>
-    <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF }}>{label}</h2>
-    <div>{children}</div>
-  </section>
+/**
+ * ui.js sSection: a section label over its rows, 32 above (0 for the first).
+ * `web` (WP-CA Calendar Extras Web): the label 12/16 600, 8 under it, no
+ * margin (the web column spaces its sections).
+ */
+export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: boolean; pane?: boolean; children: React.ReactNode }> = ({ label, first, web, pane, children }) =>
+  pane ? (
+    // WP-MO.5 web (WP-MO Edit Profile Web): the section label (24 0 8, 13/20 700 caps #7D67D9 over the 1.5 #AEA1DC rule), then the rows in a card.
+    <section aria-label={label}>
+      <h2 style={{ margin: "24px 0 8px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+      <PaneRowCard>{children}</PaneRowCard>
+    </section>
+  ) : web ? (
+    <section aria-label={label}>
+      <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", color: "#8C8378" }}>{label}</h2>
+      <div>{children}</div>
+    </section>
+  ) : (
+    <section style={{ marginTop: first ? 0 : 32 }}>
+      <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: "14px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 7.5, borderBottom: `1.5px solid ${INK.pr}`, color: INK.chF }}>{label}</h2>
+      <div>{children}</div>
+    </section>
+  );
+
+/** WP-MO.5 web: the card around pane rows (white, the 8% border, r16, 0 16). */
+export const PaneRowCard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "0 16px" }}>{children}</div>
 );
 
-/** ui.js sRow. `right` is a node (a switch, a value) or the chevron when onClick is set. */
+/**
+ * ui.js sRow. `right` is a node (a switch, a value) or the chevron when onClick is set.
+ * `web` (WP-CA Calendar Extras Web): min 60, 8 0, gap 14, tile 40 r12 / 20, title 15/24 600, sub and value 13/20, the rule from 54; hover #FAF9FD.
+ */
 export const SettingsRow: React.FC<{
   icon?: LucideIcon;
   tile?: React.ReactNode;
@@ -157,8 +181,71 @@ export const SettingsRow: React.FC<{
   onClick?: () => void;
   ariaLabel?: string;
   muted?: boolean;
-}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted }) => {
+  web?: boolean;
+  /** WP-MO.5 web (a row in PaneRowCard): min 56, gap 12, tile 32 r10 / 18 #5F5093, the title 15/24 600 with the sub 13/20 at the end, chevron 18 #9A94B3, the 6% rule. */
+  pane?: boolean;
+}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted, web, pane }) => {
   const dark = useIsDark();
+  if (pane) {
+    const paneBody = (
+      <>
+        {(Icon || tile) && (
+          <span className="flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: "#F0EDF9" }}>
+            {tile ?? (Icon && <Icon size={18} strokeWidth={2} aria-hidden style={{ color: "#5F5093" }} />)}
+          </span>
+        )}
+        <span className="flex-1 min-w-0 flex items-center justify-between" style={{ gap: 16 }}>
+          <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", color: muted ? "#8C8378" : "#241F1B" }}>{title}</span>
+          {(sub ?? value) !== undefined && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub ?? value}</span>}
+        </span>
+        {right ?? (onClick ? <ChevronRight size={18} strokeWidth={2} aria-hidden style={{ color: "#9A94B3", flexShrink: 0 }} /> : null)}
+      </>
+    );
+    const paneStyle: React.CSSProperties = { minHeight: 56, gap: 12, margin: "0 -16px", padding: "0 16px", width: "calc(100% + 32px)", boxSizing: "border-box", borderBottom: last ? "none" : "1px solid rgba(36,31,27,0.06)" };
+    return onClick ? (
+      <button type="button" onClick={onClick} aria-label={ariaLabel} className="flex items-center text-start hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={paneStyle}>
+        {paneBody}
+      </button>
+    ) : (
+      <div className="flex items-center" style={paneStyle}>
+        {paneBody}
+      </div>
+    );
+  }
+  if (web) {
+    const webBody = (
+      <>
+        {(Icon || tile) && (
+          <span className="flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 12, background: "#F0EDF9" }}>
+            {tile ?? (Icon && <Icon size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D67D9" }} />)}
+          </span>
+        )}
+        <span className="flex-1 min-w-0">
+          <span className="block truncate" style={{ fontSize: 15, fontWeight: 600, lineHeight: "24px", color: muted ? "#8C8378" : "#241F1B" }}>
+            {title}
+          </span>
+          {sub && (
+            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              {sub}
+            </span>
+          )}
+        </span>
+        {value !== undefined && <span style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>}
+        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} /> : null)}
+        {!last && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: Icon || tile ? 54 : 0, insetInlineEnd: 0, height: 1, background: "rgba(36,31,27,0.06)" }} />}
+      </>
+    );
+    const webStyle: React.CSSProperties = { gap: 14, padding: "8px 0", minHeight: 60, boxSizing: "border-box" };
+    return onClick ? (
+      <button type="button" onClick={onClick} aria-label={ariaLabel} className="relative w-full flex items-center text-start hover:bg-[#FAF9FD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={webStyle}>
+        {webBody}
+      </button>
+    ) : (
+      <div className="relative flex items-center" style={webStyle}>
+        {webBody}
+      </div>
+    );
+  }
   const body = (
     <>
       {(Icon || tile) && (

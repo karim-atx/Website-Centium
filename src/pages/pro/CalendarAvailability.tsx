@@ -37,6 +37,7 @@ import {
   type TimeOffRow,
 } from "../../services/pro/calendar";
 import { t, tn } from "../../i18n/core";
+import { useWebLayout, WEB_READING_MAX } from "../../components/web/useWebLayout";
 
 // The booking window as shown (the same words as the booking sheet).
 const windowText = (days: number) => (days % 7 === 0 ? tn(days / 7, "{n} week ahead", "{n} weeks ahead") : t("{n} days ahead", { n: days }));
@@ -60,6 +61,7 @@ export default function CalendarAvailability() {
   const { authUserId, profileReady } = useApp();
   const back = useBack();
   const dark = useIsDark();
+  const { web, rail } = useWebLayout();
   const online = useOnline();
   const me = authUserId ?? "";
   const todayIso = isoOf(new Date());
@@ -173,6 +175,167 @@ export default function CalendarAvailability() {
     { kind: "sync", icon: RefreshCw, sub: t("Coming soon") },
   ];
 
+  // The four sections, shared by both layouts (`web` sizes their rows).
+  const addStyle: React.CSSProperties = web
+    ? { gap: 6, marginTop: 8, height: 40, padding: "0 12px 0 8px", marginInlineStart: -8, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#7D6BB5" }
+    : { gap: 6, padding: "12px 0 0", minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep };
+  const addClass = web ? "inline-flex items-center hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" : "tap flex items-center";
+  const hoursSec = (
+    <SettingsSection label={t("Working hours")} first web={web}>
+      {[1, 2, 3, 4, 5, 6, 7].map((wd, i) => {
+        const w = dayWindows(wd);
+        const on = w.length > 0;
+        return (
+          <div key={wd} className="relative flex items-center" style={web ? { gap: 12, minHeight: 52, boxSizing: "border-box", padding: "6px 0" } : { gap: 12, padding: "11px 0" }}>
+            <span className="flex-1 min-w-0" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: on ? "#241F1B" : "#8C8378" } : { fontSize: textPx(14), fontWeight: 600, color: on ? INK.ch : INK.chF }}>
+              {weekdayLong(wd - 1)}
+            </span>
+            {on ? (
+              <button
+                type="button"
+                onClick={() => setHoursEdit({ weekday: wd, start: w[0].start, end: w[w.length - 1].end })}
+                aria-label={t("{weekday} hours, {hours}, change", { weekday: weekdayLong(wd - 1), hours: w.map((x) => range12(x.start, x.end)).join(t(", ")) })}
+                className={web ? "flex items-center hover:border-[#AEA1DC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" : "tap flex items-center"}
+                style={
+                  web
+                    ? { height: 36, boxSizing: "border-box", padding: "0 12px", borderRadius: 10, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.1)", fontSize: 15, lineHeight: "24px", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: "#241F1B" }
+                    : { height: 32, padding: "0 10px", borderRadius: 10, background: INK.soft, border: `1px solid ${INK.b10}`, fontSize: textPx(12.5), fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: INK.ch }
+                }
+              >
+                {w.map((x) => range12(x.start, x.end)).join(", ")}
+              </button>
+            ) : (
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { fontSize: textPx(12.5), color: INK.chF }}>{t("Day off")}</span>
+            )}
+            <Toggle checked={on} label={t("{weekday}, working", { weekday: weekdayLong(wd - 1) })} disabled={busyDay === wd} onChange={(v) => void toggleDay(wd, v)} />
+            {i < 6 && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, height: 1, background: INK.b06 }} />}
+          </div>
+        );
+      })}
+      {businessHours.map((b, i) => (
+        <SettingsRow key={b.id} icon={Store} title={t("At {name}", { name: b.name })} sub={b.line} value={t("Set by the business")} last={i === businessHours.length - 1} web={web} />
+      ))}
+    </SettingsSection>
+  );
+  const offSec = (
+    <SettingsSection label={t("Time off")} web={web}>
+      {entries.map((e) => {
+        const Icon = e.start ? Coffee : Plane;
+        return <SettingsRow key={e.key} icon={Icon} title={e.reason || (e.start ? t("Break") : t("Time off"))} sub={entrySub(e)} onClick={() => setOffSheet({ entry: e })} web={web} />;
+      })}
+      <button type="button" onClick={() => setOffSheet({ entry: null })} className={addClass} style={addStyle}>
+        <Plus size={web ? 16 : 14} strokeWidth={2.4} aria-hidden />{t("Add time off")}</button>
+    </SettingsSection>
+  );
+  const typesSec = (
+    <SettingsSection label={t("Session types")} web={web}>
+      {types.map((t, i) => {
+        const { tint, bar } = eventColours(t.colour ?? DEFAULT_SESSION, dark);
+        return (
+          <SettingsRow
+            key={t.id}
+            tile={
+              <span className="flex items-center justify-center" style={{ width: web ? 40 : 36, height: web ? 40 : 36, borderRadius: web ? 12 : 11, background: tint }}>
+                <span style={{ width: 12, height: 12, borderRadius: 9999, background: bar }} />
+              </span>
+            }
+            title={t.name}
+            sub={typeSub(t)}
+            last={i === types.length - 1}
+            onClick={() => setTypeSheet({ type: t })}
+            web={web}
+          />
+        );
+      })}
+      {types.length === 0 && <p style={web ? { margin: 0, padding: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { padding: "13px 0 0", fontSize: textPx(12.5), color: INK.chF }}>{t("Session types are what clients book: a name, a length and a price.")}</p>}
+      <button type="button" onClick={() => setTypeSheet({ type: null })} className={addClass} style={addStyle}>
+        <Plus size={web ? 16 : 14} strokeWidth={2.4} aria-hidden />{t("Add session type")}</button>
+    </SettingsSection>
+  );
+  const bookSec = (
+    <SettingsSection label={t("Booking")} web={web}>
+      {bookingRows.map((r, i) => (
+        <SettingsRow key={r.kind} icon={r.icon} title={BOOKING_TITLES[r.kind]} sub={r.sub} last={i === bookingRows.length - 1} onClick={() => setBooking(r.kind)} web={web} />
+      ))}
+    </SettingsSection>
+  );
+
+  const sheets = (
+    <>
+        <BottomSheet
+          open={!!hoursEdit}
+          onClose={() => {
+            setWheel(null);
+            setHoursEdit(null);
+          }}
+          title={hoursEdit ? weekdayLong(hoursEdit.weekday - 1) : ""}
+          footer={<CtaButton size="sheet" className="w-full" label={t("Save")} loading={busyDay !== null} disabled={!hoursEdit || hoursEdit.start >= hoursEdit.end} onClick={() => void saveHours()} />}
+        >
+          {hoursEdit && (
+            <>
+              <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
+                <TimeField label={t("From")} value={hoursEdit.start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, start: v })} minuteStep={15} />
+                <TimeField label={t("To")} value={hoursEdit.end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, end: v })} notBefore={hoursEdit.start} minuteStep={15} />
+              </div>
+              <div aria-hidden style={{ height: wheel ? 190 : 8 }} />
+            </>
+          )}
+        </BottomSheet>
+  
+        <TimeOffSheet open={!!offSheet} me={me} todayIso={todayIso} entry={offSheet?.entry ?? null} date={todayIso} onDay={null} onClose={() => setOffSheet(null)} onSaved={() => void load()} />
+        <SessionTypeSheet open={!!typeSheet} me={me} type={typeSheet?.type ?? null} onClose={() => setTypeSheet(null)} onSaved={() => void load()} />
+        <BookingSheet kind={booking} me={me} policy={policy} handle={handle} reminders={reminders} onClose={() => setBooking(null)} onSaved={() => void load()} onToast={setToast} />
+        <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+    </>
+  );
+
+  // Website viewport (WP-CA.5, WP-CA Calendar Extras Web availPage): a 72
+  // header (back 40, "Availability" 28/36, the line 13/20), then Working
+  // hours + Time off | Session types + Booking as two equal columns (24
+  // apart, 32 between sections) under a 1280 cap, 32 (24) padding.
+  if (web) {
+    const margin = rail ? 24 : 32;
+    return (
+      <div>
+        <header className="flex items-center" style={{ height: 72, boxSizing: "border-box", gap: 12, padding: `0 ${margin}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+          <button type="button" onClick={back} aria-label={t("Back")} className="flex items-center justify-center shrink-0 hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)", color: "#5B5349" }}>
+            <ChevronLeft size={20} strokeWidth={2} aria-hidden />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>{t("Availability")}</h1>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#8C8378" }}>{t("When clients can book you")}</p>
+          </div>
+        </header>
+        <div style={{ maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: `32px ${margin}px` }}>
+          {!online && loaded && <OfflineLine />}
+          {error && loaded && (
+            <div style={{ marginBottom: 12 }}>
+              <ProError onRetry={() => void load()} />
+            </div>
+          )}
+          {!loaded ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", columnGap: 24 }}>
+              <ProCardSkeleton lines={7} height={320} />
+              <ProCardSkeleton lines={7} height={320} />
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", columnGap: 24, alignItems: "start" }}>
+              <div className="flex flex-col min-w-0" style={{ gap: 32 }}>
+                {hoursSec}
+                {offSec}
+              </div>
+              <div className="flex flex-col min-w-0" style={{ gap: 32 }}>
+                {typesSec}
+                {bookSec}
+              </div>
+            </div>
+          )}
+        </div>
+        {sheets}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-start" style={{ gap: 6, marginBottom: 20 }}>
@@ -199,104 +362,16 @@ export default function CalendarAvailability() {
           </div>
         ) : (
           <>
-            <SettingsSection label={t("Working hours")} first>
-              {[1, 2, 3, 4, 5, 6, 7].map((wd, i) => {
-                const w = dayWindows(wd);
-                const on = w.length > 0;
-                return (
-                  <div key={wd} className="relative flex items-center" style={{ gap: 12, padding: "11px 0" }}>
-                    <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 600, color: on ? INK.ch : INK.chF }}>
-                      {weekdayLong(wd - 1)}
-                    </span>
-                    {on ? (
-                      <button
-                        type="button"
-                        onClick={() => setHoursEdit({ weekday: wd, start: w[0].start, end: w[w.length - 1].end })}
-                        aria-label={t("{weekday} hours, {hours}, change", { weekday: weekdayLong(wd - 1), hours: w.map((x) => range12(x.start, x.end)).join(t(", ")) })}
-                        className="tap flex items-center"
-                        style={{ height: 32, padding: "0 10px", borderRadius: 10, background: INK.soft, border: `1px solid ${INK.b10}`, fontSize: textPx(12.5), fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: INK.ch }}
-                      >
-                        {w.map((x) => range12(x.start, x.end)).join(", ")}
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: textPx(12.5), color: INK.chF }}>{t("Day off")}</span>
-                    )}
-                    <Toggle checked={on} label={t("{weekday}, working", { weekday: weekdayLong(wd - 1) })} disabled={busyDay === wd} onChange={(v) => void toggleDay(wd, v)} />
-                    {i < 6 && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, height: 1, background: INK.b06 }} />}
-                  </div>
-                );
-              })}
-              {businessHours.map((b, i) => (
-                <SettingsRow key={b.id} icon={Store} title={t("At {name}", { name: b.name })} sub={b.line} value={t("Set by the business")} last={i === businessHours.length - 1} />
-              ))}
-            </SettingsSection>
-
-            <SettingsSection label={t("Time off")}>
-              {entries.map((e) => {
-                const Icon = e.start ? Coffee : Plane;
-                return <SettingsRow key={e.key} icon={Icon} title={e.reason || (e.start ? t("Break") : t("Time off"))} sub={entrySub(e)} onClick={() => setOffSheet({ entry: e })} />;
-              })}
-              <button type="button" onClick={() => setOffSheet({ entry: null })} className="tap flex items-center" style={{ gap: 6, padding: "12px 0 0", minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-                <Plus size={14} strokeWidth={2.4} aria-hidden />{t("Add time off")}</button>
-            </SettingsSection>
-
-            <SettingsSection label={t("Session types")}>
-              {types.map((t, i) => {
-                const { tint, bar } = eventColours(t.colour ?? DEFAULT_SESSION, dark);
-                return (
-                  <SettingsRow
-                    key={t.id}
-                    tile={
-                      <span className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 11, background: tint }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 9999, background: bar }} />
-                      </span>
-                    }
-                    title={t.name}
-                    sub={typeSub(t)}
-                    last={i === types.length - 1}
-                    onClick={() => setTypeSheet({ type: t })}
-                  />
-                );
-              })}
-              {types.length === 0 && <p style={{ padding: "13px 0 0", fontSize: textPx(12.5), color: INK.chF }}>{t("Session types are what clients book: a name, a length and a price.")}</p>}
-              <button type="button" onClick={() => setTypeSheet({ type: null })} className="tap flex items-center" style={{ gap: 6, padding: "12px 0 0", minHeight: 44, fontSize: textPx(13), fontWeight: 700, color: INK.prDeep }}>
-                <Plus size={14} strokeWidth={2.4} aria-hidden />{t("Add session type")}</button>
-            </SettingsSection>
-
-            <SettingsSection label={t("Booking")}>
-              {bookingRows.map((r, i) => (
-                <SettingsRow key={r.kind} icon={r.icon} title={BOOKING_TITLES[r.kind]} sub={r.sub} last={i === bookingRows.length - 1} onClick={() => setBooking(r.kind)} />
-              ))}
-            </SettingsSection>
+            {hoursSec}
+            {offSec}
+            {typesSec}
+            {bookSec}
             <div style={{ height: 24 }} />
           </>
         )}
       </div>
 
-      <BottomSheet
-        open={!!hoursEdit}
-        onClose={() => {
-          setWheel(null);
-          setHoursEdit(null);
-        }}
-        title={hoursEdit ? weekdayLong(hoursEdit.weekday - 1) : ""}
-        footer={<CtaButton size="sheet" className="w-full" label={t("Save")} loading={busyDay !== null} disabled={!hoursEdit || hoursEdit.start >= hoursEdit.end} onClick={() => void saveHours()} />}
-      >
-        {hoursEdit && (
-          <>
-            <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-              <TimeField label={t("From")} value={hoursEdit.start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, start: v })} minuteStep={15} />
-              <TimeField label={t("To")} value={hoursEdit.end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, end: v })} notBefore={hoursEdit.start} minuteStep={15} />
-            </div>
-            <div aria-hidden style={{ height: wheel ? 190 : 8 }} />
-          </>
-        )}
-      </BottomSheet>
-
-      <TimeOffSheet open={!!offSheet} me={me} todayIso={todayIso} entry={offSheet?.entry ?? null} date={todayIso} onDay={null} onClose={() => setOffSheet(null)} onSaved={() => void load()} />
-      <SessionTypeSheet open={!!typeSheet} me={me} type={typeSheet?.type ?? null} onClose={() => setTypeSheet(null)} onSaved={() => void load()} />
-      <BookingSheet kind={booking} me={me} policy={policy} handle={handle} reminders={reminders} onClose={() => setBooking(null)} onSaved={() => void load()} onToast={setToast} />
-      <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
+      {sheets}
     </div>
   );
 }

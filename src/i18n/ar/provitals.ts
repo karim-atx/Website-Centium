@@ -210,6 +210,7 @@ const provitals: Catalogue = {
   "Trends appear here when {firstName} shares a test with you, or a single result.": "تظهر الاتجاهات هنا عندما يشارك {firstName} فحصًا معك، أو نتيجة واحدة.",
   "Ask {firstName} to share a test": "اطلب من {firstName} مشاركة فحص",
   "Ask {firstName} to share the whole test": "اطلب من {firstName} مشاركة الفحص كاملًا",
+  "{name} · over time": "{name} · عبر الوقت",
   Changing: "متغيّرة", // note: health wording; results that changed a lot between tests
   "Last test": "آخر فحص",
   "Latest results": "أحدث النتائج",

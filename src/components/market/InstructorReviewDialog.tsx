@@ -22,6 +22,7 @@ import {
 import { GuidelinesLink } from "../moderation/GuidelinesLink";
 import { useReviewOpensAt } from "../../hooks/useReviewOpensAt";
 import { ReviewWaitNote } from "../reviews/ReviewWaitNote";
+import { useIsWeb } from "../web/useWebLayout";
 
 // Market + Share 3.0 · W5 · InstructorReviewDialog (PLAN F13; C-MO.4.5
 // `revPrompt` / `revFilled`, Client Professional Screens lines 254–270 and
@@ -83,6 +84,7 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
   const [note, setNote] = useState<{ tone: "calm" | "error"; text: string } | null>(null);
   // Round F (AB7): an account under 7 days old sees when it may in Send's place.
   const opensAt = useReviewOpensAt();
+  const web = useIsWeb();
 
   const busyRef = useRef(busy);
   const closeRef = useRef(onClose);
@@ -156,7 +158,8 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
         data-review-dialog
         style={{
           position: "relative",
-          width: 338,
+          // Website viewport (WC-EX.2.1): the centred dialog is 420 wide.
+          width: web ? 420 : 338,
           maxWidth: "100%",
           maxHeight: "100%",
           overflowY: "auto",
@@ -246,11 +249,13 @@ const ReviewCard: React.FC<Omit<InstructorReviewDialogProps, "target"> & { targe
           </p>
         ) : null}
 
-        {opensAt ? <ReviewWaitNote opensAt={opensAt} boxed style={{ marginTop: 16 }} /> : null}
+        {opensAt && !web ? <ReviewWaitNote opensAt={opensAt} boxed style={{ marginTop: 16 }} /> : null}
         <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
           <button type="button" onClick={close} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
             {t("Not now")}
           </button>
+          {/* Website viewport (WC-EX.2.2): the wait note takes Send review's place in the row. */}
+          {opensAt && web ? <ReviewWaitNote opensAt={opensAt} boxed style={{ flex: 1, minWidth: 0, padding: "8px 12px", textAlign: "start" }} /> : null}
           {opensAt ? null : <SendButton ready={ready && online} busy={busy} fill={m.fill} ink={m.onfill} style={btn(m.fill, m.onfill)} onSend={() => void send()} />}
         </div>
       </div>

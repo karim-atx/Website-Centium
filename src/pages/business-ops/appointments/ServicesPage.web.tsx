@@ -213,7 +213,7 @@ export default function ServicesPageWeb() {
         <WebPageHeader title={t("Services and free slots")} sub={t("What clients can book, and when")} back={{ to: "/app/more", label: tk("Back to More") }} />
       </div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col" style={{ gap: 32 }}>
+        <div className="max-w-[1600px] flex flex-col" style={{ gap: 32 }}>
           {s.status === "error" ? (
             <ErrorCard text={t("Couldn't load your services.")} onRetry={live.reload} />
           ) : s.status === "loading" || !d ? (

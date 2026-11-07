@@ -53,12 +53,18 @@ interface Props {
    * the other editors are unchanged.
    */
   squares?: boolean;
+  /**
+   * Website viewport (WP-NU-MP.4, web Targets): with squares, each macro is
+   * the frame's row: the name 64 wide, the 12px slider, the 76 x 44 square
+   * (gap 14). Off, the squares are as on mobile.
+   */
+  web?: boolean;
 }
 
 /** Editing one slider rescales the other two proportionally to their current
  * ratio, then clamps both to their AMDR range so no macro can be dragged to
  * a scientifically unreasonable extreme just to make room for another. */
-export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, squares }) => {
+export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, squares, web }) => {
   const dark = useIsDark();
   const handleSlide = (key: keyof MacroSplit, rawValue: number) => {
     const m = macroMeta.find((mm) => mm.key === key)!;
@@ -77,6 +83,45 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
 
     onChange({ ...split, [key]: value, [o1.key]: v1, [o2.key]: v2 });
   };
+
+  if (squares && web) {
+    return (
+      <div className={`flex flex-col${disabled ? " opacity-50 pointer-events-none" : ""}`} style={{ gap: 12 }}>
+        {macroMeta.map((m) => {
+          const pct = split[m.key];
+          const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
+          const frac = ((pct - m.min) / (m.max - m.min)) * 100;
+          const ink = dark ? SQUARE_DARK[m.key].ink : m.ink;
+          return (
+            <div key={m.key} className="grid items-center" style={{ gridTemplateColumns: "64px minmax(0,1fr) 76px", gap: 14 }}>
+              <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{t(m.label)}</span>
+              <input
+                type="range"
+                min={m.min}
+                max={m.max}
+                value={pct}
+                onChange={(e) => handleSlide(m.key, Number(e.target.value))}
+                disabled={disabled}
+                aria-label={t("{macro} share", { macro: t(m.label) })}
+                className="macro-web-slider w-full block"
+                style={{
+                  ["--thumb" as string]: m.color,
+                  backgroundImage: `linear-gradient(to ${isRtl() ? "left" : "right"}, ${m.color} ${frac}%, #F0EFF3 ${frac}%)`,
+                } as React.CSSProperties}
+              />
+              <div
+                className="flex flex-col items-center justify-center"
+                style={{ height: 44, borderRadius: 12, background: dark ? SQUARE_DARK[m.key].tint : m.tint }}
+              >
+                <span style={{ fontSize: 15, lineHeight: "20px", fontWeight: 800, color: ink }}>{t("{n} g", { n: grams })}</span>
+                <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 600, color: ink }}>{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   if (squares) {
     return (

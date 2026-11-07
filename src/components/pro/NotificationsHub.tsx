@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useIsWeb } from "../web/useWebLayout";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
@@ -23,6 +24,7 @@ import {
   UserPlus,
   X,
   type LucideIcon,
+  CheckCheck,
 } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CtaButton } from "../ui/PinnedCta";
@@ -139,6 +141,7 @@ export const NotificationsHub: React.FC<{
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const panel = useRef<HTMLDivElement>(null);
+  const web = useIsWeb();
   useBackCloses(p.open, p.onClose);
   const online = useOnline();
   // Clear all asks first (W9 post-review); only "Clear all" in the popup calls
@@ -426,18 +429,37 @@ export const NotificationsHub: React.FC<{
     { key: "updates", label: t("Updates"), n: updN },
   ];
   return createPortal(
-    <div className="fixed inset-0 z-40 flex justify-center">
-      <div className="relative w-full h-full" style={{ maxWidth: 430 }}>
+    <div className="fixed inset-0 z-40 flex justify-center" style={web ? { background: "rgba(36,31,27,0.12)" } : undefined} onMouseDown={web ? (e) => e.target === e.currentTarget && p.onClose() : undefined}>
+      {/* Website viewport (WP-HO.2): from 1024px the hub is a 440 panel anchored under the header bell (top 72, 32 from the edge); a click outside closes it. Mobile keeps the full screen. */}
+      <div
+        className={web ? "absolute" : "relative w-full h-full"}
+        style={web ? { top: 72, insetInlineEnd: 32, width: 440, maxHeight: "calc(100dvh - 96px)", height: "auto", display: "flex", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(143,104,246,0.22)", boxShadow: "0 16px 40px rgba(0,0,0,0.2)" } : { maxWidth: 430 }}
+      >
         <div
           ref={panel}
           role="dialog"
           aria-modal="true"
           aria-label={t("Notifications")}
           tabIndex={-1}
-          className="absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"
-          style={{ background: m.page, color: m.ink, padding: "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
+          className={web ? "relative w-full outline-none flex flex-col overflow-y-auto overscroll-contain" : "absolute inset-0 outline-none flex flex-col overflow-y-auto overscroll-contain"}
+          style={{ background: m.page, color: m.ink, padding: web ? "20px 24px 12px" : "calc(env(safe-area-inset-top) + 12px) 16px 32px", lineHeight: "normal" }}
         >
           <style>{FOCUS_CSS}</style>
+          {web ? (
+            <div className="flex shrink-0 items-center justify-between" style={{ marginBottom: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{t("Notifications")}</h2>
+              <button
+                type="button"
+                onClick={() => void inbox.markRead(inbox.notifications.filter((n) => !n.readAt).map((n) => n.id))}
+                disabled={!anyUnread}
+                className="market-focus flex items-center"
+                style={{ gap: 4, padding: 0, background: "none", border: 0, fontSize: 15, lineHeight: "20px", fontWeight: 700, color: "#5F5093", whiteSpace: "nowrap", cursor: anyUnread ? "pointer" : "default", opacity: anyUnread ? 1 : 0.4 }}
+              >
+                <CheckCheck size={16} strokeWidth={2.2} aria-hidden />
+                {t("Mark all read")}
+              </button>
+            </div>
+          ) : (
           <div className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
             <button type="button" onClick={p.onClose} aria-label={t("Back")} className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
               <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
@@ -454,6 +476,7 @@ export const NotificationsHub: React.FC<{
               style={{ minHeight: 44, padding: 0, background: "none", border: 0, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.pdark, whiteSpace: "nowrap", cursor: anyUnread ? "pointer" : "default", opacity: anyUnread ? 1 : 0.4 }}
             >{t("Mark all read")}</button>
           </div>
+          )}
           <div role="tablist" aria-label={t("Notifications")} className="flex shrink-0" style={{ gap: 4, padding: 4, borderRadius: 12, background: m.subtrack, margin: "6px 0 2px" }}>
             {TABS.map((tab) => {
               const on = tab.key === p.tab;

@@ -37,7 +37,7 @@ export function ClassFilterPopup({ countLine, groups, filter }: { countLine: str
         <FilterTrigger ref={setAnchor} active={filter.active} open={filter.open} onPress={filter.toggleFilter} label={t("Filter classes")} />
       </div>
       {filter.active ? <FilterSummary summary={filter.summary} onShowAll={filter.clearFilter} style={{ marginTop: 10 }} /> : null}
-      <FilterPopup open={filter.open} anchor={anchor} groups={groups} selected={filter.selected} onToggle={filter.toggleOption} onClose={filter.closeFilter} />
+      <FilterPopup open={filter.open} anchor={anchor} groups={groups} selected={filter.selected} onToggle={filter.toggleOption} onClose={filter.closeFilter} webSheet count={countLine} />
     </>
   );
 }

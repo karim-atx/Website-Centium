@@ -285,7 +285,7 @@ export default function SchedulePageWeb() {
     <div style={{ color: "#241F1B" }}>
       <div className="sticky top-0 z-30">{header}</div>
       <div style={{ padding: 32 }}>
-        <div className="max-w-[1280px] flex flex-col" style={{ gap: 24 }}>
+        <div className="max-w-[1600px] flex flex-col" style={{ gap: 24 }}>
           {offline && api.loadedAt !== null && <MarketOffline loaded />}
           {firstLoad ? (
             <div aria-busy="true" aria-label={t("Loading your schedule")} className="flex flex-col" style={{ gap: 24 }}>

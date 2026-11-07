@@ -1,5 +1,5 @@
 import React from "react";
-import { useWebLayout } from "../../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
 import { t } from "../../../i18n/core";
 
 /** The page frame: the 64 header and the full-height grid. */
@@ -22,7 +22,7 @@ export const PrFrameWeb: React.FC<{ title: string; sub: string; subInk: string; 
         </p>
       </header>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <div data-pr-grid style={{ maxWidth: 1280, height: "100%", margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", display: "grid", gridTemplateColumns: `minmax(0,${lFr}fr) minmax(0,${rFr}fr)`, gap: 24 }}>
+        <div data-pr-grid style={{ maxWidth: WEB_CONTENT_MAX, height: "100%", margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", display: "grid", gridTemplateColumns: `minmax(0,${lFr}fr) minmax(0,${rFr}fr)`, gap: 24 }}>
           {children}
         </div>
       </div>

@@ -45,6 +45,8 @@ import type { ProNotification } from "../../services/pro/notifications";
 import { proMemberTarget } from "../../services/notifications/notificationsModel";
 import { imageHome } from "../../services/moderation/imageCopy";
 import { HeldShareCardSheet } from "../../components/share/HeldShareCardSheet";
+import { useIsWeb } from "../../components/web/useWebLayout";
+import { HomeGridWeb, HomeHeaderWeb, LaneCardWeb, WaysToAddWeb } from "../../components/pro/web/HomeWeb";
 import { t, tn } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 import { monthLong, monthShort } from "../../components/pro/proDates";
@@ -71,6 +73,8 @@ export default function Home() {
   const { lane } = useProSubtype();
   const navigate = useNavigate();
   const dark = useIsDark();
+  // Website viewport (WP-HO): from 1024px the page header and the two-column grid; mobile is unchanged.
+  const web = useIsWeb();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
@@ -456,65 +460,9 @@ export default function Home() {
   const firstName = user.firstName?.trim() || "";
   const initial = (firstName[0] ?? "").toUpperCase();
 
-  return (
-    <div className="relative">
-      {/* Header (gen/ui.js head19 + hubHeader): eyebrow 10.5 / 600, title 19 / 700, bell 36 with the unread badge, avatar 36. */}
-      <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
-        <div className="min-w-0">
-          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{dateKicker(now)}</p>
-          <h1 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>
-            {greeting(now)}
-            {firstName ? `, ${firstName}` : ""}
-          </h1>
-        </div>
-        <div className="flex items-center shrink-0" style={{ gap: 8 }}>
-          <button
-            type="button"
-            onClick={() => (hubOpen ? setHubOpen(false) : openHub("requests"))}
-            aria-label={inbox.unread > 0 ? t("Notifications, {n} unread", { n: inbox.unread }) : t("Notifications")}
-            aria-expanded={hubOpen}
-            className="tap relative flex items-center justify-center"
-            style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: `1px solid rgb(var(--c-charcoal) / 0.11)` }}
-          >
-            <Bell size={16} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
-            {inbox.unread > 0 && (
-              <span
-                aria-hidden
-                className="absolute flex items-center justify-center"
-                style={{ top: -4, insetInlineEnd: -4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: 9, fontWeight: 700 }}
-              >
-                {inbox.unread}
-              </span>
-            )}
-          </button>
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="object-cover" style={{ width: 36, height: 36, borderRadius: 9999 }} />
-          ) : (
-            <span
-              aria-hidden
-              className="flex items-center justify-center"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 9999,
-                fontSize: 13,
-                fontWeight: 800,
-                color: dark ? "#93C1B9" : "#3C6B65",
-                background: dark ? "linear-gradient(150deg,#2E3B3C,#293339)" : "linear-gradient(150deg,#C8E0DC,#A2C8C2)",
-              }}
-            >
-              {initial}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <TwoFactorNudge />
-      <ProGetSetUpCard onAddClient={() => openAdd()} onPlans={() => navigate("/app/more/services")} className="mb-4" />
-      {gate && (
-        <HireAvailabilityNotice gate={gate} planLabel={planLabel} capLine={myTier ? capLabel(myTier.tier, professionalClients.length) : null} className="mb-4" />
-      )}
-
+  // The trend hero (ProTrendRing and the client strip); the web Home draws it larger inside its card.
+  const trendBlock = (maxW?: number) => (
+    <>
       {trend?.offline && <OfflineLine />}
       {!trend && !empty ? (
         <div style={{ marginBottom: 24 }}>
@@ -527,6 +475,7 @@ export default function Home() {
       ) : (
         <ProTrendRing
           lane={lane}
+          maxW={maxW}
           range={range}
           onRange={setRange}
           focusLabel={focusUser ? `${focusUser.prefix ? `${focusUser.prefix} ` : ""}${focusUser.name}` : patients ? t("All patients") : t("All clients")}
@@ -564,24 +513,12 @@ export default function Home() {
             ))}
         </ProTrendRing>
       )}
+    </>
+  );
 
-      {empty ? (
-        <section>
-          <SectionLabel className="mb-1">{t("Ways to add")}</SectionLabel>
-          <GatedRow icon={QrCode} title={t("Invite clients")} subtitle={invitesAllowed ? t("Share it anywhere") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => navigate(`${PRO_ROUTES.home}/invite`) : undefined} />
-          <GatedRow icon={Mail} title={t("Invite by email or phone")} subtitle={invitesAllowed ? t("We send them a link") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => openAdd("contact") : undefined} />
-          <SettingsRow icon={UserPen} title={t("Add someone offline")} subtitle={t("Keep notes before they join")} onClick={() => openAdd("offline")} />
-        </section>
-      ) : (
-        <LaneCard
-          lane={lane}
-          rows={lane === "full_coaching" ? ending.rows : lane === "nutrition" ? mealEnding.rows : undefined}
-          error={lane === "nutrition" ? mealEnding.error : ending.error}
-          onRetry={() => setEndingNonce((n) => n + 1)}
-          onSeeAll={() => navigate(lane === "nutrition" ? PRO_ROUTES.mealPlans : PRO_ROUTES.clients)}
-        />
-      )}
-
+  // Popups, sheets and toasts shared by both layouts.
+  const overlays = (
+    <>
       <PopupMenu
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
@@ -664,6 +601,144 @@ export default function Home() {
       />
       <HeldShareCardSheet itemId={heldCardId} onClose={() => setHeldCardId(null)} />
       <Toast open={!!pageToast} message={pageToast?.text ?? ""} action={pageToast?.action} onExpire={() => setPageToast(null)} />
+    </>
+  );
+
+  if (web) {
+    const laneRows = lane === "full_coaching" ? ending.rows : lane === "nutrition" ? mealEnding.rows : undefined;
+    return (
+      <div className="relative">
+        <HomeHeaderWeb
+          title={firstName ? `${greeting(now)}, ${firstName}` : greeting(now)}
+          date={dateKicker(now)}
+          unread={inbox.unread}
+          hubOpen={hubOpen}
+          onBell={() => (hubOpen ? setHubOpen(false) : openHub("requests"))}
+          avatar={
+            user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="object-cover" style={{ width: 44, height: 44, borderRadius: 9999 }} />
+            ) : (
+              <span aria-hidden className="flex items-center justify-center" style={{ width: 44, height: 44, borderRadius: 9999, fontSize: 15, fontWeight: 800, color: "#3C6B65", background: "linear-gradient(150deg,#C8E0DC,#A2C8C2)" }}>
+                {initial}
+              </span>
+            )
+          }
+        />
+        <HomeGridWeb
+          left={
+            <>
+              <TwoFactorNudge />
+              {gate && <HireAvailabilityNotice gate={gate} planLabel={planLabel} capLine={myTier ? capLabel(myTier.tier, professionalClients.length) : null} className="mb-4" />}
+              {trendBlock(520)}
+            </>
+          }
+          right={
+            <>
+              <ProGetSetUpCard onAddClient={() => openAdd()} onPlans={() => navigate("/app/more/services")} />
+              {empty ? (
+                <WaysToAddWeb
+                  rows={[
+                    { key: "invite", icon: QrCode, title: t("Invite clients"), line: invitesAllowed ? t("Share it anywhere") : t(INVITE_LOCKED_MESSAGE), onOpen: invitesAllowed ? () => navigate(`${PRO_ROUTES.home}/invite`) : undefined },
+                    { key: "contact", icon: Mail, title: t("Invite by email or phone"), line: invitesAllowed ? t("We send them a link") : t(INVITE_LOCKED_MESSAGE), onOpen: invitesAllowed ? () => openAdd("contact") : undefined },
+                    { key: "offline", icon: UserPen, title: t("Add someone offline"), line: t("Keep notes before they join"), onOpen: () => openAdd("offline") },
+                  ]}
+                />
+              ) : (
+                <LaneCardWeb
+                  lane={lane}
+                  rows={laneRows}
+                  error={lane === "nutrition" ? mealEnding.error : ending.error}
+                  onRetry={() => setEndingNonce((n) => n + 1)}
+                  onSeeAll={() => navigate(lane === "nutrition" ? PRO_ROUTES.mealPlans : PRO_ROUTES.clients)}
+                />
+              )}
+            </>
+          }
+        />
+        {overlays}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      {/* Header (gen/ui.js head19 + hubHeader): eyebrow 10.5 / 600, title 19 / 700, bell 36 with the unread badge, avatar 36. */}
+      <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 13 }}>
+        <div className="min-w-0">
+          <p style={{ fontSize: textPx(10.5), fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.11em", color: INK.chF, marginBottom: 2 }}>{dateKicker(now)}</p>
+          <h1 style={{ fontSize: textPx(19), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>
+            {greeting(now)}
+            {firstName ? `, ${firstName}` : ""}
+          </h1>
+        </div>
+        <div className="flex items-center shrink-0" style={{ gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => (hubOpen ? setHubOpen(false) : openHub("requests"))}
+            aria-label={inbox.unread > 0 ? t("Notifications, {n} unread", { n: inbox.unread }) : t("Notifications")}
+            aria-expanded={hubOpen}
+            className="tap relative flex items-center justify-center"
+            style={{ width: 36, height: 36, borderRadius: 9999, background: INK.card, border: `1px solid rgb(var(--c-charcoal) / 0.11)` }}
+          >
+            <Bell size={16} strokeWidth={2} aria-hidden style={{ color: INK.chS }} />
+            {inbox.unread > 0 && (
+              <span
+                aria-hidden
+                className="absolute flex items-center justify-center"
+                style={{ top: -4, insetInlineEnd: -4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 9999, background: INK.hi, color: dark ? "#0D0B1A" : "#FFFFFF", fontSize: 9, fontWeight: 700 }}
+              >
+                {inbox.unread}
+              </span>
+            )}
+          </button>
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" className="object-cover" style={{ width: 36, height: 36, borderRadius: 9999 }} />
+          ) : (
+            <span
+              aria-hidden
+              className="flex items-center justify-center"
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 9999,
+                fontSize: 13,
+                fontWeight: 800,
+                color: dark ? "#93C1B9" : "#3C6B65",
+                background: dark ? "linear-gradient(150deg,#2E3B3C,#293339)" : "linear-gradient(150deg,#C8E0DC,#A2C8C2)",
+              }}
+            >
+              {initial}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <TwoFactorNudge />
+      <ProGetSetUpCard onAddClient={() => openAdd()} onPlans={() => navigate("/app/more/services")} className="mb-4" />
+      {gate && (
+        <HireAvailabilityNotice gate={gate} planLabel={planLabel} capLine={myTier ? capLabel(myTier.tier, professionalClients.length) : null} className="mb-4" />
+      )}
+
+      {trendBlock()}
+
+      {empty ? (
+        <section>
+          <SectionLabel className="mb-1">{t("Ways to add")}</SectionLabel>
+          <GatedRow icon={QrCode} title={t("Invite clients")} subtitle={invitesAllowed ? t("Share it anywhere") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => navigate(`${PRO_ROUTES.home}/invite`) : undefined} />
+          <GatedRow icon={Mail} title={t("Invite by email or phone")} subtitle={invitesAllowed ? t("We send them a link") : t(INVITE_LOCKED_MESSAGE)} onOpen={invitesAllowed ? () => openAdd("contact") : undefined} />
+          <SettingsRow icon={UserPen} title={t("Add someone offline")} subtitle={t("Keep notes before they join")} onClick={() => openAdd("offline")} />
+        </section>
+      ) : (
+        <LaneCard
+          lane={lane}
+          rows={lane === "full_coaching" ? ending.rows : lane === "nutrition" ? mealEnding.rows : undefined}
+          error={lane === "nutrition" ? mealEnding.error : ending.error}
+          onRetry={() => setEndingNonce((n) => n + 1)}
+          onSeeAll={() => navigate(lane === "nutrition" ? PRO_ROUTES.mealPlans : PRO_ROUTES.clients)}
+        />
+      )}
+
+      {overlays}
     </div>
   );
 }

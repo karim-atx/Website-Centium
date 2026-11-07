@@ -11,6 +11,8 @@ import { deductionLine, redeemOffer } from "../../../services/offers";
 import { newRequestId } from "./rewardsModel";
 import { appLocale } from "../../../i18n/format";
 import { t, tn } from "../../../i18n/core";
+import { X } from "lucide-react";
+import { useWebLayout } from "../../../components/web/useWebLayout";
 
 // Market + Share 3.0 · W2 · C-MO.4.4.3 Redeem confirm (`redeem1`, `redeem2`):
 // the two-step MasterBottomSheet over the offer. Literal values, Client
@@ -82,14 +84,77 @@ export const RedeemSheet: React.FC<RedeemSheetProps> = ({ open, onClose, offerId
     }
     refreshAchievements();
     onClose();
-    navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`);
+    navigate(`/app/marketplace/vouchers/${encodeURIComponent(r.voucher.id)}?new=1`, { state: { under: window.location.pathname } });
   };
 
+  const { web } = useWebLayout();
   const primary = step === 1 ? t("Continue") : tn(cost, "Redeem {n} point", "Redeem {n} points", { n: cost.toLocaleString(appLocale("en-US")) });
   const secondary = step === 1 ? t("Cancel") : t("Back");
 
+  const back = () => {
+    if (busy) return;
+    if (step === 2) {
+      setStep(1);
+      setError(null);
+    } else onClose();
+  };
+  const go = () => (step === 1 ? setStep(2) : void confirm());
+
+  if (web) {
+    // WC-EX.7.4 (WC-EX Rewards Web): the 440 popup (r24, padding 24): the title 22/30 800 #7248F8 with the 28 close ring, the step bars, the offer box,
+    // the note (step 1) or the caution row (step 2), then Cancel | Continue (Back | Redeem) side by side (44, r12).
+    return (
+      <BottomSheet webCentred hideHeader open={open} onClose={() => !busy && onClose()} title={step === 1 ? t("Redeem this offer") : t("Confirm redemption")}>
+        <div style={{ lineHeight: "normal", color: m.ink, margin: -24, padding: 24 }}>
+          <style>{FOCUS_CSS}</style>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h2 style={{ flex: 1, margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 800, color: "#7248F8" }}>{step === 1 ? t("Redeem this offer") : t("Confirm redemption")}</h2>
+            <button type="button" onClick={() => !busy && onClose()} aria-label={t("Close")} className="market-focus" style={{ width: 28, height: 28, boxSizing: "border-box", borderRadius: 999, border: "1.6px solid #7248F8", background: "transparent", color: "#7248F8", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <X size={14} strokeWidth={2.6} aria-hidden />
+            </button>
+          </div>
+          <div aria-hidden style={{ marginTop: 14, display: "flex", gap: 6 }}>
+            <span style={{ flex: 1, height: 4, borderRadius: 999, background: "#A79AD5" }} />
+            <span style={{ flex: 1, height: 4, borderRadius: 999, background: step === 2 ? "#A79AD5" : m.soft }} />
+          </div>
+          <span className="sr-only">{t("Step {n} of {count}", { n: step, count: 2 })}</span>
+          <div style={{ marginTop: 14, background: m.soft, borderRadius: 14, padding: "12px 14px" }}>
+            <div style={{ marginBottom: 8, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: m.faint }}>{t("Offer")}</div>
+            <div style={{ background: m.card, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontSize: 15, lineHeight: "22px", fontWeight: 800 }}>{headline}</div>
+              <div style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.accent }}>{owner}</div>
+              <div style={{ marginTop: 6, fontSize: 15, lineHeight: "24px" }}>{deductionLine(cost, balance)}</div>
+            </div>
+          </div>
+          {step === 2 ? (
+            <div style={{ marginTop: 12, display: "flex", gap: 10, borderRadius: 14, padding: "10px 14px", background: m.cautionbg }}>
+              <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: m.caution, marginTop: 7, flex: "none" }} />
+              <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.caution }}>{t("Points are non-refundable once the voucher is issued.")}</span>
+            </div>
+          ) : (
+            <div style={{ marginTop: 12, fontSize: 13, lineHeight: "20px", color: m.faint }}>{t("Points are non-refundable once the voucher is issued.")}</div>
+          )}
+          {error ? (
+            <p role="alert" style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: m.high }}>
+              {error}
+            </p>
+          ) : null}
+          <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <button type="button" onClick={back} className="market-focus" style={{ height: 44, borderRadius: 12, border: 0, background: m.soft, color: m.ink2, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer" }}>
+              {secondary}
+            </button>
+            <button type="button" onClick={go} aria-disabled={busy || undefined} aria-busy={busy || undefined} className="market-focus" style={{ height: 44, borderRadius: 12, border: 0, background: m.fill, color: m.onfill, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, cursor: busy ? "default" : "pointer" }}>
+              {busy ? t("One moment…") : primary}
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
+    );
+  }
+
   return (
     <BottomSheet
+      webCentred
       open={open}
       onClose={() => !busy && onClose()}
       title={step === 1 ? t("Redeem this offer") : t("Confirm redemption")}

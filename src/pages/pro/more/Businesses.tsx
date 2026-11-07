@@ -8,6 +8,8 @@ import { ListSkeleton, OfflineLine, ProError } from "../../../components/pro/sta
 import { INK } from "../../../components/pro/proInk";
 import { BizCard, DeclinePopup, InvitationCard, JoinById, PageHead } from "../../../components/pro/businesses/BusinessParts";
 import { useBusinesses } from "../../../components/pro/businesses/useBusinesses";
+import { useIsWeb, useWebLayout } from "../../../components/web/useWebLayout";
+import BusinessDetail from "./BusinessDetail";
 import { useApp } from "../../../context/AppContext";
 import { useBack } from "../../../hooks/useBack";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
@@ -47,6 +49,10 @@ export default function Businesses() {
   const [decline, setDecline] = useState<MyEmployment | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [refused, setRefused] = useState<Record<string, AcceptRefusalKind>>({});
+  // Website viewport (WP-MO.1): the list 5 | the open business 7 (4 | 4 on the rail); a card opens beside the list.
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
+  const [picked, setPicked] = useState<string | null>(null);
 
   if (user.accountType !== "professional") return null;
 
@@ -136,9 +142,12 @@ export default function Businesses() {
         }
   );
 
-  return (
+  // Website viewport (WP-MO.1): the open business in the list-detail (the first accepted one by default).
+  const webAll = data ? [...data.employments] : [];
+  const webSel = web ? picked ?? webAll.find((x) => x.acceptedAt)?.businessId ?? webAll[0]?.businessId ?? null : null;
+  const listNode = (
     <div data-pro-businesses="">
-      <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />
+      {!web && <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />}
       {offline && <OfflineLine />}
       {failed ? (
         <ProError onRetry={reload} />
@@ -164,9 +173,13 @@ export default function Businesses() {
           )}
 
           <section aria-label={tx("Connected", "businesses")}>
-            <SectionHead label={tx("Connected", "businesses")} />
+            {web ? (
+              <h2 style={{ margin: "0 0 12px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{tx("Connected", "businesses")}</h2>
+            ) : (
+              <SectionHead label={tx("Connected", "businesses")} />
+            )}
             {[...owned, ...teams].map((e) => (
-              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => navigate(`/app/more/businesses/${e.businessId}`)} />
+              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => (web ? setPicked(e.businessId) : navigate(`/app/more/businesses/${e.businessId}`))} {...(web ? { web: { selected: webSel === e.businessId } } : {})} />
             ))}
             {owned.length + teams.length === 0 && (
               <div style={{ marginBottom: 12 }}>
@@ -193,4 +206,29 @@ export default function Businesses() {
       <Toast open={!!toast} message={toast ?? ""} onExpire={() => setToast(null)} />
     </div>
   );
+
+  if (web) {
+    const sel = webSel;
+    return (
+      <>
+      <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 16, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+        <div className="flex min-w-0 flex-1 items-baseline" style={{ gap: 16 }}>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", whiteSpace: "nowrap", color: "#241F1B" }}>{t("Businesses")}</h1>
+          <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Where you work with a business")}</span>
+        </div>
+      </header>
+      <div style={{ maxWidth: 1600, boxSizing: "border-box", padding: rail ? 24 : 32 }}>
+        <div className="grid" style={{ gridTemplateColumns: rail ? "repeat(2,minmax(0,1fr))" : "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
+          <div className="min-w-0">{listNode}</div>
+          {sel && (
+            <section aria-label={t("Business")} className="min-w-0" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: 24 }}>
+              <BusinessDetail key={sel} id={sel} />
+            </section>
+          )}
+        </div>
+      </div>
+      </>
+    );
+  }
+  return listNode;
 }

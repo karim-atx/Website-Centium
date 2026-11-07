@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BadgeCheck, CalendarPlus, ChevronLeft, Lock, UserPlus, type LucideIcon } from "lucide-react";
 import { useBack } from "../../../hooks/useBack";
+import { usePaneSpan } from "../../web/paneFill";
 import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
@@ -26,11 +27,42 @@ import { t } from "../../../i18n/core";
 export const SubPage: React.FC<{
   title: string;
   subtitle?: string;
+  /** The line under the title in a spanning More pane only (the pane's `d`); mobile keeps its own head. */
+  paneSubtitle?: string;
+  /** In a spanning pane only: a kicker over the title (13/20 700 caps #8C8378), the title -0.03em and the line 15/24, 24 below (WP-MO Edit Profile Web). */
+  paneEyebrow?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
   bottomPad?: number;
-}> = ({ title, subtitle, right, children, bottomPad }) => {
+}> = ({ title, subtitle, paneSubtitle, paneEyebrow, right, children, bottomPad }) => {
   const back = useBack();
+  // Website viewport: in a spanning More pane the pane header replaces the back row (no chevron; the column is the way back).
+  const inPane = usePaneSpan();
+  if (inPane)
+    return paneEyebrow ? (
+      <div style={{ paddingBottom: bottomPad }}>
+        <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 24 }}>
+          <div className="flex-1 min-w-0">
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{paneEyebrow}</p>
+            <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h1>
+            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{subtitle ?? paneSubtitle}</p>}
+          </div>
+          {right}
+        </header>
+        <div>{children}</div>
+      </div>
+    ) : (
+      <div style={{ paddingBottom: bottomPad }}>
+        <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
+          <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
+            <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
+            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle ?? paneSubtitle}</p>}
+          </div>
+          {right}
+        </header>
+        <div>{children}</div>
+      </div>
+    );
   return (
     <div style={{ paddingBottom: bottomPad }}>
       <div className="flex items-start justify-between" style={{ marginBottom: 20 }}>

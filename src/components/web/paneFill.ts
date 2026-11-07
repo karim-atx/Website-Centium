@@ -16,3 +16,13 @@ export function usePaneFill(on = true): void {
     return () => set(false);
   }, [set, on]);
 }
+
+/**
+ * True inside a spanning pane (the professional More and the Client /
+ * Professional Settings panes, Professional handover v1 section 4): a page's
+ * own header drops its back chevron there and takes the pane header (ST
+ * Settings Web: the title 28/36 700, the line 13/20 #8C8378, 28 above the
+ * first block). False everywhere else, mobile included.
+ */
+export const PaneSpanContext = createContext(false);
+export const usePaneSpan = (): boolean => useContext(PaneSpanContext);

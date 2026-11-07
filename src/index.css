@@ -1146,6 +1146,42 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   box-shadow: 0 0 0 3px rgb(var(--th-aea1dc) / 0.45);
 }
 
+/* WP-NU-MP.4 (web Targets, Macro distribution): the frame's 12px track with
+   the fill drawn by an inline gradient, and a 24px white thumb ringed 3px in
+   the macro's colour (--thumb). Only the web editor uses it. */
+.macro-web-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  border-radius: 999px;
+  outline: none;
+}
+.macro-web-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--thumb);
+  box-shadow: 0 1px 3px rgba(36, 31, 27, 0.18);
+  cursor: grab;
+}
+.macro-web-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--thumb);
+  box-shadow: 0 1px 3px rgba(36, 31, 27, 0.18);
+  cursor: grab;
+}
+.macro-web-slider:focus-visible {
+  box-shadow: 0 0 0 3px rgb(var(--th-aea1dc) / 0.45);
+}
+
 /* WO24 Percentage slider: a white thumb ringed in #AEA1DC on the grey track. */
 .plate-slider::-webkit-slider-thumb {
   border: 1.5px solid rgb(var(--th-aea1dc));

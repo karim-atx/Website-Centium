@@ -4,6 +4,7 @@ import { INK } from "../proInk";
 import { textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { t } from "../../../i18n/core";
+import { usePaneSpan } from "../../web/paneFill";
 
 /**
  * Release 3 · W5 Library › Programmes: the board's pieces for TR1 to TR22,
@@ -143,7 +144,20 @@ export const DetailHeader: React.FC<{ title: string; eyebrow?: string; onBack: (
   </div>
 );
 
-export const Fab: React.FC<{ label: string; onClick: () => void; icon: LucideIcon }> = ({ label, onClick, icon: Icon }) => (
+export const Fab: React.FC<{ label: string; onClick: () => void; icon: LucideIcon }> = ({ label, onClick, icon: Icon }) =>
+  // Website viewport (ST Settings Web's CTA block): in a spanning More pane the + is a labelled button under the
+  // content (44 high, r14, #9A8CD6, the icon 18, 15/24 600, 28 above), not a floating one.
+  usePaneSpan() ? (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center hover:opacity-90"
+      style={{ height: 44, padding: "0 20px", marginTop: 28, borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#FFFFFF" }}
+    >
+      <Icon size={18} strokeWidth={2} aria-hidden />
+      {label}
+    </button>
+  ) : (
   <button
     type="button"
     onClick={onClick}
@@ -154,7 +168,7 @@ export const Fab: React.FC<{ label: string; onClick: () => void; icon: LucideIco
   >
     <Icon size={22} strokeWidth={2} aria-hidden style={{ color: INK.onFill }} />
   </button>
-);
+  );
 
 /** A small inline status line: refused writes and failed refreshes. */
 export const ErrorLine: React.FC<{ children: React.ReactNode }> = ({ children }) => (

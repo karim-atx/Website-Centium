@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
+import { DeleteConfirmWeb } from "../pro/web/DeleteConfirmWeb";
 import { usePrepForm } from "./usePrepForm";
 import { Pencil, SlidersHorizontal } from "lucide-react";
 import { useApp } from "../../context/AppContext";
@@ -56,7 +57,9 @@ export const MealPrepFlowSheet: React.FC<{
    * user's own targets) is hidden. Off by default: the client flow is unchanged.
    */
   professional?: boolean;
-}> = ({ kind, itemId, startEditing = false, onClose, professional = false }) => {
+  /** Website viewport v1 (WP-NU-MP.9): the edit form as drawn for the side sheet. */
+  web?: boolean;
+}> = ({ kind, itemId, startEditing = false, onClose, professional = false, web = false }) => {
   const { customMeals, recipes, selectedDate, logCustomMeal, logRecipe, removeCustomMeal, removeRecipe } = useApp();
   const dark = useIsDark();
   // Round D (R3): in recovery-sensitive mode the detail shows names, servings
@@ -70,6 +73,7 @@ export const MealPrepFlowSheet: React.FC<{
   const accentCta = dark && !isR ? FOOD_DARK.tealInk : PREP_PRIMARY[kind];
 
   const [screen, setScreen] = useState<Screen>(startEditing ? "edit" : "detail");
+  const inPage = web && startEditing;
   const [qty, setQty] = useState("1");
   // CentiumMealPrep.dc.html's state starts `meal: "lunch"` and never resets
   // it per item, so Add to Diary is enabled from the first frame.
@@ -88,9 +92,12 @@ export const MealPrepFlowSheet: React.FC<{
     active: screen === "edit",
     editMeal: isR ? null : (item as CustomMeal | null),
     editRecipe: isR ? (item as Recipe | null) : null,
-    onDone: () => setScreen("detail"),
+    // On web the recipe opens in the page and Edit opens this sheet straight
+    // into the form (WP-NU-MP.9 rc-edit): saving closes it, and it has no back.
+    onDone: () => (inPage ? onClose() : setScreen("detail")),
     onDeleteRequest: () => setConfirm("delete"),
     professional,
+    web,
   });
 
   useEffect(() => {
@@ -153,9 +160,9 @@ export const MealPrepFlowSheet: React.FC<{
   return (
     <>
       <BottomSheet
-        open
+        open={!(web && confirm === "delete")}
         onClose={close}
-        onBack={screen === "edit" ? leaveEdit : screen === "advanced" ? () => setScreen("detail") : undefined}
+        onBack={screen === "edit" && !inPage ? leaveEdit : screen === "advanced" ? () => setScreen("detail") : undefined}
         title={title}
         footer={
           screen === "detail" && item ? (
@@ -166,6 +173,8 @@ export const MealPrepFlowSheet: React.FC<{
             >
               <Pencil size={15} /> {t("Edit")}
             </button>
+          ) : screen === "edit" && item && form.footer ? (
+            form.footer
           ) : undefined
         }
       >
@@ -192,14 +201,24 @@ export const MealPrepFlowSheet: React.FC<{
         {screen === "advanced" && !hide && <AdvancedScreen kind={kind} item={item} qty={qty} />}
       </BottomSheet>
 
-      <ConfirmCard
-        open={confirm === "delete"}
-        title={item?.title ? t("Delete {name}?", { name: item.title }) : isR ? t("Delete this recipe?") : t("Delete this meal?")}
-        subtitle={isR ? t("The recipe is removed. Past diary entries stay.") : t("The meal is removed. Past diary entries stay.")}
-        busy={busy}
-        onCancel={() => setConfirm(null)}
-        onConfirm={() => void doDelete()}
-      />
+      {web ? (
+        // WP-NU-MP.9 rc-delete: the frame's centred card over the page, no line.
+        <DeleteConfirmWeb
+          open={confirm === "delete"}
+          title={item?.title ? t("Delete {name}?", { name: item.title }) : t("Delete this recipe?")}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => void doDelete()}
+        />
+      ) : (
+        <ConfirmCard
+          open={confirm === "delete"}
+          title={item?.title ? t("Delete {name}?", { name: item.title }) : isR ? t("Delete this recipe?") : t("Delete this meal?")}
+          subtitle={isR ? t("The recipe is removed. Past diary entries stay.") : t("The meal is removed. Past diary entries stay.")}
+          busy={busy}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => void doDelete()}
+        />
+      )}
       <ConfirmCard
         open={confirm === "discard-back" || confirm === "discard-close"}
         title={t("Discard your changes?")}

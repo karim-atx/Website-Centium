@@ -18,6 +18,7 @@ import { WebAttentionPopover, WebDashActions, WebListingPopup, WebRecentActivity
 import { WebScheduleSection, WebTodayClasses, WebTodayStore, type ClassBar } from "../../components/business-dashboard/DashboardKinds.web";
 import { BusinessPlanHomeCard } from "../../components/premium/BusinessPlanHomeCard";
 import { t } from "../../i18n/core";
+import { WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 
 // Website viewport v1 · WB-HO · CS Dashboard (WB-HO Classes Dashboard Web v2)
 // and WB-HO · ST Dashboard (WB-HO Store Dashboard Web v2), from 1024px wide.
@@ -165,7 +166,7 @@ export function BusinessDashboardKindWeb(p: KindDashProps) {
       </header>
       <WebAttentionPopover c={c} open={p.panelOpen} items={p.attention} anchor={bell} onClose={() => p.setPanelOpen(false)} onAction={p.onAttention} onRetry={p.load} notificationsUnread={p.notifUnread} />
 
-      <div style={{ maxWidth: 1280, boxSizing: "border-box", padding: "32px", minHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}>
+      <div style={{ maxWidth: WEB_CONTENT_MAX, boxSizing: "border-box", padding: "32px", minHeight: "calc(100dvh - 64px)", display: "flex", flexDirection: "column" }}>
         {/* The kept notices of the mobile page, full width above the grid. */}
         <DobPromptCard setup className="mb-6" />
         {p.error && !raw && <ErrorRow c={c} text={p.error} onRetry={p.load} />}

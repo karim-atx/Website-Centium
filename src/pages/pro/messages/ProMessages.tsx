@@ -50,6 +50,8 @@ import {
 import { fetchClientStages, STAGE_LABEL, type ClientStage } from "../../../services/pro/clients";
 import { fetchCardKinds, fetchMemberCounts } from "../../../services/pro/messages";
 import { t, tk, tn } from "../../../i18n/core";
+import { useIsWeb, useWebLayout } from "../../../components/web/useWebLayout";
+import { MobileFrame } from "../../../components/web/WebLayout";
 
 /**
  * Release 3 · Messages for professionals (MO22 v5 lists, MO22 v2 chats, MO27
@@ -135,6 +137,10 @@ export default function ProMessages() {
   const [deleteTarget, setDeleteTarget] = useState<MessageThread | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [announce, setAnnounce] = useState("");
+  // Website viewport (WP-MO.18): the list-detail page on web.
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
+  const scroller = useRef<HTMLDivElement>(null);
   const canDelete = CONVERSATION_DELETE_READY;
 
   const closeThread = () => {
@@ -322,6 +328,7 @@ export default function ProMessages() {
   const tabEmpty = shown.length === 0;
 
   const proRows: ProRowOptions = {
+    ...(web ? { web: { selectedId: open?.id ?? null } } : {}),
     toneFor: (t) => toneOf(t.participantId ?? t.id),
     statusFor: (th) => {
       const kind = tabOf(th, clientIds);
@@ -432,6 +439,11 @@ export default function ProMessages() {
     </ThreadLiveProvider>
   );
 
+  // Website viewport: the inner screens without a web design (a new group, a broadcast list, an invitation,
+  // starred messages) keep their mobile screen in the centred column; the list and the chat are the list-detail.
+  const liveW = (node: React.ReactNode) => live(web ? <MobileFrame>{node}</MobileFrame> : node);
+  let webThread: React.ReactNode = null;
+
   if (open) {
     const kind = tabOf(open, clientIds);
     const firstName = open.participantName.trim().split(/\s+/)[0] || t("They");
@@ -444,7 +456,7 @@ export default function ProMessages() {
           : kind === "businesses"
             ? { kind: "business" }
             : { kind: "client", subtitle: stage ? STAGE_LABEL[stage] : undefined, onSharePlaylist: () => setPlaylistOpen(true) };
-    return live(
+    const threadNode = (
       <div>
         <ThreadView
           key={open.id}
@@ -455,6 +467,7 @@ export default function ProMessages() {
           onBack={closeThread}
           onDeleteConversation={canDelete ? () => setDeleteTarget(open) : undefined}
           pro={pro}
+          web={web ? { scroller } : undefined}
         />
         {authUserId && kind === "enquiries" && (
           <OfferPlansSheet open={offerOpen} onClose={() => setOfferOpen(false)} threadId={open.id} userId={authUserId} firstName={firstName} onSent={() => setAnnounce(t("Plans sent."))} />
@@ -474,12 +487,14 @@ export default function ProMessages() {
         )}
       </div>
     );
+    if (!web) return live(threadNode);
+    webThread = threadNode;
   }
 
-  if (view === "newGroup") return live(<NewGroup clients={clients} onBack={() => setView("list")} onCreated={(threadId) => void load(threadId)} />);
+  if (view === "newGroup") return liveW(<NewGroup clients={clients} onBack={() => setView("list")} onCreated={(threadId) => void load(threadId)} />);
 
   if (view === "broadcast")
-    return live(
+    return liveW(
       <BroadcastEditor
         key={openList?.id ?? "new"}
         list={openList}
@@ -493,7 +508,7 @@ export default function ProMessages() {
     );
 
   if (view === "invitation" && openInvitation)
-    return live(
+    return liveW(
       <GroupInvitationView
         invitation={openInvitation}
         onBack={() => setView("list")}
@@ -510,7 +525,7 @@ export default function ProMessages() {
     );
 
   if (view === "starred")
-    return live(
+    return liveW(
       <div>
         <MessagesHead title={t("Starred messages")} onBack={() => setView("list")} />
         <StarredMessages
@@ -540,11 +555,12 @@ export default function ProMessages() {
     return <EmptyState icon={CheckCheck} title={t("No chats here")} />;
   })();
 
-  return live(
+  const listNode = (
     <div data-pro-messages="">
       <MessagesHead
         title={view === "archived" ? t("Archived") : t("Messages")}
-        onBack={view === "archived" ? () => setView("list") : back}
+        onBack={view === "archived" ? () => setView("list") : web ? undefined : back}
+        web={web}
         right={
           view === "list" ? (
             <>
@@ -555,9 +571,9 @@ export default function ProMessages() {
         }
       />
 
-      {view === "list" && <MsgTabs tabs={tabs} active={activeTab} unread={tabUnread} onChange={setTab} />}
-      <SearchField value={query} onChange={setQuery} />
-      <div style={{ height: 16 }} />
+      {view === "list" && <MsgTabs tabs={tabs} active={activeTab} unread={tabUnread} onChange={setTab} web={web} />}
+      <SearchField value={query} onChange={setQuery} web={web} />
+      <div style={{ height: web ? 12 : 16 }} />
 
       {showOffline && <OfflineLine />}
       {error && !showOffline && (
@@ -574,22 +590,22 @@ export default function ProMessages() {
 
       {/* K1: Archived, at the top of the list (it scrolls away). */}
       {view === "list" && !loading && archived.length > 0 && (
-        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
+        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={web ? { gap: 12, padding: "0 8px", minHeight: 52, boxSizing: "border-box", borderBottom: `1px solid ${INK.b06}` } : { gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
           <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 36, height: 36, background: INK.prPale }}>
-            <Archive size={17} style={{ color: INK.prDeep }} aria-hidden />
+            <Archive size={web ? 18 : 17} style={{ color: INK.prDeep }} aria-hidden />
           </span>
-          <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Archived")}</span>
-          <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{archived.length}</span>
+          <span className="flex-1 min-w-0" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 700, color: INK.ch } : { fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Archived")}</span>
+          <span style={web ? { fontSize: 13, lineHeight: "20px", fontWeight: 700, color: INK.prDeep } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{archived.length}</span>
         </button>
       )}
 
       {!loading && !error && (searchingMessages ? shown.length > 0 : true) && (
         <>
-          {searchingMessages && shown.length > 0 && <SecLabel first>{t("Chats")}</SecLabel>}
+          {searchingMessages && shown.length > 0 && <SecLabel first web={web}>{t("Chats")}</SecLabel>}
           {!searchingMessages && tabEmpty && empty}
           {shown.map((s, i) => (
             <section key={s.label ?? "all"} aria-label={s.label ?? undefined}>
-              {s.label && !searchingMessages && <SecLabel first={i === 0}>{s.label}</SecLabel>}
+              {s.label && !searchingMessages && <SecLabel first={i === 0} web={web}>{s.label}</SecLabel>}
               <ThreadList
                 items={s.items}
                 settings={settings}
@@ -713,4 +729,32 @@ export default function ProMessages() {
       </BottomSheet>
     </div>
   );
+
+  // Website viewport (WP-MO.18, WP-MO Messages Web): the conversations column 400 wide (340 on the rail), the
+  // 1px rgba(36,31,27,0.08) rule at its end, 24 padding, scrolling on its own; the open chat beside it on
+  // #FCFCFE with its header and composer stuck to the pane (ThreadView `web`). One viewport tall.
+  if (web)
+    return live(
+      <div className="flex" style={{ height: "100dvh" }}>
+        <section aria-label={t("Conversations")} className="shrink-0 min-h-0 overflow-y-auto" style={{ width: rail ? 340 : 400, boxSizing: "border-box", padding: "24px 24px 16px", borderInlineEnd: "1px solid rgba(36,31,27,0.08)", scrollbarWidth: "thin" }}>
+          {listNode}
+        </section>
+        <main className="flex-1 min-w-0 min-h-0 flex flex-col" style={{ background: "#FCFCFE" }}>
+          {webThread ? (
+            <div ref={scroller} className="flex-1 min-h-0 overflow-y-auto" style={{ padding: "0 18px", scrollbarWidth: "thin" }}>
+              {webThread}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center" style={{ padding: 40 }}>
+              <span className="flex items-center justify-center" style={{ width: 56, height: 56, borderRadius: 16, background: "#F0EDF9", color: "#7D6BB5" }}>
+                <MessagesSquare size={26} strokeWidth={1.75} aria-hidden />
+              </span>
+              <p style={{ margin: "16px 0 0", fontSize: 17, lineHeight: "22px", fontWeight: 800, color: "#241F1B" }}>{t("Pick a chat")}</p>
+              <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "22px", color: "#5B5349" }}>{t("Your conversation opens here.")}</p>
+            </div>
+          )}
+        </main>
+      </div>
+    );
+  return live(listNode);
 }

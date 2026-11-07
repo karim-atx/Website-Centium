@@ -606,8 +606,12 @@ const ThreadRow: React.FC<{
 
   // Release 3 · MO22 v5 (gen/r19.js row19): the professional's row.
   const proStatus = pro?.statusFor(th) ?? null;
+  const proWebOn = pro?.web ? pro.web.selectedId === th.id : false;
   const proBody = pro ? (
-    <div className="group relative" style={{ background: "rgb(var(--c-cream))" }}>
+    <div
+      className={pro.web ? "group relative hover:!bg-[#F5F4FE]" : "group relative"}
+      style={pro.web ? { background: proWebOn ? "#F0EDF9" : "transparent", borderRadius: 14 } : { background: "rgb(var(--c-cream))" }}
+    >
       <button
         type="button"
         onClick={() => onOpen(th)}
@@ -622,7 +626,7 @@ const ThreadRow: React.FC<{
         <ProRowBody
           avatar={
             <span className="relative shrink-0">
-              {group ? <ProTile kind="group" /> : <ProAvatar thread={th} tone={pro.toneFor?.(th) ?? "pr"} />}
+              {group ? <ProTile kind="group" /> : <ProAvatar thread={th} tone={pro.toneFor?.(th) ?? "pr"} web={!!pro.web} />}
               {online && (
                 <span
                   aria-label={t("Online")}
@@ -655,6 +659,7 @@ const ThreadRow: React.FC<{
           }
           status={proStatus}
           hideOnHover={!!actions}
+          web={!!pro.web}
         />
       </button>
       {actions && (
@@ -674,7 +679,7 @@ const ThreadRow: React.FC<{
   const rowBody = proBody ?? body;
 
   return (
-    <li ref={rowRef} style={{ borderBottom: pro ? `1px solid ${PRO_RULE}` : `0.5px solid ${c.rowRule}` }}>
+    <li ref={rowRef} aria-current={proWebOn || undefined} style={{ borderBottom: pro?.web ? "none" : pro ? `1px solid ${PRO_RULE}` : `0.5px solid ${c.rowRule}` }}>
       {actions ? (
         <SwipeActions
           actions={tiles}
@@ -702,6 +707,12 @@ export interface ProRowOptions {
   statusFor: (th: MessageThread) => { label: string; color: string } | null;
   /** The initials avatar's tone (the frames vary it per person). */
   toneFor?: (th: MessageThread) => "pr" | "teal" | "gold" | "sky";
+  /**
+   * Website viewport (WP-MO.18, WP-MO Messages Web): the list column's rows: 68 min, padding 0 8, r14, no
+   * dividers, the 44 avatar, the name 15/22 with the status inline, the preview 13/20, the time 11/16; the open
+   * chat tinted #F0EDF9. Unset (mobile), row19 as before.
+   */
+  web?: { selectedId: string | null };
 }
 
 /** gen/lib.js b06: the row divider, 6% ink. */
@@ -724,8 +735,47 @@ const ProRowBody: React.FC<{
   preview: React.ReactNode;
   status: { label: string; color: string } | null;
   hideOnHover?: boolean;
-}> = ({ avatar, name, marks, time, unread = 0, preview, status, hideOnHover }) => {
+  web?: boolean;
+}> = ({ avatar, name, marks, time, unread = 0, preview, status, hideOnHover, web }) => {
   const hide = hideOnHover ? " [@media(hover:hover)]:group-hover:opacity-0 group-has-[[data-row-more]:focus-visible]:opacity-0" : "";
+  if (web)
+    return (
+      <span data-pro-row="" className="flex items-center" style={{ gap: 12, padding: "0 8px", minHeight: 68, boxSizing: "border-box" }}>
+        {avatar}
+        <span className="flex-1 min-w-0">
+          <span className="flex items-center min-w-0" style={{ gap: 8 }}>
+            <span data-row-name="" className="truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
+              {name}
+            </span>
+            {marks}
+            {status && (
+              <span data-row-status="" className="inline-flex items-center shrink-0 whitespace-nowrap" style={{ gap: 4, fontSize: 11, lineHeight: "16px", fontWeight: 700, color: "rgb(var(--c-charcoal-faint))" }}>
+                <span aria-hidden className="rounded-full shrink-0" style={{ width: 6, height: 6, background: status.color }} />
+                {status.label}
+              </span>
+            )}
+          </span>
+          <span data-row-preview="" className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: unread ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-faint))", fontWeight: unread ? 600 : 400 }}>
+            {preview}
+          </span>
+        </span>
+        <span className={`flex flex-col items-end shrink-0${hide}`} style={{ gap: 4 }}>
+          <span data-row-time="" className="whitespace-nowrap" style={{ fontSize: 11, lineHeight: "16px", color: "rgb(var(--c-charcoal-faint))" }}>
+            {time}
+          </span>
+          {unread > 0 && (
+            <span
+              data-row-badge=""
+              aria-label={tn(unread, "{n} unread", "{n} unread")}
+              className="flex items-center justify-center rounded-full"
+              style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", background: "#8F68F6", color: "#FFFFFF", fontSize: 11, fontWeight: 800 }}
+            >
+              {unread > 99 ? "99+" : unread}
+            </span>
+          )}
+        </span>
+      </span>
+    );
   return (
     <span data-pro-row="" className="flex items-start" style={{ gap: 12, padding: "14px 8px", minHeight: 76 }}>
       {avatar}
@@ -775,8 +825,9 @@ const ProRowBody: React.FC<{
   );
 };
 
-/** gen/ui.js avatar at 48: tone fill, initials 16 / 800 (33%). A photo when there is one. */
-const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky" }> = ({ thread: th, tone }) => {
+/** gen/ui.js avatar at 48: tone fill, initials 16 / 800 (33%). A photo when there is one. `web`: 44, initials 15. */
+const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky"; web?: boolean }> = ({ thread: th, tone, web }) => {
+  if (web) return <ProAvatarWeb thread={th} tone={tone} />;
   if (th.participantAvatarUrl)
     return (
       <span className="w-12 h-12 rounded-full overflow-hidden flex shrink-0">
@@ -790,6 +841,24 @@ const ProAvatar: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" 
   return (
     <span aria-hidden className="w-12 h-12 rounded-full flex items-center justify-center shrink-0" style={{ background: bg, color: ink, fontSize: 16, fontWeight: 800 }}>
       {initials || <AvatarPlaceholder size={48} />}
+    </span>
+  );
+};
+
+const ProAvatarWeb: React.FC<{ thread: MessageThread; tone: "pr" | "teal" | "gold" | "sky" }> = ({ thread: th, tone }) => {
+  if (th.participantAvatarUrl)
+    return (
+      <span className="rounded-full overflow-hidden flex shrink-0" style={{ width: 44, height: 44 }}>
+        <img src={th.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+      </span>
+    );
+  const bg = tone === "teal" ? "rgb(var(--c-teal-pale))" : tone === "gold" ? "rgb(var(--c-gold-pale))" : tone === "sky" ? "rgb(var(--c-sky-pale))" : "rgb(var(--c-primary-pale))";
+  const ink = tone === "teal" ? "rgb(var(--th-3c6b65))" : tone === "gold" ? "rgb(var(--c-team-gold-ink))" : tone === "sky" ? "rgb(var(--c-sky))" : "rgb(var(--c-primary-deep-text))";
+  const words = th.participantName.replace(/·.*$/, "").trim().split(/\s+/).filter(Boolean);
+  const initials = th.participantId || th.kind !== "peer" ? ((words[0]?.[0] ?? "") + (words.length > 1 ? words[words.length - 1][0] : "")).toUpperCase() : "";
+  return (
+    <span aria-hidden className="rounded-full flex items-center justify-center shrink-0" style={{ width: 44, height: 44, background: bg, color: ink, fontSize: 15, fontWeight: 800 }}>
+      {initials || <AvatarPlaceholder size={44} />}
     </span>
   );
 };

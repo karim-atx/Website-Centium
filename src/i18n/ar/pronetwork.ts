@@ -91,6 +91,10 @@ const pronetwork: Catalogue = {
   "waiting for them": "بانتظار الرد",
   "Request cancelled.": "أُلغي الطلب.",
   "Add colleagues you trust. Both of you agree, then you can refer clients to each other.": "أضف زملاء تثق بهم. بعد أن يوافق كلاكما، يمكنكما إحالة العملاء إلى بعضكما.",
+  // Website viewport (WP-CO-CN, web only): the Sent rows and the Network count.
+  "To {name}": "إلى {name}",
+  "To a colleague": "إلى زميل",
+  "{n} colleagues": { zero: "لا زملاء", one: "زميل واحد", two: "زميلان", few: "{n} زملاء", many: "{n} زميلًا", other: "{n} زميل" },
   "Asked {name} to connect.": "طلبت التواصل مع {name}.",
   "Asked them to connect.": "أُرسل طلب التواصل.",
 
@@ -251,6 +255,8 @@ const pronetwork: Catalogue = {
   "Too many tries in a short time. Try again in an hour.": "محاولات كثيرة في وقت قصير. حاول مرة أخرى بعد ساعة.",
   "This business isn't taking requests right now.": "لا يستقبل هذا النشاط التجاري طلبات حاليًا.",
   "Couldn't send your request. Try again.": "تعذّر إرسال طلبك. حاول مرة أخرى.",
+  // Website viewport (WP-MO.1): the business detail's classes-this-month change.
+  "{delta} vs {month}": "{delta} مقارنةً بشهر {month}",
 };
 
 export default pronetwork;

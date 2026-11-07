@@ -32,6 +32,13 @@ const CLIENT_PAGES: RegExp[] = [
   /^\/app\/health\/checks\/?$/, // WC-HE.8 Your health checks (general plan; the other plans in a centred column)
   /^\/app\/messages\/?$/, // WC-MO.4 Messages (list and chat)
   /^\/app\/calendar\/?$/, // WC-MO.3 Calendar (month and day list)
+  /^\/app\/marketplace\/?$/, // WC-EX Discover and WC-EX.7 Rewards (the hero beside the tiles, card grids 3 / 2 / 4)
+  /^\/app\/marketplace\/rewards\/mine\/?$/, // WC-EX.4 My rewards (voucher grid 3 / 2 / 4)
+  /^\/app\/marketplace\/points\/(history|earn)\/?$/, // WC-EX.5 Points history (4 + 8) and WC-EX.6 How to earn (2 columns)
+  /^\/app\/marketplace\/(gym|class|business)\/?$/, // WC-EX.1 Gym page, WC-EX.2 Class page (8 + 4) and WC-EX.7.2 Showcase (8 + 4)
+  /^\/app\/marketplace\/bookings\/?$/, // WC-EX.3 My bookings (list-detail 5 + 7)
+  /^\/app\/marketplace\/rewards\/(?!mine\/?$)[^/]+\/?$/, // WC-EX.7.1 Offer (8 + 4)
+  /^\/app\/marketplace\/vouchers\/[^/]+\/?$/, // WC-EX.7.3 Voucher (a centred popup over the page it was opened from)
 ];
 const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/?$/, // WB-HO · GY, · CS and · ST Dashboards
@@ -52,6 +59,23 @@ const BUSINESS_PAGES: RegExp[] = [
   /^\/app\/business\/appointments\/day\/?$/, // WB-ST-AP.4 Day list
 ];
 
-export function webPageFor(pathname: string, isBusiness: boolean): boolean {
-  return (isBusiness ? BUSINESS_PAGES : CLIENT_PAGES).some((re) => re.test(pathname));
+/** Professional pages with a web layout of their own (Professional handover v1, section 5). */
+export const PRO_PAGES: RegExp[] = [
+  /^\/app\/pro\/?$/, // WP-HO · FC / · NU / · CO Home (header bar, trend card 7 + lane card 5)
+  /^\/app\/pro\/calendar\/availability\/?$/, // WP-CA.5 Availability (Working hours + Time off | Session types + Booking)
+  /^\/app\/pro\/calendar\/?$/, // WP-CA.1-.4 Calendar (Month 7 + 5, the Week time grid, Day 7 + 5, Year 6 across)
+  /^\/app\/pro\/library(\/(programmes|meal-plans))?\/?$/, // WP-LI.1 / .2 Library lists (inner screens: the centred column inside the page)
+  /^\/app\/pro\/meal-plans(\/(plans|journals|recipes|targets))?\/?$/, // WP-NU-MP.1 Plans home (the other areas: the centred column inside the page)
+  /^\/app\/pro\/insights(\/(activity|nutrition|vitals|biomarkers))?\/?$/, // WP-CO-IN.1-.4 Insights
+  /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
+  /^\/app\/pro\/invite\/?$/, // WP-HO.1 Invite clients (QR card 5 | message, settings, joined 7)
+  /^\/app\/more\/practice-insights\/?$/, // WP-MO.9 Practice insights (range, milestone + 3 boxes, groups | the open group)
+  /^\/app\/more\/care-network\/?$/, // WP-CO-CN Care network (Received 5 · Sent 4 · Network 3)
+  /^\/app\/messages\/?$/, // WP-MO.18 Messages (conversations 400 | the open chat)
+  /^\/app\/more\/businesses\/?$/, // WP-MO.1 Businesses (list 5 | the open business 7)
+  /^\/app\/pro\/clients\/[^/]+(\/(overview|plan|progress|sessions|notes|files|care-plan|health-records|trends|appointments))?\/?$/, // WP-CL.1 / · NU / WP-CO-CL.1 client and patient page (Client insights keeps its column)
+];
+
+export function webPageFor(pathname: string, isBusiness: boolean, isPro = false): boolean {
+  return (isBusiness ? BUSINESS_PAGES : isPro ? PRO_PAGES : CLIENT_PAGES).some((re) => re.test(pathname));
 }

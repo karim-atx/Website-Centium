@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Flag } from "lucide-react";
+import { ChevronDown, Flag } from "lucide-react";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../../components/web/useWebLayout";
+import { VenueWebBody, VenueWebHeader } from "../venueWeb";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useBack } from "../../../hooks/useBack";
@@ -103,8 +105,10 @@ const ICONS: React.ReactNode[] = [
 
 type Load = { state: "loading" } | { state: "done"; result: MarketResult<OfferDetail | null> };
 
-export default function OfferDetailPage() {
-  const { offerId = "" } = useParams<{ offerId: string }>();
+export default function OfferDetailPage({ offerId: drawnUnder }: { offerId?: string } = {}) {
+  // `offerId` given: drawn under the web voucher popup (WC-EX.7.3), not routed.
+  const params = useParams<{ offerId: string }>();
+  const offerId = drawnUnder ?? params.offerId ?? "";
   const { user, pointsSummary, pointTiers, refreshAchievements, authUserId } = useApp();
   // The supplement rule's second guard (forAge; the server's offer_detail already answers no row).
   const adult = forumAccess(user.dateOfBirth) === "adult";
@@ -114,6 +118,8 @@ export default function OfferDetailPage() {
   const { premium } = usePremium();
   const reduce = useReducedMotion();
   const press = usePress();
+  // Addendum A (WC-EX.7.1): the web layout from 1024px.
+  const { web, rail } = useWebLayout();
   const termsId = useId();
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [termsOpen, setTermsOpen] = useState(false);
@@ -170,12 +176,18 @@ export default function OfferDetailPage() {
     if (!summaryKnown) refreshAchievements();
   }, [summaryKnown, refreshAchievements]);
 
-  const shell = (content: React.ReactNode) => (
-    <div style={{ paddingBottom: 32 }}>
-      <BackRow onBack={back} eyebrow={t("Offer")} />
-      <div style={{ marginTop: 8 }}>{content}</div>
-    </div>
-  );
+  const shell = (content: React.ReactNode) =>
+    web ? (
+      <div style={{ lineHeight: "normal", color: m.ink }}>
+        <VenueWebHeader rail={rail} kicker={t("Offer")} title="" onBack={back} />
+        <div style={{ maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${rail ? 24 : 32}px`, boxSizing: "border-box" }}>{content}</div>
+      </div>
+    ) : (
+      <div style={{ paddingBottom: 32 }}>
+        <BackRow onBack={back} eyebrow={t("Offer")} />
+        <div style={{ marginTop: 8 }}>{content}</div>
+      </div>
+    );
 
   if (load.state === "loading") return shell(<MarketSkeleton radius={18} count={3} rows={3} label={tk("Loading this offer")} />);
   const r = load.result;
@@ -197,6 +209,150 @@ export default function OfferDetailPage() {
   const ownerHref = o.ownerType === "business" ? (o.ownerId ? `/app/marketplace/business?id=${encodeURIComponent(o.ownerId)}` : null) : o.ownerId ? `/app/professionals/${encodeURIComponent(o.ownerId)}` : null;
   const notch: React.CSSProperties = { position: "absolute", width: 14, height: 14, borderRadius: 999, background: m.page, pointerEvents: "none" };
   const divider = dark ? "1.5px dashed rgba(245,243,250,0.16)" : DIVIDER;
+
+  const overlays = (
+    <>
+      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title={t("Report this offer")}>
+        {reportOpen && (
+          <ReviewReportForm
+            reasons={OFFER_REPORT_REASONS}
+            detailMax={OFFER_REPORT_NOTE_MAX}
+            onSend={async (reason, detail) => {
+              const r = await reportOffer(o.offerId, reason, detail);
+              if (r.ok) setReportedFor({ id: o.offerId, v: true });
+              return r.ok ? null : r.message;
+            }}
+          />
+        )}
+      </BottomSheet>
+
+      <RedeemSheet open={sheetOpen} onClose={() => setSheetOpen(false)} offerId={o.offerId} headline={o.headline} owner={o.ownerSubtitle} cost={o.pointsCost} balance={balance} />
+    </>
+  );
+
+  // Addendum A, WC-EX.7.1 (WC-EX Rewards Web): from 1024px the header (OFFER,
+  // the owner), then the left 8 (owner, headline, the four facts in one row
+  // of 4 (2 × 2 on the rail), Terms, honoured-by + Report) and the right 4
+  // (the cost in the tier colours and Redeem, in the pinned CTA's place);
+  // 3 | 2 on the rail.
+  if (web) {
+    const cols = rail ? 2 : 4;
+    return (
+      <div data-offer-web="" style={{ lineHeight: "normal", color: m.ink }}>
+        <style>{FOCUS_CSS}</style>
+        <VenueWebHeader rail={rail} kicker={t("Offer")} title={o.ownerName} onBack={back} />
+        <VenueWebBody
+          rail={rail}
+          cols={rail ? [3, 2] : [8, 4]}
+          left={
+            <>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <OwnerTile name={o.ownerName} logoUrl={o.ownerLogoUrl} size={44} />
+                {ownerHref ? (
+                  <Link to={ownerHref} className="market-focus" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#7D67D9", textDecoration: "none", minWidth: 0 }}>
+                    {o.ownerSubtitle}
+                  </Link>
+                ) : (
+                  <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#7D67D9", minWidth: 0 }}>{o.ownerSubtitle}</span>
+                )}
+              </div>
+              <h2 style={{ margin: 0, fontSize: 30, lineHeight: "38px", fontWeight: 800 }}>{o.headline}</h2>
+              {o.premiumOnly ? <PremiumLabel /> : null}
+              <div style={{ position: "relative", display: "grid", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, borderRadius: 16, overflow: "hidden" }}>
+                {cells.map((c) => {
+                  const [bg, ink] = SEGMENT_STEPS[c.i];
+                  return (
+                    <div
+                      key={c.key}
+                      style={{ minHeight: 108, boxSizing: "border-box", padding: "14px 12px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, textAlign: "center", background: dark ? hexAlpha(ink, 0.16) : bg, borderInlineStart: c.i % cols ? divider : 0, borderTop: c.i >= cols ? divider : 0 }}
+                    >
+                      <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={dark ? liftInk(ink) : ink} strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ display: "block" }}>
+                        {ICONS[c.i]}
+                      </svg>
+                      <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: dark ? m.ink2 : "#6B6680" }}>{t(c.key)}</span>
+                      <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: dark ? m.ink : "#17142A", textWrap: "balance" } as React.CSSProperties}>{c.value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ borderRadius: 16, border: "0.5px solid rgba(36,31,27,0.1)", overflow: "hidden" }}>
+                <button
+                  type="button"
+                  aria-expanded={termsOpen}
+                  aria-controls={termsId}
+                  onClick={() => setTermsOpen((open) => !open)}
+                  className="market-focus"
+                  style={{ width: "100%", height: 48, padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: 0, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: m.ink, cursor: "pointer" }}
+                >
+                  {t("Terms")}
+                  <ChevronDown size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", transform: termsOpen ? "rotate(180deg)" : undefined, transition: reduce ? undefined : "transform 140ms ease" }} />
+                </button>
+                {termsOpen ? (
+                  <p id={termsId} style={{ margin: 0, padding: "0 16px 14px", fontSize: 15, lineHeight: "24px", color: "#5B5349", whiteSpace: "pre-line" }}>
+                    {o.terms ?? t("No extra terms for this offer.")}
+                  </p>
+                ) : null}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("This discount is provided and honoured by {name}.", { name: o.ownerName })}</p>
+                {authUserId && !ownOffer ? (
+                  reported ? (
+                    <p role="status" style={{ margin: 0, height: 36, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5B5349" }}>
+                      <Flag size={14} strokeWidth={2} aria-hidden /> {t("You reported this offer.")}
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setReportOpen(true)}
+                      className="market-focus"
+                      style={{ height: 36, padding: 0, display: "inline-flex", alignItems: "center", gap: 6, background: "none", border: 0, font: "inherit", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5B5349", cursor: "pointer" }}
+                    >
+                      <Flag size={14} strokeWidth={2} aria-hidden /> {t("Report this offer")}
+                    </button>
+                  )
+                ) : null}
+              </div>
+            </>
+          }
+          right={
+            <div data-offer-panel="" style={{ borderRadius: 20, border: "0.5px solid rgba(36,31,27,0.1)", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ borderRadius: 18, background: tier.fill, border: `0.5px solid ${tier.border}`, padding: "14px 18px", display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                <PointsFigure value={o.pointsCost} mark="leaf" size={28} />
+                {summaryKnown ? <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: tier.text, whiteSpace: "nowrap" }}>{t("You have {n}", { n: formatPoints(balance) })}</span> : null}
+              </div>
+              {needsPremium ? (
+                <PremiumOfferNote />
+              ) : blocked ? (
+                <div role="note" style={{ display: "flex", flexDirection: "column", gap: 4, textAlign: "center", borderRadius: 16, background: "#F5F5F6", padding: "14px 16px" }}>
+                  <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{blocked}</span>
+                  {o.isOwnBusiness ? null : <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#5B5349" }}>{t(POINTS_KEEP_COLLECTING)}</span>}
+                </div>
+              ) : (
+                <>
+                  {gate.line ? (
+                    <div id="offer-locked-line" style={{ textAlign: "center", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#5B5349" }}>
+                      {gate.line}
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => !gate.locked && setSheetOpen(true)}
+                    aria-disabled={gate.locked || undefined}
+                    aria-describedby={gate.line ? "offer-locked-line" : undefined}
+                    className="market-focus"
+                    style={{ height: 44, borderRadius: 12, border: 0, background: "#AEA1DC", color: "#FFFFFF", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, opacity: gate.locked ? 0.4 : 1, cursor: gate.locked ? "default" : "pointer" }}
+                  >
+                    {tn(o.pointsCost, "Redeem for {n} point", "Redeem for {n} points", { n: formatPoints(o.pointsCost) })}
+                  </button>
+                </>
+              )}
+            </div>
+          }
+        />
+        {overlays}
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 172, lineHeight: "normal", color: m.ink }}>
@@ -354,21 +510,7 @@ export default function OfferDetailPage() {
         )}
       </PinnedSlot>
 
-      <BottomSheet open={reportOpen} onClose={() => setReportOpen(false)} title={t("Report this offer")}>
-        {reportOpen && (
-          <ReviewReportForm
-            reasons={OFFER_REPORT_REASONS}
-            detailMax={OFFER_REPORT_NOTE_MAX}
-            onSend={async (reason, detail) => {
-              const r = await reportOffer(o.offerId, reason, detail);
-              if (r.ok) setReportedFor({ id: o.offerId, v: true });
-              return r.ok ? null : r.message;
-            }}
-          />
-        )}
-      </BottomSheet>
-
-      <RedeemSheet open={sheetOpen} onClose={() => setSheetOpen(false)} offerId={o.offerId} headline={o.headline} owner={o.ownerSubtitle} cost={o.pointsCost} balance={balance} />
+      {overlays}
     </div>
   );
 }

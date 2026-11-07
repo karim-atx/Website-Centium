@@ -15,9 +15,12 @@ import { t } from "../../../i18n/core";
  * messages19's head: the back 36 (-7 in, chevron 18 / 2 text.soft), 8 to the
  * title 24 / 700 -0.03em; the round buttons on the right; 16 below.
  */
-export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?: React.ReactNode }> = ({ title, onBack, right }) => (
+/** `onBack` unset: no back chevron (the web list head, WP-MO.18, where the sidebar is the way back). */
+/** `web` (WP-MO Messages Web): the title 28/36. */
+export const MessagesHead: React.FC<{ title: string; onBack?: () => void; right?: React.ReactNode; web?: boolean }> = ({ title, onBack, right, web }) => (
   <div className="flex items-center justify-between" style={{ marginBottom: 16, gap: 8 }}>
     <div className="flex items-center min-w-0" style={{ gap: 8 }}>
+      {onBack && (
       <button
         type="button"
         onClick={onBack}
@@ -27,7 +30,8 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
       >
         <ChevronLeft size={18} strokeWidth={2} style={{ color: INK.chS }} aria-hidden />
       </button>
-      <h1 className="truncate" style={{ fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, lineHeight: 1.25 }}>
+      )}
+      <h1 className="truncate" style={web ? { fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch } : { fontSize: textPx(24), fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch, lineHeight: 1.25 }}>
         {title}
       </h1>
     </div>
@@ -45,8 +49,31 @@ export const MessagesHead: React.FC<{ title: string; onBack: () => void; right?:
  * on an inactive tab with unread messages; active #A79AD5 / #A991FE with
  * #FFFFFF / #0D0B1A ink, idle #F5F4FE / #2B2C3A with #6D50D3 / #B7ABDE.
  */
-export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial<Record<ProTab, boolean>>; onChange: (t: ProTab) => void }> = ({ tabs, active, unread, onChange }) => {
+/** `web` (WP-MO Messages Web): a 40 track (padding 4, gap 4, r12, 12 below), tabs r9 15/24 600, the active one white with #5F5093 ink and a soft shadow. */
+export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial<Record<ProTab, boolean>>; onChange: (t: ProTab) => void; web?: boolean }> = ({ tabs, active, unread, onChange, web }) => {
   const dark = useIsDark();
+  if (web)
+    return (
+      <div role="tablist" aria-label={t("Conversations")} className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length},minmax(0,1fr))`, height: 40, boxSizing: "border-box", gap: 4, padding: 4, borderRadius: 12, background: dark ? "#242730" : "#F3F3FD", marginBottom: 12 }}>
+        {tabs.map((tab) => {
+          const on = tab === active;
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={on}
+              onClick={() => onChange(tab)}
+              className="flex items-center justify-center whitespace-nowrap min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+              style={{ borderRadius: 9, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? (dark ? "#A991FE" : "#FFFFFF") : "transparent", color: on ? (dark ? "#0D0B1A" : "#5F5093") : dark ? "#B7ABDE" : "#6D50D3", boxShadow: on ? "0 1px 3px rgba(36,31,27,0.10)" : "none" }}
+            >
+              <span className="truncate">{t(TAB_LABEL[tab])}</span>
+              {!on && unread[tab] && <span aria-label={t("Unread")} className="rounded-full shrink-0" style={{ width: 6, height: 6, background: "#8F68F6" }} />}
+            </button>
+          );
+        })}
+      </div>
+    );
   return (
     <div role="tablist" aria-label={t("Conversations")} className="flex items-center scroll-row no-scrollbar" style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, marginBottom: 16 }}>
       {tabs.map((tab) => {
@@ -84,23 +111,23 @@ export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial
 };
 
 /** gen/ui.js field (placeholder "Search", lead search 15 / 2 text.faint): 40 tall, r12, soft fill, 1px 10% border, pad 0 12, gap 8, 14. */
-export const SearchField: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
-  <label data-search-field="" className="flex items-center" style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8 }}>
-    <Search size={15} strokeWidth={2} style={{ color: INK.chF }} className="shrink-0" aria-hidden />
+export const SearchField: React.FC<{ value: string; onChange: (v: string) => void; web?: boolean }> = ({ value, onChange, web }) => (
+  <label data-search-field="" className="flex items-center" style={{ height: 40, ...(web ? { boxSizing: "border-box" as const } : null), borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8 }}>
+    <Search size={web ? 16 : 15} strokeWidth={2} style={{ color: INK.chF }} className="shrink-0" aria-hidden />
     <span className="sr-only">{t("Search messages and chats")}</span>
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={t("Search")}
       className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-charcoal-faint"
-      style={{ fontSize: textPx(14), color: INK.ch }}
+      style={{ fontSize: web ? 15 : textPx(14), color: INK.ch }}
     />
   </label>
 );
 
 /** secLab19: 11 / 600 on 14, 0.14em caps text.faint; 24 above (not the first), 8 in, 4 below. */
-export const SecLabel: React.FC<{ first?: boolean; children: React.ReactNode }> = ({ first, children }) => (
-  <h2 style={{ fontSize: textPx(11), fontWeight: 600, lineHeight: linePx(14), letterSpacing: "0.14em", textTransform: "uppercase", color: INK.chF, margin: `${first ? 0 : 24}px 8px 4px` }}>{children}</h2>
+export const SecLabel: React.FC<{ first?: boolean; children: React.ReactNode; web?: boolean }> = ({ first, children, web }) => (
+  <h2 style={web ? { fontSize: 11, fontWeight: 700, lineHeight: "16px", letterSpacing: "0.12em", textTransform: "uppercase", color: INK.chF, margin: `${first ? 0 : 20}px 8px 4px` } : { fontSize: textPx(11), fontWeight: 600, lineHeight: linePx(14), letterSpacing: "0.14em", textTransform: "uppercase", color: INK.chF, margin: `${first ? 0 : 24}px 8px 4px` }}>{children}</h2>
 );
 
 /** messages19's footnote: 12 / 1.5 text.faint, 20 above, 8 in. */

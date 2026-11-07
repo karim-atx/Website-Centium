@@ -4,7 +4,7 @@ import { Apple, BookOpen, Check, ChevronRight, ClipboardList, Dumbbell, Flame, F
 import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
-import { useWebLayout } from "../../components/web/useWebLayout";
+import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
 import { earnedCount, visibleAchievements } from "../../services/achievements";
 import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
@@ -216,7 +216,7 @@ function MindHubWeb() {
         </div>
       </header>
 
-      <div className="flex flex-col" style={{ maxWidth: 1280, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", gap: 20 }}>
+      <div className="flex flex-col" style={{ maxWidth: WEB_CONTENT_MAX, margin: "0 auto", padding: `24px ${margin}px`, boxSizing: "border-box", gap: 20 }}>
         <div data-mind-tiles style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 24 }}>
           {tiles.map((x) => (
             <button

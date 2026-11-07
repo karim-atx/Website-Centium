@@ -122,6 +122,12 @@ interface PopupMenuProps<V extends string> {
    * O2 "Nobody is free at …"); the caller styles it. Off by default.
    */
   emptyNote?: React.ReactNode;
+  /**
+   * Website viewport v1 (WP-NU-MP.10): the web menus' rows on the "plain"
+   * card: card padding 8, rows 44 tall at 15/600 (700 selected), radius 8,
+   * gap 9, 2 apart. Off by default, so every other menu is unchanged.
+   */
+  webRows?: boolean;
 }
 
 /**
@@ -178,6 +184,7 @@ export function PopupMenu<V extends string>({
   keepOpen,
   hairline,
   emptyNote,
+  webRows,
 }: PopupMenuProps<V>) {
   const dark = useIsDark();
   const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
@@ -189,7 +196,8 @@ export function PopupMenu<V extends string>({
   const plain = variant === "plain" || health;
   const field = variant === "field";
   const dimmed = backdrop ?? !field;
-  const pad = plain ? 6 : 8;
+  const webRow = plain && !health && !!webRows;
+  const pad = plain && !webRow ? 6 : 8;
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; maxHeight: number; up: boolean } | null>(null);
 
   useLayoutEffect(() => {
@@ -342,15 +350,16 @@ export function PopupMenu<V extends string>({
               style={
                 plain
                   ? {
-                      gap: 10,
-                      borderRadius: 10,
+                      gap: webRow ? 9 : 10,
+                      borderRadius: webRow ? 8 : 10,
                       padding: health ? "0 14px" : "0 10px",
-                      minHeight: health ? 44 : 40,
+                      minHeight: health || webRow ? 44 : 40,
+                      ...(webRow && i > 0 ? { marginTop: 2 } : null),
                       border: "none",
                       background: on ? c("onFill") : "transparent",
                       color: opt.destructive ? c("destructive") : on ? c("plainOn") : "rgb(var(--c-charcoal))",
-                      fontSize: textPx(14),
-                      fontWeight: on ? 700 : health ? 600 : 500,
+                      fontSize: textPx(webRow ? 15 : 14),
+                      fontWeight: on ? 700 : health || webRow ? 600 : 500,
                       ...(health ? { lineHeight: linePx(19) } : null),
                     }
                   : {

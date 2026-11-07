@@ -32,6 +32,32 @@ export function clientSidebarActive(pathname: string): ClientNavKey | null {
 }
 
 
+/** Professional More items that are sidebar pages or open a page of their own (↗). */
+// WP-MO.13: Public profile is a pane of More (WP-MO Public Profile Web), not a page of its own.
+const PRO_MORE_OWN_PAGES = ["/app/more/practice-insights", "/app/more/businesses", "/app/more/care-network"];
+
+export type ProNavKey =
+  | "home" | "clients" | "calendar" | "slot4"
+  | "messages" | "explore" | "community" | "insights" | "businesses" | "settings" | "more"
+  | "profile";
+
+/** Which professional destination a path belongs to (WP Sidebar). Slot 4 is the lane's Library, Meal plans or Insights. */
+export function proSidebarActive(pathname: string): ProNavKey | null {
+  if (pathname === "/app" || pathname === "/app/pro" || pathname === "/app/pro/invite") return "home";
+  if (under(pathname, "/app/pro/clients")) return "clients";
+  if (under(pathname, "/app/pro/calendar")) return "calendar";
+  if (under(pathname, "/app/pro/library") || under(pathname, "/app/pro/meal-plans") || under(pathname, "/app/pro/insights")) return "slot4";
+  if (under(pathname, "/app/messages")) return "messages";
+  if (under(pathname, "/app/pro/marketplace")) return "explore";
+  if (under(pathname, "/app/forum")) return "community";
+  if (under(pathname, "/app/more/practice-insights")) return "insights";
+  if (under(pathname, "/app/more/businesses")) return "businesses";
+  if (under(pathname, "/app/settings") || under(pathname, "/app/more/practice") || pathname === "/app/get-support") return "settings";
+  if (under(pathname, "/app/profile")) return "profile";
+  if (under(pathname, "/app/more") || under(pathname, "/app/subscription") || pathname === "/app/notifications") return "more";
+  return null;
+}
+
 export type BusinessShortcut = "messages" | "calendar" | "members" | "team" | "settings" | "more" | "profile";
 
 /** The secondary destinations first (each has its own page), then the four tabs. */
@@ -48,12 +74,20 @@ export function businessShortcutActive(pathname: string): BusinessShortcut | nul
 }
 
 
-export type SecondaryKind = "business-more" | "business-settings";
+export type SecondaryKind = "business-more" | "business-settings" | "pro-more" | "settings";
 
 
 /** Which secondary layout a path opens in, if any. */
-export function secondaryLayoutFor(pathname: string, isBusiness: boolean): SecondaryKind | null {
-  if (!isBusiness) return null;
+export function secondaryLayoutFor(pathname: string, isBusiness: boolean, isPro = false): SecondaryKind | null {
+  if (!isBusiness) {
+    if (under(pathname, "/app/settings") || pathname === "/app/get-support") return "settings";
+    if (isPro && under(pathname, "/app/more/practice")) return "settings";
+    if (isPro && (under(pathname, "/app/more") || under(pathname, "/app/subscription"))) {
+      if (PRO_MORE_OWN_PAGES.some((base) => under(pathname, base))) return null;
+      return "pro-more";
+    }
+    return null;
+  }
   if (pathname === "/app/more" || under(pathname, "/app/business/more")) {
     // The help centre and business terms are reached from Settings › General.
     if (under(pathname, "/app/business/more/help") || under(pathname, "/app/business/more/business-terms")) return "business-settings";
@@ -75,4 +109,16 @@ export type BizSettingsSection = (typeof BIZ_SETTINGS_SECTIONS)[number];
 export function bizSettingsSection(search: string): BizSettingsSection {
   const s = new URLSearchParams(search).get("section");
   return (BIZ_SETTINGS_SECTIONS as readonly string[]).includes(s ?? "") ? (s as BizSettingsSection) : "appearance";
+}
+
+/**
+ * The client and professional Settings panes (Addendum A WC-SE, WP-SE): the
+ * section the Settings page shows in the pane (?section=). Sub-pages
+ * (Notifications, Two-factor, Language, …) are their own routes in the pane.
+ */
+export const APP_SETTINGS_SECTIONS = ["help", "appearance", "permissions", "devices", "security", "practice", "data", "general", "legal", "guidelines"] as const;
+export type AppSettingsSection = (typeof APP_SETTINGS_SECTIONS)[number];
+export function appSettingsSection(search: string): AppSettingsSection {
+  const s = new URLSearchParams(search).get("section");
+  return (APP_SETTINGS_SECTIONS as readonly string[]).includes(s ?? "") ? (s as AppSettingsSection) : "appearance";
 }

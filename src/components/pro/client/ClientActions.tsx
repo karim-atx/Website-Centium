@@ -8,6 +8,7 @@ import { useOnline } from "../../../hooks/useOnline";
 import { INK } from "../proInk";
 import { TAG_MAX } from "../../../services/pro/clients";
 import { t, tn } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
 
 /**
  * Release 3 · W3 client actions shared by CL3 (row menu, multi-select) and
@@ -163,6 +164,8 @@ export const EndCoachingPopup: React.FC<{
   onEnd: () => Promise<string | null>;
   onClose: () => void;
 }> = ({ name, patient, onEnd, onClose }) => {
+  // 7.3: the web layout says click.
+  const web = useIsWeb();
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -200,7 +203,7 @@ export const EndCoachingPopup: React.FC<{
         </p>
       )}
       <div className="flex flex-col" style={{ gap: 8, marginTop: 4 }}>
-        <CtaButton size="page" label={armed ? t("Tap again to confirm") : t("End coaching")} loading={busy} onClick={() => void press()} />
+        <CtaButton size="page" label={armed ? (web ? t("Click again to confirm") : t("Tap again to confirm")) : t("End coaching")} loading={busy} onClick={() => void press()} />
         <CtaButton size="page" variant="secondary" label={t("Keep")} onClick={onClose} disabled={busy} />
       </div>
     </CentredPopup>

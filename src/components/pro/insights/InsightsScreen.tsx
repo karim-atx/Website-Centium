@@ -25,6 +25,9 @@ import { BiomarkersPanel } from "./BiomarkersPanel";
 import { NutrientAnalysis } from "./NutrientAnalysis";
 import { TargetsReadOnly } from "../nutrition/Targets";
 import { t, tk } from "../../../i18n/core";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
+import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
+import { ClientTabBodyWeb, ClientTabsWeb } from "../web/ClientPageWeb";
 
 /**
  * Release 3 · W5 the Insights screen (TR9 v3/v4/v5, TR16 v3, NU10, NU14 /
@@ -81,74 +84,107 @@ export interface InsightsScreenProps {
 
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, clients, clientId, onClient, tab, onTab, onBack, loading }) => {
   const navigate = useNavigate();
-  const [range, setRange] = useState<PageRange>("month");
-  const [chart, setChart] = useState<Record<InsightsTab, ChartRange>>({ activity: "M", nutrition: "M", vitals: "M", biomarkers: "M" });
+  // Website viewport (WP-CO-IN): the Insights page (not the client page's Client insights, which keeps its column) gets the page header, the equal tabs and its cards across the page; it opens on Week, as drawn.
+  const web = useIsWeb() && !onBack;
+  const [range, setRange] = useState<PageRange>(web ? "week" : "month");
+  const [chart, setChart] = useState<Record<InsightsTab, ChartRange>>(() => {
+    const c = web ? "W" : "M";
+    return { activity: c, nutrition: c, vitals: c, biomarkers: c };
+  });
   const patient = lane === "clinical_overview";
   const tabs = tabsForLane(lane);
   const allPatients = patient && tab === "nutrition";
+  const { rail } = useWebLayout();
 
   // Hold a real client whenever "All patients" isn't on offer.
   useEffect(() => {
     if (!loading && !clientId && !allPatients && clients.length) onClient(clients[0].clientId);
   }, [loading, clientId, allPatients, clients, onClient]);
 
-  const head = onBack ? (
+  const setPageRange = (r: PageRange) => {
+    setRange(r);
+    setChart({ activity: chartRangeFor(r), nutrition: chartRangeFor(r), vitals: chartRangeFor(r), biomarkers: chartRangeFor(r) });
+  };
+  const head = web ? (
+    <ProPageHeaderWeb
+      title={t(title)}
+      actions={
+        clients.length ? (
+          <>
+            <ClientPicker web={{ width: rail ? 220 : 280 }} clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? t("All patients") : undefined} patient={patient} />
+            <RangeTabs web={{ width: rail ? 240 : 300 }} value={range} onChange={setPageRange} />
+          </>
+        ) : undefined
+      }
+    />
+  ) : onBack ? (
     <DetailHead title={t(title)} onBack={onBack} />
   ) : (
     <h1 style={{ marginBottom: 13, fontSize: textPx(19), lineHeight: 1.5, fontWeight: 700, letterSpacing: "-0.03em", color: INK.ch }}>{t(title)}</h1>
   );
-  const tabBar = (
+  const tabBar = web ? (
+    <ClientTabsWeb label={t(title)} items={tabs.map((k) => ({ key: k, label: t(TAB_LABEL[k]) }))} active={tab} onChange={(k) => onTab(k as InsightsTab)} />
+  ) : (
     <SegmentedTabs className="mb-[10px]" items={tabs.map((k) => ({ key: k, label: t(TAB_LABEL[k]) }))} activeKey={tab} onChange={(k) => onTab(k as InsightsTab)} labelSize={11.5} />
   );
 
-  if (loading && !clients.length)
-    return (
+  // The page around the content: the same elements on mobile; on web the header, then the padded body.
+  const frame = (children: React.ReactNode) =>
+    web ? (
+      <div>
+        {head}
+        <ProPageBodyWeb>
+          {/* WP-CO-IN chips (Vitals, Results): one row of equal 36 cells, 8 apart, 15/24, ellipsis (Insights Web v2 chipN). */}
+          <style>{"[data-pro-web=page] [role=tablist].scroll-row{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}[data-pro-web=page] [role=tablist].scroll-row>button{min-width:0;padding:0 8px!important;overflow:hidden;text-overflow:ellipsis}"}</style>
+          {tabBar}
+          {children}
+        </ProPageBodyWeb>
+      </div>
+    ) : (
       <div>
         {head}
         {tabBar}
-        <ProCardSkeleton lines={4} height={220} />
+        {children}
       </div>
     );
 
+  if (loading && !clients.length) return frame(<ProCardSkeleton lines={4} height={220} />);
+
   if (!clients.length)
-    return (
-      <div>
-        {head}
-        {tabBar}
+    return frame(
         <EmptyState icon={Activity} title={t("No shared data yet")} line={emptyLine(patient, tab)}>
           <CtaButton size="base" variant="secondary" icon={<Send size={15} />} label={patient ? t("Ask a patient to share") : t("Ask a client to share")} onClick={() => navigate(PRO_ROUTES.clients)} />
         </EmptyState>
-      </div>
     );
 
   const range5 = (
     <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
       <ClientPicker clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? t("All patients") : undefined} patient={patient} />
-      <RangeTabs
-        value={range}
-        onChange={(r) => {
-          setRange(r);
-          setChart({ activity: chartRangeFor(r), nutrition: chartRangeFor(r), vitals: chartRangeFor(r), biomarkers: chartRangeFor(r) });
-        }}
-      />
+      <RangeTabs value={range} onChange={setPageRange} />
     </div>
   );
 
-  return (
-    <div>
-      {head}
-      {tabBar}
-      {range5}
-      {clientId ? (
-        <ClientInsights key={clientId} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
-      ) : allPatients ? (
+  const body = clientId ? (
+    <ClientInsights key={clientId} web={web} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
+  ) : allPatients ? (
+    // Website viewport (WP-CO-IN.5): the roster is one list card across the page.
+    web ? (
+      <div style={{ columnSpan: "all", display: "block" }}>
         <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
-      ) : null}
-    </div>
+      </div>
+    ) : (
+      <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
+    )
+  ) : null;
+  return frame(
+    <>
+      {!web && range5}
+      {web ? <ClientTabBodyWeb columns={2}>{body}</ClientTabBodyWeb> : body}
+    </>
   );
 };
 
-const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: PickerClient | null; tab: InsightsTab; pageRange: PageRange; chart: ChartRange; onChart: (r: ChartRange) => void }> = ({ lane, clientId, client, tab, pageRange, chart, onChart }) => {
+const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string; client: PickerClient | null; tab: InsightsTab; pageRange: PageRange; chart: ChartRange; onChart: (r: ChartRange) => void }> = ({ web, lane, clientId, client, tab, pageRange, chart, onChart }) => {
   const navigate = useNavigate();
   const { authUserId } = useApp();
   const access = useClientAccess(clientId);
@@ -198,13 +234,38 @@ const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: Picker
     asked,
     onAsk: (c) => void onAsk(c),
     openClient: (t) => navigate(proClientPath(clientId, t)),
+    webPage: web,
   };
   const badges = TAB_CATS[tab].map((c) => ({ label: t(CATEGORY_LABEL[c] ?? c), on: c === "lab_results" ? access.has(c) || (access.access?.resultSharedCount ?? 0) > 0 : access.has(c) }));
 
   return (
     <>
       {access.offline && <OfflineLine />}
-      {analysis === "targets" && tab === "nutrition" ? (
+      {web && analysis === "targets" && tab === "nutrition" ? (
+        // Website viewport (WP-CO-IN.7): the read-only targets across the page in the Extras cards.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} web />
+        </div>
+      ) : web && analysis && tab === "nutrition" ? (
+        // Website viewport (WP-CO-IN.6): the analysis across the page in the Extras cards, on the page header's range.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <NutrientAnalysis clientId={clientId} lane={lane} onBack={() => setAnalysis(null)} web={{ pageRange }} />
+        </div>
+      ) : web && (tab === "vitals" || tab === "activity" || tab === "nutrition") ? (
+        // Website viewport (WP-CO-IN.1, .2, .8): across the page, the panel draws the frames' cards (Activity and Nutrition in their grid; Vitals one card per view, its chart, stat boxes and insight).
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <SharedBadges items={badges} web />
+          {tab === "activity" && <ActivityPanel {...props} />}
+          {tab === "nutrition" && <NutritionPanel {...props} onAnalysis={() => setAnalysis("analysis")} onTargets={lane === "clinical_overview" ? () => setAnalysis("targets") : undefined} />}
+          {tab === "vitals" && <VitalsPanel {...props} />}
+        </div>
+      ) : web && tab === "biomarkers" && lane !== "full_coaching" ? (
+        // Website viewport (WP-CO-IN.4): Tests and All results beside the selected result's chart, across the page.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <SharedBadges items={badges} web />
+          <BiomarkersPanel {...props} onMessage={() => void onMessage()} />
+        </div>
+      ) : analysis === "targets" && tab === "nutrition" ? (
         // NU8 v3 Clinical overview: the targets read only.
         <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} />
       ) : analysis && tab === "nutrition" ? (

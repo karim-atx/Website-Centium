@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Check, ChevronLeft, ChevronRight, Clock, Coffee, Moon, Plane, Plus, X } from "lucide-react";
 import { CtaButton } from "../../ui/PinnedCta";
@@ -342,6 +342,8 @@ export interface DayTimelineProps {
   onOpen: (i: CalItem) => void;
   onBreak: (e: TimeOffEntry) => void;
   onOpenSlot: (start: string) => void;
+  /** Website viewport (WP-CA Calendar Web v4, the Day timeline from 1024px): the web sizes, the hour pitch filling the page. */
+  web?: boolean;
 }
 
 /** Items that overlap share the width: each gets a lane. */
@@ -361,29 +363,41 @@ function lanesOf(items: CalItem[]): { lane: Map<string, number>; count: number }
   return { lane, count: Math.max(1, ends.length) };
 }
 
-export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, items, breaks, open, nowMinutes, clinical, hiredLive, onOpen, onBreak, onOpenSlot }) => {
+export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, items, breaks, open, nowMinutes, clinical, hiredLive, onOpen, onBreak, onOpenSlot, web }) => {
   const dark = useIsDark();
-  const y = (m: number) => ((m - from * 60) / 60) * HP;
+  const fitRef = useRef<HTMLDivElement>(null);
+  const [fitH, setFitH] = useState(0);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!web || !el) return;
+    const ro = new ResizeObserver(() => setFitH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [web]);
+  // The markup's web HP: the hours share the height left in the page (never under 24 a hour; the page scrolls then).
+  const hp = web ? Math.max(24, Math.floor(fitH / Math.max(1, to - from)) || 36) : HP;
+  const gutL = web ? 68 : 40;
+  const blockFs = web ? 13 : textPx(11);
+  const y = (m: number) => ((m - from * 60) / 60) * hp;
   const hatch = `repeating-linear-gradient(135deg, ${INK.soft} 0 6px, transparent 6px 12px)`;
   const timed = items.filter((i) => !i.allDay && i.start);
   const { lane, count } = lanesOf(timed);
   const gold = dark ? GOLD_TEXT_DARK : GOLD_TEXT;
-  return (
-    <>
-      <div className="relative" data-day-timeline style={{ height: (to - from) * HP + TAIL }}>
+  const body = (
+      <div className={web ? "absolute inset-x-0 top-0" : "relative"} data-day-timeline style={{ height: (to - from) * hp + (web ? 0 : TAIL) }}>
         {Array.from({ length: to - from + 1 }, (_, k) => {
           const h = from + k;
           return (
-            <div key={h} data-hour={h} className="absolute start-0 end-0 flex" style={{ top: k * HP, borderTop: `1px solid ${INK.b06}` }}>
+            <div key={h} data-hour={h} className="absolute start-0 end-0 flex" style={{ top: k * hp, borderTop: web ? "1px solid rgba(36,31,27,0.06)" : `1px solid ${INK.b06}` }}>
               {/* The board's label: 36 content + 6 padding (content-box), so 42 wide here (border-box), on the page fill. */}
-              <span className="shrink-0 text-end" style={{ fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingInlineEnd: 6, width: 42, background: "rgb(var(--c-cream))" }}>
+              <span className="shrink-0 text-end" style={web ? { fontSize: 11, lineHeight: "14px", color: "#8C8378", marginTop: -7, paddingInlineEnd: 8, width: 64, boxSizing: "border-box", background: "#FFFFFF" } : { fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingInlineEnd: 6, width: 42, background: "rgb(var(--c-cream))" }}>
                 {hourLabel12(h)}
               </span>
             </div>
           );
         })}
         {offBands(windows, from, to).map((b) => (
-          <div key={`off${b.start}`} aria-hidden className="absolute" style={{ insetInlineStart: 40, insetInlineEnd: 0, top: y(b.start), height: y(b.end) - y(b.start), background: hatch, borderRadius: 8 }} />
+          <div key={`off${b.start}`} aria-hidden className="absolute" style={{ insetInlineStart: gutL, insetInlineEnd: web ? 4 : 0, top: y(b.start), height: y(b.end) - y(b.start), background: hatch, borderRadius: 8 }} />
         ))}
         {breaks.map((b) => (
           <button
@@ -391,9 +405,9 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
             type="button"
             onClick={() => onBreak(b.entry)}
             className="tap absolute flex items-center text-start"
-            style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(b.start)), height: Math.max(y(minutes(b.end)) - y(minutes(b.start)), 26), borderRadius: 12, background: INK.soft, padding: "0 10px", gap: 6, fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
+            style={{ insetInlineStart: gutL, insetInlineEnd: 4, top: y(minutes(b.start)), height: Math.max(y(minutes(b.end)) - y(minutes(b.start)), 26), borderRadius: 12, background: INK.soft, padding: "0 10px", gap: 6, fontSize: blockFs, lineHeight: web ? "16px" : undefined, fontWeight: 600, color: INK.chF }}
           >
-            <Coffee size={12} strokeWidth={2} aria-hidden />
+            <Coffee size={web ? 14 : 12} strokeWidth={2} aria-hidden />
             {b.entry.reason || t("Break")}
           </button>
         ))}
@@ -404,8 +418,8 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
             onClick={() => onOpenSlot(o.start)}
             aria-label={t("Open slot, {v}, add a session", { v: range12(o.start, o.end) })}
             className="tap absolute flex items-center justify-between"
-            style={{ insetInlineStart: 40, insetInlineEnd: 4, top: y(minutes(o.start)), height: Math.max(y(minutes(o.end)) - y(minutes(o.start)), 26), borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: INK.chF }}
-          >{t("Open slot")}<Plus size={13} strokeWidth={2} aria-hidden />
+            style={{ insetInlineStart: gutL, insetInlineEnd: 4, top: y(minutes(o.start)), height: Math.max(y(minutes(o.end)) - y(minutes(o.start)), 26), borderRadius: 12, border: `1.5px dashed ${INK.b10}`, padding: "0 10px", fontSize: blockFs, lineHeight: web ? "16px" : undefined, fontWeight: 600, color: INK.chF }}
+          >{t("Open slot")}<Plus size={web ? 14 : 13} strokeWidth={2} aria-hidden />
           </button>
         ))}
         {timed.map((i) => {
@@ -413,8 +427,8 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
           const hh = Math.max(y(Math.max(minutes(i.end), minutes(i.start) + 20)) - top, 26);
           const short = hh < 40;
           const l = lane.get(i.key) ?? 0;
-          const width = `calc((100% - 44px) / ${count})`;
-          const left = `calc(40px + (100% - 44px) * ${l} / ${count})`;
+          const width = `calc((100% - ${gutL + 4}px) / ${count})`;
+          const left = `calc(${gutL}px + (100% - ${gutL + 4}px) * ${l} / ${count})`;
           if (i.kind === "request") {
             return (
               <button
@@ -422,7 +436,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 type="button"
                 onClick={() => onOpen(i)}
                 className="tap absolute flex items-center text-start"
-                style={{ left, width, top, height: hh, borderRadius: 12, border: `1.5px dashed ${REQUEST_GOLD}`, padding: "0 10px", fontSize: textPx(11), fontWeight: 600, color: gold }}
+                style={{ left, width, top, height: hh, borderRadius: 12, border: `1.5px dashed ${REQUEST_GOLD}`, padding: "0 10px", fontSize: blockFs, lineHeight: web ? "16px" : undefined, fontWeight: 600, color: gold }}
               >
                 <span className="truncate">{t("Requested · {name}", { name: i.name ?? i.title })}</span>
               </button>
@@ -456,28 +470,38 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
                 opacity: cancelled ? 0.55 : i.done || i.badge === "declined" ? 0.6 : 1,
               }}
             >
-              <p className="flex items-center truncate" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.ch, gap: 6, minWidth: 0 }}>
+              <p className="flex items-center truncate" style={{ fontSize: web ? 14 : textPx(12), lineHeight: web ? "20px" : undefined, fontWeight: 600, color: INK.ch, gap: 6, minWidth: 0 }}>
                 <span className="truncate" style={{ textDecoration: cancelled ? "line-through" : undefined }}>{label}</span>
                 {cls?.hired && (
                   <span className="shrink-0" style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: textPx(9.5), fontWeight: 700, color: classInk(i.colour, dark), whiteSpace: "nowrap" }}>
                     <TicketCheck size={11} />{t("Hired via Centium")}</span>
                 )}
                 {cancelled && <span className="sr-only">{t("Cancelled")}</span>}
-                {i.done && <Check size={10} strokeWidth={2.4} aria-label={t("Completed")} className="shrink-0" style={{ color: INK.good }} />}
+                {i.done && <Check size={web ? 14 : 10} strokeWidth={2.4} aria-label={t("Completed")} className="shrink-0" style={{ color: INK.good }} />}
               </p>
-              <p className="truncate" style={{ fontSize: textPx(10), color: INK.chF, textDecoration: cancelled ? "line-through" : undefined }}>
+              <p className="truncate" style={{ fontSize: web ? 11 : textPx(10), lineHeight: web ? "16px" : undefined, color: INK.chF, textDecoration: cancelled ? "line-through" : undefined }}>
                 {[range12(i.start, i.end), sub].filter(Boolean).join(" · ")}
               </p>
             </button>
           );
         })}
         {nowMinutes !== null && nowMinutes >= from * 60 && nowMinutes <= to * 60 && (
-          <div aria-hidden className="absolute" style={{ insetInlineStart: 36, insetInlineEnd: 0, top: y(nowMinutes), height: 2, background: INK.hi }}>
-            <span className="absolute" style={{ insetInlineStart: -4, top: -3, width: 8, height: 8, borderRadius: 9999, background: INK.hi }} />
+          <div aria-hidden className="absolute" style={{ insetInlineStart: web ? 60 : 36, insetInlineEnd: 0, top: y(nowMinutes), height: 2, background: web ? "#C0392B" : INK.hi }}>
+            <span className="absolute" style={{ insetInlineStart: -4, top: -3, width: 8, height: 8, borderRadius: 9999, background: web ? "#C0392B" : INK.hi }} />
           </div>
         )}
       </div>
-      <div className="flex flex-wrap" style={{ gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
+  );
+  return (
+    <>
+      {web ? (
+        <div ref={fitRef} className="relative min-h-0 flex-1" style={{ minHeight: (to - from) * 24 + 8 }}>
+          {body}
+        </div>
+      ) : (
+        body
+      )}
+      <div className="flex flex-wrap" style={web ? { gap: "10px 18px", marginTop: 14, fontSize: 13, lineHeight: "20px", color: "#8C8378", flex: "none" } : { gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 14, height: 10, borderRadius: 3, background: `repeating-linear-gradient(135deg, ${INK.soft} 0 3px, transparent 3px 6px)`, border: `1px solid ${INK.b10}` }} />{t("Outside working hours")}</span>
         <span className="flex items-center" style={{ gap: 5 }}>

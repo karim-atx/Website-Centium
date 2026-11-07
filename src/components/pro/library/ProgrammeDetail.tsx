@@ -22,6 +22,11 @@ import { reviewStateText } from "../../../services/workout/logReplyLogic";
 import { useReviewStates } from "./useReviewStates";
 import { appLocale } from "../../../i18n/format";
 import { t, tn } from "../../../i18n/core";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
+import { Lock } from "lucide-react";
+import { blockHeading } from "../../../services/workout/prescription";
+import { BLOCK_LINE } from "../web/programmeSpec";
+import { BlockBandWeb, CapsHeadWeb, EmptyPanelWeb, InitialsWeb, ProgBodyWeb, ProgHeaderWeb, SpecCardWeb } from "../web/ProgrammeWeb";
 
 /** One date, or "{from} to {to}". */
 const dateSpan = (d: string[]) => (d.length > 1 ? t("{from} to {to}", { from: d[0], to: d[1] }) : d[0] ?? "");
@@ -59,6 +64,8 @@ export const ProgrammeDetail: React.FC<{
   const moreRef = useRef<HTMLButtonElement>(null);
   // Round D · TR22: each session's reviewed mark and reply count.
   const reviewStates = useReviewStates(sessions?.map((s) => s.id) ?? []);
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
 
   const assignments = templateAssignments.filter((a) => a.templateId === template.id);
   const active = assignments.filter(isActive);
@@ -133,6 +140,157 @@ export const ProgrammeDetail: React.FC<{
       </div>
     );
   };
+
+
+  // Website viewport (WP-LI.3, WP-LI Programme Web v5 "detail"): the web header (back, the name, the meta
+  // line beside it, Assign to clients, ⋮) and two columns under it: the workout card 7 (5 on the rail) with
+  // the name band and the spec-strip cards, the assigned clients 5 (3). Mobile below is unchanged.
+  if (web) {
+    const empty = active.length === 0;
+    let n = 0;
+    const endLabel = (a: (typeof active)[number]) => (confirmEnd === a.id ? t("Click again to confirm") : a.startsOn && a.startsOn > today ? t("Remove") : t("End programme"));
+    const end = (id: string) => {
+      if (confirmEnd !== id) {
+        setConfirmEnd(id);
+        return;
+      }
+      setConfirmEnd(null);
+      void endTemplateAssignment(id).then((m) => setActionError(m ?? null));
+    };
+    const webActivity = (clientId: string, routineId: string | null) => {
+      const c = clientOf(clientId);
+      if (!c) return null;
+      if (!c.access.workoutActivity)
+        return (
+          <div className="flex items-start" style={{ gap: 10, borderRadius: 14, background: "#F5F5F6", padding: "10px 14px" }}>
+            <Lock size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2, color: "#8C8378" }} />
+            <p className="flex-1 min-w-0" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
+              {t("Workout activity not shared, so hidden. {name} can change this any time.", { name: c.name.split(" ")[0] })}
+            </p>
+          </div>
+        );
+      if (state === "error" && !sessions) return <ProError onRetry={() => setReload((x) => x + 1)} />;
+      if (!sessions) return <ProCardSkeleton lines={2} />;
+      const mine = sessions.filter((s) => s.userId === clientId && s.routineId === routineId);
+      if (mine.length === 0) return <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No sessions logged yet.")}</p>;
+      return (
+        <div className="flex flex-col">
+          {mine.slice(0, 3).map((s) => (
+            <button key={s.id} type="button" onClick={() => onOpenLog(s.id)} className="flex items-center text-start hover:bg-[#F5F5F6]" style={{ minHeight: 44, gap: 12, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
+              <span className="whitespace-nowrap shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
+                {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(s.totalVolumeKg).toLocaleString(appLocale()) })}
+              </span>
+              <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                {reviewStateText(reviewStates[s.id]) ? `${reviewStateText(reviewStates[s.id])} · ` : ""}
+                {s.exercises.map((e) => e.name).join(", ")}
+              </span>
+            </button>
+          ))}
+          {mine.length > 3 && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{tn(mine.length - 3, "{n} earlier session not shown.", "{n} earlier sessions not shown.")}</p>}
+        </div>
+      );
+    };
+    const cardGap = !rail && empty ? 16 : 10;
+    return (
+      <div>
+        <ProgHeaderWeb
+          title={template.name}
+          meta={meta}
+          onBack={onBack}
+          cta={!template.isPublic && !empty ? { label: t("Assign to clients"), icon: UserPlus, onClick: onAssign } : undefined}
+          onMore={onMenu}
+        />
+        <ProgBodyWeb>
+          <UnverifiedProgramNotice isVerified={template.isVerified} isPublic={template.isPublic} className="mb-3" />
+          {actionError && <ErrorLine>{actionError}</ErrorLine>}
+          <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, gap: 24, alignItems: "start" }}>
+            <section aria-label={t("Workout")} className="flex flex-col min-w-0" style={{ gridColumn: `span ${rail ? 5 : 7}`, boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, padding: 24 }}>
+              <div style={{ borderRadius: 12, background: "rgba(125,107,181,0.11)", padding: "16px 20px", marginBottom: 16 }}>
+                <p style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{template.name}</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  {[tn(template.exercises.length, "{n} exercise", "{n} exercises"), template.durationMin ? tn(template.durationMin, "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+              <div className="flex flex-col" style={{ gap: cardGap }}>
+                {runs.map((run) =>
+                  run.block ? (
+                    <BlockBandWeb key={run.block.id} heading={blockHeading(run.block, run.ordinal)} line={t(BLOCK_LINE[run.block.kind])} gap={cardGap}>
+                      {run.members.map((ex) => (
+                        <SpecCardWeb key={ex.id} ex={ex} n={++n} />
+                      ))}
+                    </BlockBandWeb>
+                  ) : (
+                    run.members.map((ex) => <SpecCardWeb key={ex.id} ex={ex} n={++n} />)
+                  )
+                )}
+              </div>
+              {template.coachNote && (
+                <p style={{ margin: "12px 0 0", borderRadius: 14, fontSize: 15, lineHeight: "24px", color: "#5F5093", background: "#F0EDF9", padding: "14px 18px", textWrap: "pretty" }}>
+                  {t("Note to client: {note}", { note: template.coachNote })}
+                </p>
+              )}
+            </section>
+
+            {!template.isPublic && (
+              <section aria-label={t("Assigned to clients")} className="flex flex-col min-w-0" style={{ gridColumn: `span ${rail ? 3 : 5}` }}>
+                <CapsHeadWeb label={t("Assigned to clients")} right={empty ? undefined : t("Progress")} onRight={empty ? undefined : onProgress} />
+                {state === "offline" && <OfflineLine />}
+                {empty ? (
+                  <EmptyPanelWeb line={t("Not assigned to anyone yet.")} action={{ label: t("Assign to clients"), icon: UserPlus, onClick: onAssign }} minHeight={rail ? 420 : 560} />
+                ) : (
+                  <div className="flex flex-col" style={{ gap: 16 }}>
+                    {active.map((a) => {
+                      const c = clientOf(a.clientId);
+                      const week = currentWeek(a.startsOn, a.joinWeek, template.durationWeeks, today);
+                      const line = [week ? (week.of ? t("Week {n} of {of}", { n: week.n, of: week.of }) : t("Week {n}", { n: week.n })) : a.startsOn && a.startsOn > today ? t("Starts {date}", { date: fmtDay(a.startsOn) }) : null, a.endsOn ? t("ends {date}", { date: fmtDay(a.endsOn) }) : null]
+                        .filter(Boolean)
+                        .join(" · ");
+                      return (
+                        <div key={a.id} className="flex flex-col" style={{ boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, padding: "16px 20px" }}>
+                          <div className="flex items-center" style={{ gap: 12 }}>
+                            <button type="button" onClick={() => onOpenCopy(a.id)} className="flex-1 min-w-0 flex items-center text-start hover:opacity-80" style={{ gap: 12 }}>
+                              <InitialsWeb name={c?.name ?? ""} url={c?.avatarUrl} />
+                              <span className="flex-1 min-w-0">
+                                <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{c?.name ?? t("A client")}</span>
+                                {line && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{line}</span>}
+                              </span>
+                            </button>
+                            <button type="button" onClick={() => end(a.id)} className="shrink-0 hover:text-[#C0392B]" style={{ padding: "8px 0", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: confirmEnd === a.id ? "#C0392B" : "#5B5349" }}>
+                              {endLabel(a)}
+                            </button>
+                          </div>
+                          <div style={{ marginTop: 8 }}>{webActivity(a.clientId, a.routineId)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {past.length > 0 && (
+                  <>
+                    <CapsHeadWeb label={t("Past programmes")} first={false} />
+                    {past.map((a) => {
+                      const c = clientOf(a.clientId);
+                      return (
+                        <div key={a.id} className="flex items-center" style={{ gap: 12, padding: "8px 0" }}>
+                          <InitialsWeb name={c?.name ?? ""} url={c?.avatarUrl} size={36} />
+                          <span className="flex-1 min-w-0 flex flex-wrap items-baseline justify-between" style={{ columnGap: 12 }}>
+                            <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{c?.name ?? t("A client")}</span>
+                            <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                              {dateSpan([...new Set([a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter((d): d is string => !!d))])}
+                            </span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </section>
+            )}
+          </div>
+        </ProgBodyWeb>
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 96 }}>

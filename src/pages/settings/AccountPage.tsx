@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Check, Mail, ShieldCheck } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { PaneFrame, PaneHeader } from "../../components/business-more/paneWeb";
+import { usePaneEligible } from "../../components/business-more/paneWebScope";
 import { SettingsBody, SettingsSection } from "../../components/ui/SettingsRows";
 import { Button } from "../../components/ui/Button";
 import { CodeBoxes } from "../../components/ui/CodeBoxes";
@@ -173,10 +175,16 @@ export default function AccountPage() {
     </p>
   ) : null;
 
+  // Website viewport (handover 7.1, "Repo changes after the read"): from
+  // 1024px the page is a pane of the Settings layout (Data & account lit),
+  // spanning the pane up to the reading width, titled as the other panes.
+  // The logic is the same page's.
+  const paneWeb = usePaneEligible();
+  const Frame = paneWeb ? PaneFrame : "div";
   return (
-    <div>
-      <PageHeader title={t("Account")} showBack sub tightBack />
-      <SettingsBody className="-mt-1">
+    <Frame {...(paneWeb ? { reading: true } : null)}>
+      {paneWeb ? <PaneHeader title={t("Account")} sub={t("Your first name and sign-in email")} /> : <PageHeader title={t("Account")} showBack sub tightBack />}
+      <SettingsBody className={paneWeb ? undefined : "-mt-1"}>
         <SettingsSection label={t("First name")}>
           <form
             noValidate
@@ -386,6 +394,6 @@ export default function AccountPage() {
           </div>
         </SettingsSection>
       </SettingsBody>
-    </div>
+    </Frame>
   );
 }

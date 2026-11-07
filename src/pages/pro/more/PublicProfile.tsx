@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CircleCheck, Eye, Pencil, Share2 } from "lucide-react";
+import { CircleCheck, Eye, Info, Pencil, Share2 } from "lucide-react";
 import ProfessionalDetail from "../../professionals/ProfessionalDetail";
 import { HireAvailabilityNotice } from "../../../components/hire-pro/HireAvailabilityNotice";
 import { HireBookPair } from "../../../components/pro/profile/kit";
@@ -23,6 +23,8 @@ import { textPx } from "../../../theme/textSize";
 import { WhatToShareSheet } from "../../../components/share/WhatToShareSheet";
 import { useProSubtype } from "../../../hooks/useProSubtype";
 import { t } from "../../../i18n/core";
+import { usePaneSpan } from "../../../components/web/paneFill";
+import { useWebLayout } from "../../../components/web/useWebLayout";
 
 /**
  * Release 3 · W6 MO3 v3 public profile preview (/app/more/public-profile) and
@@ -64,6 +66,9 @@ export default function PublicProfile() {
   const [cardsOpen, setCardsOpen] = useState(false);
   const { lane } = useProSubtype();
   const [handleOpen, setHandleOpen] = useState(false);
+  // WP-MO.13: in the spanning More pane (from 1024px) the web preview.
+  const pane = usePaneSpan();
+  const { rail } = useWebLayout();
   const [toast, setToast] = useState<string | null>((location.state as { toast?: string } | null)?.toast ?? null);
 
   useEffect(() => {
@@ -155,10 +160,48 @@ export default function PublicProfile() {
 
   const explain = () => setNote(t("Clients use these buttons. You can't book or hire yourself."));
 
+  const outline: React.CSSProperties = { height: 40, padding: "0 16px", boxSizing: "border-box", borderRadius: 14, border: "1px solid rgba(36,31,27,0.12)", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5B5349" };
+  const webHead = pane && (
+    <div className="flex items-center justify-between" style={{ gap: 16, marginBottom: 16 }}>
+      <div className="flex-1 min-w-0">
+        <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Public profile")}</p>
+        <h2 style={{ margin: 0, whiteSpace: "nowrap", fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("What clients see")}</h2>
+      </div>
+      <div className="flex items-center shrink-0" style={{ gap: 8 }}>
+        <span className="inline-flex items-center" style={{ gap: 6, height: 36, padding: "0 14px", borderRadius: 999, background: "#F0EDF9", fontSize: 13, lineHeight: "20px", fontWeight: 800, color: "#5F5093" }}>
+          <Eye size={16} aria-hidden />
+          {t("Preview as client")}
+        </span>
+        <button type="button" onClick={() => navigate("/app/more/edit-profile")} aria-label={t("Edit public profile")} title={t("Edit public profile")} className="flex items-center hover:bg-[#F5F5F6]" style={outline}>
+          <Pencil size={16} aria-hidden />
+          {t("Edit")}
+        </button>
+        <button type="button" onClick={() => setCardsOpen(true)} className="flex items-center hover:bg-[#F5F5F6]" style={outline}>
+          <Share2 size={16} aria-hidden />
+          {t("Share")}
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <>
+      {webHead}
       <ProfessionalDetail
         preview={{
+          web: pane
+            ? {
+                rail,
+                onHire: explain,
+                onBook: explain,
+                note: note && (
+                  <p role="status" className="flex items-center" style={{ margin: "0 24px 20px", padding: "10px 14px", borderRadius: 12, background: "#F7F7FC", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5B5349" }}>
+                    <Info size={18} aria-hidden style={{ color: "#7D67D9", flexShrink: 0 }} />
+                    {note}
+                  </p>
+                ),
+              }
+            : undefined,
           profileId: authUserId,
           fallbackListing: fallback,
           headerRight: chip,

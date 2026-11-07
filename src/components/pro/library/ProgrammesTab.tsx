@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ClipboardList, Copy, Pencil, Plus, Search, Send, Settings2, SlidersHorizontal, Trash2, UserRound } from "lucide-react";
+import { ChevronLeft, ClipboardList, Copy, Dumbbell, Pencil, Plus, Search, Send, Settings2, SlidersHorizontal, Trash2, UserRound } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
 import { BottomSheet } from "../../ui/BottomSheet";
@@ -26,7 +26,10 @@ import { WorkoutLogView } from "./WorkoutLogView";
 import { WeekProgrammesSection, WeekProgrammeView } from "../programmes/WeekProgrammes";
 import { DetailHeader, ErrorLine, Fab, FilterChip, LibCard, SquareBtn } from "./libraryUi";
 import { assignedLine, clientsLabel, currentWeek, isActive, templateMeta } from "./libraryModel";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
+import { ProPageBodyWeb } from "../web/ProPageWeb";
+import { AssignedListWeb, EmptyPanelWeb, LibSectionHeadWeb, LibraryChipsWeb, LibraryHeaderWeb, WorkoutCardWeb } from "../web/ProgrammeWeb";
 
 /**
  * Release 3 · W5 Library › Programmes (TR1 v7), the content under the
@@ -58,7 +61,10 @@ type ChipKey = "programmes" | "workouts" | "exercises";
 type FilterKey = "all" | "assigned" | "unassigned";
 type MenuAction = "rename" | "edit" | "assign" | "progress" | "duplicate" | "delete";
 
-export const ProgrammesTab: React.FC = () => {
+export const ProgrammesTab: React.FC<{
+  /** Website viewport: the Library tabs, when the list renders as the web page (its own header with search and the action). */
+  webTabs?: React.ReactNode;
+}> = ({ webTabs }) => {
   const {
     workoutTemplates,
     workoutTemplateFolders,
@@ -97,6 +103,8 @@ export const ProgrammesTab: React.FC = () => {
   const [creatingExercise, setCreatingExercise] = useState(false);
   const [fabLabel, setFabLabel] = useState(false);
   const pressTimer = useRef<number | null>(null);
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
 
   const own = workoutTemplates.filter((w) => !w.isPublic);
   const active = templateAssignments.filter(isActive);
@@ -335,6 +343,60 @@ export const ProgrammesTab: React.FC = () => {
       </>
     );
   }
+  if (view === "assignments" && web && webTabs) {
+    // Website viewport (WP-LI.5 all; WP-LI Library Extras Web): the Library header and tabs, the back circle with
+    // PROGRAMMES / All assignments and the count, then one card of rows 2 across (1 on the rail).
+    const cols = rail ? 1 : 2;
+    const clients = new Set(assignedRows.map(({ a }) => a.clientId)).size;
+    return (
+      <div>
+        <LibraryHeaderWeb
+          query={query}
+          onQuery={setQuery}
+          placeholder={t("Search programmes and workouts")}
+          action={{ label: t("New programme"), icon: Plus, onClick: () => setEditor({ template: null, folderId: null }) }}
+        />
+        <ProPageBodyWeb>
+          {webTabs}
+          <div className="flex items-center" style={{ gap: 10, marginBottom: 16 }}>
+            <button type="button" onClick={back} aria-label={t("Back")} className="tap flex items-center justify-center shrink-0" style={{ width: 40, height: 40, borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)" }}>
+              <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
+            </button>
+            <div className="min-w-0">
+              <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: "#8C8378" }}>{t("Programmes")}</p>
+              <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("All assignments")}</h2>
+            </div>
+            <span style={{ marginInlineStart: "auto", fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{tn(clients, "{n} client on a programme", "{n} clients on a programme")}</span>
+          </div>
+          {assignedRows.length === 0 ? (
+            <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+          ) : (
+            <div className="grid" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: "0 20px", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 32 }}>
+              {assignedRows.map(({ a, tpl }, i) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => go({ view: "template", id: tpl.id })}
+                  className="flex items-center text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+                  style={{ gap: 16, minHeight: 72, borderBottom: i < assignedRows.length - cols ? "1px solid rgba(36,31,27,0.06)" : "none" }}
+                >
+                  <span className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 44, borderRadius: 11, background: "#F0EDF9" }}>
+                    <UserRound size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D6BB5" }} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{`${clientName(a.clientId)} · ${tpl.name}`}</span>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{assignedLine(currentWeek(a.startsOn, a.joinWeek, tpl.durationWeeks, today), rings[a.clientId]) ?? ""}</span>
+                  </span>
+                  <StatusRing value={rings[a.clientId] ?? null} lane="full_coaching" />
+                </button>
+              ))}
+            </div>
+          )}
+          {sheets}
+        </ProPageBodyWeb>
+      </div>
+    );
+  }
   if (view === "assignments") {
     return (
       <>
@@ -348,6 +410,131 @@ export const ProgrammesTab: React.FC = () => {
   // ----- the list (TR1) ----------------------------------------------------
   const workouts = visible.filter((w) => !w.durationWeeks);
   const empty = own.length === 0 && workoutTemplateFolders.length === 0;
+
+  // Website viewport (WP-LI.1, WP-LI.6; WP-LI Library Extras Web): the page header carries the search, Filter and
+  // the primary action (New programme, or Create exercise on the Exercises chip) instead of the floating button;
+  // the chips are 3 equal pills; Programmes keeps its sections in columns, Workouts are cards 3 across (2 on the
+  // rail), Exercises the panel's web list.
+  if (web && webTabs) {
+    return (
+      <div>
+        <LibraryHeaderWeb
+          query={query}
+          onQuery={setQuery}
+          placeholder={chip === "exercises" ? t("Search exercises…") : t("Search programmes and workouts")}
+          filter={chip !== "exercises" ? { on: filter !== "all", onClick: (a) => setFilterAnchor(a) } : undefined}
+          action={chip === "exercises" ? { label: t("Create exercise"), icon: Plus, onClick: () => setCreatingExercise(true) } : { label: t("New programme"), icon: Plus, onClick: () => setEditor({ template: null, folderId: null }) }}
+        />
+        <ProPageBodyWeb>
+          {webTabs}
+          <LibraryChipsWeb<ChipKey>
+            items={[
+              { key: "programmes", label: t("Programmes") },
+              { key: "workouts", label: t("Workouts") },
+              { key: "exercises", label: t("Exercises") },
+            ]}
+            active={chip}
+            onChange={setChip}
+          />
+          {errors}
+          {/* WP-LI Library Web v2: Templates as cards 3 across (2 on the rail), then Assigned to clients below; the
+              repo's week-by-day programmes keep their section above. */}
+          {chip === "programmes" && (
+            <div className="flex flex-col" style={{ gap: 24 }}>
+              <WeekProgrammesSection query={query} onOpen={(id) => go({ view: "programme", id })} />
+              {empty ? (
+                <EmptyPanelWeb line={t("No templates yet. Build your first one.")} minHeight={rail ? 420 : 520} />
+              ) : (
+                <>
+                  <section aria-label={t("Templates")}>
+                    <LibSectionHeadWeb label={t("Templates")} right={visible.length > 3 || workoutTemplateFolders.length ? t("See all {n}", { n: visible.length }) : undefined} onRight={() => go({ view: "all" })} />
+                    {latest.length === 0 ? (
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No matches.")}</p>
+                    ) : (
+                      <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 2 : 3},minmax(0,1fr))`, gap: 24 }}>
+                        {latest.map((tpl) => {
+                          const n = clientCount(tpl);
+                          const folder = tpl.folderId ? workoutTemplateFolders.find((f) => f.id === tpl.folderId) : undefined;
+                          return (
+                            <WorkoutCardWeb
+                              key={tpl.id}
+                              icon={ClipboardList}
+                              colour={folder?.color}
+                              title={tpl.name}
+                              sub={templateMeta(tpl)}
+                              chip={tpl.isPublic ? null : n > 0 ? { label: clientsLabel(n), template: false } : { label: t("Template"), template: true }}
+                              extra={tpl.isPublic ? <UnverifiedProgramNotice isVerified={tpl.isVerified} isPublic={tpl.isPublic} variant="compact" /> : undefined}
+                              onOpen={() => go({ view: "template", id: tpl.id })}
+                              onMenu={(anchor) => setMenu({ template: tpl, anchor })}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                  <section aria-label={t("Assigned to clients")}>
+                    <LibSectionHeadWeb label={t("Assigned to clients")} />
+                    {assignedRows.length === 0 ? (
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+                    ) : (
+                      <AssignedListWeb
+                        rows={assignedRows.slice(0, 3).map(({ a, tpl }) => ({
+                          key: a.id,
+                          title: `${clientName(a.clientId)} · ${tpl.name}`,
+                          line: assignedLine(currentWeek(a.startsOn, a.joinWeek, tpl.durationWeeks, today), rings[a.clientId]) ?? undefined,
+                          trailing: <StatusRing value={rings[a.clientId] ?? null} lane="full_coaching" scale={48 / 56} />,
+                          onClick: () => go({ view: "template", id: tpl.id }),
+                        }))}
+                        more={assignedRows.length > 3 ? { label: t("All assignments"), onClick: () => go({ view: "assignments" }) } : undefined}
+                      />
+                    )}
+                  </section>
+                </>
+              )}
+            </div>
+          )}
+          {chip === "workouts" &&
+            (workouts.length === 0 ? (
+              <EmptyPanelWeb line={q ? t("No matches.") : t("No templates yet. Build your first one.")} minHeight={rail ? 420 : 520} />
+            ) : (
+              <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 2 : 3},minmax(0,1fr))`, gap: 24 }}>
+                {workouts.map((tpl) => {
+                  const n = clientCount(tpl);
+                  const folder = tpl.folderId ? workoutTemplateFolders.find((f) => f.id === tpl.folderId) : undefined;
+                  return (
+                    <WorkoutCardWeb
+                      key={tpl.id}
+                      icon={Dumbbell}
+                      colour={folder?.color}
+                      title={tpl.name}
+                      sub={templateMeta(tpl)}
+                      chip={tpl.isPublic ? null : n > 0 ? { label: clientsLabel(n), template: false } : { label: t("Template"), template: true }}
+                      extra={tpl.isPublic ? <UnverifiedProgramNotice isVerified={tpl.isVerified} isPublic={tpl.isPublic} variant="compact" /> : undefined}
+                      onOpen={() => go({ view: "template", id: tpl.id })}
+                      onMenu={(anchor) => setMenu({ template: tpl, anchor })}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          {chip === "exercises" && <ExercisesPanel query={query} templates={workoutTemplates} creating={creatingExercise} onCreatingChange={setCreatingExercise} />}
+        </ProPageBodyWeb>
+        <PopupMenu<FilterKey>
+          open={!!filterAnchor}
+          anchor={filterAnchor}
+          onClose={() => setFilterAnchor(null)}
+          selected={filter}
+          options={[
+            { value: "all", label: t("All templates") },
+            { value: "assigned", label: t("Assigned") },
+            { value: "unassigned", label: t("Not assigned") },
+          ]}
+          onSelect={setFilter}
+        />
+        {sheets}
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 96 }}>

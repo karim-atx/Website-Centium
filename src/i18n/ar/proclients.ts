@@ -110,6 +110,22 @@ const proclients: Catalogue = {
   "No tags": "لا وسوم",
   "No unread messages": "لا رسائل غير مقروءة",
   "Preview of {name}": "معاينة {name}",
+  // Website viewport (WP-CL): the list-detail's two regions.
+  "Client list": "قائمة العملاء",
+  "Client preview, {name}": "معاينة العميل، {name}",
+  // Website viewport (WP-HO, WP-CL.1, WP-CA): regions and web-only lines.
+  Trend: "الاتجاه",
+  "Client page": "صفحة العميل",
+  "Patient page": "صفحة المريض",
+  "Calendar view": "عرض التقويم",
+  "No requests": "لا طلبات",
+  // 7.3: the web layout says click (mobile keeps tap).
+  "Click again to confirm": "انقر مرة أخرى للتأكيد",
+  "Click again to delete this recipe": "انقر مجددًا لحذف هذه الوصفة",
+  "Click the exercise name to replace it from the exercise database.": "انقر على اسم التمرين لاستبداله من قاعدة بيانات التمارين.",
+  "Drag sideways to scrub, click to pin": "اسحب جانبيًا للتنقل، وانقر للتثبيت",
+  "Drag sideways to scrub, click a point to pin it": "اسحب جانبيًا للتنقل، وانقر على نقطة لتثبيتها",
+  "Drag sideways to scrub, click a week to pin it": "اسحب جانبيًا للتنقّل، وانقر على أسبوع لتثبيته",
   "More actions for {name}": "إجراءات أخرى لـ{name}",
   Status: "الحالة",
   "Close filters": "إغلاق عوامل التصفية",
@@ -313,6 +329,7 @@ const proclients: Catalogue = {
   "Early data: trends start after the first full week.": "بيانات أولية: تبدأ الاتجاهات بعد أول أسبوع كامل.",
   "Open in Insights": "فتح في الرؤى",
   "Client insights": "رؤى العميل",
+  Groups: "المجموعات",
   "Activity, nutrition, vitals": "النشاط والتغذية والعلامات الحيوية",
   "Activity, nutrition, vitals and biomarkers": "النشاط والتغذية والعلامات الحيوية والمؤشرات الحيوية",
   "Couldn't load results.": "تعذّر تحميل النتائج.",
@@ -590,6 +607,7 @@ const proclients: Catalogue = {
   "Ended|history": "تم إنهاء",
   "workouts|unit": "تمارين",
   "Due|status": "مستحقة",
+  "Range {range}": "النطاق {range}", // note: health wording (web marker row: the reference range, then the date)
 };
 
 export default proclients;

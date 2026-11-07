@@ -15,6 +15,8 @@ import { DetailHeader } from "./libraryUi";
 import { compareLog, currentWeek, parseSwaps, type LogStatus } from "./libraryModel";
 import { WorkoutLogReplies } from "./WorkoutLogReplies";
 import { t, tx, tn } from "../../../i18n/core";
+import { useIsWeb } from "../../web/useWebLayout";
+import { ProgBodyWeb, ProgHeaderWeb } from "../web/ProgrammeWeb";
 
 /**
  * Release 3 · W5 TR22 "Client workout log · targets vs logged, swap".
@@ -32,6 +34,8 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
   const [targets, setTargets] = useState<Exercise[] | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "none" | "error" | "offline">("loading");
   const [reload, setReload] = useState(0);
+  const web = useIsWeb();
+  const [reviewSlot, setReviewSlot] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,6 +65,16 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
   const name = client?.name ?? "";
   const first = name.split(" ")[0] ?? "";
 
+  if (web && client && !client.access.workoutActivity) {
+    return (
+      <div>
+        <ProgHeaderWeb title={name} eyebrow={t("Workout log")} eyebrowInline onBack={onBack} />
+        <ProgBodyWeb>
+          <LockLine what={t("Workout activity")} clientFirstName={first} />
+        </ProgBodyWeb>
+      </div>
+    );
+  }
   if (client && !client.access.workoutActivity) {
     return (
       <div>
@@ -99,6 +113,56 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
     below: { label: tx("Below", "target"), ink: INK.goldInk },
     skipped: { label: t("Skipped"), ink: INK.hi },
   };
+
+  // Website viewport (WP-LI.3.3, WP-LI Programme Web v5 "log"): one header line (back, the client, WORKOUT
+  // LOG · {when} 12/16 caps beside the name, Mark as reviewed or Reviewed on the right), the session line,
+  // the swap notes (#FDF3D6), the rows as a target / logged table (44 | 4fr | 3fr | 3fr | 120, rows 72) and
+  // the replies under it. Mark as reviewed moves from the pinned button into the header.
+  if (web) {
+    return (
+      <div>
+        <ProgHeaderWeb title={name || " "} eyebrow={when} eyebrowInline onBack={onBack} slot={<span ref={setReviewSlot} className="flex items-center shrink-0" />} />
+        <ProgBodyWeb>
+          {state === "offline" && <OfflineLine />}
+          {state === "loading" && <ProCardSkeleton lines={4} />}
+          {state === "error" && <ProError onRetry={() => setReload((n) => n + 1)} />}
+          {state === "none" && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("This session is no longer shared.")}</p>}
+          {session && (
+            <>
+              {line && <p style={{ margin: "0 0 16px", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{line}</p>}
+              {swaps.map((s) => (
+                <div key={`${s.from}-${s.to}`} className="flex items-center" style={{ gap: 12, background: "#FDF3D6", borderRadius: 16, padding: "16px 20px", marginBottom: 16 }}>
+                  <Repeat2 size={20} strokeWidth={2} aria-hidden className="shrink-0" style={{ color: "#9A7414" }} />
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#241F1B" }}>
+                    <span style={{ fontWeight: 700 }}>{t("{from} swapped for {to}", { from: s.from, to: s.to })}</span>
+                    {s.reason ? ` · ${t("\"{reason}\"", { reason: s.reason })}` : ""}
+                  </p>
+                </div>
+              ))}
+              {rows.length === 0 ? (
+                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Nothing logged in this session.")}</p>
+              ) : (
+                <div className="flex flex-col" style={{ boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, padding: "0 24px" }}>
+                  {rows.map((r, i) => (
+                    <div key={`${r.name}-${i}`} className="grid items-center" style={{ minHeight: 72, gridTemplateColumns: "44px minmax(0,4fr) minmax(0,3fr) minmax(0,3fr) 120px", gap: 20, borderBottom: i < rows.length - 1 ? "1px solid rgba(36,31,27,0.06)" : "none" }}>
+                      <span className="flex items-center justify-center" style={{ width: 44, height: 44, borderRadius: 12, background: "#F0EDF9" }}>
+                        <Dumbbell size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D67D9" }} />
+                      </span>
+                      <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{r.swapped ? t("{name} (swap)", { name: r.name }) : r.name}</span>
+                      <span style={{ fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{r.status === "skipped" ? t("Skipped") : r.target}</span>
+                      <span style={{ fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{r.status === "skipped" ? "" : r.logged}</span>
+                      <span style={{ textAlign: "end", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: STATUS[r.status].ink }}>{STATUS[r.status].label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <WorkoutLogReplies sessionId={session.id} clientFirstName={first} webReviewSlot={reviewSlot} />
+            </>
+          )}
+        </ProgBodyWeb>
+      </div>
+    );
+  }
 
   return (
     <div>

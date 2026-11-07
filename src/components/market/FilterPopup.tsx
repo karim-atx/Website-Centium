@@ -6,6 +6,8 @@ import { NO_ICON_SCALE } from "../pro/proInk";
 import { marketPalette } from "../../theme/marketTokens";
 import { t } from "../../i18n/core";
 import { filterOptionLabel } from "./filterModel";
+import { useIsWeb } from "../web/useWebLayout";
+import { BottomSheet } from "../ui/BottomSheet";
 
 // Market + Share 3.0 · FilterPopup (HANDOVER §4 C-MO.4.3 class filter and
 // P-MA.5.1, §5 "groups of checkbox rows + Done, reuse repo PopupMenu
@@ -106,13 +108,82 @@ export interface FilterPopupProps {
   /** Done and the scrim (closeFilter). */
   onClose: () => void;
   variant?: FilterVariant;
+  /** Website viewport (WC-EX Explore): from 1024px, the 440 Filters side sheet instead of the card. */
+  webSheet?: boolean;
+  /** The count line above the side sheet's Done ("2 gyms"). */
+  count?: string;
 }
 
 const GAP = 6;
 const EDGE = 8;
 const CONTENT_W = 232;
 
-export const FilterPopup: React.FC<FilterPopupProps> = ({ open, anchor, groups, selected, onToggle, onClose, variant = "client" }) => {
+// Website viewport, Addendum A WC-EX (WC-EX Explore Web v4, `sheet`): from
+// 1024px Explore's filter (webSheet) is the 440 Filters side sheet (the shared
+// BottomSheet web branch: the lavender band, "Filters", the close ring), the
+// groups' headings 12/16 700 0.08em uppercase #8C8378, the options up to 3
+// across (40 high, r10, 15/24, 500 / 700 selected, #FAFAFB / 1px #E5E6EB,
+// selected #F0EDF9 / #AEA1DC, the square check 15), 18 between groups, then
+// the count line 13/20 #8C8378 and Done (44, r12, #AEA1DC, 15/24 700).
+// Mobile keeps the anchored card below.
+export const FilterPopup: React.FC<FilterPopupProps> = (props) => {
+  const web = useIsWeb();
+  return web && props.webSheet ? <FilterSheetWeb {...props} /> : <FilterPopupCard {...props} />;
+};
+
+const FilterSheetWeb: React.FC<FilterPopupProps> = ({ open, groups, selected, onToggle, onClose, count }) => (
+  <BottomSheet
+    open={open}
+    onClose={onClose}
+    title={t("Filters")}
+    footer={
+      <div className="flex flex-col w-full" style={{ gap: 10 }}>
+        {count && (
+          <p role="status" style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            {count}
+          </p>
+        )}
+        <button type="button" onClick={onClose} className="hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ height: 44, borderRadius: 12, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 700 }}>
+          {t("Done")}
+        </button>
+      </div>
+    }
+  >
+    <div className="flex flex-col" style={{ gap: 18 }}>
+      {groups.map((g) => (
+        <div key={g.heading} role="group" aria-label={t(g.heading)} className="flex flex-col" style={{ gap: 8 }}>
+          <p aria-hidden style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>
+            {t(g.heading)}
+          </p>
+          <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.min(3, g.options.length)},minmax(0,1fr))`, gap: 8 }}>
+            {g.options.map((o) => {
+              const on = selected.includes(o);
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  role="menuitemcheckbox"
+                  aria-checked={on}
+                  onClick={() => onToggle(o)}
+                  className="flex items-center min-w-0 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+                  style={{ height: 40, boxSizing: "border-box", gap: 8, borderRadius: 10, padding: "0 12px", fontSize: 15, lineHeight: "24px", color: "#241F1B", fontWeight: on ? 700 : 500, background: on ? "#F0EDF9" : "#FAFAFB", border: `1px solid ${on ? "#AEA1DC" : "#E5E6EB"}` }}
+                >
+                  <span className="flex-1 min-w-0 truncate">{filterOptionLabel(o)}</span>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7D6BB5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ flex: "none", opacity: on ? 1 : 0 }}>
+                    <rect width="18" height="18" x="3" y="3" rx="2" />
+                    <path d="m9 12 2 2 4-4" />
+                  </svg>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  </BottomSheet>
+);
+
+const FilterPopupCard: React.FC<FilterPopupProps> = ({ open, anchor, groups, selected, onToggle, onClose, variant = "client" }) => {
   const dark = useIsDark();
   const card = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number; up: boolean } | null>(null);

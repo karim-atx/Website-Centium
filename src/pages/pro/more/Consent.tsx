@@ -66,7 +66,7 @@ export default function Consent() {
   };
 
   return (
-    <SubPage title={t("Consent and data sharing")} bottomPad={120}>
+    <SubPage title={t("Consent and data sharing")} paneSubtitle={t("What clients share with you & why")} bottomPad={120}>
       <div className="flex" style={{ borderRadius: 16, background: INK.tealPale, padding: 14, gap: 10, marginBottom: 8 }}>
         <ShieldCheck size={18} strokeWidth={2} aria-hidden style={{ color: dark ? "#B2D4CF" : "#3C6B65", flexShrink: 0 }} />
         <p style={{ fontSize: textPx(12.5), color: INK.chS, lineHeight: 1.55 }}>{t("Clients choose what to share with you, item by item, and can stop at any time. You only ever see what they have shared.")}</p>

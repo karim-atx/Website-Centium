@@ -18,6 +18,7 @@ import { useApp } from "../../context/AppContext";
 import { useWebLayout } from "./useWebLayout";
 import { WebClientSidebar } from "./WebClientSidebar";
 import { WebBusinessSidebar } from "./WebBusinessSidebar";
+import { WebProSidebar } from "./WebProSidebar";
 import { WebSecondaryHost } from "./WebSecondaryLayout";
 import { secondaryLayoutFor } from "./webNav";
 import { webPageFor } from "./webPages";
@@ -61,8 +62,9 @@ export const WebLayout: React.FC = () => {
   const { pathname } = useLocation();
   const { rail, sidebarW } = useWebLayout();
   const isBusiness = user.accountType === "business";
-  const secondary = secondaryLayoutFor(pathname, isBusiness);
-  const webPage = !secondary && webPageFor(pathname, isBusiness);
+  const isPro = user.accountType === "professional";
+  const secondary = secondaryLayoutFor(pathname, isBusiness, isPro);
+  const webPage = !secondary && webPageFor(pathname, isBusiness, isPro);
 
   const page = (
     <ErrorBoundary resetKey={pathname}>
@@ -74,14 +76,20 @@ export const WebLayout: React.FC = () => {
     <UnreadProvider>
       <CallProvider>
         <div className="min-h-[100dvh] bg-cream" data-web-shell={rail ? "rail" : "full"}>
-          {isBusiness ? <WebBusinessSidebar rail={rail} width={sidebarW} /> : <WebClientSidebar rail={rail} width={sidebarW} />}
+          {isBusiness ? (
+            <WebBusinessSidebar rail={rail} width={sidebarW} />
+          ) : isPro ? (
+            <WebProSidebar rail={rail} width={sidebarW} />
+          ) : (
+            <WebClientSidebar rail={rail} width={sidebarW} />
+          )}
           {secondary ? (
             <WebSecondaryHost kind={secondary} sidebarW={sidebarW} rail={rail} banners={<Banners />}>
               {page}
             </WebSecondaryHost>
           ) : webPage ? (
             <main data-web-frame="page" style={{ paddingInlineStart: sidebarW }}>
-              <div className="max-w-[1280px]" style={{ paddingInline: 32 }}>
+              <div className="max-w-[1600px]" style={{ paddingInline: 32 }}>
                 <Banners />
               </div>
               {page}
@@ -92,13 +100,13 @@ export const WebLayout: React.FC = () => {
               {page}
             </MobileFrame>
           )}
-          {!isBusiness && <ActiveWorkoutBar />}
+          {!isBusiness && !isPro && <ActiveWorkoutBar />}
         </div>
         <CallSurface />
         <AchievementUnlockToast />
         <MessagePopupToast />
-        {isBusiness && <PromotionUsedHost />}
-        {!isBusiness && <PremiumAskHost />}
+        {(isBusiness || isPro) && <PromotionUsedHost />}
+        {!isBusiness && !isPro && <PremiumAskHost />}
       </CallProvider>
     </UnreadProvider>
   );

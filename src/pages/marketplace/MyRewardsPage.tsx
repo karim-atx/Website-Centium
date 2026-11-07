@@ -13,6 +13,8 @@ import type { MarketResult } from "../../services/market/rpc";
 import { ownerInitials } from "../../services/offers";
 import { BackRow } from "./rewards/rewardsParts";
 import { t, tk, tx } from "../../i18n/core";
+import { ExploreWebPage } from "./ExploreWebPage";
+import { useIsWide, useWebLayout } from "../../components/web/useWebLayout";
 
 // Market + Share 3.0 · W2 · C-MO.4.6 My rewards (`rewardsActive`,
 // `rewardsEmpty`) at /app/marketplace/rewards/mine. Literal values, Client
@@ -53,6 +55,8 @@ type Load = { state: "loading" } | { state: "done"; result: MarketResult<Voucher
 
 export default function MyRewardsPage() {
   const dark = useIsDark();
+  const { web, rail } = useWebLayout();
+  const wide = useIsWide();
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const back = useBack("/app/marketplace?tab=rewards");
@@ -84,10 +88,10 @@ export default function MyRewardsPage() {
   const now = new Date();
   const rows = load.state === "done" && load.result.ok ? load.result.value.filter((v) => tabOf(liveStatus(v, now)) === tab) : [];
 
-  return (
+  const page = (
     <div style={{ paddingBottom: 32, lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS}</style>
-      <BackRow onBack={back} title={t("My rewards")} />
+      {!web && <BackRow onBack={back} title={t("My rewards")} />}
 
       <div role="tablist" aria-label={t("Vouchers")} style={{ marginTop: 10, display: "flex", gap: 5, padding: 6, borderRadius: 16, background: m.segtrack }}>
         {VOUCHER_TABS.map((vt, i) => {
@@ -121,9 +125,9 @@ export default function MyRewardsPage() {
         ) : !load.result.ok ? (
           <MarketError thing={tk("your rewards")} onRetry={fetchIt} style={{ marginTop: 14 }} />
         ) : rows.length === 0 ? (
-          <EmptyState tab={tab} onBrowse={() => navigate("/app/marketplace?tab=rewards")} />
+          <EmptyState tab={tab} web={web} onBrowse={() => navigate("/app/marketplace?tab=rewards")} />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+          <div style={web ? { display: "grid", gridTemplateColumns: `repeat(${rail ? 2 : wide ? 4 : 3},minmax(0,1fr))`, gap: 16, alignItems: "start", marginTop: 16 } : { display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
             {rows.map((v) => {
               const row = voucherRow(v, now);
               return (
@@ -134,7 +138,7 @@ export default function MyRewardsPage() {
                   stubLabel={row.stub}
                   tone={row.tone}
                   labelType={[10.5, "0.16em"]}
-                  onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`)}
+                  onPress={() => navigate(`/app/marketplace/vouchers/${encodeURIComponent(v.id)}`, { state: { under: "/app/marketplace/rewards/mine" } })}
                   ariaLabel={`${[v.offerHeadline, v.ownerSubtitle].filter(Boolean).join(", ")}. ${row.meta}. ${row.stub}`}
                   className="market-focus"
                   bodyStyle={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}
@@ -155,11 +159,38 @@ export default function MyRewardsPage() {
       </div>
     </div>
   );
+  // WC-EX.4 (WC-EX Rewards Web): the page header, the tabs across, the voucher tickets 3 per row (2 on the rail, 4 at 1920).
+  return web ? (
+    <ExploreWebPage title={t("My rewards")} back="/app/marketplace?tab=rewards">
+      {page}
+    </ExploreWebPage>
+  ) : (
+    page
+  );
 }
 
-const EmptyState: React.FC<{ tab: VoucherTab; onBrowse: () => void }> = ({ tab, onBrowse }) => {
+/** `web` (WC-EX Points Web, vEmpty): a bordered card (r20, 48 24) with the 17/24 title, the 15/24 line and a 40 white button 15/24. */
+const EmptyState: React.FC<{ tab: VoucherTab; web?: boolean; onBrowse: () => void }> = ({ tab, web, onBrowse }) => {
   const m = marketPalette(useIsDark());
   const e = EMPTY[tab];
+  if (web)
+    return (
+      <div style={{ marginTop: 16, borderRadius: 20, border: "0.5px solid rgba(36,31,27,0.1)", padding: "48px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+        <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", color: "#7D67D9" }}>
+          <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4" />
+            <path d="M8 2v4" />
+            <path d="M3 10h18" />
+          </svg>
+        </span>
+        <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{t(e.title)}</h2>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t(e.body)}</p>
+        <button type="button" onClick={onBrowse} className="market-focus hover:bg-[#F5F5F6]" style={{ marginTop: 6, height: 40, borderRadius: 12, border: "1px solid rgba(36,31,27,0.11)", background: "#FFFFFF", padding: "0 16px", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#5F5093", cursor: "pointer" }}>
+          {t("Browse rewards")}
+        </button>
+      </div>
+    );
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "56px 24px 0" }}>
       <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", color: m.accent }}>

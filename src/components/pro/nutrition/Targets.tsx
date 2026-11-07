@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Check, Lock, Target } from "lucide-react";
+import { Check, Equal, Lock, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
 import { textPx } from "../../../theme/textSize";
@@ -26,7 +26,9 @@ import { useNuRoster } from "./hooks";
 import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel";
 import { useNutritionOverview } from "./useNutritionOverview";
 import { appLocale } from "../../../i18n/format";
-import { t } from "../../../i18n/core";
+import { t, tx } from "../../../i18n/core";
+import { useWebLayout } from "../../web/useWebLayout";
+import { ExtrasCapWeb, ExtrasCardWeb, ExtrasGridWeb, ExtrasHeadWeb, ExtrasLockWeb, ExtrasStatsWeb } from "../insights/extrasWeb";
 
 /**
  * Release 3 · NU8 v3 "Targets · weight goal rate and TDEE" (source gen
@@ -104,10 +106,12 @@ function useTargetsData(clientId: string, access: ReturnType<typeof useClientAcc
   return { data: state && state.key === key ? state : null, stale: state, progress, weightShared };
 }
 
-export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: () => void }> = ({ lane, clientId, onBack }) => {
+/** `pane` (website viewport, WP-NU-MP.4): the editor column of the web list-detail, without its back button. */
+export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: () => void; pane?: boolean }> = ({ lane, clientId, onBack, pane }) => {
   const { clients } = useNuRoster(lane);
   const client = clients?.find((c) => c.clientId === clientId) ?? null;
   const access = useClientAccess(clientId);
+  const { rail } = useWebLayout();
   const [nonce, setNonce] = useState(0);
   const { data, stale, progress } = useTargetsData(clientId, access, nonce);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -148,12 +152,31 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     </button>
   );
 
-  const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={onBack} />;
+  const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={pane ? undefined : onBack} />;
+  // Website viewport (WP-NU-MP.4, WP-NU Meal Plans Web v3 isTargets): the editor is one #FAFAFB
+  // section (r20): a white 14 24 head (the caps name and the 22/28 title on one baseline), the
+  // body (16 24, the panel in two columns 12 apart, one on the rail) and a white 14 24 footer
+  // with the set-on line and the 44 Save button.
+  const webHead = (
+    <div className="flex items-baseline flex-wrap" style={{ columnGap: 12, padding: "14px 24px", borderBottom: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{client?.name ?? ""}</p>
+      <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Targets and dietary needs")}</h2>
+    </div>
+  );
+  const webShell = (body: React.ReactNode, footer?: React.ReactNode) => (
+    <section aria-label={t("Targets and dietary needs")} className="min-w-0 flex flex-col overflow-hidden" style={{ boxSizing: "border-box", borderRadius: 20, background: "#FAFAFB", border: "1px solid rgba(36,31,27,0.08)" }}>
+      {webHead}
+      <div style={{ padding: "16px 24px" }}>{body}</div>
+      {footer}
+    </section>
+  );
   if (!data || !draft) {
+    const body = stale?.error && !stale.offline ? <ProError onRetry={() => setNonce((n) => n + 1)} /> : <ProCardSkeleton lines={5} height={260} />;
+    if (pane) return webShell(body);
     return (
       <div>
         {head}
-        {stale?.error && !stale.offline ? <ProError onRetry={() => setNonce((n) => n + 1)} /> : <ProCardSkeleton lines={5} height={260} />}
+        {body}
       </div>
     );
   }
@@ -180,9 +203,12 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
             <LockLine what={t("Progress")} clientFirstName={first || t("Your client")} action={askBtn("progress")} />
           </div>
         )}
-        <p style={{ fontSize: textPx(10.5), color: INK.chF }}>
-          {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
-        </p>
+        {/* On web the footer carries this line (WP-NU-MP.4). */}
+        {!pane && (
+          <p style={{ fontSize: textPx(10.5), color: INK.chF }}>
+            {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
+          </p>
+        )}
       </div>
     ),
     desiredWeightEditable: true,
@@ -211,6 +237,54 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     setMsg({ ok: true, text: t("Saved. {name} has been notified.", { name: first }) });
     setNonce((n) => n + 1);
   };
+
+  if (pane) {
+    const card: React.CSSProperties = { boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "12px 18px" };
+    return webShell(
+      <div className="flex flex-col" style={{ gap: 12 }}>
+        {data.error && data.offline && <OfflineLine />}
+        {data.error && !data.offline && <ProError onRetry={() => setNonce((n) => n + 1)} />}
+        {/* Safety: the allergies and dietary needs stay in full above the targets (the frame shows a one-line note in the head). */}
+        <DietaryNeedsCard clientId={clientId} firstName={first || t("Your client")} access={access} onAsk={() => ask("allergies_dietary")} asked={asked.has("allergies_dietary")} />
+        <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 12 }}>
+          <div className="min-w-0">
+            <GoalsPanel pro={{ ...pro, webPart: "goals" }} />
+          </div>
+          <div className="min-w-0 flex flex-col" style={{ gap: 12 }}>
+            <GoalsPanel pro={{ ...pro, webPart: "macros" }} />
+            <div className="flex items-center justify-between" style={{ ...card, gap: 12 }}>
+              <span className="min-w-0">
+                <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Lock these targets")}</span>
+                <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
+              </span>
+              <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
+            </div>
+            {lane === "nutrition" && (
+              <div style={card}>
+                <div className="flex items-center justify-between" style={{ gap: 8 }}>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" }}>{t("Micronutrient targets")}</p>
+                  <ComingSoonPill web />
+                </div>
+                <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {msg && (
+          <p role={msg.ok ? "status" : "alert"} style={{ margin: 0, fontSize: 13, fontWeight: 600, color: msg.ok ? INK.good : INK.hi }}>
+            {msg.text}
+          </p>
+        )}
+      </div>,
+      <div className="flex items-center" style={{ gap: 16, padding: "14px 24px", borderTop: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
+        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          {data.mine ? `${t("You set these on {date}.", { date: fmtDay(data.mine.setAt, true) })} ` : ""}
+          {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
+        </span>
+        <CtaButton size="page" icon={<Check size={18} />} label={t("Save and notify {name}", { name: first })} loading={busy} disabled={!(draft.targetCalories > 0)} onClick={() => void save()} />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -260,14 +334,16 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
  * plus weigh-ins behind Weight. "Read only. Set on {date}." says when; the
  * setter's name isn't readable for another professional (gap).
  */
-export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; showHead?: boolean; onBack?: () => void; clientName?: string }> = ({ clientId, firstName, showHead, onBack, clientName }) => {
+/** `web` (website viewport, WP-CO-IN.7; only the web Insights page passes it): the Extras cards, 4 across (2 on the rail). */
+export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; showHead?: boolean; onBack?: () => void; clientName?: string; web?: boolean }> = ({ clientId, firstName, showHead, onBack, clientName, web }) => {
   const access = useClientAccess(clientId);
   const dark = useIsDark();
+  const { rail } = useWebLayout();
   const [nonce, setNonce] = useState(0);
   const { data, stale, progress } = useTargetsData(clientId, access, nonce);
   const first = firstName || t("This client");
   const weight = useMemo(() => (data?.weights ? buildMetricReadings("weight", data.weights) : null), [data]);
-  const head = showHead ? <NuHead eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} /> : null;
+  const head = web ? <ExtrasHeadWeb eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} backLabel={t("Back")} /> : showHead ? <NuHead eyebrow={t("Nutrition targets")} title={clientName ?? ""} onBack={onBack} /> : null;
 
   if (access.loading || (!data && !stale?.error)) return <div>{head}<ProCardSkeleton lines={5} height={240} /></div>;
   if (!data) return <div>{head}<ProError onRetry={() => setNonce((n) => n + 1)} /></div>;
@@ -277,6 +353,122 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
   const split = { proteinPct: g.proteinPct, carbsPct: g.carbsPct, fatPct: g.fatPct };
   const grams = macroGrams(g.calories, split);
   const est = tdeeView(data.basics, weight?.current ?? null, !!data.weights, first);
+  if (web) {
+    // WP-CO-IN.7 (Extras): Weight goal across; Current weight | Daily target | TDEE estimate (2 wide); Macro distribution across; the lock note.
+    const setLine = g.setByProfessionalId ? t("Read only. Set by a professional on {date}.", { date: fmtDay(g.createdAt) }) : t("Read only. Set by {name} on {date}.", { name: first, date: fmtDay(g.createdAt) });
+    const GOALS = [
+      ["lose", TrendingDown, t("Lose weight")],
+      ["maintain", Equal, tx("Maintain", "weight goal")],
+      ["gain", TrendingUp, t("Gain weight")],
+    ] as const;
+    const hist = weight?.history ?? [];
+    const cur = weight?.current ?? null;
+    const kg = (n: number) => String(Math.round(n * 10) / 10);
+    const eta = cur != null && g.desiredWeightKg != null && g.weeklyRateKg > 0 && g.weightGoal !== "maintain" && Math.abs(cur - g.desiredWeightKg) > 0.05 ? shiftDate(todayLocal(), Math.round((Math.abs(cur - g.desiredWeightKg) / g.weeklyRateKg) * 7)) : null;
+    const diff = est.tdee != null ? Math.round(g.calories - est.tdee) : null;
+    const n0 = (n: number) => Math.round(n).toLocaleString(appLocale("en-GB"));
+    return (
+      <div>
+        {head}
+        {data.error && data.offline && <OfflineLine />}
+        <ExtrasGridWeb cols={4} railCols={2} gap="24px">
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasCapWeb>{t("Weight goal")}</ExtrasCapWeb>
+            <div role="radiogroup" aria-label={t("Weight goal")} aria-readonly style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 6 }}>
+              {GOALS.map(([k, Icon, label]) => {
+                const on = g.weightGoal === k;
+                return (
+                  <span key={k} role="radio" aria-checked={on} style={{ height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 15, fontWeight: 600, background: on ? "#AEA1DC" : INK.soft, color: on ? "#FFFFFF" : INK.chS, whiteSpace: "nowrap" }}>
+                    <Icon size={13} strokeWidth={2.2} aria-hidden />
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 24, marginTop: 16 }}>
+              {(
+                [
+                  [t("Weekly rate"), g.weightGoal === "maintain" ? "–" : t("{n} kg a week", { n: kg(g.weeklyRateKg) }), null],
+                  [t("Desired weight"), g.desiredWeightKg != null ? t("{n} kg", { n: kg(g.desiredWeightKg) }) : "–", eta ? t("About {date} at this rate", { date: fmtDay(eta) }) : null],
+                ] as const
+              ).map(([label, v, v2]) => (
+                <div key={label} style={{ minWidth: 0, borderRadius: 14, background: INK.soft, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: INK.ch, whiteSpace: "nowrap" }}>{label}</span>
+                  <span style={{ flex: "none", textAlign: "end" }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{v}</span>
+                    {v2 && <span style={{ display: "block", fontSize: 13, color: INK.chF, whiteSpace: "nowrap" }}>{v2}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="span 1" stretch>
+            <ExtrasCapWeb>{t("Current weight")}</ExtrasCapWeb>
+            {data.weights ? (
+              <ExtrasStatsWeb
+                top={0}
+                fill
+                stats={[
+                  {
+                    label: hist.length ? t("Last logged {date}", { date: fmtDay(hist[hist.length - 1].date) }) : t("No weigh-ins yet"),
+                    value: cur != null ? kg(cur) : "–",
+                    unit: cur != null ? t("kg") : undefined,
+                    sub: cur != null && hist.length > 1 ? t("{delta} kg since {date}", { delta: `${cur - hist[0].value >= 0 ? "+" : "−"}${kg(Math.abs(cur - hist[0].value))}`, date: fmtDay(hist[0].date) }) : undefined,
+                  },
+                ]}
+              />
+            ) : (
+              <LockLine what={t("Weight")} clientFirstName={first} />
+            )}
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="span 1" stretch>
+            <ExtrasCapWeb>{t("Daily target")}</ExtrasCapWeb>
+            <ExtrasStatsWeb top={0} fill stats={[{ label: t("Calories"), value: n0(g.calories), unit: t("kcal") }]} />
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span={rail ? "1 / -1" : "span 2"} stretch>
+            <ExtrasCapWeb>{t("TDEE estimate")}</ExtrasCapWeb>
+            {est.tdee != null ? (
+              <ExtrasStatsWeb
+                top={0}
+                fill
+                stats={[
+                  { label: t("Maintenance"), value: n0(est.tdee), unit: t("kcal"), sub: est.basis },
+                  { label: t("Target"), value: n0(g.calories), unit: t("kcal"), sub: diff ? t("{n} a day", { n: `${diff > 0 ? "+" : "−"}${n0(Math.abs(diff))}` }) : undefined, ink: "#5F5093" },
+                ]}
+              />
+            ) : (
+              <div>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: INK.ch }}>{est.title}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 13, color: INK.chF }}>{est.line}</p>
+              </div>
+            )}
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasCapWeb>{t("Macro distribution")}</ExtrasCapWeb>
+            <div className="flex overflow-hidden" style={{ height: 20, borderRadius: 999, gap: 2 }} role="img" aria-label={t("Protein {p}%, carbs {c}%, fat {f}%", { p: split.proteinPct, c: split.carbsPct, f: split.fatPct })}>
+              {(
+                [
+                  [split.proteinPct, "#7D6BB5"],
+                  [split.carbsPct, "#8175C2"],
+                  [split.fatPct, "#4274D7"],
+                ] as const
+              ).map(([p, col], i) => (
+                <span key={i} className="flex items-center justify-center" style={{ flex: p, background: col, fontSize: 11, fontWeight: 800, color: "#FFFFFF" }}>{`${Math.round(p)}%`}</span>
+              ))}
+            </div>
+            <div className="flex flex-wrap" style={{ gap: 12, marginTop: 8, fontSize: 13, color: INK.chS }}>
+              <span>{t("Protein {n} g", { n: grams.p })}</span>
+              <span>{t("Carbs {n} g", { n: grams.c })}</span>
+              <span>{t("Fat {n} g", { n: grams.f })}</span>
+            </div>
+          </ExtrasCardWeb>
+          <ExtrasCardWeb span="1 / -1">
+            <ExtrasLockWeb>{setLine}</ExtrasLockWeb>
+          </ExtrasCardWeb>
+        </ExtrasGridWeb>
+      </div>
+    );
+  }
   const pro: GoalsPanelPro = {
     goal: { weightGoal: g.weightGoal, weeklyRateKg: g.weeklyRateKg, targetCalories: Math.round(g.calories), macroSplit: split, desiredWeightKg: g.desiredWeightKg ?? undefined },
     onChange: () => undefined,
@@ -324,17 +516,43 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
 };
 
 /** The Targets area without a client: who has targets you set (NU1 "Targets" box). */
-export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string) => void }> = ({ lane, onBack, onOpen }) => {
+/** `pane` (website viewport, WP-NU-MP.4): the list column of the web list-detail: no head, the open client tinted. */
+export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: (clientId: string) => void; pane?: { selected: string | null } }> = ({ lane, onBack, onOpen, pane }) => {
   const o = useNutritionOverview(lane);
   return (
     <div>
-      <NuHead title={t("Targets")} onBack={onBack} />
+      {!pane && <NuHead title={t("Targets")} onBack={onBack} />}
       {o.error && !o.offline && <ProError onRetry={o.retry} />}
       {o.error && o.offline && <OfflineLine />}
       {o.loading ? (
         <ListSkeleton rows={4} />
       ) : o.clients.length === 0 ? (
         <EmptyState icon={Target} title={t("No clients yet")} line={lane === "nutrition" ? t("Targets you set for clients show here.") : t("Turn on nutrition coaching from a client's Plan tab to set targets.")} />
+      ) : pane ? (
+        // WP-NU-MP.4 (WP-NU Meal Plans Web v3): rows 64 (padding 0 14, r14), avatar 44, the name 15/24 600,
+        // the line 13/20 with the lock; the open client #F0EDF9 with the 2 #AEA1DC ring on the avatar.
+        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 8 }}>
+          {o.clients.map((c) => {
+            const tg = o.targets[c.clientId];
+            const on = pane.selected === c.clientId;
+            return (
+              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} aria-current={on || undefined} className="w-full flex items-center text-start hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ gap: 14, padding: "0 14px", minHeight: 64, borderRadius: 14, background: on ? INK.prPale : "transparent" }}>
+                <span className="shrink-0" style={{ borderRadius: 9999, boxShadow: on ? "0 0 0 2px #AEA1DC" : "none" }}>
+                  <Avatar name={c.name} url={c.avatarUrl} size={44} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>
+                  <span className="flex items-center" style={{ gap: 6, fontSize: 13, lineHeight: "20px", color: INK.chF, whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span className="truncate">
+                      {tg ? (tg.locked ? t("{kcal} kcal · {pct}% protein · locked", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) }) : t("{kcal} kcal · {pct}% protein", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) })) : t("Not set by you")}
+                    </span>
+                    {tg?.locked && <Lock size={12} strokeWidth={2} aria-hidden className="shrink-0" />}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       ) : (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px" }}>
           {o.clients.map((c, i) => {
