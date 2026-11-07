@@ -12,6 +12,7 @@ import {
 import { suspensionAwareFetch } from './suspension'
 import { offlineFastFetch } from './offlineFast'
 import { identityGuardFetch } from './tabIdentity'
+import { describeSessionToNative, tellNativeSessionPersists } from './nativeSession'
 import type { Database } from './database.types'
 
 // Single browser client for the whole app. createBrowserClient memoises
@@ -100,10 +101,17 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
           ? options
           : { ...options, maxAge: undefined, expires: undefined }
 
+        // In the phone app, native shares this session (./nativeSession) and
+        // acts on it only while it outlives the app, which is this same answer.
+        if (!isRemoval && !isVerifier) tellNativeSessionPersists(remember && !recovering)
+
         document.cookie = serializeCookieHeader(name, value, finalOptions)
       }
     },
   },
 })
+
+// The phone app's native side reads the same cookies; it needs the project and the cookie's name.
+describeSessionToNative(url, anonKey, (supabase.auth as unknown as { storageKey: string }).storageKey)
 
 export type SupabaseClient = typeof supabase
