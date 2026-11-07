@@ -6,6 +6,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { MealPrepFlowSheet } from "../../food/MealPrepFlowSheet";
+import { RecipeDetailWeb } from "../web/RecipeDetailWeb";
 import { PrepCreateSheet } from "../../food/PrepCreateSheet";
 import { divideTotals, sumItems, type PrepItem } from "../../food/mealPrepShared";
 import { INK, NO_ICON_SCALE } from "../proInk";
@@ -47,6 +48,9 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
   const [sortAnchor, setSortAnchor] = useState<HTMLElement | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // Website viewport (WP-NU-MP.3.1): on web a recipe opens in the page; Edit opens the repo's edit sheet.
+  const [detail, setDetail] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
 
   const list = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -81,12 +85,21 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
   const sheets = (
     <>
       {open && <MealPrepFlowSheet kind="recipes" itemId={open} professional onClose={() => setOpen(null)} />}
+      {editing && detail && <MealPrepFlowSheet kind="recipes" itemId={detail} professional startEditing onClose={() => setEditing(false)} />}
       <PrepCreateSheet kind="recipes" open={creating} onClose={() => setCreating(false)} professional />
     </>
   );
 
   if (webTabs) {
     const ring = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
+    const shown = detail ? recipes.find((r) => r.id === detail) ?? null : null;
+    if (shown)
+      return (
+        <WebRecipesPage query={query} onQuery={setQuery} sortOn={sort !== "newest"} onSort={(el) => setSortAnchor(sortAnchor ? null : el)} onNew={() => setCreating(true)} tabs={webTabs}>
+          <RecipeDetailWeb recipe={shown} onBack={() => setDetail(null)} onEdit={() => setEditing(true)} />
+          {sheets}
+        </WebRecipesPage>
+      );
     return (
       <WebRecipesPage
         query={query}
@@ -115,7 +128,7 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
         ) : (
           <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 24, alignContent: "start" }}>
             {list.map(({ r, per }) => (
-              <button key={r.id} type="button" onClick={() => setOpen(r.id)} className={`flex flex-col text-start overflow-hidden hover:border-[#AEA1DC] ${ring}`} style={{ minWidth: 0, boxSizing: "border-box", borderRadius: 18, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}>
+              <button key={r.id} type="button" onClick={() => setDetail(r.id)} className={`flex flex-col text-start overflow-hidden hover:border-[#AEA1DC] ${ring}`} style={{ minWidth: 0, boxSizing: "border-box", borderRadius: 18, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}>
                 <span className="flex items-center justify-center w-full" style={{ aspectRatio: "4 / 3", background: "#F5F5F6" }}>
                   <ChefHat size={32} strokeWidth={1.5} aria-hidden style={{ color: "#7D6BB5" }} />
                 </span>

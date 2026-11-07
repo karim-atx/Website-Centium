@@ -3,6 +3,7 @@ import { BookOpenCheck, MessageCircle, Repeat, Send, ThumbsUp } from "lucide-rea
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
+import { JournalDateButton, JournalDatePickerWeb } from "../web/JournalDatePickerWeb";
 import { textPx } from "../../../theme/textSize";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
@@ -150,6 +151,8 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
   const [conflicts, setConflicts] = useState<Record<string, ConflictRow[] | null>>({});
   const [composer, setComposer] = useState<{ entry: DiaryEntry; kind: "swap" | "comment" } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // Website viewport (WP-NU-MP.2.1): the web journal's "Jump to a date" popup.
+  const [dateOpen, setDateOpen] = useState(false);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
   useEffect(() => {
@@ -195,7 +198,17 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
 
   const first = client?.firstName ?? "";
   const name = client?.name ?? "";
-  const head = <NuHead eyebrow={t("Food journal · {date}", { date: dayDate(current) })} title={name || t("Food journal")} onBack={pane ? undefined : onBack} />;
+  const head = (
+    <NuHead
+      eyebrow={t("Food journal · {date}", { date: dayDate(current) })}
+      title={name || t("Food journal")}
+      onBack={pane ? undefined : onBack}
+      right={pane && diaryShared && days.length > 0 ? <JournalDateButton open={dateOpen} onOpen={() => setDateOpen(true)} /> : undefined}
+    />
+  );
+  const picker = pane ? (
+    <JournalDatePickerWeb key={String(dateOpen)} open={dateOpen} onClose={() => setDateOpen(false)} current={current} today={today} logged={days} firstName={client?.firstName ?? ""} onPick={onDay} />
+  ) : null;
 
   if (access.loading) return <div>{head}<ProCardSkeleton lines={3} /></div>;
   if (!diaryShared) {
@@ -227,6 +240,7 @@ export const JournalEntryView: React.FC<{ lane: ProLane; clientId: string; day: 
   return (
     <div>
       {head}
+      {picker}
       <DietStrip name={name} {...diet} />
       {data?.error && data.offline && <OfflineLine />}
       {data?.error && !data.offline && (

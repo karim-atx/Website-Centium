@@ -297,6 +297,16 @@ const pronutrition: Catalogue = {
   "of {target} kcal": "من {target} سعرة",
   "Your recipe": "وصفتك",
   "Your meal": "وجبتك",
+  "Jump to a date": "الانتقال إلى تاريخ",
+  "{date}, logged": "{date}، مسجَّل",
+  "Days {name} logged food": "أيام تسجيل الطعام لدى {name}",
+  "Days with food logged": "أيام فيها طعام مسجَّل",
+  "Back to recipes": "العودة إلى الوصفات",
+  "{n} kcal total": "{n} سعرة إجمالًا",
+  "Per serving {kcal} kcal, protein {p}, carbs {c}, fat {f}": "للحصة {kcal} سعرة، بروتين {p}، كربوهيدرات {c}، دهون {f}",
+  "Per serving. Totals ÷ {n} servings.": { zero: "للحصة. المجموع ÷ {n} حصص.", one: "للحصة. المجموع ÷ حصة واحدة.", two: "للحصة. المجموع ÷ حصتين.", few: "للحصة. المجموع ÷ {n} حصص.", many: "للحصة. المجموع ÷ {n} حصة.", other: "للحصة. المجموع ÷ {n} حصة." },
+  "{name}, no meaningful macros": "{name}، بلا عناصر غذائية تُذكر",
+  "{name}, protein {p}, carbs {c}, fat {f}": "{name}، بروتين {p}، كربوهيدرات {c}، دهون {f}",
 };
 
 export default pronutrition;
