@@ -13,6 +13,8 @@ interface PageHeaderProps {
   // V4: pages reached from More (Mind/Professionals/Explore) have no other
   // way back except the bottom nav — show an explicit back chevron instead.
   showBack?: boolean;
+  /** In a spanning pane, take the pane head even on a deeper route (a page the frames draw as a pane, e.g. WC-SE Billing and refunds). */
+  paneTop?: boolean;
   // QA 12.0: "The title and button going back to Mind should have the same
   // style as [PageHeader]" — Mind's Habits/Journal are tab-state, not
   // routes, so their back action needs to switch tabs instead of the
@@ -36,12 +38,12 @@ interface PageHeaderProps {
   bottomGap?: number;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub, tightBack, bottomGap }) => {
+export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitleColor, right, showBack, onBack, eyebrow, sub, tightBack, bottomGap, paneTop }) => {
   const back = useBack();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
   const inPane = usePaneSpan();
-  if (inPane && window.location.pathname.split("/").filter(Boolean).length <= 3) {
+  if (inPane && (paneTop || window.location.pathname.split("/").filter(Boolean).length <= 3)) {
     return (
       <div className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
         <div className="min-w-0">
