@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight, ChevronRight, ClipboardPlus, FileText, FlaskConical, Info, Layers, MessageCircle, Plus, Send, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
+import { useWebLayout } from "../../web/useWebLayout";
 import { textPx } from "../../../theme/textSize";
 import { isRtl, t, tk, tn, tx } from "../../../i18n/core";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
@@ -184,6 +185,9 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
   const visible = labsOn || sharedCount > 0;
   const [view, setView] = useState<View>({ kind: "list" });
   const [filter, setFilter] = useState("all");
+  const { web, rail } = useWebLayout();
+  const dark = useIsDark();
+  const [webKey, setWebKey] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -283,6 +287,141 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
   }).length : null;
   const improving = markers.filter((m) => m.pattern === "returning" || (m.pattern === "out" && m.points.length > 1));
   const testRows = [...(read.data?.panels ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  if (web) {
+    // WP-CO-IN.4 web (WP-CO Insights Web v2): Tests and All results on the left (5 of 12, 3 of 8 on the rail),
+    // the selected result's chart on the right (7, 5 on the rail); the first shown result opens by default.
+    const sel = shown.find((m) => m.key === webKey) ?? shown[0] ?? null;
+    const card: React.CSSProperties = { minWidth: 0, boxSizing: "border-box", borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", padding: "20px 24px" };
+    const cardTitle = (title: string, q?: string) => (
+      <div style={{ minWidth: 0 }}>
+        <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{title}</p>
+        {q && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{q}</p>}
+      </div>
+    );
+    const row = (key: string, i: number, on: boolean, onClick: () => void, lead: React.ReactNode, title: string, sub: string | null, value: React.ReactNode, aria?: string) => (
+      <button
+        key={key}
+        type="button"
+        onClick={onClick}
+        aria-label={aria}
+        aria-current={on || undefined}
+        className="w-full flex items-center text-start hover:bg-[#F0EDF9]"
+        style={{ minHeight: 56, gap: 12, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : "none", padding: "0 8px", margin: "0 -8px", width: "calc(100% + 16px)", borderRadius: 10, background: on ? "#F0EDF9" : "transparent" }}
+      >
+        {lead}
+        <span className="flex-1 min-w-0">
+          <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{title}</span>
+          {sub && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</span>}
+        </span>
+        {value}
+        <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
+      </button>
+    );
+    return (
+      <>
+        {read.offline && <OfflineLine />}
+        {!labsOn && (
+          <SoftLine icon={Info} action={undefined}>
+            {`${sharedCount === 1 ? t("Lab results aren't shared. {firstName} shared this result with you one at a time, and can stop at any time.", { firstName }) : t("Lab results aren't shared. {firstName} shared these results with you one at a time, and can stop at any time.", { firstName })} `}
+            <button type="button" onClick={() => setAsking(true)} className="tap" style={{ fontWeight: 700, color: INK.prDeep }}>
+              {t("Ask {firstName} to share the whole test", { firstName })}
+            </button>
+          </SoftLine>
+        )}
+        <ChipRow
+          label={t("Filter")}
+          items={[{ key: "all", label: t("All") }, { key: "out", label: t("Out of range") }, { key: "changing", label: t("Changing") }, ...cats.map((c) => ({ key: c, label: panelLabel(c) }))]}
+          active={filter}
+          onChange={setFilter}
+        />
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12}, minmax(0, 1fr))`, gap: 24, alignItems: "start" }}>
+          <div className="flex flex-col" style={{ gridColumn: rail ? "1 / span 3" : "1 / span 5", gap: 24, minWidth: 0 }}>
+            {testRows.length > 0 && (
+              <section aria-label={t("Tests")} style={card}>
+                {cardTitle(t("Tests"))}
+                <div className="flex flex-col" style={{ marginTop: 8 }}>
+                  {testRows.map((tp, i) => {
+                    const inTest = markers.filter((m) => m.points.some((x) => x.panelId === tp.id));
+                    const out = inTest.filter((m) => {
+                      const pt = m.points.find((x) => x.panelId === tp.id);
+                      return pt && markerStatus(pt.value, pt.low ?? m.low, pt.high ?? m.high) === "out";
+                    }).length;
+                    return row(
+                      tp.id,
+                      i,
+                      false,
+                      () => setView({ kind: "test", panelId: tp.id, date: tp.date }),
+                      <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 36, height: 36, borderRadius: 11, background: "#F0EDF9" }}>
+                        <FileText size={17} strokeWidth={1.75} style={{ color: "#7D6BB5" }} />
+                      </span>,
+                      tp.name ?? t("Lab report"),
+                      `${dateLong(tp.date)} · ${out ? t("{n} out of range", { n: out }) : tn(inTest.length, "{n} result", "{n} results")}`,
+                      null,
+                      t("Open test, {date}", { date: dateLong(tp.date) })
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+            <section aria-label={t("All results")} style={card}>
+              <div className="flex items-start justify-between" style={{ gap: 12 }}>
+                {cardTitle(t("All results"), tn(markers.length, "{n} test", "{n} tests"))}
+                {markers.length > 1 && <RoundBtn icon={Layers} label={t("Compare")} onClick={() => setView({ kind: "compare", keys: defaultCompare(markers, sel?.key ?? markers[0].key) })} />}
+              </div>
+              <div className="flex flex-col" style={{ marginTop: 8 }}>
+                {shown.length === 0 ? (
+                  <p style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", margin: "8px 0 0" }}>{t("No results match this filter.")}</p>
+                ) : (
+                  shown.map((m, i) => {
+                    const L = m.points[m.points.length - 1];
+                    const ink = statusInk(m.status, dark);
+                    return row(
+                      m.key,
+                      i,
+                      sel?.key === m.key,
+                      () => setWebKey(m.key),
+                      <span aria-hidden className="shrink-0" style={{ width: 10, height: 10, borderRadius: 9999, background: ink }} />,
+                      m.name,
+                      null,
+                      <span className="shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: m.status === "in" || m.status === "none" ? "#241F1B" : ink, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                        {`${roundMarker(L.value)} ${m.unit}`}
+                      </span>
+                    );
+                  })
+                )}
+              </div>
+            </section>
+            <p style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", margin: 0 }}>{t("Points sit on their real test dates. Ranges are the reporting lab's; where a lab gives none, Centium's reference range for {firstName}'s sex and age is used.", { firstName })}</p>
+          </div>
+          {sel && (
+            <section aria-label={sel.name} style={{ ...card, gridColumn: rail ? "4 / span 5" : "6 / span 7" }}>
+              <MarkerTrend
+                key={sel.key}
+                embedded
+                m={sel}
+                name={name}
+                firstName={firstName}
+                clinical={lane === "clinical_overview"}
+                onBack={() => setWebKey(null)}
+                onCompare={() => setView({ kind: "compare", keys: defaultCompare(markers, sel.key) })}
+                onNote={() => openClient("notes")}
+                onCarePlan={() => openClient("care-plan")}
+                onMessage={onMessage}
+                today={today}
+              />
+            </section>
+          )}
+        </div>
+        {askSheet}
+        {toast && (
+          <p role="status" style={{ fontSize: textPx(12), color: INK.good, marginTop: 8 }}>
+            {toast}
+          </p>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
@@ -464,7 +603,9 @@ const MarkerTrend: React.FC<{
   onCarePlan: () => void;
   onMessage: () => void;
   today: string;
-}> = ({ m, name, firstName, clinical, onBack, onCompare, onNote, onCarePlan, onMessage, today }) => {
+  /** WP-CO-IN.4 web: drawn inside the chart card beside the results, so the card's own head replaces the back head. */
+  embedded?: boolean;
+}> = ({ m, name, firstName, clinical, onBack, onCompare, onNote, onCarePlan, onMessage, today, embedded }) => {
   const dark = useIsDark();
   const units = m.entry && m.entry.units.some((u) => u.unit === m.unit) ? m.entry.units.map((u) => u.unit) : [m.unit];
   const [unit, setUnit] = useState(m.unit);
@@ -523,7 +664,17 @@ const MarkerTrend: React.FC<{
 
   return (
     <>
-      <DetailHead eyebrow={`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`} title={m.name} onBack={onBack} right={<RoundBtn icon={Layers} label={t("Compare")} onClick={onCompare} />} />
+      {embedded ? (
+        <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 12 }}>
+          <div className="min-w-0">
+            <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{t("{name} · over time", { name: m.name })}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`}</p>
+          </div>
+          <RoundBtn icon={Layers} label={t("Compare")} onClick={onCompare} />
+        </div>
+      ) : (
+        <DetailHead eyebrow={`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`} title={m.name} onBack={onBack} right={<RoundBtn icon={Layers} label={t("Compare")} onClick={onCompare} />} />
+      )}
       <div className="flex items-end justify-between" style={{ gap: 10, marginBottom: 10 }}>
         <div className="min-w-0">
           <p className="flex items-baseline" style={{ gap: 6 }}>

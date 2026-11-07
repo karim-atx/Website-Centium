@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { CalendarDays, Mail, MapPin, Phone, TrendingDown, TrendingUp } from "lucide-react";
+import { CalendarDays, LogOut, Mail, MapPin, Phone, TrendingDown, TrendingUp } from "lucide-react";
 import { Toast } from "../../../components/ui/Toast";
 import { SectionHead, ListCard, type ListRow } from "../../../components/pro/client/kit";
 import { ListSkeleton, OfflineLine, ProError } from "../../../components/pro/states";
@@ -119,9 +119,23 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
     <div data-pro-business="">
       {idProp ? (
         // WP-MO.1 web: the detail pane's head (eyebrow 13/20 caps #8C8378, the name 22/30 700), no back; the list is beside it.
-        <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Business")}</p>
-          <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{name || " "}</h2>
+        // The frame puts Leave {business} beside the head (40 high, r14, the red 25% border, logOut 18, 15/24 600).
+        <div className="flex items-start" style={{ gap: 16, marginBottom: 16 }}>
+          <div className="flex-1 min-w-0">
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Business")}</p>
+            <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{name || " "}</h2>
+          </div>
+          {e?.acceptedAt && (
+            <button
+              type="button"
+              onClick={() => setLeaving(true)}
+              className="flex items-center shrink-0 hover:bg-[#FDF0EE]"
+              style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid rgba(192,57,43,0.25)", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#C0392B", whiteSpace: "nowrap" }}
+            >
+              <LogOut size={18} aria-hidden />
+              {t("Leave {business}", { business: name })}
+            </button>
+          )}
         </div>
       ) : (
         <EyebrowHead eyebrow={t("Business")} title={name || " "} onBack={back} />
@@ -189,7 +203,7 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
             </>
           )}
 
-          {e?.acceptedAt && (
+          {e?.acceptedAt && !idProp && (
             <button type="button" onClick={() => setLeaving(true)} className="tap w-full flex items-center justify-center" style={{ minHeight: 48, fontSize: textPx(15), fontWeight: 700, color: INK.hi, marginTop: 4 }}>
               {t("Leave {business}", { business: name })}
             </button>

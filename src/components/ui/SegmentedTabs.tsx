@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
+import { usePaneSpan } from "../web/paneFill";
 import { linePx, textPx } from "../../theme/textSize";
 
 export interface SegmentedTabItem {
@@ -119,7 +120,11 @@ export const SegmentedTabs: React.FC<{
   lineHeight,
 }) => {
   const dark = useIsDark();
-  const lit = dark ? undefined : light;
+  // Website viewport (ST Settings Web's tabs block): inside a spanning More / Settings pane the default tabs are the
+  // drawn ones (track #F3F3FD, 5 padding, r14, gap 4; tabs r10, 15/24 600; on: white, #7D67D9, the soft shadow;
+  // off: #8C8378). A page that sets its own light colours keeps them. False everywhere else, mobile included.
+  const paneTabs = usePaneSpan() && !light && variant === "default" && !scroll && !dark;
+  const lit = dark ? undefined : paneTabs ? { activeFill: "#FFFFFF", activeInk: "#7D67D9", idleFill: "transparent", idleInk: "#8C8378" } : light;
   const teal = variant === "teal";
   const partB = darkTone === "partB";
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -156,8 +161,8 @@ export const SegmentedTabs: React.FC<{
   const idleLabel = teal
     ? "rgb(var(--c-charcoal-soft))"
     : dark ? (partB ? "rgb(var(--c-charcoal-soft))" : idleInkDark) : idleInk;
-  const height = tabHeight ?? (teal ? 32 : size === "compact" ? 38 : 44);
-  const radius = tabRadius ?? (teal ? 9 : 12);
+  const height = paneTabs ? 30 : tabHeight ?? (teal ? 32 : size === "compact" ? 38 : 44);
+  const radius = paneTabs ? 10 : tabRadius ?? (teal ? 9 : 12);
   const pad = scroll ? scrollTabPadding ?? (teal ? "0 12px" : "0 16px") : teal ? "0 12px" : "0 6px";
 
   return (
@@ -168,6 +173,7 @@ export const SegmentedTabs: React.FC<{
         background: trackFill,
         ...(teal ? { borderRadius: 12, padding: 4, gap: 4 } : { borderRadius: 16, padding: 6, gap: 5 }),
         ...trackStyle,
+        ...(paneTabs ? { background: "#F3F3FD", borderRadius: 14, padding: 5, gap: 4 } : null),
       }}
       role="tablist"
     >
@@ -193,6 +199,7 @@ export const SegmentedTabs: React.FC<{
               ...(teal ? { lineHeight: linePx(18) } : null),
               ...(lineHeight !== undefined ? { lineHeight: linePx(lineHeight) } : null),
               fontWeight: active ? 700 : idleWeight ?? (teal ? 600 : 700),
+              ...(paneTabs ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, boxShadow: active ? "0 1px 3px rgba(36,31,27,0.10)" : "none" } : null),
             }}
           >
             {item.icon}

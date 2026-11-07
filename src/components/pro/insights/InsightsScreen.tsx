@@ -260,6 +260,12 @@ const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string;
           <SharedBadges items={badges} />
           <VitalsPanel {...props} />
         </div>
+      ) : web && tab === "biomarkers" && lane !== "full_coaching" ? (
+        // Website viewport (WP-CO-IN.4): Tests and All results beside the selected result's chart, across the page.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <SharedBadges items={badges} />
+          <BiomarkersPanel {...props} onMessage={() => void onMessage()} />
+        </div>
       ) : analysis === "targets" && tab === "nutrition" ? (
         // NU8 v3 Clinical overview: the targets read only.
         <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} />

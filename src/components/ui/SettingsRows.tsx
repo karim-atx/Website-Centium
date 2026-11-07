@@ -5,6 +5,8 @@ import { Toggle } from "./Toggle";
 import { BizRow } from "../business-more/kit";
 
 import { SettingsRowVariant } from "./settingsRowVariant";
+import { usePaneSpan } from "../web/paneFill";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Mobile v5.1 handover, MO1.8 Settings and its sub-pages (Foundations 2.3,
 // 2.4), restyled to the v6 Part B MO1.8 table (the user's colour rule
@@ -37,6 +39,8 @@ export const SettingsSection: React.FC<{
 }> = ({ label, children, className, id, labelClassName }) => {
   const labelId = useId();
   const variant = useContext(SettingsRowVariant);
+  const dark = useIsDark();
+  const inPane = usePaneSpan() && !dark;
   if (variant === "pane") {
     // WP-MO.10 (web pane): the label 13/20 700 caps #7D67D9 over the 1.5 #AEA1DC rule 8 below, 32 above (0 for the first), 8 under; the rows in a white r16 card (0 16).
     return (
@@ -61,7 +65,8 @@ export const SettingsSection: React.FC<{
       <h2
         id={labelId}
         className={clsx("section-label text-primary-accent rtl:tracking-normal", labelClassName)}
-        style={{ paddingBottom: 8 }}
+        // Website viewport (ST Settings Web / WC-SE Settings Web): in a spanning pane the label is 13/20 700 .14em #7D67D9.
+        style={inPane ? { paddingBottom: 8, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", color: "#7D67D9" } : { paddingBottom: 8 }}
       >
         {label}
       </h2>

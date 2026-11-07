@@ -302,6 +302,7 @@ const proprofile: Catalogue = {
   "You're not working at a business yet. Join one from Businesses.": "لا تعمل في نشاط تجاري بعد. انضم إلى واحد من «الأنشطة التجارية».",
   "Choose how you work above.": "اختر طريقة عملك في الأعلى.",
   "Show on your public profile": "الإظهار في ملفك العام",
+  Teams: "الفِرق",
   "Teams you joined. A business that hired you through Centium always shows.": "الفرق التي انضممت إليها. يظهر دائمًا النشاط التجاري الذي وظّفك عبر Centium.",
   "Join a business or answer an invitation": "انضم إلى نشاط تجاري أو أجب عن دعوة",
   Radius: "النطاق",

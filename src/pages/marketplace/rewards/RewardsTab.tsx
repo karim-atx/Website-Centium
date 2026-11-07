@@ -80,6 +80,13 @@ const SORT_LABEL: Record<string, string> = { featured: tk("Featured"), lowest: t
 
 type Load<T> = { state: "loading" } | { state: "done"; result: MarketResult<T> };
 
+// WC-EX.7 web (WC-EX Explore Web v4): the categories (8 of 12) and Sort / Affordable now (4) share one row, the grid's
+// 24 / 16 gaps, 16 under the tabs; on the rail each takes the full row. Mobile keeps the two rows (Passthrough).
+const FilterRowWeb: React.FC<{ rail: boolean; children: React.ReactNode }> = ({ rail, children }) => (
+  <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, columnGap: 24, rowGap: 16, alignItems: "center" }}>{children}</div>
+);
+const Passthrough: React.FC<{ rail: boolean; children: React.ReactNode }> = ({ children }) => <>{children}</>;
+
 export default function RewardsTab() {
   const { pointsSummary, refreshAchievements, user } = useApp();
   const adult = forumAccess(user.dateOfBirth) === "adult";
@@ -87,6 +94,8 @@ export default function RewardsTab() {
   const m = marketPalette(dark);
   const navigate = useNavigate();
   const reduce = useReducedMotion();
+  const { web, rail } = useWebLayout();
+  const FilterRow = web ? FilterRowWeb : Passthrough;
   const balance = pointsSummary?.balance ?? 0;
   // The balance drives "You can redeem" / "N to go" and Affordable now; read it if nothing has yet.
   const summaryKnown = !!pointsSummary;
@@ -141,12 +150,13 @@ export default function RewardsTab() {
     <div style={{ lineHeight: "normal", color: m.ink }}>
       <style>{FOCUS_CSS + ".rewards-chips{scrollbar-width:none}.rewards-chips::-webkit-scrollbar{display:none}"}</style>
 
+      <FilterRow rail={rail}>
       {/* Category chips */}
       <div
         role="group"
         aria-label={t("Reward categories")}
-        className="rewards-chips scroll-row"
-        style={{ marginTop: 10, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}
+        className={web ? undefined : "rewards-chips scroll-row"}
+        style={web ? { gridColumn: "span 8", minWidth: 0, display: "grid", gridTemplateColumns: `repeat(${REWARD_CATEGORIES.length},minmax(0,1fr))`, gap: 4, padding: 4, borderRadius: 12, background: m.subtrack } : { marginTop: 10, display: "flex", gap: 4, padding: 4, borderRadius: 12, background: m.subtrack }}
       >
         {REWARD_CATEGORIES.map((c) => {
           const on = c.key === category;
@@ -175,6 +185,7 @@ export default function RewardsTab() {
                 color: on ? m.onfill : m.subink,
                 whiteSpace: "nowrap",
                 cursor: "pointer",
+                ...(web ? { minWidth: 0, padding: "0 8px", justifyContent: "center", fontSize: 13, lineHeight: "20px", overflow: "hidden", textOverflow: "ellipsis" } : null),
               }}
             >
               {t(CATEGORY_LABEL[c.key] ?? c.label)}
@@ -184,7 +195,7 @@ export default function RewardsTab() {
       </div>
 
       {/* Sort · Affordable now */}
-      <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div style={web ? { gridColumn: rail ? "span 8" : "span 4", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 } : { marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <button
           ref={setSortEl}
           type="button"
@@ -207,6 +218,7 @@ export default function RewardsTab() {
             color: m.ink2,
             cursor: "pointer",
             whiteSpace: "nowrap",
+            ...(web ? { height: 36, paddingInline: "14px 10px", border: "1px solid rgba(36,31,27,0.11)", gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600 } : null),
           }}
         >
           {t("Sort: {sort}", { sort: sortLabel })}
@@ -232,7 +244,7 @@ export default function RewardsTab() {
           aria-checked={affordable}
           onClick={() => setAffordable((a) => !a)}
           className="hit market-focus"
-          style={{ display: "flex", alignItems: "center", gap: 8, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.ink2, background: "none", border: 0, padding: 0, cursor: "pointer", whiteSpace: "nowrap" }}
+          style={{ display: "flex", alignItems: "center", gap: 8, font: "inherit", fontSize: textPx(12.5), fontWeight: 700, color: m.ink2, background: "none", border: 0, padding: 0, cursor: "pointer", whiteSpace: "nowrap", ...(web ? { gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 } : null) }}
         >
           {t("Affordable now")}
           <span aria-hidden style={{ width: 42, height: 26, borderRadius: 999, background: affordable ? m.segactive : m.swoff, position: "relative", flexShrink: 0, transition: reduce ? undefined : "background 140ms ease" }}>
@@ -252,6 +264,7 @@ export default function RewardsTab() {
           </span>
         </button>
       </div>
+      </FilterRow>
 
       {/* Offers */}
       <div style={{ marginTop: 12 }}>

@@ -142,8 +142,14 @@ export const SwitchRow: React.FC<{ title: string; sub?: string; checked: boolean
  * `web` (WP-CA Calendar Extras Web): the label 12/16 600, 8 under it, no
  * margin (the web column spaces its sections).
  */
-export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: boolean; children: React.ReactNode }> = ({ label, first, web, children }) =>
-  web ? (
+export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: boolean; pane?: boolean; children: React.ReactNode }> = ({ label, first, web, pane, children }) =>
+  pane ? (
+    // WP-MO.5 web (WP-MO Edit Profile Web): the section label (24 0 8, 13/20 700 caps #7D67D9 over the 1.5 #AEA1DC rule), then the rows in a card.
+    <section aria-label={label}>
+      <h2 style={{ margin: "24px 0 8px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+      <PaneRowCard>{children}</PaneRowCard>
+    </section>
+  ) : web ? (
     <section aria-label={label}>
       <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", color: "#8C8378" }}>{label}</h2>
       <div>{children}</div>
@@ -154,6 +160,11 @@ export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: b
       <div>{children}</div>
     </section>
   );
+
+/** WP-MO.5 web: the card around pane rows (white, the 8% border, r16, 0 16). */
+export const PaneRowCard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "0 16px" }}>{children}</div>
+);
 
 /**
  * ui.js sRow. `right` is a node (a switch, a value) or the chevron when onClick is set.
@@ -171,8 +182,36 @@ export const SettingsRow: React.FC<{
   ariaLabel?: string;
   muted?: boolean;
   web?: boolean;
-}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted, web }) => {
+  /** WP-MO.5 web (a row in PaneRowCard): min 56, gap 12, tile 32 r10 / 18 #5F5093, the title 15/24 600 with the sub 13/20 at the end, chevron 18 #9A94B3, the 6% rule. */
+  pane?: boolean;
+}> = ({ icon: Icon, tile, title, sub, value, right, last, onClick, ariaLabel, muted, web, pane }) => {
   const dark = useIsDark();
+  if (pane) {
+    const paneBody = (
+      <>
+        {(Icon || tile) && (
+          <span className="flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: "#F0EDF9" }}>
+            {tile ?? (Icon && <Icon size={18} strokeWidth={2} aria-hidden style={{ color: "#5F5093" }} />)}
+          </span>
+        )}
+        <span className="flex-1 min-w-0 flex items-center justify-between" style={{ gap: 16 }}>
+          <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", color: muted ? "#8C8378" : "#241F1B" }}>{title}</span>
+          {(sub ?? value) !== undefined && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub ?? value}</span>}
+        </span>
+        {right ?? (onClick ? <ChevronRight size={18} strokeWidth={2} aria-hidden style={{ color: "#9A94B3", flexShrink: 0 }} /> : null)}
+      </>
+    );
+    const paneStyle: React.CSSProperties = { minHeight: 56, gap: 12, margin: "0 -16px", padding: "0 16px", width: "calc(100% + 32px)", boxSizing: "border-box", borderBottom: last ? "none" : "1px solid rgba(36,31,27,0.06)" };
+    return onClick ? (
+      <button type="button" onClick={onClick} aria-label={ariaLabel} className="flex items-center text-start hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={paneStyle}>
+        {paneBody}
+      </button>
+    ) : (
+      <div className="flex items-center" style={paneStyle}>
+        {paneBody}
+      </div>
+    );
+  }
   if (web) {
     const webBody = (
       <>

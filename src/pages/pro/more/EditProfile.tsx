@@ -23,8 +23,10 @@ import {
   Globe2,
   Store,
   Music2,
+  Eye,
 } from "lucide-react";
-import { SettingsRow, SettingsSection } from "../../../components/pro/calendar/calendarFields";
+import { PaneRowCard, SettingsRow, SettingsSection } from "../../../components/pro/calendar/calendarFields";
+import { usePaneSpan } from "../../../components/web/paneFill";
 import { FootNote, HeadLink, LockTile, StateLine, SubPage } from "../../../components/pro/profile/kit";
 import { NameSheet, HandleSheet, PhotoSourceSheet, TypeChangeSheet, TypeLockedPopup, usePhotoPicker } from "../../../components/pro/profile/ProfileSheets";
 import { ListingDetailsSheet, ProfilePlaylistSheet, SpecialtiesSheet } from "../../../components/pro/profile/EditSheets";
@@ -72,6 +74,9 @@ function photoAndCoverSub(photo: boolean, cover: boolean): string {
 
 export default function EditProfile() {
   const navigate = useNavigate();
+  // WP-MO.5 web: in the spanning More pane the rows sit in cards (PaneRowCard) with the value at the end.
+  const inPane = usePaneSpan();
+  const RowGroup = inPane ? PaneRowCard : "div";
   const { user, authUserId } = useApp();
   const { cv, setCv, error: cvError, reload: reloadCv, userId } = useMyCv();
   const { facts, setFacts, error: factsError, offline, reload } = useProfileFacts();
@@ -134,7 +139,22 @@ export default function EditProfile() {
   const words = wordCount(facts?.bio);
 
   return (
-    <SubPage title={t("Edit public profile")} subtitle={t("Each section opens its own sheet")} right={<HeadLink label={t("Preview")} onClick={() => navigate("/app/more/public-profile")} />}>
+    <SubPage
+      title={t("Edit public profile")}
+      subtitle={t("Each section opens its own sheet")}
+      paneEyebrow={inPane ? t("Public profile") : undefined}
+      right={
+        inPane ? (
+          // The frame's Preview: 40 high, r14, the 12% border, eye 18, 15/24 600 #5F5093.
+          <button type="button" onClick={() => navigate("/app/more/public-profile")} className="flex items-center shrink-0 hover:bg-[#F0EDF9]" style={{ height: 40, padding: "0 16px", borderRadius: 14, border: "1px solid rgba(36,31,27,0.12)", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" }}>
+            <Eye size={18} aria-hidden />
+            {t("Preview")}
+          </button>
+        ) : (
+          <HeadLink label={t("Preview")} onClick={() => navigate("/app/more/public-profile")} />
+        )
+      }
+    >
       {offline && facts && <OfflineLine />}
       {failed ? (
         <div style={{ marginTop: 12 }}>
@@ -152,37 +172,37 @@ export default function EditProfile() {
         </div>
       ) : (
         <>
-          <div>
-            <SettingsRow icon={ImageIcon} title={t("Photo and cover")} sub={photoAndCoverSub(!!user.avatarUrl, !!cover.url)} onClick={() => setSheet("photo")} />
-            <SettingsRow icon={UserRound} title={t("Name")} sub={user.firstName || t("Add your name")} onClick={() => setSheet("name")} />
-            <SettingsRow icon={Briefcase} title={t("Professional type")} sub={typeLabel(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={t("Professional type, {v}. Locked", { v: typeLabel(user.professionalSubtype) })} />
-            <SettingsRow icon={Sparkles} title={t("Specialties")} sub={facts && facts.specialties.length > 0 ? t("{n} selected", { n: facts.specialties.length }) : t("None yet")} onClick={() => setSheet("specialties")} />
-            <SettingsRow icon={GraduationCap} title={t("Credentials")} sub={cv && cv.licences.length > 0 ? tn(cv.licences.length, "{n} certification", "{n} certifications") : t("None yet")} onClick={() => navigate("/app/more/credentials")} />
-            <SettingsRow icon={ShieldCheck} title={t("Licence")} sub={licenceSub} onClick={() => setCvView({ kind: "licence", entry: lic?.primary ?? null })} />
-            <SettingsRow icon={BriefcaseBusiness} title={t("Experience")} sub={cv && cv.experience.length > 0 ? tn(years, "{n} year", "{n} years") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "experience" })} />
-            <SettingsRow icon={AlignLeft} title={t("Bio")} sub={words > 0 ? tn(words, "{n} word", "{n} words") : t("Not written yet")} onClick={() => setSheet("bio")} />
-            <SettingsRow icon={Tag} title={t("Services and prices")} sub={counts ? (counts.services > 0 ? tn(counts.services, "{n} service", "{n} services") : t("None yet")) : undefined} onClick={() => navigate("/app/more/services")} />
-            <SettingsRow icon={MapPin} title={t("Where you work")} sub={whereSub} onClick={() => navigate("/app/more/where-you-work")} />
-            <SettingsRow icon={CalendarDays} title={t("Availability")} sub={t("From your calendar")} onClick={() => navigate("/app/pro/calendar/availability")} last />
-          </div>
+          <RowGroup>
+            <SettingsRow pane={inPane} icon={ImageIcon} title={t("Photo and cover")} sub={photoAndCoverSub(!!user.avatarUrl, !!cover.url)} onClick={() => setSheet("photo")} />
+            <SettingsRow pane={inPane} icon={UserRound} title={t("Name")} sub={user.firstName || t("Add your name")} onClick={() => setSheet("name")} />
+            <SettingsRow pane={inPane} icon={Briefcase} title={t("Professional type")} sub={typeLabel(user.professionalSubtype)} right={<LockTile />} onClick={() => setSheet("locked")} ariaLabel={t("Professional type, {v}. Locked", { v: typeLabel(user.professionalSubtype) })} />
+            <SettingsRow pane={inPane} icon={Sparkles} title={t("Specialties")} sub={facts && facts.specialties.length > 0 ? t("{n} selected", { n: facts.specialties.length }) : t("None yet")} onClick={() => setSheet("specialties")} />
+            <SettingsRow pane={inPane} icon={GraduationCap} title={t("Credentials")} sub={cv && cv.licences.length > 0 ? tn(cv.licences.length, "{n} certification", "{n} certifications") : t("None yet")} onClick={() => navigate("/app/more/credentials")} />
+            <SettingsRow pane={inPane} icon={ShieldCheck} title={t("Licence")} sub={licenceSub} onClick={() => setCvView({ kind: "licence", entry: lic?.primary ?? null })} />
+            <SettingsRow pane={inPane} icon={BriefcaseBusiness} title={t("Experience")} sub={cv && cv.experience.length > 0 ? tn(years, "{n} year", "{n} years") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "experience" })} />
+            <SettingsRow pane={inPane} icon={AlignLeft} title={t("Bio")} sub={words > 0 ? tn(words, "{n} word", "{n} words") : t("Not written yet")} onClick={() => setSheet("bio")} />
+            <SettingsRow pane={inPane} icon={Tag} title={t("Services and prices")} sub={counts ? (counts.services > 0 ? tn(counts.services, "{n} service", "{n} services") : t("None yet")) : undefined} onClick={() => navigate("/app/more/services")} />
+            <SettingsRow pane={inPane} icon={MapPin} title={t("Where you work")} sub={whereSub} onClick={() => navigate("/app/more/where-you-work")} />
+            <SettingsRow pane={inPane} icon={CalendarDays} title={t("Availability")} sub={t("From your calendar")} onClick={() => navigate("/app/pro/calendar/availability")} last />
+          </RowGroup>
 
-          <SettingsSection label={t("Also on your profile")}>
-            <SettingsRow icon={Quote} title={t("Headline")} sub={cv?.profile.headline || t("Not written yet")} onClick={() => setCvView({ kind: "headline" })} />
-            <SettingsRow icon={GraduationCap} title={t("Qualifications")} sub={cv && cv.education.length > 0 ? tn(cv.education.length, "{n} qualification", "{n} qualifications") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "education" })} />
-            <SettingsRow icon={Languages} title={t("Skills and languages")} sub={cv ? [cv.profile.skills.length ? tn(cv.profile.skills.length, "{n} skill", "{n} skills") : null, cv.languages.length ? tn(cv.languages.length, "{n} language", "{n} languages") : null].filter(Boolean).join(" · ") || t("None yet") : undefined} onClick={() => setCvView({ kind: "skills" })} />
-            <SettingsRow icon={Award} title={t("Awards")} sub={cv && cv.awards.length ? t("{n} added", { n: cv.awards.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "awards" })} />
-            <SettingsRow icon={BookOpen} title={t("Publications")} sub={cv && cv.publications.length ? t("{n} added", { n: cv.publications.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "publications" })} />
-            <SettingsRow icon={LinkIcon} title={t("Links")} sub={cv && cv.links.length ? t("{n} added", { n: cv.links.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "links" })} />
-            <SettingsRow
+          <SettingsSection pane={inPane} label={t("Also on your profile")}>
+            <SettingsRow pane={inPane} icon={Quote} title={t("Headline")} sub={cv?.profile.headline || t("Not written yet")} onClick={() => setCvView({ kind: "headline" })} />
+            <SettingsRow pane={inPane} icon={GraduationCap} title={t("Qualifications")} sub={cv && cv.education.length > 0 ? tn(cv.education.length, "{n} qualification", "{n} qualifications") : t("None yet")} onClick={() => setCvView({ kind: "list", key: "education" })} />
+            <SettingsRow pane={inPane} icon={Languages} title={t("Skills and languages")} sub={cv ? [cv.profile.skills.length ? tn(cv.profile.skills.length, "{n} skill", "{n} skills") : null, cv.languages.length ? tn(cv.languages.length, "{n} language", "{n} languages") : null].filter(Boolean).join(" · ") || t("None yet") : undefined} onClick={() => setCvView({ kind: "skills" })} />
+            <SettingsRow pane={inPane} icon={Award} title={t("Awards")} sub={cv && cv.awards.length ? t("{n} added", { n: cv.awards.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "awards" })} />
+            <SettingsRow pane={inPane} icon={BookOpen} title={t("Publications")} sub={cv && cv.publications.length ? t("{n} added", { n: cv.publications.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "publications" })} />
+            <SettingsRow pane={inPane} icon={LinkIcon} title={t("Links")} sub={cv && cv.links.length ? t("{n} added", { n: cv.links.length }) : t("None yet")} onClick={() => setCvView({ kind: "list", key: "links" })} />
+            <SettingsRow pane={inPane}
               icon={HandHeart}
               title={t("Volunteering")}
               sub={cv ? `${cv.volunteering.length ? `${t("{n} added", { n: cv.volunteering.length })} · ` : ""}${cv.profile.showVolunteering ? t("Shown to clients") : t("Hidden from clients")}` : undefined}
               onClick={() => setCvView({ kind: "list", key: "volunteering" })}
             />
-            <SettingsRow icon={Globe2} title={t("Details and links")} sub={t("Specialty, location, website and socials")} onClick={() => setSheet("details")} />
-            <SettingsRow icon={Music2} title={t("Playlist")} sub={playlist === undefined ? undefined : playlistService ? t("{service} · shown on your profile", { service: SERVICE_LABEL[playlistService] }) : t("Optional. Spotify, Apple Music or YouTube Music")} onClick={() => setSheet("playlist")} />
-            <SettingsRow icon={AtSign} title={t("Your handle")} sub={facts?.handle ? profileUrl(facts.handle) : t("Choose a handle for your profile link")} onClick={() => setSheet("handle")} />
-            <SettingsRow
+            <SettingsRow pane={inPane} icon={Globe2} title={t("Details and links")} sub={t("Specialty, location, website and socials")} onClick={() => setSheet("details")} />
+            <SettingsRow pane={inPane} icon={Music2} title={t("Playlist")} sub={playlist === undefined ? undefined : playlistService ? t("{service} · shown on your profile", { service: SERVICE_LABEL[playlistService] }) : t("Optional. Spotify, Apple Music or YouTube Music")} onClick={() => setSheet("playlist")} />
+            <SettingsRow pane={inPane} icon={AtSign} title={t("Your handle")} sub={facts?.handle ? profileUrl(facts.handle) : t("Choose a handle for your profile link")} onClick={() => setSheet("handle")} />
+            <SettingsRow pane={inPane}
               icon={Store}
               title={t("Public listing")}
               sub={facts?.listedPublicly ? t("Listed in Explore") : t("Not listed")}

@@ -6,6 +6,7 @@ import { useProSubtype } from "../../../hooks/useProSubtype";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { SubPage } from "../../../components/pro/profile/kit";
+import { usePaneSpan } from "../../../components/web/paneFill";
 import { SegmentedTabs } from "../../../components/ui/SegmentedTabs";
 import { PinnedCta } from "../../../components/ui/PinnedCta";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
@@ -70,6 +71,14 @@ type Menu = { kind: "programme" | "meal" | "note"; id: string; name: string; anc
  * The ⋮ offers Edit and Delete (with a confirmation), the actions each home
  * screen already has. ?tab= picks the opening tab.
  */
+// WP-MO.16 web: the Templates frame's own tabs (track #F5F5F6, 4 padding, r12; tabs r9; on white with #5F5093).
+const TPL_TABS = {
+  light: { activeFill: "#FFFFFF", activeInk: "#5F5093", idleFill: "transparent", idleInk: "#5B5349" },
+  trackStyle: { background: "#F5F5F6", borderRadius: 12, padding: 4, gap: 4 },
+  tabRadius: 9,
+  idleWeight: 600,
+};
+
 export default function Templates() {
   const navigate = useNavigate();
   const { lane } = useProSubtype();
@@ -144,6 +153,7 @@ export default function Templates() {
   const openProgramme = (id: string) => navigate(`${PRO_ROUTES.library}/programmes?view=template&id=${encodeURIComponent(id)}`);
   const openMeal = (id: string) => lane && navigate(mealPlansHref(lane, "plans", { plan: id }));
 
+  const inPane = usePaneSpan();
   const newTemplate = () => {
     setError(null);
     if (tab === "programmes") setEditor(true);
@@ -228,10 +238,11 @@ export default function Templates() {
 
   const offlineLine = (tab === "meal-plans" && meals.list && meals.state === "offline") || (tab === "notes" && notes.list && notes.state === "offline");
 
-  return (
-    <SubPage title={t("Templates")} subtitle={t("Reuse what works")} bottomPad={172}>
+  const canAdd = !!tab && tab !== "referrals";
+  const content = (
+    <>
       {tabs.length > 1 && tab && (
-        <SegmentedTabs className="mb-[14px]" items={tabs.map((tab) => ({ key: tab, label: t(TAB_LABEL[tab]) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={38} labelSize={12} />
+        <SegmentedTabs className={inPane ? "mb-5" : "mb-[14px]"} items={tabs.map((tab) => ({ key: tab, label: t(TAB_LABEL[tab]) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={inPane ? 32 : 38} labelSize={inPane ? 15 : 12} {...(inPane ? TPL_TABS : null)} />
       )}
       {offlineLine && <OfflineLine />}
       {error && (
@@ -240,7 +251,7 @@ export default function Templates() {
         </p>
       )}
       {body}
-      {tab && tab !== "referrals" && <PinnedCta primary={{ label: t("New template"), icon: <Plus size={15} strokeWidth={2} aria-hidden />, onClick: newTemplate }} />}
+      {canAdd && !inPane && <PinnedCta primary={{ label: t("New template"), icon: <Plus size={15} strokeWidth={2} aria-hidden />, onClick: newTemplate }} />}
 
       <TemplateEditor
         open={editor}
@@ -305,6 +316,32 @@ export default function Templates() {
         }}
       />
       <TopToast icon={CircleCheck} text={toast} onDone={() => setToast(null)} />
+    </>
+  );
+
+  // WP-MO.16 web (WP-MO Templates Web): the Templates kicker over Reuse what works (28/36), New template in the
+  // header (40 high, r14, #9A8CD6, plus 18, 15/24 600), 20 above the tabs; no pinned button.
+  if (inPane)
+    return (
+      <div style={{ paddingBottom: 32 }}>
+        <div className="flex items-end justify-between" style={{ gap: 16, marginBottom: 20 }}>
+          <div className="flex-1 min-w-0">
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Templates")}</p>
+            <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("Reuse what works")}</h1>
+          </div>
+          {canAdd && (
+            <button type="button" onClick={newTemplate} className="flex items-center shrink-0 hover:opacity-90" style={{ height: 40, padding: "0 18px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: "#9A8CD6", color: "#FFFFFF", whiteSpace: "nowrap" }}>
+              <Plus size={18} strokeWidth={2} aria-hidden />
+              {t("New template")}
+            </button>
+          )}
+        </div>
+        {content}
+      </div>
+    );
+  return (
+    <SubPage title={t("Templates")} subtitle={t("Reuse what works")} bottomPad={172}>
+      {content}
     </SubPage>
   );
 }
