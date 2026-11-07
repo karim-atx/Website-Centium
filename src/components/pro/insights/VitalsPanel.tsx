@@ -32,6 +32,8 @@ import {
   type ChartRange,
 } from "./insightsModel";
 import { ChipRow, InsightCard, NotShared, StatBoxes, type StatBox } from "./parts";
+import { InsightsCardWeb, InsightsGridWeb, StatBoxesWeb } from "./webCard";
+import { useSpan } from "./webCardContext";
 import { readGate, useRead, type ReadState } from "./reads";
 import { PAGE_RANGE_DAYS } from "./panelProps";
 import type { PanelProps } from "./panelProps";
@@ -117,16 +119,19 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
   const ask = (c: "health_metrics" | "weight" | "blood_pressure") => ({ asked: p.asked.includes(c), onAsk: () => p.onAsk(c), askLabel: t("Ask {firstName} to share", { firstName }) });
   const shift = (r: ChartRange) => onRange(r);
   const winStart = addDays(today, -(PAGE_RANGE_DAYS[pageRange] - 1));
+  // Website viewport (WP-CO-IN.3, .8): each view is one drawn card, its chart (200 high), its stat boxes 3 across and its insight inside.
+  const wrapWeb = (view: React.ReactNode) => (p.webPage && !(sub === "bp" && bpOn) && sub !== "sleep" ? <InsightsCardWeb col="1 / -1" plotPx={200} statCols={3} legendBelow>{view}</InsightsCardWeb> : view);
 
   return (
     <>
       {(bp.offline || vit.offline || weight.offline || sleep.offline) && <OfflineLine />}
       <ChipRow label={t("Vitals")} items={subs} active={sub} onChange={(k) => setChosen(k as Sub)} />
+      {wrapWeb(<>
       {sub === "bp" &&
         (!bpOn ? (
           <NotShared icon={HeartPulse} title={t("No blood pressure shared yet")} line={t("This fills in when {firstName} shares blood pressure with you.", { firstName })} {...ask("blood_pressure")} />
         ) : (
-          <BpView readings={bp.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} />
+          <BpView readings={bp.data ?? []} range={range} onRange={shift} today={today} winStart={winStart} web={p.webPage ? { period: pageRange === "today" ? t("Today") : pageRange === "week" ? t("This week") : t("This month") } : undefined} />
         ))}
       {sub === "hr" &&
         (!hmOn ? (
@@ -160,6 +165,7 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
       {sub === "steps" && (readGate(vit) ?? <SimpleView kind="steps" rows={stepRows(vit.data ?? [], daily.data ?? [])} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "water" && (readGate(vit) ?? <SimpleView kind="water" rows={(vit.data ?? []).filter((r) => r.type === "water")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
       {sub === "calories" && (readGate(vit) ?? <SimpleView kind="calories" rows={(vit.data ?? []).filter((r) => r.type === "calories_burned")} range={range} onRange={shift} today={today} winStart={winStart} firstName={firstName} />)}
+      </>)}
     </>
   );
 };
@@ -168,8 +174,9 @@ export const VitalsPanel: React.FC<PanelProps> = (p) => {
 // Blood pressure
 // ---------------------------------------------------------------------------
 
-const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string }> = ({ readings, range, onRange, today, winStart }) => {
+const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; onRange: (r: ChartRange) => void; today: string; winStart: string; web?: { period: string } }> = ({ readings, range, onRange, today, winStart, web }) => {
   const dark = useIsDark();
+  const span = useSpan();
   const b = bucketsFor(range, today);
   const rows = readings.map((r) => ({ day: localDay(r.recordedAt), systolic: r.systolic, diastolic: r.diastolic }));
   const agg = bpByBucket(b, rows);
@@ -209,8 +216,7 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
       </>
     );
   }
-  return (
-    <>
+  const chart = (
       <ProChart
         title={t("Blood pressure")}
         question={latestCat === "stage1" || latestCat === "stage2" ? t("Is blood pressure coming down out of Stage {n}?", { n: latestCat === "stage1" ? 1 : 2 }) : t("Is blood pressure staying within a healthy range?")}
@@ -254,6 +260,26 @@ const BpView: React.FC<{ readings: BloodPressureReading[]; range: ChartRange; on
         }
         summary={avg ? tn(inWin.length, "Blood pressure {value} mmHg on average, {n} readings.", "Blood pressure {value} mmHg on average, {n} readings.", { value: `${avg.systolic}/${avg.diastolic}` }) : undefined}
       />
+  );
+  // Website viewport (WP-CO-IN.3, WP-CO Insights Web v2 vitals): the chart 8 over three rows beside one card per box 4
+  // (This week / Normal band / Time of day; rail 5 | 3).
+  if (web) {
+    const W4 = span("9 / span 4", "6 / span 3");
+    const titles = [web.period, t("Normal band"), t("Time of day")];
+    return (
+      <InsightsGridWeb>
+        <InsightsCardWeb col={span("1 / span 8", "1 / span 5")} row="1 / span 3" plotPx={340}>{chart}</InsightsCardWeb>
+        {boxes.map((box, i) => (
+          <InsightsCardWeb key={box.label} col={W4} row={String(i + 1)} title={titles[i]}>
+            <StatBoxesWeb boxes={[box]} cols={1} />
+          </InsightsCardWeb>
+        ))}
+      </InsightsGridWeb>
+    );
+  }
+  return (
+    <>
+      {chart}
       <StatBoxes boxes={boxes} />
     </>
   );

@@ -13,6 +13,8 @@ import { addDays, bucketLabel, bucketTitle, bucketsFor, calorieBand, fewestMeals
 import { InsightCard, InsightLine, NotShared, type PickerClient } from "./parts";
 import { readGate, useRead } from "./reads";
 import type { PanelProps } from "./panelProps";
+import { InsightsCardWeb, InsightsGridWeb, LinkListWeb, StreakWeb } from "./webCard";
+import { useSpan } from "./webCardContext";
 import { appLocale } from "../../../i18n/format";
 import { t, tn } from "../../../i18n/core";
 
@@ -70,6 +72,7 @@ function byDay(entries: FoodEntry[]): Map<string, DayAgg> {
 
 export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onTargets?: () => void }> = (p) => {
   const { clientId, firstName, access, range, onRange, today, onAnalysis } = p;
+  const cols = useSpan();
   const on = access.has("food_diary");
   const span = RANGE_DAYS[range];
   const since = addDays(today, -Math.max(span * 2, 90));
@@ -132,12 +135,7 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
   const timed = (food.data ?? []).filter((e) => e.eatenAt && e.day >= b[0].start);
   const late = timed.filter((e) => localDay(e.createdAt) > e.day);
 
-  return (
-    <>
-      {food.offline && <OfflineLine />}
-      {p.lane === "clinical_overview" && <ReadOnlyLine text={t("Read only · from what {firstName} shares", { firstName })} />}
-      <SectionHead label={t("Logging")} />
-      <LeafStreak title={t("Logging streak")} current={streak.current} best={streak.best} label={t("days logged")} days={streak.days} />
+  const consistency = (
       <ProChart
         title={t("Logging consistency")}
         question={t("Can the food diary be trusted day to day?")}
@@ -156,24 +154,8 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
         insight={fewestMealsLine(inRange.map((d) => ({ day: d.day, meals: d.meals }))) ?? undefined}
         summary={tn(RANGE_DAYS[range], "Logged on {logged} of {n} day.", "Logged on {logged} of {n} days.", { logged: inRange.length })}
       />
-      {timed.length > 0 && (
-        <InsightCard title={t("When {firstName} logs", { firstName })}>
-          <div className="relative" style={{ height: 34, borderRadius: 10, background: INK.soft }} role="img" aria-label={tn(timed.length, "{n} entry by the time it was eaten", "{n} entries by the time they were eaten")}>
-            {timed.map((e, i) => {
-              const m = localMinute(e.eatenAt as string);
-              const h = m / 60 < 6 ? m / 60 + 24 : m / 60;
-              const isLate = localDay(e.createdAt) > e.day;
-              return <span key={i} className="absolute" style={{ top: 11, insetInlineStart: `calc(${(((h - 6) / 18) * 100).toFixed(1)}% - 6px)`, width: 12, height: 12, borderRadius: 9999, background: isLate ? INK.hi : INK.pr, opacity: 0.85 }} />;
-            })}
-          </div>
-          <div aria-hidden className="flex justify-between" style={{ fontSize: textPx(9.5), color: INK.chT, marginTop: 4 }}>
-            {[6, 12, 18, 24].map((h) => (
-              <span key={h}>{hourLabel12(h % 24)}</span>
-            ))}
-          </div>
-          {late.length > 0 && <InsightLine top={8}>{tn(timed.length, "{late} of {n} entry was added a day or more after it was eaten (red).", "{late} of {n} entries were added a day or more after they were eaten (red).", { late: late.length })}</InsightLine>}
-        </InsightCard>
-      )}
+  );
+  const intake = (
       <ProChart
         title={t("Intake vs targets")}
         question={t("Is {firstName} eating to the care plan?", { firstName })}
@@ -209,6 +191,58 @@ export const NutritionPanel: React.FC<PanelProps & { onAnalysis: () => void; onT
             : t("Calories {kcal} kcal a day on logged days.", { kcal: inRange.length ? fmt(inRange.reduce((a, d) => a + d.kcal, 0) / inRange.length) : 0 })
         }
       />
+  );
+
+  // Website viewport (WP-CO-IN.2, WP-CO Insights Web v2 nutrition): Intake vs targets 8 over three rows beside
+  // Logging streak, Logging consistency and the Nutrient analysis and targets rows 4 (rail 5 | 3).
+  if (p.webPage) {
+    const W4 = cols("9 / span 4", "6 / span 3");
+    return (
+      <InsightsGridWeb>
+        {food.offline && <div style={{ gridColumn: "1 / -1" }}><OfflineLine /></div>}
+        <InsightsCardWeb col={cols("1 / span 8", "1 / span 5")} row="1 / span 3" plotPx={360}>{intake}</InsightsCardWeb>
+        <InsightsCardWeb col={W4} row="1" title={t("Logging streak")}>
+          <StreakWeb current={streak.current} label={t("days logged")} bestLine={tn(streak.best, "Best {n} day · last 14 days shown", "Best {n} days · last 14 days shown")} done={new Set(logged)} today={today} />
+        </InsightsCardWeb>
+        <InsightsCardWeb col={W4} row="2" plotPx={110}>{consistency}</InsightsCardWeb>
+        <InsightsCardWeb col={W4} row="3" title={t("Nutrient analysis and targets")}>
+          <LinkListWeb
+            rows={[
+              { key: "na", icon: BarChart3, title: t("Nutrient analysis"), meta: p.lane === "clinical_overview" ? t("Macros and intake, read only") : t("Macros, intake and meal timing"), onClick: onAnalysis },
+              ...(p.onTargets ? [{ key: "nt", icon: Target, title: t("Nutrition targets"), meta: t("Read only"), onClick: p.onTargets }] : []),
+            ]}
+          />
+        </InsightsCardWeb>
+      </InsightsGridWeb>
+    );
+  }
+
+  return (
+    <>
+      {food.offline && <OfflineLine />}
+      {p.lane === "clinical_overview" && <ReadOnlyLine text={t("Read only · from what {firstName} shares", { firstName })} />}
+      <SectionHead label={t("Logging")} />
+      <LeafStreak title={t("Logging streak")} current={streak.current} best={streak.best} label={t("days logged")} days={streak.days} />
+      {consistency}
+      {timed.length > 0 && (
+        <InsightCard title={t("When {firstName} logs", { firstName })}>
+          <div className="relative" style={{ height: 34, borderRadius: 10, background: INK.soft }} role="img" aria-label={tn(timed.length, "{n} entry by the time it was eaten", "{n} entries by the time they were eaten")}>
+            {timed.map((e, i) => {
+              const m = localMinute(e.eatenAt as string);
+              const h = m / 60 < 6 ? m / 60 + 24 : m / 60;
+              const isLate = localDay(e.createdAt) > e.day;
+              return <span key={i} className="absolute" style={{ top: 11, insetInlineStart: `calc(${(((h - 6) / 18) * 100).toFixed(1)}% - 6px)`, width: 12, height: 12, borderRadius: 9999, background: isLate ? INK.hi : INK.pr, opacity: 0.85 }} />;
+            })}
+          </div>
+          <div aria-hidden className="flex justify-between" style={{ fontSize: textPx(9.5), color: INK.chT, marginTop: 4 }}>
+            {[6, 12, 18, 24].map((h) => (
+              <span key={h}>{hourLabel12(h % 24)}</span>
+            ))}
+          </div>
+          {late.length > 0 && <InsightLine top={8}>{tn(timed.length, "{late} of {n} entry was added a day or more after it was eaten (red).", "{late} of {n} entries were added a day or more after they were eaten (red).", { late: late.length })}</InsightLine>}
+        </InsightCard>
+      )}
+      {intake}
       {analysisRow}
     </>
   );

@@ -85,13 +85,16 @@ export interface InsightsScreenProps {
 
 export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, clients, clientId, onClient, tab, onTab, onBack, loading }) => {
   const navigate = useNavigate();
-  const [range, setRange] = useState<PageRange>("month");
-  const [chart, setChart] = useState<Record<InsightsTab, ChartRange>>({ activity: "M", nutrition: "M", vitals: "M", biomarkers: "M" });
+  // Website viewport (WP-CO-IN): the Insights page (not the client page's Client insights, which keeps its column) gets the page header, the equal tabs and its cards across the page; it opens on Week, as drawn.
+  const web = useIsWeb() && !onBack;
+  const [range, setRange] = useState<PageRange>(web ? "week" : "month");
+  const [chart, setChart] = useState<Record<InsightsTab, ChartRange>>(() => {
+    const c = web ? "W" : "M";
+    return { activity: c, nutrition: c, vitals: c, biomarkers: c };
+  });
   const patient = lane === "clinical_overview";
   const tabs = tabsForLane(lane);
   const allPatients = patient && tab === "nutrition";
-  // Website viewport (WP-CO-IN): the Insights page (not the client page's Client insights, which keeps its column) gets the page header, the equal tabs and its cards across the page.
-  const web = useIsWeb() && !onBack;
   const { rail } = useWebLayout();
 
   // Hold a real client whenever "All patients" isn't on offer.
@@ -232,6 +235,7 @@ const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string;
     asked,
     onAsk: (c) => void onAsk(c),
     openClient: (t) => navigate(proClientPath(clientId, t)),
+    webPage: web,
   };
   const badges = TAB_CATS[tab].map((c) => ({ label: t(CATEGORY_LABEL[c] ?? c), on: c === "lab_results" ? access.has(c) || (access.access?.resultSharedCount ?? 0) > 0 : access.has(c) }));
 
@@ -254,16 +258,18 @@ const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string;
             </ClientTabBodyWeb>
           </GroupsOpenContext.Provider>
         </div>
-      ) : web && tab === "vitals" ? (
-        // Website viewport (WP-CO-IN.8): the chips and one full-width chart per view, its stat boxes and insight under it.
+      ) : web && (tab === "vitals" || tab === "activity" || tab === "nutrition") ? (
+        // Website viewport (WP-CO-IN.1, .2, .8): across the page, the panel draws the frames' cards (Activity and Nutrition in their grid; Vitals one card per view, its chart, stat boxes and insight).
         <div style={{ columnSpan: "all", display: "block" }}>
-          <SharedBadges items={badges} />
-          <VitalsPanel {...props} />
+          <SharedBadges items={badges} web />
+          {tab === "activity" && <ActivityPanel {...props} />}
+          {tab === "nutrition" && <NutritionPanel {...props} onAnalysis={() => setAnalysis("analysis")} onTargets={lane === "clinical_overview" ? () => setAnalysis("targets") : undefined} />}
+          {tab === "vitals" && <VitalsPanel {...props} />}
         </div>
       ) : web && tab === "biomarkers" && lane !== "full_coaching" ? (
         // Website viewport (WP-CO-IN.4): Tests and All results beside the selected result's chart, across the page.
         <div style={{ columnSpan: "all", display: "block" }}>
-          <SharedBadges items={badges} />
+          <SharedBadges items={badges} web />
           <BiomarkersPanel {...props} onMessage={() => void onMessage()} />
         </div>
       ) : analysis === "targets" && tab === "nutrition" ? (

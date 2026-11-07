@@ -8,6 +8,7 @@ import { t, tx, isRtl } from "../../i18n/core";
 import { WebCopy } from "../web/WebCopy";
 import { webScrubHint } from "../web/webScrubHint";
 import { useIsWeb } from "../web/useWebLayout";
+import { useInsightsWebCard } from "./insights/webCardContext";
 
 /**
  * Release 3 · ProChart, the one chart standard (HANDOVER e: "Range W M 3M Y,
@@ -135,8 +136,8 @@ export interface ProChartProps {
   goalLegend?: string;
 }
 
-const W = 320;
-const PAD = 10;
+const W0 = 320;
+const PAD0 = 10;
 
 /** Points to a smooth path (horizontal-tangent cubic segments, as wtChart14). */
 function smoothPath(pts: [number, number][]): string {
@@ -187,7 +188,11 @@ export const ProChart: React.FC<ProChartProps> = ({
   const dark = theme === "dark";
   const svgRef = useRef<SVGSVGElement | null>(null);
   const [svgW, setSvgW] = useState(0);
-  const fixed = web && !!webPlotPx;
+  // Website viewport (WP-CO-IN): inside an Insights page card the chart is flat, at the card's plot height, with the card's title and legend sizes.
+  const wc = useInsightsWebCard();
+  const card = web && !!wc;
+  const plotPx = webPlotPx ?? (card ? wc!.plotPx : undefined);
+  const fixed = web && !!plotPx;
   useEffect(() => {
     const el = svgRef.current;
     if (!fixed || !el) return;
@@ -195,8 +200,13 @@ export const ProChart: React.FC<ProChartProps> = ({
     ro.observe(el);
     return () => ro.disconnect();
   }, [fixed]);
-  const H = fixed && svgW > 0 ? Math.round((W * webPlotPx!) / svgW) : height;
+  // In an Insights page card the drawing is 1:1 with the screen (the measured width, the plot height), so strokes and labels keep their size.
+  const W = card && svgW > 0 ? Math.round(svgW) : W0;
+  const H = card && svgW > 0 ? plotPx! : fixed && svgW > 0 ? Math.round((W0 * plotPx!) / svgW) : height;
+  const sz = (n: number) => (card ? Math.round(n * 1.4) : n);
   const n = Math.max(2, x.length);
+  // In an Insights page card the points sit at the slot centres, so a bar never runs past the plot.
+  const PAD = card && svgW > 0 ? W / (2 * n) : PAD0;
   const [off, setOff] = useState<Set<string>>(() => new Set(series.filter((s) => s.hidden).map((s) => s.key)));
   const [bandOff, setBandOff] = useState(false);
   const [bandsOff, setBandsOff] = useState(false);
@@ -252,9 +262,50 @@ export const ProChart: React.FC<ProChartProps> = ({
   const bw = ((W - 2 * PAD) / n) * 0.56;
   const tipLines = tip ? tip.lines.length : 0;
 
+  const legend = (series.some((s) => !s.noLegend) || band || (bands && bandsLabel) || goalLegend) && (
+    <div className="flex flex-wrap" style={card ? (wc!.legendBelow ? { gap: "4px 14px", marginTop: 8 } : { gap: "4px 14px", justifyContent: "flex-end", flex: "none", maxWidth: "60%" }) : { gap: 6, marginTop: 8 }}>
+      {series
+        .filter((se) => !se.noLegend)
+        .map((se) => {
+          const on = !off.has(se.key);
+          const sw = se.swatch ?? (se.type === "bar" ? "bar" : se.type === "points" ? "hollow" : se.type === "range" ? "fill" : se.type === "dumbbell" ? "dot" : "line");
+          return (
+            <LegendChip plain={card} key={se.key} on={on} label={se.label} onClick={() => toggle(se.key)}>
+              <Swatch kind={sw} color={se.color} dashed={se.dashed} on={on} />
+            </LegendChip>
+          );
+        })}
+      {bands && bandsLabel && (
+        <LegendChip plain={card} on={!bandsOff} label={bandsLabel} onClick={() => setBandsOff((b) => !b)}>
+          <Swatch kind="fill" color={INK.hiBg} on={!bandsOff} />
+        </LegendChip>
+      )}
+      {band && (
+        <LegendChip plain={card} on={!bandOff} label={band.label} onClick={() => setBandOff((b) => !b)}>
+          <span style={{ width: 12, height: 9, borderRadius: 2, background: INK.tealPale, border: `1px solid ${INK.tealDark}` }} />
+        </LegendChip>
+      )}
+      {goalLegend && (
+        <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 5, height: 26, padding: "0 9px", borderRadius: 8, border: `1px solid ${INK.b10}`, fontSize: textPx(10.5), fontWeight: 700, color: INK.chS }}>
+          <span style={{ width: 12, borderTop: `2px dashed ${INK.tealDark}` }} />
+          {goalLegend}
+        </span>
+      )}
+    </div>
+  );
+
   const body = (
     <>
-      {title && (
+      {card && (title || question) ? (
+        <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            {title && <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch }}>{title}</p>}
+            {question && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: INK.chF }}>{question}</p>}
+            {wc!.legendBelow && legend}
+          </div>
+          {!wc!.legendBelow && legend}
+        </div>
+      ) : title && (
         <div className="flex items-center justify-between" style={{ gap: 8, marginBottom: 8 }}>
           <p style={{ fontSize: textPx(13), fontWeight: 700, color: INK.ch, minWidth: 0 }}>{title}</p>
           {right ??
@@ -290,7 +341,7 @@ export const ProChart: React.FC<ProChartProps> = ({
             ))}
         </div>
       )}
-      {question && (
+      {question && !card && (
         <p className="flex" style={{ gap: 5, fontSize: textPx(11.5), color: INK.chF, margin: "-4px 0 8px" }}>
           {questionIcon && <HelpCircle size={12} strokeWidth={2} aria-hidden style={{ color: INK.chT, flexShrink: 0, marginTop: 2 }} />}
           {question}
@@ -365,7 +416,7 @@ export const ProChart: React.FC<ProChartProps> = ({
               <g key={`bd${i}`}>
                 <rect x={0} y={clampY(b.high)} width={W} height={Math.max(0, clampY(b.low) - clampY(b.high))} fill={b.fill} />
                 {b.label && (
-                  <text x={mir(W - 4)} y={(clampY(b.low) + clampY(b.high)) / 2 + 3} textAnchor="end" fontSize={8.5} fontWeight={700} fill={INK.chF}>
+                  <text x={mir(W - 4)} y={(clampY(b.low) + clampY(b.high)) / 2 + 3} textAnchor="end" fontSize={sz(8.5)} fontWeight={700} fill={INK.chF}>
                     {b.label}
                   </text>
                 )}
@@ -375,12 +426,23 @@ export const ProChart: React.FC<ProChartProps> = ({
           {[0.25, 0.5, 0.75].map((f) => (
             <line key={f} x1={0} x2={W} y1={Math.round(H * f)} y2={Math.round(H * f)} stroke={INK.b06} />
           ))}
+          {/* Website viewport (WP-CO-IN): in an Insights page card each gridline carries its value (12, text.faint), as the frames' axes. */}
+          {card &&
+            [0.25, 0.5, 0.75].map((f) => {
+              const v = min + ((H - 18 - Math.round(H * f)) / (H - 34 || 1)) * (max - min);
+              const r = Math.abs(max - min) >= 50 ? Math.round(v) : Math.round(v * 10) / 10;
+              return (
+                <text key={`t${f}`} x={mir(2)} y={Math.round(H * f) - 4} textAnchor={rtl ? "end" : "start"} fontSize={12} fill={INK.chF}>
+                  {r.toLocaleString("en-GB")}
+                </text>
+              );
+            })}
           {(refs ?? []).map((r, i) =>
             r.value < min || r.value > max ? null : (
               <g key={`rf${i}`}>
                 <line x1={0} x2={W} y1={Y(r.value)} y2={Y(r.value)} stroke={r.color ?? INK.tealDark} strokeWidth={1.2} strokeDasharray={r.dashed === false ? undefined : "4 3"} opacity={r.dashed === false ? 0.7 : 1} />
                 {r.label && (
-                  <text x={mir(r.side === "right" ? W - 2 : 2)} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={8.5} fontWeight={800} fill={r.color ?? INK.tealDark}>
+                  <text x={mir(r.side === "right" ? W - 2 : 2)} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={sz(8.5)} fontWeight={800} fill={r.color ?? INK.tealDark}>
                     {r.label}
                   </text>
                 )}
@@ -389,7 +451,7 @@ export const ProChart: React.FC<ProChartProps> = ({
           )}
           {goal != null && <line x1={0} x2={W} y1={Y(goal)} y2={Y(goal)} stroke={INK.tealDark} strokeWidth={1.4} strokeDasharray="4 3" />}
           {goal != null && goalLabel && (
-            <text x={mir(4)} y={Y(goal) - 5} fontSize={9} fontWeight={800} fill={INK.tealDark}>
+            <text x={mir(4)} y={Y(goal) - 5} fontSize={sz(9)} fontWeight={800} fill={INK.tealDark}>
               {goalLabel}
             </text>
           )}
@@ -446,7 +508,7 @@ export const ProChart: React.FC<ProChartProps> = ({
                   )}
                   {(se.labels ?? []).map((i) =>
                     se.values[i] == null ? null : (
-                      <text key={`l${i}`} x={X(i)} y={Y(se.values[i] as number) - 10} textAnchor="middle" fontSize={10} fontWeight={800} fill={INK.ch}>
+                      <text key={`l${i}`} x={X(i)} y={Y(se.values[i] as number) - 10} textAnchor="middle" fontSize={sz(10)} fontWeight={800} fill={INK.ch}>
                         {se.values[i]}
                       </text>
                     )
@@ -482,7 +544,7 @@ export const ProChart: React.FC<ProChartProps> = ({
                   if (v == null) return null;
                   const y = Y(v);
                   return (
-                    <text key={`l${i}`} x={X(i)} y={y - 24 > 0 ? y - 10 : y + 18} textAnchor="middle" fontSize={10} fontWeight={800} fill={INK.ch}>
+                    <text key={`l${i}`} x={X(i)} y={y - 24 > 0 ? y - 10 : y + 18} textAnchor="middle" fontSize={sz(10)} fontWeight={800} fill={INK.ch}>
                       {v}
                     </text>
                   );
@@ -495,7 +557,7 @@ export const ProChart: React.FC<ProChartProps> = ({
             return (
               <g key={i}>
                 <circle cx={mx} cy={12} r={8} fill={m.color ?? "#D9A441"} />
-                <text x={mx} y={15.5} textAnchor="middle" fontSize={9} fontWeight={800} fill="#FFFFFF">
+                <text x={mx} y={15.5} textAnchor="middle" fontSize={sz(9)} fontWeight={800} fill="#FFFFFF">
                   {m.label}
                 </text>
               </g>
@@ -512,6 +574,13 @@ export const ProChart: React.FC<ProChartProps> = ({
             </span>
           ))}
         </div>
+      ) : card ? (
+        // Website viewport (WP-CO-IN): one label under each slot centre (12/16 600).
+        <div aria-hidden style={{ display: "grid", gridTemplateColumns: `repeat(${x.length}, minmax(0, 1fr))`, fontSize: 12, lineHeight: "16px", fontWeight: 600, color: INK.chF, marginTop: 4, textAlign: "center", whiteSpace: "nowrap" }}>
+          {x.map((l, i) => (
+            <span key={i}>{labelEvery === 1 || i % labelEvery === 0 || i === x.length - 1 ? l : ""}</span>
+          ))}
+        </div>
       ) : (
         <div aria-hidden className="flex justify-between" style={{ fontSize: textPx(9.5), color: INK.chT, marginTop: 2 }}>
           {xLabels.map((l, i) => (
@@ -519,40 +588,10 @@ export const ProChart: React.FC<ProChartProps> = ({
           ))}
         </div>
       )}
-      {(series.some((s) => !s.noLegend) || band || (bands && bandsLabel) || goalLegend) && (
-        <div className="flex flex-wrap" style={{ gap: 6, marginTop: 8 }}>
-          {series
-            .filter((se) => !se.noLegend)
-            .map((se) => {
-              const on = !off.has(se.key);
-              const sw = se.swatch ?? (se.type === "bar" ? "bar" : se.type === "points" ? "hollow" : se.type === "range" ? "fill" : se.type === "dumbbell" ? "dot" : "line");
-              return (
-                <LegendChip key={se.key} on={on} label={se.label} onClick={() => toggle(se.key)}>
-                  <Swatch kind={sw} color={se.color} dashed={se.dashed} on={on} />
-                </LegendChip>
-              );
-            })}
-          {bands && bandsLabel && (
-            <LegendChip on={!bandsOff} label={bandsLabel} onClick={() => setBandsOff((b) => !b)}>
-              <Swatch kind="fill" color={INK.hiBg} on={!bandsOff} />
-            </LegendChip>
-          )}
-          {band && (
-            <LegendChip on={!bandOff} label={band.label} onClick={() => setBandOff((b) => !b)}>
-              <span style={{ width: 12, height: 9, borderRadius: 2, background: INK.tealPale, border: `1px solid ${INK.tealDark}` }} />
-            </LegendChip>
-          )}
-          {goalLegend && (
-            <span className="inline-flex items-center whitespace-nowrap" style={{ gap: 5, height: 26, padding: "0 9px", borderRadius: 8, border: `1px solid ${INK.b10}`, fontSize: textPx(10.5), fontWeight: 700, color: INK.chS }}>
-              <span style={{ width: 12, borderTop: `2px dashed ${INK.tealDark}` }} />
-              {goalLegend}
-            </span>
-          )}
-        </div>
-      )}
+      {!card && legend}
       {insight && (
-        <p className="flex" style={{ gap: 6, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45, marginTop: 10 }}>
-          <Lightbulb size={13} strokeWidth={2} aria-hidden style={{ color: INK.prAccent, flexShrink: 0, marginTop: 2 }} />
+        <p className="flex" style={card ? { gap: 6, fontSize: 13, lineHeight: "20px", color: INK.chS, marginTop: 12 } : { gap: 6, fontSize: textPx(12), color: INK.chS, lineHeight: 1.45, marginTop: 10 }}>
+          <Lightbulb size={card ? 14 : 13} strokeWidth={2} aria-hidden style={{ color: INK.prAccent, flexShrink: 0, marginTop: 2 }} />
           {insight}
         </p>
       )}
@@ -563,7 +602,7 @@ export const ProChart: React.FC<ProChartProps> = ({
     </>
   );
 
-  if (flat) return <div>{body}</div>;
+  if (flat || card) return <div>{body}</div>;
   return <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "14px 14px 12px", marginBottom: 12 }}>{body}</div>;
 };
 
@@ -576,14 +615,14 @@ export const Swatch: React.FC<{ kind: "dot" | "hollow" | "fill" | "bar" | "line"
   return <span style={{ width: 12, borderTop: `2px ${dashed ? "dashed" : "solid"} ${color}`, opacity: o }} />;
 };
 
-export const LegendChip: React.FC<{ on: boolean; label: string; onClick: () => void; children: React.ReactNode }> = ({ on, label, onClick, children }) => (
+export const LegendChip: React.FC<{ on: boolean; label: string; onClick: () => void; children: React.ReactNode; plain?: boolean }> = ({ on, label, onClick, children, plain }) => (
   <button
     type="button"
     role="switch"
     aria-checked={on}
     onClick={onClick}
     className="relative inline-flex items-center whitespace-nowrap before:absolute before:inset-x-0 before:-inset-y-[9px] before:content-['']"
-    style={{
+    style={plain ? { gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: on ? INK.chS : INK.chT } : {
       gap: 5,
       height: 26,
       padding: "0 9px",

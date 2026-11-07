@@ -21,6 +21,8 @@ export interface PanelProps {
   onAsk: (c: AccessCategory) => void;
   /** Opens this client's page on a tab (notes, care plan). */
   openClient: (tab?: string) => void;
+  /** Website viewport (WP-CO-IN): the Insights page draws its panels as the frames' cards. */
+  webPage?: boolean;
 }
 
 /** The chart range a page range starts at. */

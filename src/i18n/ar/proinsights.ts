@@ -523,6 +523,19 @@ const proinsights: Catalogue = {
     other: "متوسط التقييم {avg} من {n} تقييم.",
   },
   "No reviews yet.": "لا تقييمات بعد.",
+  // Website viewport (WP-CO-IN.1, .2): the Insights page cards.
+  "Best {n} days · last 14 days shown": {
+    zero: "الأفضل {n} يوم · تظهر آخر 14 يومًا",
+    one: "الأفضل يوم واحد · تظهر آخر 14 يومًا",
+    two: "الأفضل يومان · تظهر آخر 14 يومًا",
+    few: "الأفضل {n} أيام · تظهر آخر 14 يومًا",
+    many: "الأفضل {n} يومًا · تظهر آخر 14 يومًا",
+    other: "الأفضل {n} يوم · تظهر آخر 14 يومًا",
+  },
+  "Nothing shared in the last 4 weeks.": "لم يُشارَك شيء في آخر 4 أسابيع.",
+  "Nutrient analysis and targets": "تحليل العناصر الغذائية والأهداف",
+  "Normal band": "النطاق الطبيعي",
+  "Time of day": "وقت اليوم",
 };
 
 export default proinsights;

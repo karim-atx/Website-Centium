@@ -12,6 +12,8 @@ import { EmptyState } from "../EmptyState";
 import { askWithMessage, ASK_MESSAGE_MAX } from "../../../services/pro/insights";
 import { useIsWeb } from "../../web/useWebLayout";
 import { GroupsOpenContext } from "./groupsOpen";
+import { StatBoxesWeb } from "./webCard";
+import { useInsightsWebCard } from "./webCardContext";
 import { t } from "../../../i18n/core";
 
 /**
@@ -59,14 +61,14 @@ export const InsightLine: React.FC<{ children: React.ReactNode; top?: number }> 
 /** A card's quiet line (early data, no data in range): 12 text.faint. */
 export const QuietLine: React.FC<{ children: React.ReactNode }> = ({ children }) => <p style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>{children}</p>;
 
-export const SharedBadges: React.FC<{ items: { label: string; on: boolean }[] }> = ({ items }) => {
+export const SharedBadges: React.FC<{ items: { label: string; on: boolean }[]; web?: boolean }> = ({ items, web }) => {
   const dark = useIsDark();
   const onInk = dark ? "#B2D4CF" : "#3C6B65";
   return (
-    <div className="flex flex-wrap" style={{ gap: 5, marginBottom: 12 }}>
+    <div className="flex flex-wrap" style={web ? { gap: 6, marginBottom: 16 } : { gap: 5, marginBottom: 12 }}>
       {items.map((c) => (
-        <span key={c.label} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF }}>
-          {c.on ? <ShieldCheck size={11} strokeWidth={2.2} aria-hidden /> : <Lock size={11} strokeWidth={2.2} aria-hidden />}
+        <span key={c.label} className="inline-flex items-center whitespace-nowrap" style={web ? { gap: 5, height: 28, padding: "0 10px", borderRadius: 8, fontSize: 13, fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF } : { gap: 4, height: 24, padding: "0 8px", borderRadius: 8, fontSize: textPx(11), fontWeight: 700, background: c.on ? INK.tealPale : INK.soft, color: c.on ? onInk : INK.chF }}>
+          {c.on ? <ShieldCheck size={web ? 13 : 11} strokeWidth={2.2} aria-hidden /> : <Lock size={web ? 13 : 11} strokeWidth={2.2} aria-hidden />}
           {c.label}
           <span className="sr-only">{c.on ? t(", shared") : t(", not shared")}</span>
         </span>
@@ -85,7 +87,12 @@ export interface StatBox {
   sub: string;
 }
 
-export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
+export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => {
+  // Website viewport (WP-CO-IN.8): inside an Insights page card, the drawn boxes in one row.
+  const wc = useInsightsWebCard();
+  const web = useIsWeb();
+  if (wc && web) return <StatBoxesWeb boxes={boxes} cols={wc.statCols} />;
+  return (
   <div className="flex flex-wrap justify-center" style={{ gap: 8, marginBottom: 12 }}>
     {boxes.map((b) => {
       const dc = b.dir === "up" ? INK.good : b.dir === "down" ? INK.hi : INK.chF;
@@ -112,7 +119,8 @@ export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
       );
     })}
   </div>
-);
+  );
+};
 
 export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open: openProp, onToggle, children }) => {
   const dark = useIsDark();
