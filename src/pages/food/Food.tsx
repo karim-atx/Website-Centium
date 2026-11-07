@@ -440,7 +440,7 @@ export default function Food() {
         // FO1 O1: skeletons #F5F5F6 / #242730, pulse 1.2 s (static under
         // Reduce motion): date pill 358×41 r9999, card 358×101 r20, four
         // meal cards 358×51 r15.
-        <div aria-busy="true" aria-label={t("Diary, loading")} className="flex flex-col">
+        <div role="status" aria-busy="true" aria-label={t("Diary, loading")} className="flex flex-col">
           <div className="animate-skeleton-pulse bg-cream-soft rounded-full" style={{ height: 41, marginBottom: 13 }} />
           <div className="animate-skeleton-pulse bg-cream-soft rounded-[20px]" style={{ height: 101, marginBottom: 13 }} />
           <div className="flex flex-col gap-2">

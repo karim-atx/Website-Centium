@@ -85,7 +85,7 @@ export default function CarePlan() {
       </div>
 
       {load.state === "loading" && (
-        <div aria-busy="true" aria-label={t("Loading your care plan")} className="flex flex-col" style={{ gap: 12 }}>
+        <div role="status" aria-busy="true" aria-label={t("Loading your care plan")} className="flex flex-col" style={{ gap: 12 }}>
           <Skel w="100%" h={62} r={20} />
           <Skel w="40%" h={12} />
           <Skel w="100%" h={120} r={20} />

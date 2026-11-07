@@ -392,7 +392,7 @@ export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pi
       {tab === "rewards" && <RewardsTab />}
 
       {loading && tab !== "rewards" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label={t("Loading")}>
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label={t("Loading")}>
           {[0, 1, 2].map((i) => (
             <div key={i} aria-hidden="true" className="animate-skeleton-pulse" style={{ height: tab === "gyms" ? 166 : 117, borderRadius: 18, background: m.soft }} />
           ))}

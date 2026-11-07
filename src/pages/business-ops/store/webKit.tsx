@@ -217,7 +217,7 @@ export const WebEmpty: React.FC<{ icon: LucideIcon; title: string; body: string;
 
 /** A row of skeleton rows inside a list card, while loading. */
 export const WebListSkeleton: React.FC<{ rows?: number; label: string; rowH: number }> = ({ rows = 3, label, rowH }) => (
-  <div aria-busy="true" aria-label={label} className="flex flex-col" style={{ background: "#F7F7FC", borderRadius: 18, padding: "4px 16px" }}>
+  <div role="status" aria-busy="true" aria-label={label} className="flex flex-col" style={{ background: "#F7F7FC", borderRadius: 18, padding: "4px 16px" }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: rowH }}>
         <span aria-hidden className="animate-skeleton-pulse" style={{ width: 40, height: 40, borderRadius: 12, background: "#ECEBF5" }} />

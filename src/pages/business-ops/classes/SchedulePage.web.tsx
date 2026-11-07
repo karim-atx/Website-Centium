@@ -288,7 +288,7 @@ export default function SchedulePageWeb() {
         <div className="max-w-[1600px] flex flex-col" style={{ gap: 24 }}>
           {offline && api.loadedAt !== null && <MarketOffline loaded />}
           {firstLoad ? (
-            <div aria-busy="true" aria-label={t("Loading your schedule")} className="flex flex-col" style={{ gap: 24 }}>
+            <div role="status" aria-busy="true" aria-label={t("Loading your schedule")} className="flex flex-col" style={{ gap: 24 }}>
               <div className="flex" style={{ gap: 12 }}>
                 {Array.from({ length: 7 }, (_, i) => (
                   <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ flex: 1, height: wide ? 84 : 76, borderRadius: 12, background: "#F5F5F6" }} />

@@ -122,7 +122,7 @@ export const RetryLine: React.FC<{ text: string; onRetry: () => void }> = ({ tex
 );
 
 export const SkeletonCards: React.FC<{ heights?: number[]; label?: string }> = ({ heights = [72, 72, 72], label }) => (
-  <div className="space-y-2.5" aria-busy="true" aria-label={label ?? t("Loading")}>
+  <div role="status" className="space-y-2.5" aria-busy="true" aria-label={label ?? t("Loading")}>
     {heights.map((h, i) => (
       <div key={i} aria-hidden className="animate-skeleton-pulse rounded-[18px] bg-cream-soft" style={{ height: h }} />
     ))}

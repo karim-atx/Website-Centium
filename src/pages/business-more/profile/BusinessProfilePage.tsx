@@ -335,7 +335,7 @@ export default function BusinessProfilePage() {
     return (
       <div>
         <SubHeader title={t("Business Profile")} />
-        <div aria-busy="true" aria-label={t("Loading your profile")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading your profile")}>
           <div className={clsx(LIST_BG, "animate-skeleton-pulse")} style={{ height: 132, borderRadius: 18 }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: 72, height: 72, borderRadius: 20, marginTop: -34, marginInlineStart: 14, boxShadow: "0 0 0 3px rgb(var(--c-cream))" }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: "55%", height: 16, borderRadius: 8, marginTop: 12 }} />

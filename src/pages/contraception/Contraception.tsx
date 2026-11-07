@@ -137,7 +137,7 @@ export default function Contraception() {
   // --- loading (O1): the grid as skeletons -----------------------------------
   if (!plan) {
     return page(
-      <div aria-busy="true" aria-label={t("Loading")} style={{ marginTop: 20 }}>
+      <div role="status" aria-busy="true" aria-label={t("Loading")} style={{ marginTop: 20 }}>
         <Skeleton width="60%" height={14} />
         <div className="grid" style={{ gridTemplateColumns: "repeat(7, 1fr)", rowGap: 8, marginTop: 20 }}>
           {Array.from({ length: 28 }, (_, i) => (

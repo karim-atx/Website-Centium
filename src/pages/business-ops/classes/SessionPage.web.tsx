@@ -271,7 +271,7 @@ export default function SessionPageWeb() {
                   <MarketError thing={tk("who's booked")} onRetry={() => setTick((n) => n + 1)} notchBg="#FFFFFF" />
                 </div>
               ) : !entries ? (
-                <div aria-busy="true" aria-label={t("Loading who's booked")} className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))" }}>
+                <div role="status" aria-busy="true" aria-label={t("Loading who's booked")} className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))" }}>
                   {[0, 1].map((i) => (
                     <div key={i} className="flex items-center" style={{ gap: 12, padding: "8px 20px", minHeight: 64, borderInlineStart: i ? DIV : 0 }}>
                       <span aria-hidden className="animate-skeleton-pulse" style={{ width: 40, height: 40, borderRadius: 999, background: "#F5F5F6" }} />

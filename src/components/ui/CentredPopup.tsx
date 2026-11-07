@@ -274,7 +274,7 @@ export const CentredPopup: React.FC<{
             className={clsx(partB ? "mt-3" : "mt-5", cta.className)}
             // Part B: 46 tall on fill.pinned (#9A8CD6 / #A991FE; #5B48B8 under
             // High contrast), ink on-primary-fill.
-            style={partB ? { minHeight: 46, background: "rgb(var(--c-fill-pinned))", ...cta.style } : cta.style}
+            style={partB ? { height: 46, background: "rgb(var(--c-fill-pinned))", ...cta.style } : cta.style}
           />
         )}
       </div>

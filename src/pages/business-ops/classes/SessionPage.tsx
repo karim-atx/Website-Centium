@@ -240,7 +240,7 @@ export default function SessionPage() {
             <MarketError thing={tk("who's booked")} onRetry={() => setTick((n) => n + 1)} notchBg={m.card} />
           </div>
         ) : !entries ? (
-          <div aria-busy="true" aria-label={t("Loading who's booked")}>
+          <div role="status" aria-busy="true" aria-label={t("Loading who's booked")}>
             {[0, 1].map((i) => (
               <div key={i} className="flex items-center" style={{ gap: 12, padding: "10px 16px", borderTop: i ? `0.5px solid ${m.div}` : 0 }}>
                 <span aria-hidden className="animate-skeleton-pulse" style={{ width: 32, height: 32, borderRadius: 999, background: m.soft }} />

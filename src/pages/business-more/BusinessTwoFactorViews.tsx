@@ -154,7 +154,7 @@ export function BusinessTwoFactorView(p: {
         </p>
       )}
       {p.loading ? (
-        <div aria-busy="true" aria-label={t("Loading two-factor status")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading two-factor status")}>
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ height: 126, borderRadius: 20, marginBottom: 12 }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ height: 162, borderRadius: 20 }} />
         </div>
@@ -240,7 +240,7 @@ export function BusinessTwoFactorSetupView(p: {
         </p>
       )}
       {!p.startError && !p.ready && (
-        <div aria-busy="true" aria-label={t("Loading two-factor setup")} className="flex flex-col items-center">
+        <div role="status" aria-busy="true" aria-label={t("Loading two-factor setup")} className="flex flex-col items-center">
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: 168, height: 168, borderRadius: 16, marginTop: 40 }} />
         </div>
       )}

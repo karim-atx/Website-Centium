@@ -119,7 +119,7 @@ export function Overview() {
   if (m.error && !business) return <MarketError thing={tk("your marketplace")} onRetry={m.reload} />;
   if (m.loading) {
     return (
-      <div aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div role="status" aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
           <MarketSkeleton radius={20} rows={2} height={96} label={t("Loading")} />
           <MarketSkeleton radius={20} rows={1} height={96} label={t("Loading")} />

@@ -240,7 +240,7 @@ export const DeskRow: React.FC<{
 };
 
 export const RowsSkeleton: React.FC<{ rows?: number }> = ({ rows = 3 }) => (
-  <div aria-busy="true" aria-label={t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
+  <div role="status" aria-busy="true" aria-label={t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: 58, padding: "8px 0" }}>
         <span className="block shrink-0 bg-cream-soft animate-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 11 }} />

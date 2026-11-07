@@ -582,7 +582,7 @@ export default function FoodWeb() {
   );
 
   const diary = firstLoad ? (
-    <div aria-busy="true" aria-label={t("Diary, loading")} className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12}, minmax(0, 1fr))`, columnGap: 24 }}>
+    <div role="status" aria-busy="true" aria-label={t("Diary, loading")} className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12}, minmax(0, 1fr))`, columnGap: 24 }}>
       <div className="flex flex-col min-w-0" style={{ gridColumn: `span ${rail ? 4 : 8}`, gap: 24 }}>
         <div className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
         <div className="animate-skeleton-pulse bg-cream-soft" style={{ height: 40, borderRadius: 12 }} />
@@ -609,7 +609,7 @@ export default function FoodWeb() {
         )}
 
         {recoveryModePending ? (
-          <div aria-busy="true" aria-label={t("Today, loading")} className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
+          <div role="status" aria-busy="true" aria-label={t("Today, loading")} className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
         ) : (
           !recoverySensitive && (
             <button

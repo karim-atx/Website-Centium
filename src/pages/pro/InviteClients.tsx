@@ -295,7 +295,7 @@ export default function InviteClients() {
               style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, minHeight: 96, marginBottom: 14, border: `1px solid ${INK.pr}` }}
             />
           ) : (
-            <p style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 14 }}>{text}</p>
+            <p style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 14, overflowWrap: "anywhere" }}>{text}</p>
           )}
 
           <SectionHead label={t("Settings")} />

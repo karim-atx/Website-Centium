@@ -213,7 +213,7 @@ export default function TwoFactorSetupPage() {
         // Foundations loading state: skeleton blocks at the anatomy positions
         // (surface.soft, each block's radius): the step label, the QR card,
         // the key row and the code boxes.
-        <div aria-busy="true" aria-label={t("Loading two-factor setup")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading two-factor setup")}>
           <div className="h-[18px] w-24 rounded bg-cream-soft" />
           <div className="mt-2.5 mx-auto w-[180px] h-[180px] rounded-[18px] bg-cream-soft" />
           <div className="mt-[43px] flex gap-2">

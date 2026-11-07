@@ -258,7 +258,7 @@ export const SettingsRow: React.FC<{
           {title}
         </span>
         {sub && (
-          <span className="block" style={{ marginTop: 1, fontSize: textPx(12), lineHeight: "16px", color: INK.chF }}>
+          <span className="block" style={{ marginTop: 1, fontSize: textPx(12), lineHeight: "16px", color: INK.chF, overflowWrap: "anywhere" }}>
             {sub}
           </span>
         )}
