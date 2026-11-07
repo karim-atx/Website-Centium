@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Bell, CalendarClock, Clock, Copy, Mail, MessageCircle, Repeat, Share2, UserPlus } from "lucide-react";
+import { Bell, CalendarClock, Clock, Copy, Mail, MessageCircle, RefreshCw, Repeat, Share2, UserPlus } from "lucide-react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { PopupMenu } from "../../ui/PopupMenu";
@@ -8,6 +8,7 @@ import { PassQr } from "../../marketplace/PassQr";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
 import { ComingSoon, ComingSoonPill } from "../ComingSoon";
+import { useIsWeb } from "../../web/useWebLayout";
 import { bookingHref, bookingUrl, saveBookingPolicy, saveReminderDefaults, type BookingAudience, type BookingPolicy } from "../../../services/pro/calendar";
 import { ChoiceCard, FieldButton, SettingsRow } from "./calendarFields";
 import type { AlertValue } from "./calendarModel";
@@ -92,6 +93,7 @@ export const BookingSheet: React.FC<{
   onToast: (text: string) => void;
 }> = ({ kind, me, policy, handle, reminders, onClose, onSaved, onToast }) => {
   const [p, setP] = useState<BookingPolicy>(policy);
+  const isWeb = useIsWeb();
   const [day, setDay] = useState(false);
   const [hour, setHour] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -160,7 +162,7 @@ export const BookingSheet: React.FC<{
   const saveFooter = (onClick: () => void) => <CtaButton size="sheet" className="w-full" label={t("Save")} loading={busy} onClick={onClick} />;
   // No backend: the row says so, and never shows a value it cannot keep.
   const soon = (key: string, icon: typeof Bell, title: string, last?: boolean) => (
-    <SettingsRow key={key} icon={icon} title={title} muted right={<ComingSoonPill />} last={last} />
+    <SettingsRow key={key} icon={icon} title={title} muted right={<ComingSoonPill sheet />} last={last} />
   );
 
   let body: React.ReactNode = null;
@@ -224,8 +226,8 @@ export const BookingSheet: React.FC<{
         {order.map((a) => (
           <ChoiceCard key={a} title={t(AUDIENCE[a].title)} sub={t(AUDIENCE[a].sub)} on={p.whoCanBook === a} onClick={() => setP({ ...p, whoCanBook: a })} />
         ))}
-        <ChoiceCard title={t("Selected clients")} sub={t("Choose who in the list below")} on={false} disabled trailing={<ComingSoonPill />} />
-        <ChoiceCard title={t("No one")} sub={t("Only you can add sessions")} on={false} disabled trailing={<ComingSoonPill />} />
+        <ChoiceCard title={t("Selected clients")} sub={t("Choose who in the list below")} on={false} disabled trailing={<ComingSoonPill sheet />} />
+        <ChoiceCard title={t("No one")} sub={t("Only you can add sessions")} on={false} disabled trailing={<ComingSoonPill sheet />} />
       </div>
     );
     footer = saveFooter(() => void savePolicy(p));
@@ -272,7 +274,18 @@ export const BookingSheet: React.FC<{
     );
     footer = saveFooter(() => void saveReminders());
   } else {
-    body = <ComingSoon line={t("Events from your other calendars block those times here, so clients can't book over them.")} />;
+    // WP-CA.9 Sync on web: the frame's 48 tile, the Coming soon pill and the 15 line.
+    body = isWeb ? (
+      <div className="flex flex-col items-center text-center" style={{ gap: 10, padding: "12px 8px" }}>
+        <span className="flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 14, background: "#F0EDF9" }}>
+          <RefreshCw size={22} strokeWidth={1.75} color="#7D67D9" aria-hidden />
+        </span>
+        <ComingSoonPill sheet />
+        <p style={{ margin: 0, maxWidth: 300, fontSize: 15, lineHeight: 1.55, color: "#5B5349" }}>{t("Events from your other calendars block those times here, so clients can't book over them.")}</p>
+      </div>
+    ) : (
+      <ComingSoon line={t("Events from your other calendars block those times here, so clients can't book over them.")} />
+    );
   }
 
   return (

@@ -5,6 +5,7 @@ import { EmptyState } from "./EmptyState";
 import { INK } from "./proInk";
 import { t } from "../../i18n/core";
 import { usePaneSpan } from "../web/paneFill";
+import { useIsWeb } from "../web/useWebLayout";
 
 /**
  * Release 3 · ComingSoon (HANDOVER a and l: "Where data or a backend doesn't
@@ -24,9 +25,13 @@ export const ComingSoon: React.FC<{ line?: string; children?: React.ReactNode }>
 // Website viewport (ST Settings Web, a row's value): in a spanning More / Settings pane "Coming soon" is the plain
 // 13/20 #8C8378 value text the frames draw, not a pill.
 // web: the web Targets page (WP-NU-MP.4) draws a 12/16 700 #F0EDF9 pill, no caps.
-export const ComingSoonPill: React.FC<{ web?: boolean }> = ({ web }) => {
+// sheet: the Calendar booking side sheets (WP-CA.9) draw an 11/16 700 #F5F5F6 pill, no caps (web only).
+export const ComingSoonPill: React.FC<{ web?: boolean; sheet?: boolean }> = ({ web, sheet }) => {
   const span = usePaneSpan();
-  return web ? (
+  const isWeb = useIsWeb();
+  return sheet && isWeb ? (
+    <span style={{ flex: "none", fontSize: 11, lineHeight: "16px", fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#F5F5F6", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
+  ) : web ? (
     <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#F0EDF9", color: "#5F5093", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
   ) : span ? (
     <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>

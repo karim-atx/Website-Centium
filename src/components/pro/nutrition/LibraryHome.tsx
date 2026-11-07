@@ -10,6 +10,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { ConfirmCard } from "../../ui/ConfirmCard";
+import { DeleteConfirmWeb } from "../web/DeleteConfirmWeb";
 import { INK, NO_ICON_SCALE } from "../proInk";
 import { SectionHead } from "../client/kit";
 import { StatusRing } from "../StatusRing";
@@ -134,6 +135,8 @@ export const LibraryHome: React.FC<{
       selected={show}
       align="right"
       width={180}
+      // WP-NU-MP.10: the web menus draw plain rows (no row borders).
+      variant={web ? "plain" : undefined}
       onSelect={(v) => {
         setShow(v as Show);
         setFilterAnchor(null);
@@ -150,6 +153,7 @@ export const LibraryHome: React.FC<{
       ]}
       align="right"
       width={190}
+      variant={web ? "plain" : undefined}
       onSelect={(v) => {
         const p = menu?.plan;
         setMenu(null);
@@ -170,20 +174,26 @@ export const LibraryHome: React.FC<{
         setNonce((x) => x + 1);
       }}
     />
-    <ConfirmCard
-      open={!!deleting}
-      title={deleting ? t("Delete {name}?", { name: deleting.name }) : t("Delete this meal plan?")}
-      subtitle={t("Clients already on it keep their own copy.")}
-      onCancel={() => setDeleting(null)}
-      onConfirm={async () => {
-        const p = deleting;
-        setDeleting(null);
-        if (!p) return;
-        const r = await deleteTemplate(p.id);
-        if (!r.ok) setMsg(r.message);
-        setNonce((x) => x + 1);
-      }}
-    />
+    {(() => {
+      const props = {
+        open: !!deleting,
+        title: deleting ? t("Delete {name}?", { name: deleting.name }) : t("Delete this meal plan?"),
+        onCancel: () => setDeleting(null),
+        onConfirm: async () => {
+          const p = deleting;
+          setDeleting(null);
+          if (!p) return;
+          const r = await deleteTemplate(p.id);
+          if (!r.ok) setMsg(r.message);
+          setNonce((x) => x + 1);
+        },
+      };
+      return web ? (
+        <DeleteConfirmWeb {...props} line={t("Clients already on it keep their own copy.")} />
+      ) : (
+        <ConfirmCard {...props} subtitle={t("Clients already on it keep their own copy.")} />
+      );
+    })()}
     <NewPlanSheet
       open={creating}
       onClose={() => setCreating(false)}

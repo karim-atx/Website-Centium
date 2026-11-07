@@ -64,6 +64,8 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
 
   const sortMenu = (
     <PopupMenu
+      // WP-NU-MP.10 mn-sort: plain rows on web (the web page passes webTabs).
+      variant={webTabs ? "plain" : undefined}
       open={!!sortAnchor}
       anchor={sortAnchor}
       onClose={() => setSortAnchor(null)}

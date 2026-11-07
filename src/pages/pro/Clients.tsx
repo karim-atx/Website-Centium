@@ -769,6 +769,8 @@ export default function Clients() {
         open={!!quick}
         onClose={() => setQuick(null)}
         anchor={quick?.el ?? null}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={groups.find((g) => g.key === quick?.group)?.title}
         options={(groups.find((g) => g.key === quick?.group)?.options ?? []).map((o) => ({ value: o.value, label: o.label }))}
         selected={quick ? filters[quick.group] ?? [] : []}
@@ -782,6 +784,8 @@ export default function Clients() {
         open={!!sortEl}
         onClose={() => setSortEl(null)}
         anchor={sortEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={t("Sort by")}
         options={SORTS}
         selected={sort}
@@ -808,6 +812,8 @@ export default function Clients() {
         open={!!menuEl && !!preview}
         onClose={() => setMenuEl(null)}
         anchor={menuEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         options={[
           { value: "message", label: t("Message"), icon: <MessageCircle size={15} /> },
           { value: "stage", label: t("Change stage"), icon: <ClipboardList size={15} /> },
@@ -829,6 +835,8 @@ export default function Clients() {
         open={!!stageEl && !!preview}
         onClose={() => setStageEl(null)}
         anchor={stageEl}
+        // WP-CL.5 / .6: the web frames draw these menus over an undimmed page.
+        backdrop={!web}
         heading={t("Stage")}
         options={CLIENT_STAGES.map((s) => ({ value: s, label: STAGE_LABEL[s] }))}
         selected={preview?.stage ?? null}

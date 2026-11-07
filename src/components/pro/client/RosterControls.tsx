@@ -3,6 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
+import { useWebLayout } from "../../web/useWebLayout";
 import { INK } from "../proInk";
 import { t } from "../../../i18n/core";
 
@@ -118,24 +119,27 @@ export const FilterPanel: React.FC<{
   showLabel: string;
 }> = ({ open, groups, selected, onToggle, onClear, onClose, showLabel }) => {
   const dark = useIsDark();
+  // WP-CL.5 on web: the frame's floating card under the header's Filter
+  // button (top 60, the page margin from the right, 420 wide, no scrim),
+  // chips 15/20 and 40 buttons. Mobile as before.
+  const { web, rail } = useWebLayout();
   if (!open) return null;
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
-      <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: "rgba(36,31,27,0.18)" }} onClick={onClose} />
+      <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: web ? "transparent" : "rgba(36,31,27,0.18)" }} onClick={onClose} />
       <div
         role="dialog"
         aria-label={t("Filter")}
         className="absolute overflow-y-auto"
         style={{
-          top: 116,
-          insetInlineStart: "max(16px, calc(50% - 199px))",
-          insetInlineEnd: "max(16px, calc(50% - 199px))",
-          maxHeight: "calc(100vh - 220px)",
+          ...(web
+            ? { top: 60, insetInlineEnd: rail ? 24 : 32, width: 420, maxHeight: "calc(100vh - 92px)" }
+            : { top: 116, insetInlineStart: "max(16px, calc(50% - 199px))", insetInlineEnd: "max(16px, calc(50% - 199px))", maxHeight: "calc(100vh - 220px)" }),
           background: INK.card,
           border: "1px solid rgba(174,161,220,0.5)",
           borderRadius: 14,
           boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
-          padding: "8px 10px 10px",
+          padding: web ? "8px 16px 16px" : "8px 10px 10px",
         }}
       >
         {groups.map((g) => (
@@ -155,7 +159,8 @@ export const FilterPanel: React.FC<{
                       minHeight: 36,
                       borderRadius: 8,
                       padding: "7px 10px",
-                      fontSize: textPx(12),
+                      fontSize: web ? 15 : textPx(12),
+                      lineHeight: web ? "20px" : undefined,
                       border: `1px solid ${on ? (dark ? "#9A8CD6" : "#AEA1DC") : dark ? "#31343C" : "#E5E6EB"}`,
                       background: on ? (dark ? "#303141" : "#F0EDF9") : dark ? "#262932" : "#FAFAFB",
                       color: INK.ch,
@@ -170,8 +175,17 @@ export const FilterPanel: React.FC<{
           </div>
         ))}
         <div className="flex" style={{ gap: 8, marginTop: 14 }}>
-          <CtaButton className="flex-1" variant="secondary" size="base" label={t("Clear")} onClick={onClear} />
-          <CtaButton className="flex-1" size="base" label={showLabel} onClick={onClose} />
+          {web ? (
+            <>
+              <button type="button" onClick={onClear} className="tap flex-1" style={{ height: 40, borderRadius: 12, background: "#F0EDF9", color: "#5F5093", fontSize: 15, fontWeight: 600 }}>{t("Clear")}</button>
+              <button type="button" onClick={onClose} className="tap flex-1 whitespace-nowrap" style={{ height: 40, borderRadius: 12, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, fontWeight: 600 }}>{showLabel}</button>
+            </>
+          ) : (
+            <>
+              <CtaButton className="flex-1" variant="secondary" size="base" label={t("Clear")} onClick={onClear} />
+              <CtaButton className="flex-1" size="base" label={showLabel} onClick={onClose} />
+            </>
+          )}
         </div>
       </div>
     </div>
