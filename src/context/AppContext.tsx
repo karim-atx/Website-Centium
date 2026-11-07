@@ -127,7 +127,7 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { reportInstallOnce } from "../platform/installReport";
-import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
 import { startHealthSync, stopHealthSync } from "../platform/health";
 import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
@@ -2242,6 +2242,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
     document.documentElement.classList.toggle("high-contrast", !!accessibility.highContrast);
     document.documentElement.classList.toggle("big-targets", !!accessibility.biggerTargets);
+    // The phone's own surfaces (widgets, the session notification) follow it too.
+    mirrorReducedMotion(accessibility.reduceMotion);
   }, [accessibility]);
 
   // Starts empty. The seeded demo meals are gone — see services/food, which
