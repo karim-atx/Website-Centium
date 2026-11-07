@@ -394,6 +394,24 @@ const prolibrary: Catalogue = {
   "Reply to {name}": "الرد على {name}",
   "Mark as reviewed": "التحديد كمُراجَعة",
   "W{n}": "أ{n}",
+
+  // == Website viewport · programme pages (WP-LI.3 to .3.3) ==
+  Sets: "المجموعات",
+  Reps: "التكرارات",
+  Weight: "الوزن",
+  RPE: "RPE",
+  Rest: "راحة",
+  Tempo: "الإيقاع",
+  Exercise: "التمرين",
+  Workout: "التمرين",
+  BW: "و.ج",
+  "s hold": "ث ثبات",
+  "kg RM": "كغ RM",
+  "Workout activity not shared, so hidden. {name} can change this any time.": "نشاط التمارين غير مُشارَك، لذا هو مخفي. يمكن لـ{name} تغيير ذلك في أي وقت.",
+  "(drag to reorder, click for settings)": "(اسحب لإعادة الترتيب، وانقر للإعدادات)",
+  "Click again to confirm": "انقر مرة أخرى للتأكيد",
+  Undo: "تراجع",
+  "Muscle group": "المجموعة العضلية",
 };
 
 export default prolibrary;

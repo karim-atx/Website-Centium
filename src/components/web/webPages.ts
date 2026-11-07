@@ -65,6 +65,7 @@ export const PRO_PAGES: RegExp[] = [
   /^\/app\/pro\/insights(\/(activity|nutrition|vitals|biomarkers))?\/?$/, // WP-CO-IN.1-.4 Insights
   /^\/app\/pro\/clients\/?$/, // WP-CL Clients (list-detail)
   /^\/app\/more\/care-network\/?$/, // WP-CO-CN Care network (Received 5 · Sent 4 · Network 3)
+  /^\/app\/messages\/?$/, // WP-MO.18 Messages (conversations 400 | the open chat)
   /^\/app\/pro\/clients\/[^/]+(\/(overview|plan|progress|sessions|notes|files|care-plan|health-records|trends|appointments))?\/?$/, // WP-CL.1 / · NU / WP-CO-CL.1 client and patient page (Client insights keeps its column)
 ];
 

@@ -22,6 +22,7 @@ import { RefundPolicyLink } from "../../../components/legal/RefundPolicyLink";
 import { useProPlanInApp, useSwitches } from "../../../services/premium/hooks";
 import { premiumOn, proPlanBoughtLine, proPlanPath } from "../../../services/premium/model";
 import { BuyInApp } from "../../../components/premium/BuyInApp";
+import { usePaneSpan } from "../../../components/web/paneFill";
 
 /** A box's horizontal middle on screen. */
 const centreX = (r: DOMRect) => r.left + r.width / 2;
@@ -141,6 +142,7 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
 
 export default function ProSubscription() {
   const back = useBack();
+  const inPane = usePaneSpan();
   const dark = useIsDark();
   const { professionalClients } = useApp();
   const { tiers: all, loading, error } = useSubscriptionTiers("professional");
@@ -217,16 +219,19 @@ export default function ProSubscription() {
 
   return (
     <div style={{ paddingBottom: target && !viaApp ? 72 : 0 }}>
-      <button
-        type="button"
-        onClick={back}
-        aria-label={t("Back")}
-        className="tap flex items-center justify-center"
-        style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
-      >
-        <ChevronLeft size={20} strokeWidth={2} />
-      </button>
-      <div className="text-center" style={{ margin: "-30px 0 14px" }}>
+      {/* Website viewport (WP-MO.12): in the spanning More pane there is no back row (the column is the way back). */}
+      {!inPane && (
+        <button
+          type="button"
+          onClick={back}
+          aria-label={t("Back")}
+          className="tap flex items-center justify-center"
+          style={{ width: 44, height: 44, marginInlineStart: -12, marginBottom: 0, color: INK.chS }}
+        >
+          <ChevronLeft size={20} strokeWidth={2} />
+        </button>
+      )}
+      <div className="text-center" style={{ margin: inPane ? "0 0 14px" : "-30px 0 14px" }}>
         <CentiumLockup width={64} className="mx-auto" style={{ marginBottom: 10 }} />
         <p style={{ fontSize: textPx(25), fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.15, color: INK.ch }}>{t("Grow your client roster.")}</p>
         <p style={{ fontSize: textPx(13.5), color: INK.chS, margin: "6px auto 0", maxWidth: 300, lineHeight: 1.5 }}>

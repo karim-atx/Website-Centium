@@ -17,6 +17,7 @@ import { localIso } from "../../../services/pro/home";
 import type { AccessCategory } from "../../../services/pro/access";
 import type { ChartRange } from "./insightsModel";
 import { ClientPicker, DetailHead, RangeTabs, SharedBadges, type PickerClient } from "./parts";
+import { GroupsOpenContext } from "./groupsOpen";
 import { CATEGORY_LABEL, chartRangeFor, tabsForLane, type InsightsTab, type PageRange, type PanelProps } from "./panelProps";
 import { ActivityPanel } from "./ActivityPanel";
 import { NutritionPanel, NutritionRoster } from "./NutritionPanel";
@@ -116,6 +117,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
       <div>
         {head}
         <ProPageBodyWeb>
+          <style>{".wpin-an .wpcl-tab>:nth-child(-n+3),.wpin-tg .wpcl-tab>:first-child{column-span:all}"}</style>
           {tabBar}
           {children}
         </ProPageBodyWeb>
@@ -151,9 +153,16 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   );
 
   const body = clientId ? (
-    <ClientInsights key={clientId} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
+    <ClientInsights key={clientId} web={web} lane={lane} clientId={clientId} client={clients.find((c) => c.clientId === clientId) ?? null} tab={tab} pageRange={range} chart={chart[tab]} onChart={(r) => setChart((c) => ({ ...c, [tab]: r }))} />
   ) : allPatients ? (
-    <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
+    // Website viewport (WP-CO-IN.5): the roster is one list card across the page.
+    web ? (
+      <div style={{ columnSpan: "all", display: "block" }}>
+        <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
+      </div>
+    ) : (
+      <NutritionRoster clients={clients} today={localIso(new Date())} onPick={(id) => onClient(id)} />
+    )
   ) : null;
   return frame(
     <>
@@ -163,7 +172,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   );
 };
 
-const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: PickerClient | null; tab: InsightsTab; pageRange: PageRange; chart: ChartRange; onChart: (r: ChartRange) => void }> = ({ lane, clientId, client, tab, pageRange, chart, onChart }) => {
+const ClientInsights: React.FC<{ web?: boolean; lane: ProLane; clientId: string; client: PickerClient | null; tab: InsightsTab; pageRange: PageRange; chart: ChartRange; onChart: (r: ChartRange) => void }> = ({ web, lane, clientId, client, tab, pageRange, chart, onChart }) => {
   const navigate = useNavigate();
   const { authUserId } = useApp();
   const access = useClientAccess(clientId);
@@ -219,7 +228,29 @@ const ClientInsights: React.FC<{ lane: ProLane; clientId: string; client: Picker
   return (
     <>
       {access.offline && <OfflineLine />}
-      {analysis === "targets" && tab === "nutrition" ? (
+      {web && analysis === "targets" && tab === "nutrition" ? (
+        // Website viewport (WP-CO-IN.7): the read-only targets across the page, their cards in two columns under the head.
+        <div className="wpin-tg" style={{ columnSpan: "all", display: "block" }}>
+          <ClientTabBodyWeb columns={2}>
+            <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} />
+          </ClientTabBodyWeb>
+        </div>
+      ) : web && analysis && tab === "nutrition" ? (
+        // Website viewport (WP-CO-IN.6): the analysis across the page; its head, tabs and range span both columns and every Group is open beside the main card.
+        <div className="wpin-an" style={{ columnSpan: "all", display: "block" }}>
+          <GroupsOpenContext.Provider value>
+            <ClientTabBodyWeb columns={2}>
+              <NutrientAnalysis clientId={clientId} lane={lane} onBack={() => setAnalysis(null)} />
+            </ClientTabBodyWeb>
+          </GroupsOpenContext.Provider>
+        </div>
+      ) : web && tab === "vitals" ? (
+        // Website viewport (WP-CO-IN.8): the chips and one full-width chart per view, its stat boxes and insight under it.
+        <div style={{ columnSpan: "all", display: "block" }}>
+          <SharedBadges items={badges} />
+          <VitalsPanel {...props} />
+        </div>
+      ) : analysis === "targets" && tab === "nutrition" ? (
         // NU8 v3 Clinical overview: the targets read only.
         <TargetsReadOnly clientId={clientId} firstName={firstName} clientName={name} showHead onBack={() => setAnalysis(null)} />
       ) : analysis && tab === "nutrition" ? (

@@ -14,6 +14,11 @@ import { INK } from "../proInk";
 import { OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { DetailHeader, ErrorLine } from "./libraryUi";
 import { t } from "../../../i18n/core";
+import { blockHeading } from "../../../services/workout/prescription";
+import { BLOCK_LINE } from "../web/programmeSpec";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
+import { EmptyPanelWeb, ProgBodyWeb, ProgHeaderWeb } from "../web/ProgrammeWeb";
+import { specCells } from "../web/programmeSpec";
 
 /**
  * Release 3 · W5 TR6 "Edit one client's copy or the template".
@@ -47,6 +52,8 @@ export const ClientCopyView: React.FC<{
   const [draft, setDraft] = useState<RoutineDraft | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const web = useIsWeb();
+  const { rail } = useWebLayout();
 
   useEffect(() => {
     let cancelled = false;
@@ -116,6 +123,124 @@ export const ClientCopyView: React.FC<{
 
   const runs = copy ? groupIntoRuns(copy.exercises, copy.blocks) : [];
 
+  const wherePopup = (
+    <CentredPopup
+      open={!!draft}
+      onClose={() => setDraft(null)}
+      icon={<GitBranch size={22} />}
+      title={t("Where should this change go?")}
+      body={[
+        changed.length > 2
+          ? t("You changed {a}, {b} and more.", { a: changed[0], b: changed[1] })
+          : changed.length === 2
+            ? t("You changed {a} and {b}.", { a: changed[0], b: changed[1] })
+            : changed.length === 1
+              ? t("You changed {a}.", { a: changed[0] })
+              : null,
+        t("{name} follows their own copy of this programme.", { name }),
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="flex flex-col" style={{ gap: 8 }}>
+        <Button fullWidth size="lg" disabled={saving} onClick={() => void onlyTheirs()}>
+          {t("Only {first}'s copy", { first })}
+        </Button>
+        <Button fullWidth size="lg" variant="secondary" disabled={saving} onClick={() => void toTemplate()}>
+          {t("Update the template")}
+        </Button>
+        <p className="text-center" style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>
+          {t("Updating the template changes it for new clients. Existing copies stay as they are.")}
+        </p>
+      </div>
+    </CentredPopup>
+  );
+
+  // Website viewport (WP-LI.3.2, WP-LI Client Copy Web): the web header (the client's name above the
+  // programme, Edit {first}'s copy), the line, and the copy as one workout table: the header band
+  // rgba(143,104,246,0.2) EXERCISE · SETS · REPS · WEIGHT · RPE · TEMPO · REST (Exercise 32%, 28% on the
+  // rail, six equal centred columns), rows 52 (72 with a coach note), a block's band 36 with the 3 lavender
+  // bar on its members. The deleted copy is the #FAFAFB panel with Edit the template. The popup is the
+  // repo's CentredPopup below, centred on web as on mobile.
+  if (web) {
+    const cols = `${rail ? "28%" : "32%"} repeat(6,minmax(0,1fr))`;
+    const heads = [t("Exercise"), t("Sets"), t("Reps"), t("Weight"), t("RPE"), t("Tempo"), t("Rest")];
+    const BAR = "inset 3px 0 0 #9A8CD6";
+    let n = 0;
+    const exRow = (ex: (typeof runs)[number]["members"][number], grp: boolean) => (
+      <div key={ex.id} role="row" className="grid items-center hover:bg-[#FAFAFB]" style={{ minHeight: ex.coachNote ? 72 : 52, boxSizing: "border-box", gridTemplateColumns: cols, padding: "14px 20px", borderTop: "1px solid rgba(36,31,27,0.06)", boxShadow: grp ? BAR : "none" }}>
+        <div className="min-w-0 flex items-center" style={{ gap: 12, paddingInlineEnd: 12 }}>
+          <span className="flex items-center justify-center shrink-0" style={{ width: 24, height: 24, borderRadius: 7, background: "#F0EDF9", color: "#5F5093", fontSize: 12, lineHeight: "16px", fontWeight: 700 }}>{++n}</span>
+          <span title={ex.name} className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{ex.name}</span>
+        </div>
+        {specCells(ex).map((parts, i) => (
+          <span key={i} role="cell" className="min-w-0 flex items-baseline justify-center whitespace-nowrap" style={{ gap: 4 }}>
+            {(parts ?? [{ n: "–" }]).map((p, j) => (
+              <span key={j} className="whitespace-nowrap">
+                <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: parts ? "#241F1B" : "#C9C2B8", fontVariantNumeric: "tabular-nums" }}>{p.n}</span>
+                {"u" in p && p.u && <span style={{ marginInlineStart: 2, fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{p.u}</span>}
+              </span>
+            ))}
+          </span>
+        ))}
+        {ex.coachNote && (
+          <p className="truncate" style={{ gridColumn: "1 / -1", margin: 0, paddingInlineStart: 36, fontSize: 13, lineHeight: "20px", color: "#6A55C2" }}>{ex.coachNote}</p>
+        )}
+      </div>
+    );
+    return (
+      <div>
+        <ProgHeaderWeb
+          title={copy?.name ?? template.name}
+          eyebrow={name}
+          onBack={onBack}
+          cta={copy && editable ? { label: t("Edit {first}'s copy", { first }), icon: Pencil, onClick: () => setEditing(true) } : undefined}
+        />
+        <ProgBodyWeb>
+          <p style={{ margin: "0 0 24px", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{t("{name} follows their own copy of this programme.", { name })}</p>
+          {error && <ErrorLine>{t(error)}</ErrorLine>}
+          {state === "offline" && <OfflineLine />}
+          {state === "loading" && <ProCardSkeleton lines={4} />}
+          {state === "error" && <ProError onRetry={() => setReload((x) => x + 1)} />}
+          {state === "none" && (
+            <EmptyPanelWeb line={t("{first} has deleted their copy. Assigning again gives them a fresh one.", { first })} action={{ label: t("Edit the template"), icon: Pencil, onClick: onEditTemplate, secondary: true }} minHeight={0} />
+          )}
+          {copy && (state === "ok" || state === "offline") && (
+            <section role="table" aria-label={t("Workout")} style={{ boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, overflow: "hidden" }}>
+              <div role="row" className="grid items-center" style={{ height: 44, gridTemplateColumns: cols, padding: "0 20px", background: "rgba(143,104,246,0.2)" }}>
+                {heads.map((h, i) => (
+                  <span key={h} role="columnheader" className="whitespace-nowrap" style={{ textAlign: i ? "center" : "start", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#4B3C86" }}>{h}</span>
+                ))}
+              </div>
+              {runs.map((run) =>
+                run.block ? (
+                  <React.Fragment key={run.block.id}>
+                    <div className="flex items-center" style={{ height: 36, boxSizing: "border-box", gap: 6, padding: "0 20px", background: "#F3F0FB", borderTop: "1px solid rgba(36,31,27,0.06)", boxShadow: BAR }}>
+                      <span className="whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 800, color: "#5F5093" }}>{blockHeading(run.block, run.ordinal)}</span>
+                      <span className="whitespace-nowrap truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>· {t(BLOCK_LINE[run.block.kind])}</span>
+                    </div>
+                    {run.members.map((ex) => exRow(ex, true))}
+                  </React.Fragment>
+                ) : (
+                  run.members.map((ex) => exRow(ex, false))
+                )
+              )}
+            </section>
+          )}
+          {state !== "loading" && state !== "none" && (!editable || !copy) && (
+            <div style={{ marginTop: 24, maxWidth: 360 }}>
+              <Button fullWidth size="lg" variant="outline" onClick={onEditTemplate}>
+                <Pencil size={15} /> {t("Edit the template")}
+              </Button>
+            </div>
+          )}
+        </ProgBodyWeb>
+        <CreateRoutineSheet open={editing} onClose={() => setEditing(false)} folderId={null} pro={pro} />
+        {wherePopup}
+      </div>
+    );
+  }
+
   return (
     <div>
       <DetailHeader title={copy?.name ?? template.name} eyebrow={name} onBack={onBack} />
@@ -157,36 +282,7 @@ export const ClientCopyView: React.FC<{
 
       <CreateRoutineSheet open={editing} onClose={() => setEditing(false)} folderId={null} pro={pro} />
 
-      <CentredPopup
-        open={!!draft}
-        onClose={() => setDraft(null)}
-        icon={<GitBranch size={22} />}
-        title={t("Where should this change go?")}
-        body={[
-          changed.length > 2
-            ? t("You changed {a}, {b} and more.", { a: changed[0], b: changed[1] })
-            : changed.length === 2
-              ? t("You changed {a} and {b}.", { a: changed[0], b: changed[1] })
-              : changed.length === 1
-                ? t("You changed {a}.", { a: changed[0] })
-                : null,
-          t("{name} follows their own copy of this programme.", { name }),
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <div className="flex flex-col" style={{ gap: 8 }}>
-          <Button fullWidth size="lg" disabled={saving} onClick={() => void onlyTheirs()}>
-            {t("Only {first}'s copy", { first })}
-          </Button>
-          <Button fullWidth size="lg" variant="secondary" disabled={saving} onClick={() => void toTemplate()}>
-            {t("Update the template")}
-          </Button>
-          <p className="text-center" style={{ fontSize: textPx(12), color: INK.chF, lineHeight: 1.5 }}>
-            {t("Updating the template changes it for new clients. Existing copies stay as they are.")}
-          </p>
-        </div>
-      </CentredPopup>
+      {wherePopup}
     </div>
   );
 };

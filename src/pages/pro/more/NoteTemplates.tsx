@@ -6,6 +6,8 @@ import { useOnline } from "../../../hooks/useOnline";
 import { useBack } from "../../../hooks/useBack";
 import { textPx } from "../../../theme/textSize";
 import { PageHeader } from "../../../components/ui/PageHeader";
+import { PaneHeaderWeb } from "../../../components/web/PaneHeaderWeb";
+import { usePaneSpan } from "../../../components/web/paneFill";
 import { SegmentedTabs } from "../../../components/ui/SegmentedTabs";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { CtaButton } from "../../../components/ui/PinnedCta";
@@ -73,9 +75,15 @@ export default function NoteTemplates() {
   }, [authUserId, nonce]);
 
   const shown = (list ?? []).filter((t) => t.kind === tab);
+  const inPane = usePaneSpan();
   return (
     <div style={{ paddingBottom: 120 }}>
-      <PageHeader title={t("Note templates")} subtitle={t("Start notes the same way every time")} showBack onBack={back} />
+      {inPane ? (
+        // Website viewport (WP-MO.7): in the spanning More pane the pane header replaces the back row.
+        <PaneHeaderWeb title={t("Note templates")} subtitle={t("Start notes the same way every time")} />
+      ) : (
+        <PageHeader title={t("Note templates")} subtitle={t("Start notes the same way every time")} showBack onBack={back} />
+      )}
       <SegmentedTabs className="mb-3" items={TABS.map((x) => ({ ...x, label: t(x.label) }))} activeKey={tab} onChange={(k) => setTab(k as Tab)} tabHeight={36} labelSize={12} />
       {state === "offline" && list && <OfflineLine />}
       {state === "loading" && !list ? (

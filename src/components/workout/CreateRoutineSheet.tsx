@@ -26,6 +26,7 @@ import { prescriptionLine } from "../../services/workout/prescription";
 import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 import { tidyPlaylistInput } from "../../services/music/playlistLink";
 import { t } from "../../i18n/core";
+import { WebCopy } from "../web/WebCopy";
 
 const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
@@ -388,7 +389,7 @@ export const CreateRoutineSheet: React.FC<{
 
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-              {t("Exercises")} {exercises.length > 0 && t("(drag to reorder, tap for settings)")}
+              {t("Exercises")} {exercises.length > 0 && <WebCopy mobile={t("(drag to reorder, tap for settings)")} web={t("(drag to reorder, click for settings)")} />}
             </span>
             {pro && groupProblem && <p className="text-[11px] text-status-high mb-2">{t(groupProblem)}</p>}
             <div className="space-y-1.5 mb-3">

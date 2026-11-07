@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { ChevronDown, ChevronLeft, Lightbulb, Lock, Send, ShieldCheck, TrendingDown, TrendingUp, type LucideIcon } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
@@ -10,6 +10,8 @@ import { INK } from "../proInk";
 import { Avatar } from "../client/kit";
 import { EmptyState } from "../EmptyState";
 import { askWithMessage, ASK_MESSAGE_MAX } from "../../../services/pro/insights";
+import { useIsWeb } from "../../web/useWebLayout";
+import { GroupsOpenContext } from "./groupsOpen";
 import { t } from "../../../i18n/core";
 
 /**
@@ -112,8 +114,10 @@ export const StatBoxes: React.FC<{ boxes: StatBox[] }> = ({ boxes }) => (
   </div>
 );
 
-export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open, onToggle, children }) => {
+export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line: string; open: boolean; onToggle: () => void; children: React.ReactNode }> = ({ id, icon: Icon, title, line, open: openProp, onToggle, children }) => {
   const dark = useIsDark();
+  const allOpen = useContext(GroupsOpenContext);
+  const open = openProp || allOpen;
   return (
     <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, marginBottom: 10, overflow: "hidden" }}>
       <button type="button" aria-expanded={open} aria-controls={`grp-${id}`} onClick={onToggle} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "14px 16px", minHeight: 64 }}>
@@ -140,8 +144,11 @@ export const Group: React.FC<{ id: string; icon: LucideIcon; title: string; line
 };
 
 /** The scrolling sub-tab chips (vitals, filters): r10, pad 7 12, 12 / 700 on, 600 off. */
-export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (k: string) => void; label: string }> = ({ items, active, onChange, label }) => (
-  <div role="tablist" aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: 6, marginBottom: 12, paddingBottom: 2 }}>
+export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active: string; onChange: (k: string) => void; label: string }> = ({ items, active, onChange, label }) => {
+  // Website viewport (WP-CO-IN.8): the chips are 36 high on web (15/24), 8 apart, 16 below; mobile unchanged.
+  const web = useIsWeb();
+  return (
+  <div role="tablist" aria-label={label} className="flex scroll-row no-scrollbar" style={{ gap: web ? 8 : 6, marginBottom: web ? 16 : 12, paddingBottom: 2 }}>
     {items.map((c) => {
       const on = c.key === active;
       return (
@@ -152,14 +159,15 @@ export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active
           aria-selected={on}
           onClick={() => onChange(c.key)}
           className="tap shrink-0 whitespace-nowrap relative before:absolute before:inset-x-0 before:-inset-y-[7px] before:content-['']"
-          style={{ borderRadius: 10, padding: "7px 12px", fontSize: textPx(12), fontWeight: on ? 700 : 600, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}
+          style={{ borderRadius: 10, ...(web ? { height: 36, boxSizing: "border-box" as const, padding: "0 14px", fontSize: 15, lineHeight: "24px" } : { padding: "7px 12px", fontSize: textPx(12) }), fontWeight: on ? 700 : 600, background: on ? INK.fill : INK.card, color: on ? INK.onFill : INK.chS, border: `1px solid ${on ? INK.fill : "rgb(var(--c-charcoal) / 0.11)"}` }}
         >
           {c.label}
         </button>
       );
     })}
   </div>
-);
+  );
+};
 
 import type { PageRange } from "./panelProps";
 
