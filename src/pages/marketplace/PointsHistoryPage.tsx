@@ -143,14 +143,28 @@ export default function PointsHistoryPage() {
           <p style={{ margin: 0, fontSize: textPx(14), lineHeight: linePx(20), color: m.ink2, maxWidth: 240 }}>{t("Your points activity will appear here.")}</p>
         </div>
       ) : (
-        <div style={{ marginTop: 6, display: "flex", flexDirection: "column" }}>
+        <div
+          style={
+            // WC-EX.5 (WC-EX Points Web, "Points activity"): the ledger in a r20 0.5px card, padding 4 20 8.
+            web
+              ? { marginTop: 6, display: "flex", flexDirection: "column", borderRadius: 20, border: `0.5px solid ${m.border}`, padding: "4px 20px 8px" }
+              : { marginTop: 6, display: "flex", flexDirection: "column" }
+          }
+        >
           {items.map((it) =>
             it.kind === "head" ? (
-              <h2 key={it.key} style={{ margin: 0, padding: "16px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }}>
+              <h2
+                key={it.key}
+                style={
+                  web
+                    ? { margin: 0, padding: "14px 0 4px", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: m.faint }
+                    : { margin: 0, padding: "16px 0 6px", fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: m.faint }
+                }
+              >
                 {it.label}
               </h2>
             ) : (
-              <LedgerRow key={it.key} entry={it.entry} balanceAfter={pointsSummary ? it.balanceAfter : null} lines={ledgerLines(it.entry, title, hideNumbers)} ink={amountTone(it.entry.amount) === "earned" ? earnedInk : spentInk} />
+              <LedgerRow key={it.key} web={web} entry={it.entry} balanceAfter={pointsSummary ? it.balanceAfter : null} lines={ledgerLines(it.entry, title, hideNumbers)} ink={amountTone(it.entry.amount) === "earned" ? earnedInk : spentInk} />
             )
           )}
           {more ? (
@@ -183,8 +197,24 @@ export default function PointsHistoryPage() {
   );
 }
 
-const LedgerRow: React.FC<{ entry: LedgerEntry; balanceAfter: number | null; lines: { title: string; kind: string }; ink: string }> = ({ entry, balanceAfter, lines, ink }) => {
+const LedgerRow: React.FC<{ entry: LedgerEntry; balanceAfter: number | null; lines: { title: string; kind: string }; ink: string; web?: boolean }> = ({ entry, balanceAfter, lines, ink, web }) => {
   const m = marketPalette(useIsDark());
+  // WC-EX.5 web row: min 56, padding 6 0; the title 15/22 700 and the kind 13/20 on one
+  // baseline (wrapping), the amount 72 wide 15/22 800, the balance 64 wide 13/20.
+  if (web)
+    return (
+      <div style={{ minHeight: 56, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 16, padding: "6px 0", borderBottom: `0.5px solid ${m.div}` }}>
+        <span style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: m.ink }}>{lines.title}</span>
+          <span style={{ fontSize: 13, lineHeight: "20px", color: m.faint }}>{lines.kind}</span>
+          <DoubledChip multiplier={entry.multiplier} />
+        </span>
+        <span style={{ width: 72, textAlign: "end", fontSize: 15, lineHeight: "22px", fontWeight: 800, color: ink, fontVariantNumeric: "tabular-nums" }}>{signedPoints(entry.amount)}</span>
+        {balanceAfter !== null ? (
+          <span style={{ width: 64, textAlign: "end", fontSize: 13, lineHeight: "20px", color: m.faint, fontVariantNumeric: "tabular-nums" }}>{balanceAfter.toLocaleString(appLocale("en-US"))}</span>
+        ) : null}
+      </div>
+    );
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderBottom: `0.5px solid ${m.div}` }}>
       <div style={{ flex: 1, minWidth: 0 }}>

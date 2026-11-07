@@ -137,6 +137,7 @@ export const LibraryHome: React.FC<{
       width={180}
       // WP-NU-MP.10: the web menus draw plain rows (no row borders).
       variant={web ? "plain" : undefined}
+      webRows={web}
       onSelect={(v) => {
         setShow(v as Show);
         setFilterAnchor(null);
@@ -154,6 +155,7 @@ export const LibraryHome: React.FC<{
       align="right"
       width={190}
       variant={web ? "plain" : undefined}
+      webRows={web}
       onSelect={(v) => {
         const p = menu?.plan;
         setMenu(null);

@@ -22,6 +22,7 @@ export const FILES: string[] = [
   "components/pro/nutrition/Targets.tsx",
   "components/pro/nutrition/useNutritionOverview.ts",
   "components/pro/web/JournalDayWeb.tsx",
+  "components/pro/web/RecipeFormWeb.tsx",
   "pages/pro/MealPlans.tsx",
   "services/pro/nutrition.ts",
 ];
@@ -319,6 +320,8 @@ const pronutrition: Catalogue = {
   "{slot}: {kcal} kcal, protein {p} g, carbs {c} g, fat {f} g": "{slot}: {kcal} سعرة، بروتين {p} غ، كربوهيدرات {c} غ، دهون {f} غ",
   "C {n}g": "ك {n} غ",
   "F {n}g": "د {n} غ",
+  "e.g. Chicken and rice bowl": "مثلًا: وعاء دجاج وأرز",
+  "One step per line": "خطوة في كل سطر",
 };
 
 export default pronutrition;

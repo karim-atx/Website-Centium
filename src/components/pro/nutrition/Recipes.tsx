@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { ChefHat, Plus, Search, SlidersHorizontal } from "lucide-react";
-import { useWebLayout, WEB_READING_MAX } from "../../web/useWebLayout";
+import { useIsWeb, useWebLayout, WEB_READING_MAX } from "../../web/useWebLayout";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
@@ -51,6 +51,7 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
   // Website viewport (WP-NU-MP.3.1): on web a recipe opens in the page; Edit opens the repo's edit sheet.
   const [detail, setDetail] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const web = useIsWeb();
 
   const list = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -66,6 +67,7 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
     <PopupMenu
       // WP-NU-MP.10 mn-sort: plain rows on web (the web page passes webTabs).
       variant={webTabs ? "plain" : undefined}
+      webRows={!!webTabs}
       open={!!sortAnchor}
       anchor={sortAnchor}
       onClose={() => setSortAnchor(null)}
@@ -86,9 +88,9 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
   );
   const sheets = (
     <>
-      {open && <MealPrepFlowSheet kind="recipes" itemId={open} professional onClose={() => setOpen(null)} />}
-      {editing && detail && <MealPrepFlowSheet kind="recipes" itemId={detail} professional startEditing onClose={() => setEditing(false)} />}
-      <PrepCreateSheet kind="recipes" open={creating} onClose={() => setCreating(false)} professional />
+      {open && <MealPrepFlowSheet kind="recipes" itemId={open} professional web={web} onClose={() => setOpen(null)} />}
+      {editing && detail && <MealPrepFlowSheet kind="recipes" itemId={detail} professional web={web} startEditing onClose={() => setEditing(false)} />}
+      <PrepCreateSheet kind="recipes" open={creating} onClose={() => setCreating(false)} professional web={web} />
     </>
   );
 
