@@ -616,7 +616,7 @@ export default function Clients() {
 
       {stages.offline && <OfflineLine />}
 
-      <div className="flex items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
+      <div className="flex flex-wrap items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
         {selecting ? (
           <>
             <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{t("{n} selected", { n: picked.size })}</span>

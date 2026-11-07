@@ -77,6 +77,7 @@ const member: Catalogue = {
 
   // == Home: streaks board ==
   "Change plant species": "تغيير نوع النبتة",
+  "Open Mind": "فتح العقل",
   "day streak": { zero: "يوم متتالٍ", one: "يوم متتالٍ", two: "يومان متتاليان", few: "أيام متتالية", many: "يومًا متتاليًا", other: "يوم متتالٍ" },
   "{n} of 4 goals done today": "{n} من 4 أهداف أُنجزت اليوم",
   "Nothing to share yet. Start a streak first.": "لا شيء للمشاركة بعد. ابدأ سلسلة أولًا.",

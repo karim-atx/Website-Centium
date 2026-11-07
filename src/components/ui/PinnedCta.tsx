@@ -20,9 +20,9 @@ type CtaSize = "base" | "page" | "sheet";
 type CtaVariant = "primary" | "secondary" | "outline";
 
 const sizeClasses: Record<CtaSize, string> = {
-  base: "h-11 rounded-xl",
-  page: "h-12 rounded-[14px]",
-  sheet: "h-[52px] rounded-2xl",
+  base: "min-h-11 rounded-xl",
+  page: "min-h-12 rounded-[14px]",
+  sheet: "min-h-[52px] rounded-2xl",
 };
 
 // Secondary (the left button of a CTA row): primary.tint fill with
@@ -67,7 +67,7 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
     aria-busy={loading || undefined}
     onClick={loading ? undefined : onClick}
     className={clsx(
-      "tap w-full min-w-0 inline-flex items-center justify-center gap-[7px] px-4 text-[14px] font-bold leading-none",
+      "tap w-full min-w-0 inline-flex items-center justify-center gap-[7px] px-4 py-1 text-[14px] font-bold leading-none",
       "transition-[filter] duration-150 ease-out active:brightness-[0.92]",
       "disabled:opacity-40 disabled:pointer-events-none",
       loading && "cursor-progress",
@@ -78,7 +78,8 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
     {...rest}
   >
     {loading ? <Loader2 size={15} className="animate-spin shrink-0" aria-hidden /> : icon}
-    <span className="truncate">{label}</span>
+    {/* Round K · ET: a minimum height and a label that wraps, so 200% text is never cut off. */}
+    <span className="min-w-0 text-center" style={{ overflowWrap: "break-word" }}>{label}</span>
   </button>
 );
 

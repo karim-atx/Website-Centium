@@ -630,25 +630,32 @@ export default function Food() {
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
                 >
+                  {/* Round K · ET: the row stays clickable; the keyboard and screen readers use the
+                      button on the meal's name (a button may not hold the meal menu's button). */}
                   <div
-                    role="button"
-                    tabIndex={0}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       toggleCollapsed(meal);
                     }}
-                    onKeyDown={(ev) => {
-                      if (ev.key === "Enter" || ev.key === " ") {
-                        ev.preventDefault();
-                        toggleCollapsed(meal);
-                      }
-                    }}
                     className="tap w-full flex items-start gap-2.5 cursor-pointer"
                     style={{ background: headBg, padding: "13px 14px", transition: "background-color .18s ease" }}
-                    aria-label={collapsed ? t("Expand {section}", { section: t(mealLabels[meal]) }) : t("Collapse {section}", { section: t(mealLabels[meal]) })}
                   >
                     <span className="flex-1 min-w-0 flex items-start" style={{ gap: 22 }}>
-                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">{t(mealLabels[meal])}</h3>
+                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">
+                        <button
+                          type="button"
+                          aria-expanded={!collapsed}
+                          aria-label={collapsed ? t("Expand {section}", { section: t(mealLabels[meal]) }) : t("Collapse {section}", { section: t(mealLabels[meal]) })}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            toggleCollapsed(meal);
+                          }}
+                          className="text-start"
+                          style={{ font: "inherit", color: "inherit", background: "none", border: 0, padding: 0, margin: 0 }}
+                        >
+                          {t(mealLabels[meal])}
+                        </button>
+                      </h3>
                       {/* FO1.1: the meal menu, with clear space after the title. */}
                       <button
                         onClick={(ev) => {

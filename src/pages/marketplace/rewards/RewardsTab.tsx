@@ -195,7 +195,7 @@ export default function RewardsTab() {
       </div>
 
       {/* Sort · Affordable now */}
-      <div style={web ? { gridColumn: rail ? "span 8" : "span 4", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 } : { marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <div style={web ? { gridColumn: rail ? "span 8" : "span 4", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 } : { marginTop: 10, display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <button
           ref={setSortEl}
           type="button"

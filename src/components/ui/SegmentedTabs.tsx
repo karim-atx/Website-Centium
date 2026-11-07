@@ -185,11 +185,12 @@ export const SegmentedTabs: React.FC<{
             role="tab"
             aria-selected={active}
             onClick={() => onChange(item.key)}
-            className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : "whitespace-nowrap"}`}
+            className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : scroll ? "whitespace-nowrap" : "text-center"}`}
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
               minWidth: scroll ? (teal && scrollMinWidth === 86 ? 0 : scrollMinWidth) : 0,
-              height,
+              // Round K · ET: a minimum height, and (outside a scrolling row) labels that wrap at spaces, so 200% text stays inside its tab.
+              minHeight: height,
               gap: item.icon ? iconGap ?? 6 : undefined,
               padding: pad,
               borderRadius: radius,

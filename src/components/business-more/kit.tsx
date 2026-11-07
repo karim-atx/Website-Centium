@@ -937,7 +937,7 @@ export const BizConfirm: React.FC<{
 
 /** Rows skeleton: a 36 tile block and two text bars per row. */
 export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = t("Loading") }) => (
-  <div aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
+  <div role="status" aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11 }}>
         <span className="block shrink-0 bg-cream-soft dark:bg-white/[0.06] animate-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 11 }} />

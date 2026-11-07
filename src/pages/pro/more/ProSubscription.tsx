@@ -515,6 +515,9 @@ export default function ProSubscription() {
             <div
               ref={track}
               onScroll={onScroll}
+              role="region"
+              aria-label={t("Plans")}
+              tabIndex={0}
               className="flex scroll-row no-scrollbar"
               style={{ gap: 10, padding: "12px 16px 4px", scrollSnapType: "x mandatory", scrollPaddingInline: 16 }}
             >

@@ -522,7 +522,7 @@ export const CheckReminderSheet: React.FC<{
               onClick={() => void save()}
               loading={busy}
               disabled={past || !check}
-              className="!h-[50px] !rounded-[14px] !text-[15px]"
+              className="!min-h-[50px] !rounded-[14px] !text-[15px]"
               style={{ background: "rgb(var(--c-fill-pinned))", lineHeight: "22.5px" }}
             />
           </div>
