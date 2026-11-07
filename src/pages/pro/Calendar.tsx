@@ -872,7 +872,7 @@ export default function Calendar() {
             </div>
           )}
           {view === "day" && (
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {dayRequests.length > 0 && (
                 <>
                   <EyebrowWeb>{t("Requests")}</EyebrowWeb>
@@ -904,6 +904,7 @@ export default function Calendar() {
                   onOpen={openItem}
                   onBreak={(e) => setOffSheet({ entry: e, day: selected })}
                   onOpenSlot={(start) => setAddOpen({ date: selected, start })}
+                  web
                 />
               )}
             </div>

@@ -55,7 +55,7 @@ export default function Payments() {
     : undefined;
 
   return (
-    <SubPage title={t("Payments and billing")}>
+    <SubPage title={t("Payments and billing")} paneSubtitle={t("Methods, payouts, invoices & receipts")}>
       {offline && facts && <OfflineLine />}
       {error && !facts ? (
         <ProError onRetry={() => void reload()} />

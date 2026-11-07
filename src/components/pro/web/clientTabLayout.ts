@@ -33,6 +33,8 @@ export interface TabLayout {
   blocks: TabBlock[];
   /** The block this item opens, or undefined to stay in the current block. */
   place: (item: TabItem, ctx: { heads: Set<string>; rail: boolean }) => number | undefined;
+  /** Section heads (i18n keys) whose run of cards moves to the top of its block, in this order. */
+  lead?: string[];
 }
 
 const B = (s1440: number, s1024: number): TabBlock => ({ span: [s1440, s1024] });
@@ -60,6 +62,7 @@ const fcOverview: TabLayout = {
     if (is(it.head, "About")) return 3;
     return undefined;
   },
+  lead: ["Shared with you"],
 };
 
 const fcPlan: TabLayout = {

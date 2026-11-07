@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, ChevronUp, CircleCheck, MessageCircle, Plus, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronUp, CircleCheck, MessageCircle, Plus, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useBack } from "../../../hooks/useBack";
@@ -41,8 +41,8 @@ import {
 import { startThread } from "../../../services/messaging";
 import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { time12 } from "../../../utils/time12";
-import { useIsWeb } from "../../web/useWebLayout";
-import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
+import { ProPageBodyWeb } from "../web/ProPageWeb";
 import { t, tn, tx } from "../../../i18n/core";
 
 const offline = () => t("You're offline. Try again when you're connected.");
@@ -82,6 +82,7 @@ export const CareNetworkScreen: React.FC = () => {
   const back = useBack(PRO_ROUTES.more);
   const dark = useIsDark();
   const web = useIsWeb();
+  const { rail } = useWebLayout();
   const [tab, setTab] = useState<Tab>("received");
   const [refs, setRefs] = useState<{ received: Referral[]; sent: Referral[] } | null>(null);
   const [links, setLinks] = useState<CareLink[] | null>(null);
@@ -484,20 +485,30 @@ export const CareNetworkScreen: React.FC = () => {
   const nSent = refs ? refs.sent.length : 0;
   const page = web ? (
     <div>
-      <ProPageHeaderWeb
-        title={t("Care network")}
-        actions={
+      <header className="flex items-center" style={{ height: 80, boxSizing: "border-box", gap: 16, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+        <button
+          type="button"
+          onClick={back}
+          aria-label={t("Back")}
+          className="flex shrink-0 items-center justify-center hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+          style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)", color: "#241F1B" }}
+        >
+          <ChevronLeft size={20} strokeWidth={2} aria-hidden />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("Care network")}</h1>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Referrals between you and colleagues")}</p>
+        </div>
         <button
           type="button"
           onClick={() => setRefer(true)}
-          className="flex items-center shrink-0 hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-          style={{ height: 44, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+          className="flex items-center shrink-0 hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+          style={{ height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}
         >
           <Send size={18} strokeWidth={2} aria-hidden />
           {t("Refer a client")}
         </button>
-        }
-      />
+      </header>
       <ProPageBodyWeb>
       {state === "offline" && refs && <OfflineLine />}
       {err && <ErrorLine>{err}</ErrorLine>}

@@ -117,7 +117,15 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
 
   return (
     <div data-pro-business="">
-      <EyebrowHead eyebrow={t("Business")} title={name || " "} onBack={back} />
+      {idProp ? (
+        // WP-MO.1 web: the detail pane's head (eyebrow 13/20 caps #8C8378, the name 22/30 700), no back; the list is beside it.
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Business")}</p>
+          <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{name || " "}</h2>
+        </div>
+      ) : (
+        <EyebrowHead eyebrow={t("Business")} title={name || " "} onBack={back} />
+      )}
       {offline && <OfflineLine />}
       {failed ? (
         <ProError onRetry={reload} />

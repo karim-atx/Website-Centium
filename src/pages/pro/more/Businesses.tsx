@@ -147,7 +147,7 @@ export default function Businesses() {
   const webSel = web ? picked ?? webAll.find((x) => x.acceptedAt)?.businessId ?? webAll[0]?.businessId ?? null : null;
   const listNode = (
     <div data-pro-businesses="">
-      <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />
+      {!web && <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />}
       {offline && <OfflineLine />}
       {failed ? (
         <ProError onRetry={reload} />
@@ -210,6 +210,13 @@ export default function Businesses() {
   if (web) {
     const sel = webSel;
     return (
+      <>
+      <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 16, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
+        <div className="flex min-w-0 flex-1 items-baseline" style={{ gap: 16 }}>
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", whiteSpace: "nowrap", color: "#241F1B" }}>{t("Businesses")}</h1>
+          <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Where you work with a business")}</span>
+        </div>
+      </header>
       <div style={{ maxWidth: 1600, boxSizing: "border-box", padding: rail ? 24 : 32 }}>
         <div className="grid" style={{ gridTemplateColumns: rail ? "repeat(2,minmax(0,1fr))" : "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
           <div className="min-w-0">{listNode}</div>
@@ -220,6 +227,7 @@ export default function Businesses() {
           )}
         </div>
       </div>
+      </>
     );
   }
   return listNode;

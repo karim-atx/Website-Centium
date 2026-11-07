@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { HelpCircle, Lightbulb, MoveHorizontal, Pin } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { textPx } from "../../theme/textSize";
@@ -106,6 +106,8 @@ export interface ProChartProps {
   /** Screen-reader summary of the whole chart. */
   summary?: string;
   height?: number;
+  /** Website viewport: the plot's drawn height in px whatever the width (the viewBox height follows the measured width). */
+  webPlotPx?: number;
   /** W5: true-date x positions (0 to 1), one per index. */
   xPos?: number[];
   /** W5: positioned x labels (0 to 1) instead of `x`. */
@@ -164,6 +166,7 @@ export const ProChart: React.FC<ProChartProps> = ({
   insight,
   summary,
   height = 140,
+  webPlotPx,
   xPos,
   xTicks,
   bands,
@@ -182,7 +185,17 @@ export const ProChart: React.FC<ProChartProps> = ({
   const web = useIsWeb();
   const { theme } = useApp();
   const dark = theme === "dark";
-  const H = height;
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [svgW, setSvgW] = useState(0);
+  const fixed = web && !!webPlotPx;
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!fixed || !el) return;
+    const ro = new ResizeObserver(() => setSvgW(el.getBoundingClientRect().width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fixed]);
+  const H = fixed && svgW > 0 ? Math.round((W * webPlotPx!) / svgW) : height;
   const n = Math.max(2, x.length);
   const [off, setOff] = useState<Set<string>>(() => new Set(series.filter((s) => s.hidden).map((s) => s.key)));
   const [bandOff, setBandOff] = useState(false);
@@ -345,7 +358,7 @@ export const ProChart: React.FC<ProChartProps> = ({
             ))}
           </div>
         )}
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
+        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} width="100%" aria-hidden style={{ display: "block", overflow: "visible", ...NO_ICON_SCALE }}>
           {bands &&
             !bandsOff &&
             bands.map((b, i) => (

@@ -27,10 +27,12 @@ import { t } from "../../../i18n/core";
 export const SubPage: React.FC<{
   title: string;
   subtitle?: string;
+  /** The line under the title in a spanning More pane only (the pane's `d`); mobile keeps its own head. */
+  paneSubtitle?: string;
   right?: React.ReactNode;
   children: React.ReactNode;
   bottomPad?: number;
-}> = ({ title, subtitle, right, children, bottomPad }) => {
+}> = ({ title, subtitle, paneSubtitle, right, children, bottomPad }) => {
   const back = useBack();
   // Website viewport: in a spanning More pane the pane header replaces the back row (no chevron; the column is the way back).
   const inPane = usePaneSpan();
@@ -40,7 +42,7 @@ export const SubPage: React.FC<{
         <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
           <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
-            {subtitle && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle}</p>}
+            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle ?? paneSubtitle}</p>}
           </div>
           {right}
         </header>

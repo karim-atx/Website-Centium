@@ -230,6 +230,25 @@ export const ClientTabGridWeb: React.FC<{ lane: ProLane; tab: string; children: 
         if (b !== undefined) cur = b;
         members[cur].push(index);
       });
+      // A block's runs (a section head and the cards under it) led by `lead` heads move to its top.
+      if (layout.lead) {
+        const leads = layout.lead.map((k) => t(k));
+        members.forEach((m, b) => {
+          const runs: number[][] = [];
+          m.forEach((i) => {
+            if (!runs.length || headOf(els[i])) runs.push([i]);
+            else runs[runs.length - 1].push(i);
+          });
+          const rank = (r: number[]) => {
+            const k = leads.indexOf(headOf(els[r[0]]) ?? "");
+            return k < 0 ? leads.length : k;
+          };
+          members[b] = runs
+            .map((r, i) => ({ r, i }))
+            .sort((a, z) => rank(a.r) - rank(z.r) || a.i - z.i)
+            .flatMap((x) => x.r);
+        });
+      }
       const spans = layout.blocks.map((b) => b.span[rail ? 1 : 0]);
       // Columns first (an item's height depends on its width), then rows.
       const ones = els.map(() => 1);

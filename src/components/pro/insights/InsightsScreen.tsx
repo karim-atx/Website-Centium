@@ -26,7 +26,7 @@ import { BiomarkersPanel } from "./BiomarkersPanel";
 import { NutrientAnalysis } from "./NutrientAnalysis";
 import { TargetsReadOnly } from "../nutrition/Targets";
 import { t, tk } from "../../../i18n/core";
-import { useIsWeb } from "../../web/useWebLayout";
+import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
 import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
 import { ClientTabBodyWeb, ClientTabsWeb } from "../web/ClientPageWeb";
 
@@ -92,14 +92,29 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   const allPatients = patient && tab === "nutrition";
   // Website viewport (WP-CO-IN): the Insights page (not the client page's Client insights, which keeps its column) gets the page header, the equal tabs and its cards across the page.
   const web = useIsWeb() && !onBack;
+  const { rail } = useWebLayout();
 
   // Hold a real client whenever "All patients" isn't on offer.
   useEffect(() => {
     if (!loading && !clientId && !allPatients && clients.length) onClient(clients[0].clientId);
   }, [loading, clientId, allPatients, clients, onClient]);
 
+  const setPageRange = (r: PageRange) => {
+    setRange(r);
+    setChart({ activity: chartRangeFor(r), nutrition: chartRangeFor(r), vitals: chartRangeFor(r), biomarkers: chartRangeFor(r) });
+  };
   const head = web ? (
-    <ProPageHeaderWeb title={t(title)} />
+    <ProPageHeaderWeb
+      title={t(title)}
+      actions={
+        clients.length ? (
+          <>
+            <ClientPicker web={{ width: rail ? 220 : 280 }} clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? t("All patients") : undefined} patient={patient} />
+            <RangeTabs web={{ width: rail ? 240 : 300 }} value={range} onChange={setPageRange} />
+          </>
+        ) : undefined
+      }
+    />
   ) : onBack ? (
     <DetailHead title={t(title)} onBack={onBack} />
   ) : (
@@ -117,7 +132,8 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
       <div>
         {head}
         <ProPageBodyWeb>
-          <style>{".wpin-an .wpcl-tab>:nth-child(-n+3),.wpin-tg .wpcl-tab>:first-child{column-span:all}"}</style>
+          {/* WP-CO-IN chips (Vitals, Results): one row of equal 36 cells, 8 apart, 15/24, ellipsis (Insights Web v2 chipN). */}
+          <style>{".wpin-an .wpcl-tab>:nth-child(-n+3),.wpin-tg .wpcl-tab>:first-child{column-span:all}[data-pro-web=page] [role=tablist].scroll-row{display:grid!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}[data-pro-web=page] [role=tablist].scroll-row>button{min-width:0;padding:0 8px!important;overflow:hidden;text-overflow:ellipsis}"}</style>
           {tabBar}
           {children}
         </ProPageBodyWeb>
@@ -142,13 +158,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   const range5 = (
     <div className="flex items-center" style={{ gap: 8, marginBottom: 10 }}>
       <ClientPicker clients={clients} value={clientId} onChange={(id) => onClient(id || null)} allLabel={allPatients ? t("All patients") : undefined} patient={patient} />
-      <RangeTabs
-        value={range}
-        onChange={(r) => {
-          setRange(r);
-          setChart({ activity: chartRangeFor(r), nutrition: chartRangeFor(r), vitals: chartRangeFor(r), biomarkers: chartRangeFor(r) });
-        }}
-      />
+      <RangeTabs value={range} onChange={setPageRange} />
     </div>
   );
 
@@ -166,7 +176,7 @@ export const InsightsScreen: React.FC<InsightsScreenProps> = ({ lane, title, cli
   ) : null;
   return frame(
     <>
-      {range5}
+      {!web && range5}
       {web ? <ClientTabBodyWeb columns={2}>{body}</ClientTabBodyWeb> : body}
     </>
   );

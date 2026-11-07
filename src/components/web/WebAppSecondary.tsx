@@ -48,6 +48,8 @@ import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/ref
 import { tk, tn } from "../../i18n/core";
 import { Column, Pane, PlanCard, SecondaryGroups, type SecondaryGroup, type SecondaryItem } from "./WebSecondaryLayout";
 import { appSettingsSection } from "./webNav";
+import { LEGAL_UPDATED, legalDate } from "../../pages/settings/legalCopy";
+import { GUIDELINES_UPDATED } from "../../marketing/legal/guidelines";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
 
@@ -255,14 +257,15 @@ function useCallsSetting(on: boolean): { on: boolean | null; error: string | nul
 }
 
 function useSettingsGroups(): SecondaryGroup[] {
-  const { user, t } = useApp();
+  const { user, t, theme, language } = useApp();
+  const legal = t("Last updated {date}", { date: legalDate(LEGAL_UPDATED) });
   const pro = user.accountType === "professional";
   const calls = useCallsSetting(pro);
   const customer = user.accountType === "customer";
   const sec = (s: string) => `/app/settings?section=${s}`;
   return [
-    { label: tk("Help"), items: [{ key: "help", label: tk("Help and questions"), icon: LifeBuoy, to: "/app/settings/help" }] },
-    { label: tk("Appearance"), items: [{ key: "appearance", label: tk("Appearance"), icon: Sun, to: sec("appearance") }] },
+    { label: tk("Help"), items: [{ key: "help", label: tk("Help and questions"), desc: t("Answers, live chat and email"), icon: LifeBuoy, to: "/app/settings/help" }] },
+    { label: tk("Appearance"), items: [{ key: "appearance", label: tk("Appearance"), desc: `${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`, icon: Sun, to: sec("appearance") }] },
     { label: tk("Permissions"), items: [{ key: "permissions", label: tk("Permissions"), icon: Mic, to: sec("permissions") }] },
     ...(customer ? [{ label: tk("Connected devices"), items: [{ key: "devices", label: tk("Connected devices"), icon: HeartPulse, to: sec("devices") }] }] : []),
     { label: tk("Security"), items: [{ key: "twofactor", label: tk("Two-factor authentication"), icon: ShieldCheck, to: "/app/settings/two-factor" }] },
@@ -292,7 +295,7 @@ function useSettingsGroups(): SecondaryGroup[] {
     {
       label: tk("General"),
       items: [
-        { key: "language", label: tk("Language"), icon: Globe, to: "/app/settings/language" },
+        { key: "language", label: tk("Language"), desc: language === "ar" ? "العربية" : "English", icon: Globe, to: "/app/settings/language" },
         { key: "music", label: tk("Your music"), icon: Music2, to: "/app/settings/music" },
         { key: "accessibility", label: tk("Accessibility"), icon: Accessibility, to: "/app/settings/accessibility" },
         { key: "crisis", label: tk("Crisis lines"), icon: HeartHandshake, to: "/app/get-support" },
@@ -305,8 +308,8 @@ function useSettingsGroups(): SecondaryGroup[] {
     {
       label: tk("Legal"),
       items: [
-        { key: "terms", label: tk("Terms of Service"), icon: FileText, to: "/app/settings/terms" },
-        { key: "privacy", label: tk("Privacy"), icon: Lock, to: "/app/settings/privacy" },
+        { key: "terms", label: tk("Terms of Service"), desc: legal, icon: FileText, to: "/app/settings/terms" },
+        { key: "privacy", label: tk("Privacy"), desc: legal, icon: Lock, to: "/app/settings/privacy" },
         {
           key: "refund",
           label: tk("Refund and cancellation policy"),
@@ -314,7 +317,7 @@ function useSettingsGroups(): SecondaryGroup[] {
           ext: true,
           onClick: () => window.open(REFUND_POLICY_HREF, "_blank", "noopener"),
         },
-        { key: "guidelines", label: tk("Community guidelines"), icon: Users, to: sec("guidelines") },
+        { key: "guidelines", label: tk("Community guidelines"), desc: t("Last updated {date}", { date: legalDate(GUIDELINES_UPDATED) }), icon: Users, to: sec("guidelines") },
       ],
     },
   ];

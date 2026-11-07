@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useBack } from "../../hooks/useBack";
+import { usePaneSpan } from "../web/paneFill";
 
 interface PageHeaderProps {
   title: string;
@@ -39,6 +40,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitl
   const back = useBack();
   const { language, t } = useApp();
   const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
+  const inPane = usePaneSpan();
+  if (inPane && window.location.pathname.split("/").filter(Boolean).length <= 3) {
+    return (
+      <div className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
+        <div className="min-w-0">
+          {eyebrow && <p style={{ margin: "0 0 2px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{eyebrow}</p>}
+          <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h1>
+          {subtitle && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: subtitleColor ?? "#8C8378" }}>{subtitle}</p>}
+        </div>
+        {right}
+      </div>
+    );
+  }
   return (
     <div
       className="flex items-start justify-between mb-5 animate-fade-slide-up"

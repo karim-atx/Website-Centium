@@ -171,7 +171,27 @@ export const ChipRow: React.FC<{ items: { key: string; label: string }[]; active
 
 import type { PageRange } from "./panelProps";
 
-export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) => void }> = ({ value, onChange }) => (
+export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) => void; web?: { width: number } }> = ({ value, onChange, web }) =>
+  web ? (
+    <div role="tablist" aria-label={t("Range")} className="grid shrink-0" style={{ width: web.width, height: 40, boxSizing: "border-box", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 3, padding: 5, borderRadius: 14, background: "#F3F3FD" }}>
+      {(["today", "week", "month"] as const).map((k) => {
+        const on = value === k;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="tab"
+            aria-selected={on}
+            onClick={() => onChange(k)}
+            className="flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+            style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5B5349" }}
+          >
+            {k === "today" ? t("Today") : k === "week" ? t("Week") : t("Month")}
+          </button>
+        );
+      })}
+    </div>
+  ) : (
   <SegmentedTabs
     items={[
       { key: "today", label: t("Today") },
@@ -186,7 +206,7 @@ export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) =>
     tabRadius={9}
     labelSize={11.5}
   />
-);
+  );
 
 export interface PickerClient {
   clientId: string;
@@ -194,7 +214,7 @@ export interface PickerClient {
   avatarUrl: string | null;
 }
 
-export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | null; onChange: (id: string) => void; allLabel?: string; patient: boolean }> = ({ clients, value, onChange, allLabel, patient }) => {
+export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | null; onChange: (id: string) => void; allLabel?: string; patient: boolean; web?: { width: number } }> = ({ clients, value, onChange, allLabel, patient, web }) => {
   const [el, setEl] = useState<HTMLElement | null>(null);
   const cur = clients.find((c) => c.clientId === value) ?? null;
   const label = cur ? cur.name : allLabel ?? "";
@@ -206,12 +226,12 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
         aria-haspopup="listbox"
         aria-expanded={!!el}
         aria-label={patient ? t("Patient: {label}", { label }) : t("Client: {label}", { label })}
-        className="tap flex-1 min-w-0 flex items-center"
-        style={{ height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
+        className={web ? "flex min-w-0 shrink-0 items-center hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" : "tap flex-1 min-w-0 flex items-center"}
+        style={web ? { width: web.width, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)", padding: "0 14px", gap: 10, fontSize: 15, lineHeight: "24px", color: "#241F1B" } : { height: 40, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "0 12px", gap: 8, fontSize: textPx(14), color: INK.ch }}
       >
-        {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={24} />}
+        {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={web ? 28 : 24} />}
         <span className="flex-1 min-w-0 truncate text-start">{label}</span>
-        <ChevronDown size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
+        <ChevronDown size={web ? 16 : 14} strokeWidth={2} aria-hidden style={{ color: web ? "#8C8378" : INK.chF, flexShrink: 0 }} />
       </button>
       <PopupMenu
         open={!!el}

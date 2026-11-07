@@ -74,7 +74,7 @@ export function StatusTabs<K extends string>({ tabs, active, onChange, k }: { ta
   );
 }
 
-export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean; web?: boolean }> = ({ label, on, onClick, k, expanded, web }) => (
+export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: HTMLElement) => void; k: number; expanded: boolean; /** The web box; a number is its font size (WP-CL Patients Web qFs 13). */ web?: boolean | number }> = ({ label, on, onClick, k, expanded, web }) => (
   <button
     type="button"
     aria-haspopup="menu"
@@ -89,7 +89,7 @@ export const QuickFilter: React.FC<{ label: string; on: boolean; onClick: (el: H
       padding: web ? "0 8px" : "0 11px",
       boxSizing: "border-box",
       borderRadius: 10,
-      fontSize: web ? 15 : textPx(12),
+      fontSize: web ? (typeof web === "number" ? web : 15) : textPx(12),
       lineHeight: web ? "20px" : undefined,
       fontWeight: on ? 700 : 600,
       background: on ? INK.fill : INK.card,

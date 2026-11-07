@@ -600,13 +600,13 @@ export default function Clients() {
             on={(filters[g.key] ?? []).length > 0}
             expanded={quick?.group === g.key}
             k={k}
-            web={web}
+            web={web && patients ? 13 : web}
             onClick={(el) => setQuick((cur) => (cur?.group === g.key ? null : { group: g.key, el }))}
           />
         ));
-        // WP-CL Clients Web v2: the quick filters as a grid of 40 boxes, 4 across (2 on the rail), 8 apart.
+        // WP-CL Clients Web v2: the quick filters as a grid of 40 boxes, 4 across (2 on the rail), 8 apart; Patients Web: 4 across at both widths, 13.
         return web ? (
-          <div role="group" aria-label={t("Filters")} style={{ display: "grid", gridTemplateColumns: `repeat(${webRail ? 2 : 4},minmax(0,1fr))`, gap: 8 }}>
+          <div role="group" aria-label={t("Filters")} style={{ display: "grid", gridTemplateColumns: `repeat(${webRail && !patients ? 2 : 4},minmax(0,1fr))`, gap: 8 }}>
             {chips}
           </div>
         ) : (

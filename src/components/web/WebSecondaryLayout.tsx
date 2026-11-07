@@ -41,6 +41,7 @@ import { tk, tn } from "../../i18n/core";
 import { bizSettingsSection, type BizSettingsSection, type SecondaryKind } from "./webNav";
 import { AppSettingsLayout, ProMoreLayout } from "./WebAppSecondary";
 import { PaneFillContext, PaneSpanContext } from "./paneFill";
+import { PinnedInline } from "../ui/pinnedInline";
 import { useWebLayout, WEB_READING_MAX } from "./useWebLayout";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
@@ -406,7 +407,8 @@ export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNod
           <PaneFillContext.Provider value={setFill}>
             <PaneSpanContext.Provider value={!!span && !fill}>
               {banners}
-              {children}
+              {/* A spanning pane draws a page's pinned buttons under its content (the panes draw them inline), not over the window. */}
+              <PinnedInline.Provider value={!!span && !fill}>{children}</PinnedInline.Provider>
             </PaneSpanContext.Provider>
           </PaneFillContext.Provider>
         </div>

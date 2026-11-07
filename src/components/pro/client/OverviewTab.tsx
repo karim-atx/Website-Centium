@@ -232,6 +232,7 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
     return (
       <div style={{ marginBottom: 12 }}>
         <ProChart
+          webPlotPx={170}
           title={t("Blood pressure, last 6 weeks")}
           x={x}
           min={Math.max(0, Math.min(...vals) - 10)}
@@ -275,6 +276,7 @@ const WeeksChart: React.FC<{ data: ClientPageData; lane: ProLane; early: boolean
   return (
     <div style={{ marginBottom: 12 }}>
       <ProChart
+        webPlotPx={lane === "full_coaching" ? undefined : 170}
         title={title}
         x={x}
         min={0}

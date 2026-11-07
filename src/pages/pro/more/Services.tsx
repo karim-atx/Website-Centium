@@ -9,6 +9,7 @@ import { planLine, planPrice, priceLabel, sessionLine } from "../../../component
 import { useProfileFacts } from "../../../components/pro/profile/useProfileFacts";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../../components/pro/states";
 import { PinnedSlot } from "../../../components/ui/PinnedCta";
+import { usePaneSpan } from "../../../components/web/paneFill";
 import { useApp } from "../../../context/AppContext";
 import { useProSubtype } from "../../../hooks/useProSubtype";
 import { fetchBookingPolicy, fetchSessionTypes, DEFAULT_POLICY, type BookingAudience, type SessionType } from "../../../services/pro/calendar";
@@ -31,6 +32,7 @@ import { t } from "../../../i18n/core";
  */
 export default function Services() {
   const navigate = useNavigate();
+  const inPane = usePaneSpan();
   const { authUserId } = useApp();
   const { lane } = useProSubtype();
   const { facts, setFacts } = useProfileFacts();
@@ -122,11 +124,22 @@ export default function Services() {
         </>
       )}
 
-      {!loading && (
-        <PinnedSlot>
-          <CtaButton label={t("Add a service")} icon={Plus} onClick={() => setSheet({ plan: null })} full />
-        </PinnedSlot>
-      )}
+      {!loading &&
+        (inPane ? (
+          <button
+            type="button"
+            onClick={() => setSheet({ plan: null })}
+            className="flex items-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+            style={{ marginTop: 24, height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+          >
+            <Plus size={18} strokeWidth={2} aria-hidden />
+            {t("Add a service")}
+          </button>
+        ) : (
+          <PinnedSlot>
+            <CtaButton label={t("Add a service")} icon={Plus} onClick={() => setSheet({ plan: null })} full />
+          </PinnedSlot>
+        ))}
 
       <ServiceSheet
         open={!!sheet}
