@@ -192,7 +192,7 @@ export const SettingsRow: React.FC<{
           )}
         </span>
         {value !== undefined && <span style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>}
-        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378", flexShrink: 0 }} /> : null)}
+        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} /> : null)}
         {!last && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: Icon || tile ? 54 : 0, insetInlineEnd: 0, height: 1, background: "rgba(36,31,27,0.06)" }} />}
       </>
     );

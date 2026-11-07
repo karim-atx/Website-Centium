@@ -74,7 +74,7 @@ export const PlanHeaderWeb: React.FC<{
         className="flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
         style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}
       >
-        <ChevronLeft size={20} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: "#241F1B" }} />
+        <ChevronLeft size={20} strokeWidth={2} aria-hidden style={{ color: "#241F1B" }} />
       </button>
       <div className="flex-1 min-w-0">
         <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>

@@ -337,12 +337,37 @@ export const TargetsList: React.FC<{ lane: ProLane; onBack: () => void; onOpen: 
         <ListSkeleton rows={4} />
       ) : o.clients.length === 0 ? (
         <EmptyState icon={Target} title={t("No clients yet")} line={lane === "nutrition" ? t("Targets you set for clients show here.") : t("Turn on nutrition coaching from a client's Plan tab to set targets.")} />
+      ) : pane ? (
+        // WP-NU-MP.4 (WP-NU Meal Plans Web v3): rows 64 (padding 0 14, r14), avatar 44, the name 15/24 600,
+        // the line 13/20 with the lock; the open client #F0EDF9 with the 2 #AEA1DC ring on the avatar.
+        <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: 8 }}>
+          {o.clients.map((c) => {
+            const tg = o.targets[c.clientId];
+            const on = pane.selected === c.clientId;
+            return (
+              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} aria-current={on || undefined} className="w-full flex items-center text-start hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ gap: 14, padding: "0 14px", minHeight: 64, borderRadius: 14, background: on ? INK.prPale : "transparent" }}>
+                <span className="shrink-0" style={{ borderRadius: 9999, boxShadow: on ? "0 0 0 2px #AEA1DC" : "none" }}>
+                  <Avatar name={c.name} url={c.avatarUrl} size={44} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>
+                  <span className="flex items-center" style={{ gap: 6, fontSize: 13, lineHeight: "20px", color: INK.chF, whiteSpace: "nowrap", overflow: "hidden" }}>
+                    <span className="truncate">
+                      {tg ? (tg.locked ? t("{kcal} kcal · {pct}% protein · locked", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) }) : t("{kcal} kcal · {pct}% protein", { kcal: Math.round(tg.calories).toLocaleString(appLocale("en-GB")), pct: Math.round(tg.proteinPct) })) : t("Not set by you")}
+                    </span>
+                    {tg?.locked && <Lock size={12} strokeWidth={2} aria-hidden className="shrink-0" />}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       ) : (
         <div style={{ background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 20, padding: "4px 14px" }}>
           {o.clients.map((c, i) => {
             const tg = o.targets[c.clientId];
             return (
-              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} aria-current={pane?.selected === c.clientId || undefined} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none", ...(pane?.selected === c.clientId ? { background: INK.prPale, marginInline: -14, paddingInline: 14, width: "calc(100% + 28px)" } : null) }}>
+              <button key={c.clientId} type="button" onClick={() => onOpen(c.clientId)} className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "11px 0", minHeight: 44, borderBottom: i < o.clients.length - 1 ? `1px solid ${INK.b06}` : "none" }}>
                 <Avatar name={c.name} url={c.avatarUrl} size={34} />
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>{c.name}</span>

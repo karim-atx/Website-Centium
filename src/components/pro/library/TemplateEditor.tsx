@@ -11,6 +11,7 @@ import { INK } from "../proInk";
 import { PlaylistField, playlistFieldValid } from "../../music/PlaylistField";
 import { tidyPlaylistInput } from "../../../services/music/playlistLink";
 import { isRtl, t } from "../../../i18n/core";
+import { clientsColumn as W, routineLabel } from "../web/routinePageStyles";
 
 /**
  * Release 3 · W5 TR3 / TR13: the template builder = the shared
@@ -180,12 +181,82 @@ export const TemplateEditor: React.FC<{
     </div>
   );
 
+  // Website viewport (WP-LI.4, WP-LI Builders Web v2): the same fields as the
+  // "For your clients" column of the page; the playlist (Round E) stays under
+  // the note, as in the sheet.
+  const webLeft = (
+    <>
+      <p style={W.caps}>
+        <Briefcase size={16} strokeWidth={2} aria-hidden /> {t("For your clients")}
+      </p>
+      {!template?.isPublic && roster.length > 0 && (
+        <div>
+          <span style={routineLabel}>{t("Assign to")}</span>
+          <button
+            type="button"
+            onClick={(e) => setPickerAnchor(e.currentTarget)}
+            className="hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+            style={{ ...W.pick, color: names.length ? "#241F1B" : "#8C8378" }}
+            aria-haspopup="listbox"
+          >
+            <span className="truncate">{names.length ? names.join(isRtl() ? "، " : ", ") : t("Choose clients")}</span>
+          </button>
+        </div>
+      )}
+      <div style={W.switchRow}>
+        <span className="min-w-0">
+          <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Save as template")}</span>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Reuse it in other programmes")}</span>
+        </span>
+        <Toggle checked onChange={() => undefined} disabled label={t("Save as template")} />
+      </div>
+      <label className="block">
+        <span style={routineLabel}>{t("Programme length (weeks)")}</span>
+        <input value={weeks} onChange={(e) => setWeeks(e.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" className={W.focus} style={W.weeks} />
+      </label>
+      {workoutTemplateFolders.length > 0 && (
+        <div>
+          <span style={routineLabel}>{t("Folder")}</span>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+            {[{ id: null as string | null, name: t("Unfiled"), parentId: null as string | null | undefined }, ...workoutTemplateFolders].map((f) => (
+              <button
+                key={f.id ?? "unfiled"}
+                type="button"
+                onClick={() => setFolderId(f.id)}
+                aria-pressed={folderId === f.id}
+                className="truncate focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+                style={W.folder(folderId === f.id)}
+              >
+                {f.parentId ? "↳ " : ""}
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <label className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
+        <span style={routineLabel}>
+          {t("Note to client")} <span style={{ color: "#8C8378", fontWeight: 400 }}>{t("(read-only for them)")}</span>
+        </span>
+        <textarea value={note} onChange={(e) => setNote(e.target.value)} className={W.focus} style={W.note} />
+      </label>
+      <PlaylistField
+        value={playlist}
+        onChange={setPlaylist}
+        hint={t("Your clients see it on this workout and can play it while they train.")}
+        labelStyle={{ fontWeight: 600 }}
+        inputStyle={{ borderRadius: 16, fontWeight: 400 }}
+      />
+    </>
+  );
+
   const pro: RoutineSheetPro = {
     title: template ? template.name : t("Create Routine"),
     initial,
     submitLabel: t("Save routine"),
     onSubmit: submit,
     extra,
+    webPage: { left: webLeft },
     settings: (exercise): ExerciseSettingsPro => ({
       ...(onTargets && exercise.exerciseId && exercise.intensityPct
         ? { targets: { summary: targetsSummary?.(exercise) ?? null, onOpen: () => onTargets(exercise) } }

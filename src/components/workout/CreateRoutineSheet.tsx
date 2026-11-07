@@ -27,6 +27,9 @@ import { PlaylistField, playlistFieldValid } from "../music/PlaylistField";
 import { tidyPlaylistInput } from "../../services/music/playlistLink";
 import { t } from "../../i18n/core";
 import { WebCopy } from "../web/WebCopy";
+import { useWebLayout } from "../web/useWebLayout";
+import { ExerciseRowWeb, ExerciseSearchWeb, RoutineFieldsWeb, RoutinePageWeb } from "../pro/web/RoutinePageWeb";
+import { routineLabel } from "../pro/web/routinePageStyles";
 
 const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
@@ -79,6 +82,12 @@ export interface RoutineSheetPro {
   extra?: React.ReactNode;
   /** Pro-mode exercise settings for one exercise (targets row etc.). */
   settings?: (exercise: Exercise) => ExerciseSettingsPro;
+  /**
+   * Website viewport (WP-LI.4): from 1024px the builder is a page, with this
+   * "For your clients" column on the left and the exercise search docked on
+   * the right. Unset, or below 1024, the sheet as before.
+   */
+  webPage?: { left: React.ReactNode };
 }
 
 const NOTE_MAX = 500;
@@ -120,6 +129,8 @@ export const CreateRoutineSheet: React.FC<{
   const [settingsIndex, setSettingsIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { web: webLayout } = useWebLayout();
+  const asPage = !!pro?.webPage && webLayout;
 
   // Pro mode: start from the template being edited each time the sheet opens.
   const initial = pro?.initial;
@@ -331,8 +342,151 @@ export const CreateRoutineSheet: React.FC<{
 
   const settingsExercise = settingsIndex !== null ? exercises[settingsIndex] : null;
 
+  // Website viewport (WP-LI.4): the page, web only (see RoutinePageWeb).
+  const close = () => {
+    reset();
+    onClose();
+  };
+  const webRow = (ex: Exercise) => {
+    const i = exercises.findIndex((e) => e.id === ex.id);
+    const picked = selected.includes(ex.id);
+    return (
+      <ExerciseRowWeb
+        key={ex.id}
+        name={ex.name}
+        line={prescriptionLine(ex)}
+        hasNote={!!ex.coachNote?.trim()}
+        open={settingsIndex === i}
+        dragProps={{ draggable: !selecting, onDragStart: () => setDragIndex(i), onDragOver: (e) => e.preventDefault(), onDrop: () => handleDrop(i) }}
+        lead={
+          selecting ? (
+            <button
+              onClick={() => setSelected((prev) => (prev.includes(ex.id) ? prev.filter((id) => id !== ex.id) : [...prev, ex.id]))}
+              role="checkbox"
+              aria-checked={picked}
+              aria-label={t("Select {name}", { name: ex.name })}
+              className="flex items-center justify-center shrink-0"
+              style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${picked ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`, background: picked ? "#AEA1DC" : "transparent" }}
+            />
+          ) : undefined
+        }
+        onSettings={() => setSettingsIndex(i)}
+        onNote={() => setNoteFor({ id: ex.id, text: ex.coachNote ?? "" })}
+        onRemove={() => removeExercise(ex.id)}
+      />
+    );
+  };
+  const webPage = asPage && open && pro?.webPage && (
+    <RoutinePageWeb
+      title={pro.title}
+      saveLabel={saving ? t("Saving…") : pro.submitLabel}
+      saveDisabled={saving || !name.trim() || exercises.length === 0}
+      onBack={close}
+      onSave={() => void save()}
+      left={pro.webPage.left}
+      routine={
+        <>
+          <RoutineFieldsWeb name={name} onName={setName} duration={duration} onDuration={setDuration} />
+          <span style={{ ...routineLabel, flex: "none", marginBottom: 8 }}>
+            {t("Exercises")} {exercises.length > 0 && <WebCopy mobile={t("(drag to reorder, tap for settings)")} web={t("(drag to reorder, click for settings)")} />}
+          </span>
+          {groupProblem && <p style={{ margin: "0 0 8px", fontSize: 13, lineHeight: "20px", color: "rgb(var(--c-status-high))" }}>{t(groupProblem)}</p>}
+          <div className="overflow-y-auto" style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+            {groupIntoRuns(exercises, blocks).map((run) =>
+              run.block ? (
+                <div key={run.block.id} style={{ flex: "none" }}>
+                  <BlockCard
+                    block={run.block}
+                    ordinal={run.ordinal}
+                    members={run.members}
+                    onHeaderClick={() => setBlockDraft({ block: run.block!, memberIds: run.members.map((m) => m.id) })}
+                    renderMemberAction={(ex) => (
+                      <span className="flex items-center shrink-0" style={{ gap: 10 }}>
+                        {noteIcon(ex)}
+                        <button
+                          onClick={() => setSettingsIndex(exercises.findIndex((e) => e.id === ex.id))}
+                          aria-label={t("Settings for {name}", { name: ex.name })}
+                          className="text-charcoal-faint shrink-0"
+                        >
+                          <Settings2 size={16} />
+                        </button>
+                      </span>
+                    )}
+                  />
+                </div>
+              ) : (
+                run.members.map(webRow)
+              )
+            )}
+          </div>
+          {exercises.length >= 2 && (
+            <div className="flex items-center" style={{ flex: "none", gap: 16, marginTop: 12 }}>
+              {selecting ? (
+                <>
+                  <button
+                    onClick={() => {
+                      setSelecting(false);
+                      setSelected([]);
+                      setGroupProblem(null);
+                    }}
+                    style={{ minHeight: 44, fontSize: 15, fontWeight: 600, color: "#5B5349" }}
+                  >
+                    {t("Cancel")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const check = canGroup(exercises, selected);
+                      if (!check.ok) {
+                        setGroupProblem(check.message);
+                        return;
+                      }
+                      setGroupProblem(null);
+                      setBlockDraft({ block: { id: newBlockId(), kind: "superset", ...defaultBlockParams("superset") }, memberIds: [...selected] });
+                    }}
+                    disabled={selected.length < 2}
+                    className="disabled:opacity-50"
+                    style={{ minHeight: 44, fontSize: 15, fontWeight: 700, color: "#5F5093" }}
+                  >
+                    {t("Group as…")}
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setSelecting(true)} className="flex items-center" style={{ gap: 8, minHeight: 44, fontSize: 15, fontWeight: 700, color: "#5F5093" }}>
+                  <Link2 size={20} strokeWidth={2} aria-hidden /> {t("Group into a superset")}
+                </button>
+              )}
+            </div>
+          )}
+          {error && <p style={{ flex: "none", margin: "8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "rgb(var(--c-status-high))" }}>{error}</p>}
+        </>
+      }
+      search={
+        settingsIndex === null ? (
+          <ExerciseSearchWeb
+            query={searchQuery}
+            onQuery={setSearchQuery}
+            results={searchResults.map((r) => ({ key: r.name, name: r.name }))}
+            onAdd={(i) => {
+              const r = searchResults[i];
+              if (!r) return;
+              addExercise({
+                name: r.name,
+                classification: r.classification,
+                isCustom: r.isCustom,
+                exerciseId: "exerciseId" in r ? r.exerciseId : undefined,
+                customExerciseId: "customExerciseId" in r ? r.customExerciseId : undefined,
+              });
+            }}
+            onBrowse={() => setLibraryOpen(true)}
+          />
+        ) : null
+      }
+    />
+  );
+
   return (
     <>
+      {asPage ? webPage : (
       <BottomSheet
         open={open}
         onClose={() => {
@@ -537,6 +691,7 @@ export const CreateRoutineSheet: React.FC<{
           </Button>
         </div>
       </BottomSheet>
+      )}
 
       <ExerciseLibrarySheet
         open={libraryOpen}

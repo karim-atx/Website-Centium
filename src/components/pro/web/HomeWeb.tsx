@@ -164,7 +164,7 @@ export const LaneCardWeb: React.FC<{
                       {r.line}
                     </span>
                   </span>
-                  <ChevronRight size={16} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378" }} />
+                  <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
                 </button>
               ))}
             </div>
@@ -175,7 +175,7 @@ export const LaneCardWeb: React.FC<{
               style={{ gap: 2, padding: "16px 24px 20px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093", borderTop: divider }}
             >
               {t("See all")}
-              <ChevronRight size={16} strokeWidth={2.4} aria-hidden className="rtl:-scale-x-100" />
+              <ChevronRight size={16} strokeWidth={2.4} aria-hidden />
             </button>
           </>
         ))}
@@ -219,7 +219,7 @@ export const WaysToAddWeb: React.FC<{ rows: WayRow[] }> = ({ rows }) => (
               {x.line}
             </span>
           </span>
-          {x.onOpen && <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="rtl:-scale-x-100" style={{ color: "#8C8378" }} />}
+          {x.onOpen && <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />}
         </button>
       );
     })}

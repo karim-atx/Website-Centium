@@ -62,8 +62,9 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
       {!pane && <NuHead eyebrow={t("To review")} title={t("Food journals")} onBack={onBack} />}
       <SegmentedTabs
         className="mb-3"
-        tabHeight={36}
-        labelSize={12}
+        tabHeight={pane ? 40 : 36}
+        labelSize={pane ? 15 : 12}
+        {...(pane ? { trackStyle: { padding: 4, gap: 4, borderRadius: 14, width: "100%" }, tabRadius: 10 } : {})}
         items={[
           { key: "waiting", label: o.loading ? t("Waiting") : t("Waiting {n}", { n: o.waiting.length }) },
           { key: "reviewed", label: tx("Reviewed", "journal") },
@@ -89,16 +90,38 @@ export const JournalQueue: React.FC<{ lane: ProLane; onBack: () => void; onOpen:
         rows.map((r) => {
           const c = byId.get(r.clientId);
           if (!c) return null;
-          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} selected={pane?.selected === r.clientId} />;
+          return <QueueCard key={r.clientId} row={r} name={c.name} avatarUrl={c.avatarUrl} today={today} hasTarget={!!targetOf(r.clientId)} onOpen={() => onOpen(r.clientId, r.lastDay)} selected={pane?.selected === r.clientId} web={!!pane} />;
         })
+      )}
+      {pane && !o.loading && tab === "waiting" && rows.length > 0 && (
+        <p style={{ margin: 0, padding: "12px 16px", borderRadius: 14, border: "1px dashed rgba(36,31,27,0.12)", fontSize: 13, lineHeight: "20px", color: INK.chF, textAlign: "center" }}>{t("Days you leave feedback on move to Reviewed.")}</p>
       )}
     </div>
   );
 };
 
-const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void; selected?: boolean }> = ({ row, name, avatarUrl, today, hasTarget, onOpen, selected }) => {
+/** `web` (WP-NU-MP.2, WP-NU Meal Plans Web v3): 72 min, padding 12 18, avatar 44, the name 17/24, the lines 13/20, 12 apart. */
+const QueueCard: React.FC<{ row: QueueRow; name: string; avatarUrl: string | null; today: string; hasTarget: boolean; onOpen: () => void; selected?: boolean; web?: boolean }> = ({ row, name, avatarUrl, today, hasTarget, onOpen, selected, web }) => {
   const flagged = (row.proteinUnder ?? 0) > 0;
   const n = row.days.length;
+  if (web)
+    return (
+      <button type="button" onClick={onOpen} aria-current={selected || undefined} className="w-full flex items-center text-start hover:border-[#AEA1DC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ minHeight: 72, boxSizing: "border-box", background: selected ? INK.prPale : INK.card, border: selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 18px", marginBottom: 12, gap: 14 }}>
+        <Avatar name={name} url={avatarUrl} size={44} tone={flagged ? "gold" : "pr"} />
+        <span className="flex-1 min-w-0">
+          <span className="flex justify-between" style={{ gap: 8 }}>
+            <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch, overflowWrap: "anywhere" }}>{name}</span>
+            <span className="shrink-0" style={{ fontSize: 13, lineHeight: "24px", color: INK.chT }}>{daysAgo(row.lastDay, today)}</span>
+          </span>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: INK.chS }}>{tn(n, "{n} day logged · {range}", "{n} days logged · {range}", { range: dayRange(row.days[0], row.lastDay) })}</span>
+          {hasTarget && row.proteinUnder !== null && (
+            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: flagged ? INK.hi : INK.chF, fontWeight: flagged ? 600 : 500 }}>
+              {flagged ? tn(n, "Protein under target {under} of {n} day", "Protein under target {under} of {n} days", { under: row.proteinUnder ?? 0 }) : t("Protein on target")}
+            </span>
+          )}
+        </span>
+      </button>
+    );
   return (
     <button type="button" onClick={onOpen} aria-current={selected || undefined} className="tap w-full flex text-start" style={{ background: selected ? INK.prPale : INK.card, border: selected ? "1.5px solid #AEA1DC" : `1px solid ${INK.bCard}`, borderRadius: 20, padding: "12px 14px", marginBottom: 8, gap: 12 }}>
       <Avatar name={name} url={avatarUrl} size={38} tone={flagged ? "gold" : "pr"} />

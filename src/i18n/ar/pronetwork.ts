@@ -91,6 +91,10 @@ const pronetwork: Catalogue = {
   "waiting for them": "بانتظار الرد",
   "Request cancelled.": "أُلغي الطلب.",
   "Add colleagues you trust. Both of you agree, then you can refer clients to each other.": "أضف زملاء تثق بهم. بعد أن يوافق كلاكما، يمكنكما إحالة العملاء إلى بعضكما.",
+  // Website viewport (WP-CO-CN, web only): the Sent rows and the Network count.
+  "To {name}": "إلى {name}",
+  "To a colleague": "إلى زميل",
+  "{n} colleagues": { zero: "لا زملاء", one: "زميل واحد", two: "زميلان", few: "{n} زملاء", many: "{n} زميلًا", other: "{n} زميل" },
   "Asked {name} to connect.": "طلبت التواصل مع {name}.",
   "Asked them to connect.": "أُرسل طلب التواصل.",
 

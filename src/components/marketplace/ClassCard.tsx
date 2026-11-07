@@ -46,6 +46,7 @@ export function ClassCard({
   booked,
   onOpen,
   hideVenue,
+  web,
 }: {
   c: MarketplaceClass;
   booked: boolean;
@@ -57,6 +58,12 @@ export function ClassCard({
   onBook?: (c: MarketplaceClass) => void;
   /** The gym page's Classes tab: the venue is the page itself. */
   hideVenue?: boolean;
+  /**
+   * Website viewport (WC-EX.1 Classes, WC-EX Gym Web): min 92, the body 16 18 with 10 between, the 72 time block
+   * (17/24, the duration 13/20), the title 17/24 600 and its line 13/20, the booked line 13/20 with the bar 4
+   * under, the 84 stub with the price 20. Unset, the card as before.
+   */
+  web?: boolean;
 }) {
   const dark = useIsDark();
   const m = marketPalette(dark);
@@ -77,19 +84,20 @@ export function ClassCard({
     <>
       <style>{FOCUS_CSS}</style>
       <TicketStub
-        stubWidth={72}
+        stubWidth={web ? 84 : 72}
+        {...(web ? { priceSize: 20 } : {})}
         tone={l.stub === "booked" ? "teal" : l.stub === "full" ? "muted" : "pale"}
         stubLabel={l.stub === "full" ? t("Full") : l.price}
         stub={stub}
-        minHeight={88}
+        minHeight={web ? 92 : 88}
         onPress={() => onOpen(c)}
         ariaLabel={label}
         className="market-focus"
-        bodyStyle={{ padding: 20, display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}
+        bodyStyle={web ? { padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10, boxSizing: "border-box" } : { padding: 20, display: "flex", flexDirection: "column", gap: 12, boxSizing: "border-box" }}
       >
         <span data-class-card="" style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-          <span style={{ width: 64, flexShrink: 0 }}>
-            <span style={{ display: "block", fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+          <span style={{ width: web ? 72 : 64, flexShrink: 0 }}>
+            <span style={web ? { display: "block", fontSize: 17, lineHeight: "24px", fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" } : { display: "block", fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
               {l.time ? (
                 <>
                   {l.time.time}
@@ -99,18 +107,18 @@ export function ClassCard({
                 c.startTime
               )}
             </span>
-            <span style={{ display: "block", fontSize: textPx(12), lineHeight: linePx(16), color: m.faint }}>{l.dur}</span>
+            <span style={web ? { display: "block", fontSize: 13, lineHeight: "20px", color: m.faint } : { display: "block", fontSize: textPx(12), lineHeight: linePx(16), color: m.faint }}>{l.dur}</span>
           </span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-              <span style={{ fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 600, minWidth: 0, ...one }}>{c.title}</span>
+              <span style={web ? { fontSize: 17, lineHeight: "24px", fontWeight: 600, minWidth: 0, ...one } : { fontSize: textPx(16), lineHeight: linePx(22), fontWeight: 600, minWidth: 0, ...one }}>{c.title}</span>
               {c.isFeatured && <FeaturedChip />}
             </span>
-            <span style={{ display: "block", fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 500, color: m.ink2, ...one }}>{l.sub}</span>
+            <span style={web ? { display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 500, color: m.ink2, ...one } : { display: "block", fontSize: textPx(13), lineHeight: linePx(18), fontWeight: 500, color: m.ink2, ...one }}>{l.sub}</span>
           </span>
         </span>
         <span style={{ display: "block" }}>
-          <span style={{ display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
+          <span style={web ? { display: "block", fontSize: 13, lineHeight: "20px", color: m.faint, fontVariantNumeric: "tabular-nums" } : { display: "block", fontSize: textPx(11), lineHeight: linePx(15), color: m.faint, fontVariantNumeric: "tabular-nums" }}>
             {l.booked}
             {l.extra && (
               <>
@@ -119,7 +127,7 @@ export function ClassCard({
               </>
             )}
           </span>
-          <span aria-hidden style={{ display: "block", marginTop: 5, height: 3, borderRadius: 999, background: m.soft, overflow: "hidden" }}>
+          <span aria-hidden style={{ display: "block", marginTop: web ? 4 : 5, height: 3, borderRadius: 999, background: m.soft, overflow: "hidden" }}>
             <span style={{ display: "block", height: "100%", width: `${l.pct}%`, borderRadius: 999, background: m.segactive }} />
           </span>
         </span>

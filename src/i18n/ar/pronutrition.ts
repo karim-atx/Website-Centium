@@ -171,6 +171,7 @@ const pronutrition: Catalogue = {
   "Nothing reviewed yet": "لم تُراجَع أي أيام بعد",
   "Days your clients log show here when they share their food diary with you.": "تظهر هنا الأيام التي يسجّلها عملاؤك عندما يشاركون يوميات طعامهم معك.",
   "Days you've left feedback on show here.": "تظهر هنا الأيام التي تركت عليها ملاحظاتك.",
+  "Days you leave feedback on move to Reviewed.": "تنتقل الأيام التي تترك عليها ملاحظاتك إلى «تمت المراجعة».", // note: web only (WP-NU-MP.2)
   "{n} days logged · {range}": { zero: "لا أيام مسجّلة · {range}", one: "يوم واحد مسجّل · {range}", two: "يومان مسجّلان · {range}", few: "{n} أيام مسجّلة · {range}", many: "{n} يومًا مسجّلًا · {range}", other: "{n} يوم مسجّل · {range}" },
   "Protein under target {under} of {n} days": { zero: "البروتين دون الهدف في {under} من {n} يوم", one: "البروتين دون الهدف في {under} من يوم واحد", two: "البروتين دون الهدف في {under} من يومين", few: "البروتين دون الهدف في {under} من {n} أيام", many: "البروتين دون الهدف في {under} من {n} يومًا", other: "البروتين دون الهدف في {under} من {n} يوم" }, // note: health-related; a count of logged days, no judgement
   "Protein on target": "البروتين ضمن الهدف", // note: health-related

@@ -328,6 +328,7 @@ export default function ProMessages() {
   const tabEmpty = shown.length === 0;
 
   const proRows: ProRowOptions = {
+    ...(web ? { web: { selectedId: open?.id ?? null } } : {}),
     toneFor: (t) => toneOf(t.participantId ?? t.id),
     statusFor: (th) => {
       const kind = tabOf(th, clientIds);
@@ -559,6 +560,7 @@ export default function ProMessages() {
       <MessagesHead
         title={view === "archived" ? t("Archived") : t("Messages")}
         onBack={view === "archived" ? () => setView("list") : web ? undefined : back}
+        web={web}
         right={
           view === "list" ? (
             <>
@@ -569,9 +571,9 @@ export default function ProMessages() {
         }
       />
 
-      {view === "list" && <MsgTabs tabs={tabs} active={activeTab} unread={tabUnread} onChange={setTab} />}
-      <SearchField value={query} onChange={setQuery} />
-      <div style={{ height: 16 }} />
+      {view === "list" && <MsgTabs tabs={tabs} active={activeTab} unread={tabUnread} onChange={setTab} web={web} />}
+      <SearchField value={query} onChange={setQuery} web={web} />
+      <div style={{ height: web ? 12 : 16 }} />
 
       {showOffline && <OfflineLine />}
       {error && !showOffline && (
@@ -588,22 +590,22 @@ export default function ProMessages() {
 
       {/* K1: Archived, at the top of the list (it scrolls away). */}
       {view === "list" && !loading && archived.length > 0 && (
-        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={{ gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
+        <button type="button" onClick={() => setView("archived")} data-archived-row="" className="tap w-full flex items-center text-start" style={web ? { gap: 12, padding: "0 8px", minHeight: 52, boxSizing: "border-box", borderBottom: `1px solid ${INK.b06}` } : { gap: 12, padding: "10px 8px", minHeight: 56, borderBottom: `1px solid ${INK.b06}` }}>
           <span className="flex items-center justify-center shrink-0 rounded-full" style={{ width: 36, height: 36, background: INK.prPale }}>
-            <Archive size={17} style={{ color: INK.prDeep }} aria-hidden />
+            <Archive size={web ? 18 : 17} style={{ color: INK.prDeep }} aria-hidden />
           </span>
-          <span className="flex-1 min-w-0" style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Archived")}</span>
-          <span style={{ fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{archived.length}</span>
+          <span className="flex-1 min-w-0" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 700, color: INK.ch } : { fontSize: textPx(14), fontWeight: 700, color: INK.ch }}>{t("Archived")}</span>
+          <span style={web ? { fontSize: 13, lineHeight: "20px", fontWeight: 700, color: INK.prDeep } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{archived.length}</span>
         </button>
       )}
 
       {!loading && !error && (searchingMessages ? shown.length > 0 : true) && (
         <>
-          {searchingMessages && shown.length > 0 && <SecLabel first>{t("Chats")}</SecLabel>}
+          {searchingMessages && shown.length > 0 && <SecLabel first web={web}>{t("Chats")}</SecLabel>}
           {!searchingMessages && tabEmpty && empty}
           {shown.map((s, i) => (
             <section key={s.label ?? "all"} aria-label={s.label ?? undefined}>
-              {s.label && !searchingMessages && <SecLabel first={i === 0}>{s.label}</SecLabel>}
+              {s.label && !searchingMessages && <SecLabel first={i === 0} web={web}>{s.label}</SecLabel>}
               <ThreadList
                 items={s.items}
                 settings={settings}

@@ -96,7 +96,8 @@ const NuListDetailWeb: React.FC<{ lane: ProLane; area: "journals" | "targets"; c
   const first = journals ? o.waiting[0] ?? o.reviewed[0] ?? null : o.clients[0] ?? null;
   const open = client ?? first?.clientId ?? null;
   const openDay = client ? day : journals && first && "lastDay" in first ? first.lastDay : null;
-  const spans = journals ? (rail ? [3, 5] : [5, 7]) : rail ? [3, 5] : [4, 8];
+  // WP-NU Meal Plans Web v3 ldCols / tgCols: 4fr | 8fr (3fr | 5fr on the rail) for both.
+  const spans = rail ? [3, 5] : [4, 8];
   return (
     <div>
       <ProPageHeaderWeb title={lane === "nutrition" ? t("Meal plans") : t("Library")} />

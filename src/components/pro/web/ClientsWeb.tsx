@@ -142,7 +142,7 @@ export const ClientDetailPanel: React.FC<{
           className="flex items-center justify-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
           style={{ height: 44, borderRadius: 16, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
         >
-          <ArrowRight size={20} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" />
+          <ArrowRight size={20} strokeWidth={2} aria-hidden />
           {t("Open")}
         </button>
       </div>

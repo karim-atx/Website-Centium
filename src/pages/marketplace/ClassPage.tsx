@@ -1255,9 +1255,10 @@ export function ClassPage({ classId }: { classId: string }) {
                   reviewCount={c.instructorReviewCount ?? 0}
                   hiredViaCentium={hiredViaCentium(c)}
                   to={`/app/professionals/${encodeURIComponent(c.instructorId!)}`}
+                  web
                 />
               ) : (
-                <InstructorCard listed={false} />
+                <InstructorCard listed={false} web />
               )}
               <MarketOffline loaded />
               {online && loadFailed && <MarketError thing={tk("this class")} onRetry={() => void load()} />}

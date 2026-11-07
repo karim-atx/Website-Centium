@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, ChevronUp, CircleCheck, MessageCircle, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, CircleCheck, MessageCircle, Plus, Send, UserPlus, UserRound, UserX, Users, X } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useBack } from "../../../hooks/useBack";
@@ -13,6 +13,7 @@ import { CentredPopup } from "../../ui/CentredPopup";
 import { CtaButton, PinnedCta } from "../../ui/PinnedCta";
 import { INK } from "../proInk";
 import { Avatar, Chip, ListCard, SectionHead, SoftLine } from "../client/kit";
+import { toneOf, type Tone } from "../client/clientFormat";
 import { EmptyState } from "../EmptyState";
 import { ListSkeleton, OfflineLine, ProCardSkeleton, ProError } from "../states";
 import { ErrorLine } from "../library/libraryUi";
@@ -42,7 +43,7 @@ import { proClientPath, PRO_ROUTES } from "../subtypeLanes";
 import { time12 } from "../../../utils/time12";
 import { useIsWeb } from "../../web/useWebLayout";
 import { ProPageBodyWeb, ProPageHeaderWeb } from "../web/ProPageWeb";
-import { t, tx } from "../../../i18n/core";
+import { t, tn, tx } from "../../../i18n/core";
 
 const offline = () => t("You're offline. Try again when you're connected.");
 type Tab = "received" | "sent" | "network";
@@ -303,10 +304,184 @@ export const CareNetworkScreen: React.FC = () => {
   };
 
   // WP-CO-CN (WP-CO Care Network Web v2): the three lists side by side, Received 5 · Sent 4 · Network 3, each
-  // under its caps head; Refer a client is the header's primary button. Mobile keeps the tabs and the pinned CTA.
-  const webHead = (label: string) => (
-    <h2 style={{ margin: "0 0 12px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+  // under its caps head with its count; Refer a client is the header's primary button. The cards: r20, white, the
+  // 8% border, padding 18 20, 12 apart; rows with the 44 avatar, the name 17/24 700 and the line 13/20, the chip
+  // 13/20 700 (2 10), the note on #F6F5FB (r12, 10 14, 15/24), the actions 40 high (r12, 15/24 600; the primary
+  // #9A8CD6, the others white with the 1.5 #AEA1DC border); text links 13 700. Mobile keeps the tabs and the pinned CTA.
+  const webHead = (label: string, count?: string) => (
+    <div className="flex items-end justify-between" style={{ gap: 8, paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", marginBottom: 16 }}>
+      <h2 style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+      {count && <span style={{ flex: "none", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5F5093", whiteSpace: "nowrap" }}>{count}</span>}
+    </div>
   );
+  const webCard = (key: string, children: React.ReactNode, head?: string, footer?: React.ReactNode) => (
+    <div key={key} className="flex flex-col" style={{ gap: 12, borderRadius: 20, background: INK.card, border: `1px solid ${INK.bCard}`, padding: "18px 20px", marginBottom: 12 }}>
+      {head && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF }}>{head}</p>}
+      {children}
+      {footer}
+    </div>
+  );
+  const webChip = (label: string, tone: Tone) => {
+    const c = toneOf(tone);
+    return <span style={{ flex: "none", fontSize: 13, lineHeight: "20px", fontWeight: 700, padding: "2px 10px", borderRadius: 999, background: c.bg, color: c.ink, whiteSpace: "nowrap" }}>{label}</span>;
+  };
+  const webRow = (key: string, i: number, name: string, meta: string, trailing: React.ReactNode, tone: (typeof TONES)[number] = "pr", onClick?: () => void) => {
+    const inner = (
+      <>
+        <Avatar name={name} size={44} tone={tone} />
+        <span className="flex-1 min-w-0 text-start">
+          <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch }}>{name}</span>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: INK.chF }}>{meta}</span>
+        </span>
+      </>
+    );
+    return (
+      <div key={key} className="flex items-center" style={{ gap: 12, borderTop: i ? `1px solid ${INK.b06}` : "none", paddingTop: i ? 12 : 0 }}>
+        {onClick ? (
+          <button type="button" onClick={onClick} className="flex flex-1 min-w-0 items-center rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ gap: 12 }}>
+            {inner}
+          </button>
+        ) : (
+          inner
+        )}
+        {trailing}
+      </div>
+    );
+  };
+  const webLink = (label: string, colour: string, onClick: () => void) => (
+    <button type="button" disabled={!!busy} onClick={onClick} className="shrink-0 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] rounded" style={{ fontSize: 13, fontWeight: 700, color: colour }}>
+      {label}
+    </button>
+  );
+  const webAct = (label: string, icon: React.ReactNode, onClick: () => void, primary = false, loading = false) => (
+    <button
+      type="button"
+      disabled={!!busy}
+      onClick={onClick}
+      className="flex items-center justify-center hover:brightness-95 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+      style={{ height: 40, boxSizing: "border-box", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: primary ? "#9A8CD6" : "#FFFFFF", color: primary ? "#FFFFFF" : "#5F5093", border: primary ? "none" : "1.5px solid #AEA1DC" }}
+    >
+      {icon}
+      {loading ? t("Saving…") : label}
+    </button>
+  );
+  const webReceived = (x: Referral, i: number) => {
+    const name = clientName(x.clientId);
+    const cFirst = firstName(name);
+    const from = proName(x.fromId);
+    const st = x.status;
+    const chip = receivedChip(st);
+    const declined = st === "declined";
+    const whenLine =
+      st === "declined"
+        ? [t("Declined {when}", { when: whenWord(x.respondedAt ?? x.createdAt) }), x.declineReason ? t(x.declineReason) : null].filter(Boolean).join(" · ")
+        : st === "sent"
+          ? cFirst
+            ? t("Received {when} · {name} agreed to the referral", { when: whenWord(x.clientAnsweredAt ?? x.createdAt, new Date(), clock), name: cFirst })
+            : t("Received {when} · The client agreed to the referral", { when: whenWord(x.clientAnsweredAt ?? x.createdAt, new Date(), clock) })
+          : t("Received {when}", { when: whenWord(x.clientAnsweredAt ?? x.createdAt) });
+    const fromLine = from ? t("From {name}, {type}", { name: from, type: typeLabel(people[x.fromId]?.type) }) : t("From a colleague, {type}", { type: typeLabel(people[x.fromId]?.type) });
+    const acts: React.ReactNode[] = [];
+    if (st === "sent") {
+      acts.push(webAct(t("Accept"), <Check size={16} strokeWidth={2} aria-hidden />, () => void run(`acc-${x.id}`, () => respondReferral(x.id, true), from ? t("Accepted. {name} has been told.", { name: from }) : t("Accepted. Your colleague has been told.")), true, busy === `acc-${x.id}`));
+      acts.push(webAct(t("Decline"), <X size={16} strokeWidth={2} aria-hidden />, () => setDecline(x)));
+    }
+    if (st === "accepted" && inRoster(x.clientId)) {
+      acts.push(webAct(cFirst ? t("Message {name}", { name: cFirst }) : t("Message client"), <MessageCircle size={16} strokeWidth={2} aria-hidden />, () => void message(x.clientId)));
+      acts.push(webAct(t("Open client"), <UserRound size={16} strokeWidth={2} aria-hidden />, () => navigate(proClientPath(x.clientId))));
+    }
+    return (
+      <div key={x.id} className="flex flex-col" style={{ gap: 10, borderRadius: 20, background: INK.card, border: `1px solid ${declined ? (dark ? "rgba(240,154,142,0.35)" : "rgba(192,57,43,0.25)") : INK.bCard}`, padding: "18px 20px", marginBottom: 12 }}>
+        <div className="flex items-center" style={{ gap: 12 }}>
+          <Avatar name={name ?? "?"} size={44} tone={TONES[i % 4]} />
+          <span className="flex-1 min-w-0">
+            <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: INK.ch }}>{name ?? t("Referred client")}</span>
+            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: declined ? INK.hi : INK.chF, fontWeight: declined ? 700 : 400 }}>{whenLine}</span>
+          </span>
+          {webChip(chip.label, chip.tone)}
+        </div>
+        <p style={{ margin: 0, borderRadius: 12, background: "#F6F5FB", padding: "10px 14px", fontSize: 15, lineHeight: "24px", color: INK.chS, overflowWrap: "anywhere" }}>
+          {fromLine}: {x.reason}
+        </p>
+        {acts.length > 0 && <div className="grid" style={{ gridTemplateColumns: `repeat(${acts.length},minmax(0,1fr))`, gap: 8 }}>{acts}</div>}
+        {st === "accepted" && !inRoster(x.clientId) && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: INK.chF }}>{cFirst ? t("{name} chooses whether to connect with you, and what to share.", { name: cFirst }) : t("The client chooses whether to connect with you, and what to share.")}</p>}
+        {canDispute(st) && (
+          <button type="button" onClick={() => setDispute(x)} className="self-start hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] rounded" style={{ fontSize: 13, fontWeight: 700, color: INK.prDeep }}>
+            {t("Ask support to look at this")}
+          </button>
+        )}
+      </div>
+    );
+  };
+  const webBody = (which: Tab) => {
+    if (state === "loading" && !refs) return <ListSkeleton rows={2} row={CardRow} />;
+    if (!refs || !links) return <ProError onRetry={reload} />;
+    if (which === "received") {
+      const list = refs.received.filter((x) => x.status !== "withdrawn");
+      return list.length ? list.map(webReceived) : <EmptyState icon={Users} title={t("No referrals yet")} line={t("When a colleague refers a client to you and the client agrees, it shows here.")} />;
+    }
+    if (which === "sent") {
+      return refs.sent.length ? (
+        webCard(
+          "sent",
+          refs.sent.map((x, i) => {
+            const cKnown = clientName(x.clientId);
+            const pKnown = proName(x.toId);
+            const chip = sentChip(x.status, firstName(cKnown ?? t("A client")), firstName(pKnown ?? t("a colleague")));
+            const meta = [pKnown ? t("To {name}", { name: pKnown }) : t("To a colleague"), typeLabel(people[x.toId]?.type), x.createdAt > new Date(Date.now() - 60000).toISOString() ? t("sent just now") : whenWord(x.createdAt), x.status === "declined" && x.declineReason ? t(x.declineReason) : null].filter(Boolean).join(" · ");
+            return webRow(x.id, i, cKnown ?? t("A client"), meta, webChip(chip.label, chip.tone), TONES[i % 4], canWithdraw(x.status) || canDispute(x.status) ? () => setActions(x) : undefined);
+          })
+        )
+      ) : (
+        <EmptyState icon={Send} title={t("No referrals sent")} line={t("Refer a client to a colleague in your care network. The client agrees before your colleague sees anything.")} />
+      );
+    }
+    const add = (
+      <button type="button" onClick={() => setAdding(true)} className="flex items-center hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] rounded" style={{ gap: 6, paddingTop: 12, borderTop: `1px solid ${INK.b06}`, fontSize: 13, fontWeight: 700, color: INK.prDeep }}>
+        <Plus size={16} strokeWidth={2.4} aria-hidden /> {t("Add a colleague")}
+      </button>
+    );
+    return (
+      <>
+        {incoming.length > 0 &&
+          webCard(
+            "incoming",
+            incoming.map((l, i) =>
+              webRow(l.id, i, proName(l.other) ?? t("A colleague"), typeLabel(people[l.other]?.type), (
+                <span className="flex shrink-0" style={{ gap: 16 }}>
+                  {webLink(t("Decline"), INK.chS, () => void run(`ld-${l.id}`, () => respondLink(l.id, false), t("Request declined.")))}
+                  {webLink(t("Accept"), INK.prDeep, () => void run(`la-${l.id}`, () => respondLink(l.id, true), t("Added to your care network.")))}
+                </span>
+              ))
+            ),
+            t("Asking to connect")
+          )}
+        {webCard(
+          "network",
+          linked.length || outgoing.length ? (
+            [
+              ...linked.map((l, i) => webRow(l.id, i, proName(l.other) ?? t("A colleague"), typeLabel(people[l.other]?.type), webLink(t("Remove"), INK.chS, () => void run(`lr-${l.id}`, () => removeLink(l.id), t("Removed from your care network."))))),
+              ...outgoing.map((l, i) =>
+                webRow(
+                  l.id,
+                  linked.length + i,
+                  proName(l.other) ?? t("A colleague"),
+                  `${typeLabel(people[l.other]?.type)} · ${firstName(proName(l.other)) ? t("waiting for {name}", { name: firstName(proName(l.other)) }) : t("waiting for them")}`,
+                  webLink(t("Cancel"), INK.chS, () => void run(`lc-${l.id}`, () => removeLink(l.id), t("Request cancelled.")))
+                )
+              ),
+            ]
+          ) : (
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: INK.chF }}>{t("Add colleagues you trust. Both of you agree, then you can refer clients to each other.")}</p>
+          ),
+          t("Your care network"),
+          add
+        )}
+      </>
+    );
+  };
+  const nReceived = refs ? refs.received.filter((x) => x.status !== "withdrawn").length : 0;
+  const nSent = refs ? refs.sent.length : 0;
   const page = web ? (
     <div>
       <ProPageHeaderWeb
@@ -328,16 +503,16 @@ export const CareNetworkScreen: React.FC = () => {
       {err && <ErrorLine>{err}</ErrorLine>}
       <div className="grid items-start" style={{ gridTemplateColumns: "minmax(0,5fr) minmax(0,4fr) minmax(0,3fr)", gap: 24 }}>
         <section className="min-w-0" aria-label={tx("Received", "referrals tab")}>
-          {webHead(tx("Received", "referrals tab"))}
-          {body("received")}
+          {webHead(tx("Received", "referrals tab"), nReceived ? String(nReceived) : undefined)}
+          {webBody("received")}
         </section>
         <section className="min-w-0" aria-label={t("Sent")}>
-          {webHead(t("Sent"))}
-          {body("sent")}
+          {webHead(t("Sent"), nSent ? String(nSent) : undefined)}
+          {webBody("sent")}
         </section>
         <section className="min-w-0" aria-label={t("Network")}>
-          {webHead(t("Network"))}
-          {body("network")}
+          {webHead(t("Network"), linked.length ? tn(linked.length, "{n} colleague", "{n} colleagues") : undefined)}
+          {webBody("network")}
         </section>
       </div>
       </ProPageBodyWeb>

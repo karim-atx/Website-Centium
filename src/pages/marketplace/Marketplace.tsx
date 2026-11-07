@@ -170,7 +170,7 @@ function ExploreTilesWeb({ span }: { span: number }) {
             <span className="flex-1 min-w-0" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#6D50D3" }}>
               {label}
             </span>
-            <ChevronRight size={20} strokeWidth={1.75} aria-hidden className="rtl:-scale-x-100" style={{ color: "#6D50D3" }} />
+            <ChevronRight size={20} strokeWidth={1.75} aria-hidden style={{ color: "#6D50D3" }} />
           </span>
         </button>
       ))}

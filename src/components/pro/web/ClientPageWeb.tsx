@@ -30,7 +30,7 @@ export const ClientTopBarWeb: React.FC<{
   return (
     <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 12, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
       <button type="button" onClick={onBack} aria-label={t("Back")} className={`${round} shrink-0`} style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)" }}>
-        <ArrowLeft size={20} strokeWidth={2} aria-hidden className="rtl:-scale-x-100" style={{ color: "#5B5349" }} />
+        <ArrowLeft size={20} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
       </button>
       <p className="flex-1" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
         {kicker}

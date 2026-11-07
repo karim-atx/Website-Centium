@@ -38,15 +38,25 @@ export type InstructorCardProps =
       to: string;
       className?: string;
       style?: React.CSSProperties;
+      /**
+       * Website viewport (WC-EX.2, WC-EX Class Web): padding 12 16, gap 14; INSTRUCTOR 11/16, the name 15/22
+       * 800, the line 13/20 with "Hired via Centium" beside it (13/20 700, the 14 ticket, 12 apart). Unset, as before.
+       */
+      web?: boolean;
     }
-  | { listed: false; className?: string; style?: React.CSSProperties };
+  | { listed: false; className?: string; style?: React.CSSProperties; web?: boolean };
 
 export const InstructorCard: React.FC<InstructorCardProps> = (props) => {
   const dark = useIsDark();
   const m = marketPalette(dark);
   const press = usePress();
-  const caps: React.CSSProperties = { display: "block", fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", color: m.faint };
-  const row: React.CSSProperties = { lineHeight: "normal", display: "flex", alignItems: "center", gap: 12, borderRadius: 18, padding: "12px 14px" };
+  const web = !!props.web;
+  const caps: React.CSSProperties = web
+    ? { display: "block", fontSize: 11, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.1em", color: m.faint }
+    : { display: "block", fontSize: textPx(10), fontWeight: 700, letterSpacing: "0.1em", color: m.faint };
+  const row: React.CSSProperties = web
+    ? { lineHeight: "normal", display: "flex", alignItems: "center", gap: 14, borderRadius: 18, padding: "12px 16px" }
+    : { lineHeight: "normal", display: "flex", alignItems: "center", gap: 12, borderRadius: 18, padding: "12px 14px" };
 
   if (!props.listed) {
     return (
@@ -62,7 +72,7 @@ export const InstructorCard: React.FC<InstructorCardProps> = (props) => {
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <span style={caps}>{t("INSTRUCTOR")}</span>
-          <span style={{ display: "block", fontSize: textPx(14.5), fontWeight: 700, lineHeight: linePx(20), color: m.ink2 }}>{t("Instructor not listed")}</span>
+          <span style={web ? { display: "block", fontSize: 15, fontWeight: 700, lineHeight: "22px", color: m.ink2 } : { display: "block", fontSize: textPx(14.5), fontWeight: 700, lineHeight: linePx(20), color: m.ink2 }}>{t("Instructor not listed")}</span>
         </div>
       </div>
     );
@@ -83,9 +93,21 @@ export const InstructorCard: React.FC<InstructorCardProps> = (props) => {
         <MarketAvatar id={p.id} name={p.name} photoUrl={p.photoUrl} size={48} fontSize={15} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={caps}>{t("INSTRUCTOR")}</span>
-          <span style={{ display: "block", fontSize: textPx(14.5), fontWeight: 800, lineHeight: linePx(20) }}>{p.name}</span>
-          <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{detail}</span>
-          {p.hiredViaCentium ? (
+          <span style={web ? { display: "block", fontSize: 15, fontWeight: 800, lineHeight: "22px" } : { display: "block", fontSize: textPx(14.5), fontWeight: 800, lineHeight: linePx(20) }}>{p.name}</span>
+          {web ? (
+            <span style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, lineHeight: "20px", color: m.ink2 }}>{detail}</span>
+              {p.hiredViaCentium ? (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: m.tealink }}>
+                  <TicketCheck size={14} />
+                  {t("Hired via Centium")}
+                </span>
+              ) : null}
+            </span>
+          ) : (
+            <span style={{ display: "block", fontSize: textPx(12), color: m.ink2 }}>{detail}</span>
+          )}
+          {!web && p.hiredViaCentium ? (
             <span style={{ marginTop: 3, display: "inline-flex", alignItems: "center", gap: 4, fontSize: textPx(11), fontWeight: 700, color: m.tealink }}>
               <TicketCheck size={12} />
               {t("Hired via Centium")}

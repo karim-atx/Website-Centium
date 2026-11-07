@@ -898,6 +898,7 @@ export function GymPage({ gymId }: { gymId: string }) {
                               })()}
                               booked={bookedIds.has(c.classId)}
                               hideVenue
+                              web
                               onOpen={(x) => navigate(`/app/marketplace/class?id=${encodeURIComponent(x.classId)}`)}
                               onBook={(x) => recordListingEvent({ businessId: x.businessId, kind: "book_tap", source, itemId: x.classId })}
                             />

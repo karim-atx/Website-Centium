@@ -98,13 +98,13 @@ export const JournalDatePickerWeb: React.FC<{
         </div>
         <div className="flex items-center justify-between" style={{ gap: 12 }}>
           <button type="button" aria-label={t("Previous month")} onClick={() => step(-1)} className="flex items-center justify-center hover:bg-[#ECE8FB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={arrow}>
-            <ChevronLeft size={18} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" style={{ color: "#5F5093" }} />
+            <ChevronLeft size={18} strokeWidth={2.2} aria-hidden style={{ color: "#5F5093" }} />
           </button>
           <span aria-live="polite" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
             {title}
           </span>
           <button type="button" aria-label={t("Next month")} disabled={atLast} onClick={() => step(1)} className="flex items-center justify-center enabled:hover:bg-[#ECE8FB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ ...arrow, opacity: atLast ? 0.4 : 1 }}>
-            <ChevronRight size={18} strokeWidth={2.2} aria-hidden className="rtl:-scale-x-100" style={{ color: "#5F5093" }} />
+            <ChevronRight size={18} strokeWidth={2.2} aria-hidden style={{ color: "#5F5093" }} />
           </button>
         </div>
         <div className="grid" style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4 }}>

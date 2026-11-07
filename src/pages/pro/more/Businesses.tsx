@@ -142,6 +142,9 @@ export default function Businesses() {
         }
   );
 
+  // Website viewport (WP-MO.1): the open business in the list-detail (the first accepted one by default).
+  const webAll = data ? [...data.employments] : [];
+  const webSel = web ? picked ?? webAll.find((x) => x.acceptedAt)?.businessId ?? webAll[0]?.businessId ?? null : null;
   const listNode = (
     <div data-pro-businesses="">
       <PageHead title={t("Businesses")} sub={t("Where you work with a business")} onBack={back} />
@@ -170,9 +173,13 @@ export default function Businesses() {
           )}
 
           <section aria-label={tx("Connected", "businesses")}>
-            <SectionHead label={tx("Connected", "businesses")} />
+            {web ? (
+              <h2 style={{ margin: "0 0 12px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{tx("Connected", "businesses")}</h2>
+            ) : (
+              <SectionHead label={tx("Connected", "businesses")} />
+            )}
             {[...owned, ...teams].map((e) => (
-              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => (web ? setPicked(e.businessId) : navigate(`/app/more/businesses/${e.businessId}`))} />
+              <BizCard key={e.businessId} e={e} facts={data.facts[e.businessId]} upcoming={upcomingAt(e.businessId)} onOpen={() => (web ? setPicked(e.businessId) : navigate(`/app/more/businesses/${e.businessId}`))} {...(web ? { web: { selected: webSel === e.businessId } } : {})} />
             ))}
             {owned.length + teams.length === 0 && (
               <div style={{ marginBottom: 12 }}>
@@ -201,8 +208,7 @@ export default function Businesses() {
   );
 
   if (web) {
-    const all = data ? [...data.employments] : [];
-    const sel = picked ?? all.find((x) => x.acceptedAt)?.businessId ?? all[0]?.businessId ?? null;
+    const sel = webSel;
     return (
       <div style={{ maxWidth: 1600, boxSizing: "border-box", padding: rail ? 24 : 32 }}>
         <div className="grid" style={{ gridTemplateColumns: rail ? "repeat(2,minmax(0,1fr))" : "minmax(0,5fr) minmax(0,7fr)", gap: 24, alignItems: "start" }}>
