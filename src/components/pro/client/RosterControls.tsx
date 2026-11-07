@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { ChevronDown } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
@@ -123,11 +123,32 @@ export const FilterPanel: React.FC<{
   // button (top 60, the page margin from the right, 420 wide, no scrim),
   // chips 15/20 and 40 buttons. Mobile as before.
   const { web, rail } = useWebLayout();
+  // Web keyboard: focus moves into the card on open, Esc closes it and focus
+  // returns to the Filter button.
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    if (!open || !web) return;
+    const back = document.activeElement as HTMLElement | null;
+    cardRef.current?.querySelector<HTMLElement>("button")?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeRef.current();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      back?.focus?.({ preventScroll: true });
+    };
+  }, [open, web]);
   if (!open) return null;
   return (
     <div className="fixed inset-0" style={{ zIndex: 60 }}>
       <button type="button" aria-label={t("Close filters")} className="absolute inset-0" style={{ background: web ? "transparent" : "rgba(36,31,27,0.18)" }} onClick={onClose} />
       <div
+        ref={cardRef}
         role="dialog"
         aria-label={t("Filter")}
         className="absolute overflow-y-auto"
