@@ -68,7 +68,9 @@ export const AddItemSheet: React.FC<{
   ctx: AddContext;
   needs: { needs: DietaryNeeds | null; shared: boolean; allergiesShared: boolean; loading: boolean } | null;
   onSubmit: (draft: ItemDraft, alsoTemplate: boolean) => Promise<string | null>;
-}> = ({ open, onClose, ctx, needs, onSubmit }) => {
+  /** Website viewport: the search a flagged inline result came from. */
+  initialQuery?: string;
+}> = ({ open, onClose, ctx, needs, onSubmit, initialQuery }) => {
   const { recipes, customMeals } = useApp();
   const dark = useIsDark();
   const tile = useTileBg();
@@ -89,14 +91,14 @@ export const AddItemSheet: React.FC<{
 
   useEffect(() => {
     if (!open) return;
-    setQuery("");
+    setQuery(initialQuery ?? "");
     setFilter("all");
     setPicked(null);
     setSlot(ctx.slot);
     setError(null);
     setAlsoTemplate(false);
     setBlocked(null);
-  }, [open, ctx.slot]);
+  }, [open, ctx.slot, initialQuery]);
 
   // Foods: the same service the client's Add Food uses; an empty box lists.
   useEffect(() => {

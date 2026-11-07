@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 // Website viewport v1 (handover section 0 and 2): the web layouts apply from
 // 1024px wide and only there. Below it every screen renders exactly as the
@@ -38,6 +38,31 @@ const isWeb = matches(WEB_QUERY);
 const isFull = matches(FULL_SIDEBAR_QUERY);
 const no = () => false;
 
+// A page whose frames draw the rail at every width (the meal-plan week
+// builder, WP-LI.7.3) holds it while it is mounted.
+let railHolds = 0;
+const railListeners = new Set<() => void>();
+const subRail = (onChange: () => void) => {
+  railListeners.add(onChange);
+  return () => {
+    railListeners.delete(onChange);
+  };
+};
+const isRailHeld = () => railHolds > 0;
+
+/** Draws the sidebar as the rail while the calling component is mounted. */
+export function useHoldRail(on = true): void {
+  useEffect(() => {
+    if (!on) return;
+    railHolds += 1;
+    railListeners.forEach((l) => l());
+    return () => {
+      railHolds -= 1;
+      railListeners.forEach((l) => l());
+    };
+  }, [on]);
+}
+
 export interface WebLayout {
   /** At least 1024px wide: the web shell and the web pages apply. */
   web: boolean;
@@ -45,13 +70,16 @@ export interface WebLayout {
   rail: boolean;
   /** The sidebar's width in px (0 below 1024). */
   sidebarW: number;
+  /** The window is at least 1280 wide, so the 1440 frames' sizes apply (even when a page holds the rail). */
+  wideWindow: boolean;
 }
 
 export function useWebLayout(): WebLayout {
   const web = useSyncExternalStore(subWeb, isWeb, no);
   const full = useSyncExternalStore(subFull, isFull, no);
-  const rail = web && !full;
-  return { web, rail, sidebarW: web ? (rail ? RAIL_W : SIDEBAR_W) : 0 };
+  const held = useSyncExternalStore(subRail, isRailHeld, no);
+  const rail = web && (!full || held);
+  return { web, rail, sidebarW: web ? (rail ? RAIL_W : SIDEBAR_W) : 0, wideWindow: web && full };
 }
 
 /** Only the boolean, for a branch between a mobile and a web component. */

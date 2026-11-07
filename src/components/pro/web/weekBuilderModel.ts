@@ -1,5 +1,6 @@
-import type { MealPlan } from "../../../services/pro/nutrition";
-import { macroGrams, type Macros } from "../nutrition/nutritionModel";
+import type { MealPlan, PlanItem } from "../../../services/pro/nutrition";
+import { gramsInServingLabel } from "../../../services/nutrition";
+import { gramsAllowed, macroGrams, type Macros } from "../nutrition/nutritionModel";
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
 
@@ -18,4 +19,21 @@ export function targetsLine(tg: Macros | null): string | null {
   const parts = [t("{n} kcal", { n: fmt(tg.kcal) })];
   if (tg.c || tg.p || tg.f) parts.push(`C ${t("{n} g", { n: fmt(tg.c) })}`, `P ${t("{n} g", { n: fmt(tg.p) })}`, `F ${t("{n} g", { n: fmt(tg.f) })}`);
   return parts.join(" · ");
+}
+
+/** The units a plan item can be counted in: a food with a gram weight offers grams and servings. */
+export function unitOptions(item: Pick<PlanItem, "kind" | "facts">): ("g" | "serving")[] {
+  const food = item.kind === "food" || item.kind === "custom_food";
+  return food && gramsAllowed(item.facts?.servingLabel) ? ["g", "serving"] : ["serving"];
+}
+
+/** The same portion in the other unit: servings × the serving's grams, or grams ÷ them (2 decimals). */
+export function convertUnit(item: Pick<PlanItem, "grams" | "servings" | "facts">, to: "g" | "serving"): { grams: number | null; servings: number | null } {
+  const per = item.facts?.servingLabel ? gramsInServingLabel(item.facts.servingLabel) : null;
+  if (to === "g") {
+    if (item.grams != null) return { grams: item.grams, servings: null };
+    return { grams: per ? Math.round((item.servings ?? 1) * per) : null, servings: per ? null : item.servings ?? 1 };
+  }
+  if (item.grams == null) return { grams: null, servings: item.servings ?? 1 };
+  return { grams: null, servings: per ? Math.round((item.grams / per) * 100) / 100 : 1 };
 }

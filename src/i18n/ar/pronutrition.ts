@@ -288,6 +288,15 @@ const pronutrition: Catalogue = {
   "Search food": "ابحث عن طعام",
   "Totals": "المجموع",
   "Week planner": "مخطط الأسبوع",
+  // Website viewport (Professional v1, session 5): the inline food search and the web Day view.
+  "Foods matching {q}": "أطعمة تطابق {q}",
+  "↑↓ to move": "↑↓ للتنقل",
+  "↵ to add": "↵ للإضافة",
+  "Esc to close": "Esc للإغلاق",
+  Days: "الأيام",
+  "of {target} kcal": "من {target} سعرة",
+  "Your recipe": "وصفتك",
+  "Your meal": "وجبتك",
 };
 
 export default pronutrition;

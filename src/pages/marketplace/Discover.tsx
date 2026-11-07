@@ -32,7 +32,7 @@ import { useIsWide, useWebLayout } from "../../components/web/useWebLayout";
 import { classCountLine, classFilterGroups, gymFilterGroups, stripDays } from "./classFilterModel";
 import { FilterPopup, FilterSummary, FilterTrigger } from "../../components/market/FilterPopup";
 import RewardsTab from "./rewards/RewardsTab";
-import { t, tk } from "../../i18n/core";
+import { t, tk, tn } from "../../i18n/core";
 
 // Market + Share 3.0 · W2 · Explore's search, tracks and lists (C-MO.4.1 /
 // C-MO.4.2 Gyms, C-MO.4.3 Classes, C-MO.4.4 Rewards; Client Explore Screens
@@ -340,7 +340,7 @@ export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pi
                 <FilterTrigger ref={setGymAnchor} active={gymFilter.active} open={gymFilter.open} onPress={gymFilter.toggleFilter} label={t("Filter gyms")} />
               </div>
               {gymFilter.active ? <FilterSummary summary={gymFilter.summary} onShowAll={gymFilter.clearFilter} style={{ marginTop: 10 }} /> : null}
-              <FilterPopup open={gymFilter.open} anchor={gymAnchor} groups={gymGroups} selected={gymFilter.selected} onToggle={gymFilter.toggleOption} onClose={gymFilter.closeFilter} />
+              <FilterPopup open={gymFilter.open} anchor={gymAnchor} groups={gymGroups} selected={gymFilter.selected} onToggle={gymFilter.toggleOption} onClose={gymFilter.closeFilter} webSheet count={tn(shownGyms.length, "{n} gym", "{n} gyms")} />
             </>
           ) : (
             <p style={{ margin: "12px 0 0", fontSize: textPx(11.5), color: m.faint }}>{t("Sorted by rating and distance")}</p>

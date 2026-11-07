@@ -45,8 +45,9 @@ import { mondayIndex } from "../../../utils/week";
 import { appLocale } from "../../../i18n/format";
 import { useSearchParams } from "react-router-dom";
 import { useIsWeb } from "../../web/useWebLayout";
-import { PlanHeaderWeb, WeekBuilderWeb } from "../web/WeekBuilderWeb";
-import { planTargets, targetsLine } from "../web/weekBuilderModel";
+import { PlanHeaderWeb, WeekBuilderWeb, type MealIO } from "../web/WeekBuilderWeb";
+import { PlanDayWeb } from "../web/PlanDayWeb";
+import { convertUnit, planTargets, targetsLine } from "../web/weekBuilderModel";
 import { t } from "../../../i18n/core";
 
 /**
@@ -89,7 +90,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const [assignment, setAssignment] = useState<(Assignment & { endedAt: string | null }) | null>(null);
   const [nonce, setNonce] = useState(0);
   const [day, setDay] = useState<number | null>(null);
-  const [adding, setAdding] = useState<{ slot: MealSlot; swap: PlanItem | null } | null>(null);
+  const [adding, setAdding] = useState<{ slot: MealSlot; swap: PlanItem | null; query?: string } | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [itemMenu, setItemMenu] = useState<{ item: PlanItem; anchor: HTMLElement } | null>(null);
   const [flagged, setFlagged] = useState<{ item: PlanItem; row: ConflictRow } | null>(null);
@@ -137,10 +138,11 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   const theDay = days.find((d) => d.dayIndex === current) ?? null;
   const src = useMemo(() => ({ recipes, customMeals }), [recipes, customMeals]);
 
-  // food_conflicts for the day's items (a client's copy only).
+  // food_conflicts for the day's items (a client's copy only); on web the week builder shows every day.
+  const scanned = useMemo(() => (web ? (plan?.days ?? []).flatMap((d) => d.items) : theDay?.items ?? null), [web, plan, theDay]);
   useEffect(() => {
-    if (!clientId || !theDay) return;
-    const todo = theDay.items.filter((i) => i.kind && i.refId && !asked.current.has(`${i.kind}:${i.refId}`));
+    if (!clientId || !scanned) return;
+    const todo = scanned.filter((i) => i.kind && i.refId && !asked.current.has(`${i.kind}:${i.refId}`));
     if (!todo.length) return;
     todo.forEach((i) => asked.current.add(`${i.kind}:${i.refId}`));
     let live = true;
@@ -150,7 +152,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
     return () => {
       live = false;
     };
-  }, [clientId, theDay]);
+  }, [clientId, scanned]);
 
   if (!state) {
     return (
@@ -231,7 +233,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
           <ProError onRetry={reload} />
         </div>
       )}
-      {isCopy && <DietStrip name={clientName} {...diet} />}
+      {isCopy && !(web && webView === "day") && <DietStrip name={clientName} {...diet} />}
       {isCopy && assignment?.endedAt && (
         <p style={{ fontSize: textPx(12), color: INK.chF, marginBottom: 10 }}>{t("This plan has ended. Changes won't reach the client.")}</p>
       )}
@@ -239,13 +241,49 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
   );
   const kicker = isCopy ? t("{name}'s copy", { name: clientName }) : t("Template");
 
+  // Website viewport: the week builder and the web Day view (WP-LI.7 / .7.3, WP-NU-MP.7).
+  const webDays = days.map((d) => ({ id: d.id, dayIndex: d.dayIndex, name: startsOn ? weekdayLong(mondayIndex(new Date(`${shiftDate(startsOn, d.dayIndex - 1)}T00:00:00`).getDay())) : labels(d.dayIndex).tab, short: labels(d.dayIndex).short, items: d.items }));
+  const saveItem = async (item: PlanItem, portion: { grams: number | null; servings: number | null }) => {
+    if (!item.kind || !item.refId) return;
+    const r = await replaceItem(item.id, { ref: { kind: item.kind, refId: item.refId }, slot: item.slot, ...portion });
+    if (!r.ok) setMsg(r.message);
+    reload();
+  };
+  const webIO: MealIO = {
+    src,
+    readOnly: !!(isCopy && assignment?.endedAt),
+    clientId,
+    onItemMenu: (item, dayIndex, anchor) => {
+      setDay(dayIndex);
+      setItemMenu({ item, anchor });
+    },
+    onQty: (item, value) => saveItem(item, item.grams != null ? { grams: value, servings: null } : { grams: null, servings: value }),
+    onUnit: (item, unit) => saveItem(item, convertUnit(item, unit)),
+    onPick: async (dayIndex, draft) => {
+      const d = days.find((x) => x.dayIndex === dayIndex);
+      if (!d) return;
+      const r = await addItem(d.id, draft);
+      if (!r.ok) setMsg(r.message);
+      reload();
+    },
+    onFlagged: (dayIndex, slot, query) => {
+      setDay(dayIndex);
+      setAdding({ slot, swap: null, query });
+    },
+    flag: (it) => {
+      const f = flagOf(it);
+      return <Flag row={f} onClick={f && f.kind !== "preference" ? () => setFlagged({ item: it, row: f }) : undefined} />;
+    },
+  };
+
   return (
     <div>
       {web ? (
         <PlanHeaderWeb
           kicker={kicker}
           title={plan.name}
-          line={targetsLine(planTargets(plan))}
+          line={webView === "week" ? targetsLine(planTargets(plan)) : null}
+          compact={webView === "day"}
           view={webView}
           onView={setView}
           onBack={onBack}
@@ -268,25 +306,26 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       {web && webView === "week" ? (
         <>
           {(state.error || isCopy) && <div style={{ padding: "16px 32px 0" }}>{notices}</div>}
-          <WeekBuilderWeb
-            days={days.map((d) => ({ id: d.id, dayIndex: d.dayIndex, name: startsOn ? weekdayLong(mondayIndex(new Date(`${shiftDate(startsOn, d.dayIndex - 1)}T00:00:00`).getDay())) : labels(d.dayIndex).tab, short: labels(d.dayIndex).short, items: d.items }))}
+          <WeekBuilderWeb days={webDays} targets={planTargets(plan)} io={webIO} />
+          {msg && (
+            <p role="alert" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.hi, padding: "8px 32px" }}>
+              {msg}
+            </p>
+          )}
+        </>
+      ) : (
+      web ? (
+        <>
+          {(state.error || isCopy) && <div style={{ padding: "16px 32px 0" }}>{notices}</div>}
+          <PlanDayWeb
+            days={webDays}
+            current={current}
+            onDay={setDay}
             targets={planTargets(plan)}
-            src={src}
-            readOnly={!!(isCopy && assignment?.endedAt)}
-            onAdd={(dayIndex, slot) => {
-              setDay(dayIndex);
-              setAdding({ slot, swap: null });
-            }}
-            onItemMenu={(item, dayIndex, anchor) => {
-              setDay(dayIndex);
-              setItemMenu({ item, anchor });
-            }}
-            onQty={async (item, value) => {
-              if (!item.kind || !item.refId) return;
-              const r = await replaceItem(item.id, { ref: { kind: item.kind, refId: item.refId }, slot: item.slot, grams: item.grams != null ? value : null, servings: item.grams != null ? item.servings : value });
-              if (!r.ok) setMsg(r.message);
-              reload();
-            }}
+            needs={isCopy ? <DietStrip name={clientName} {...diet} /> : null}
+            io={webIO}
+            recipeLine={(it) => itemLine(it, itemMacros(it, src)).replace(/ · [^·]*kcal$/, "")}
+            flag={webIO.flag}
           />
           {msg && (
             <p role="alert" style={{ fontSize: textPx(13), fontWeight: 600, color: INK.hi, padding: "8px 32px" }}>
@@ -384,7 +423,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
         </p>
       )}
       </DayFrame>
-      )}
+      ))}
 
       <PopupMenu
         open={!!menuAnchor}
@@ -423,7 +462,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       />
 
       {addCtx && (
-        <AddItemSheet open={!!adding} onClose={() => setAdding(null)} ctx={addCtx} needs={isCopy ? diet : null} onSubmit={submitItem} />
+        <AddItemSheet open={!!adding} onClose={() => setAdding(null)} ctx={addCtx} needs={isCopy ? diet : null} onSubmit={submitItem} initialQuery={adding?.query} />
       )}
 
       {/* NU11 / NU12 on an item already in the copy */}
