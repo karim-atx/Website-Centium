@@ -282,6 +282,12 @@ const pronutrition: Catalogue = {
   Day: "اليوم",
   kcal: "سعرة",
   Unit: "الوحدة",
+  // Website viewport: the meal-plan week builder (WP-LI.7.3 / WP-NU-MP.7).
+  "Food item · Qty": "الصنف · الكمية",
+  "Cals": "سعرات",
+  "Search food": "ابحث عن طعام",
+  "Totals": "المجموع",
+  "Week planner": "مخطط الأسبوع",
 };
 
 export default pronutrition;
