@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, ChevronLeft, ChevronRight, Ellipsis, EllipsisVertical, Search, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Ellipsis, EllipsisVertical, Search, SlidersHorizontal, UserRound, type LucideIcon } from "lucide-react";
 import type { Exercise } from "../../../types";
 import { specCells } from "./programmeSpec";
 import { useWebLayout } from "../../web/useWebLayout";
@@ -235,17 +235,19 @@ export const BlockBandWeb: React.FC<{ heading: string; line: string; gap: number
 
 /** The page header: Library 28/36, the search 360 × 44 (260 on the rail), Filter 44 and the 44 primary action with its shadow. */
 export const LibraryHeaderWeb: React.FC<{
+  /** The page title (Library; the Nutrition lane's Meal plans). */
+  title?: string;
   query: string;
   onQuery: (q: string) => void;
   placeholder: string;
   filter?: { on: boolean; onClick: (anchor: HTMLElement) => void };
   action: { label: string; icon: LucideIcon; onClick: () => void };
-}> = ({ query, onQuery, placeholder, filter, action }) => {
+}> = ({ title, query, onQuery, placeholder, filter, action }) => {
   const { rail } = useWebLayout();
   return (
     <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 12, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
       <h1 className="flex-1 min-w-0 truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>
-        {t("Library")}
+        {title ?? t("Library")}
       </h1>
       <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: rail ? 260 : 360, height: 44, boxSizing: "border-box", gap: 10, padding: "0 14px", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
         <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
@@ -334,3 +336,42 @@ export const WorkoutCardWeb: React.FC<{ icon: LucideIcon; colour?: string; title
     </div>
   );
 };
+
+/** WP-LI Library Web v2's section head: 13/20 700 .08em caps #7D67D9 over the 1.5 #AEA1DC rule (8 below the label, 16 under the rule); the link 15/20 600 #5F5093. */
+export const LibSectionHeadWeb: React.FC<{ label: string; right?: string; onRight?: () => void }> = ({ label, right, onRight }) => (
+  <div className="flex items-end justify-between" style={{ gap: 12, paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", marginBottom: 16 }}>
+    <h2 style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h2>
+    {right && (
+      <button type="button" onClick={onRight} className="shrink-0 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ fontSize: 15, lineHeight: "20px", fontWeight: 600, color: "#5F5093" }}>
+        {right}
+      </button>
+    )}
+  </div>
+);
+
+/** WP-LI.1 Assigned to clients on web: one card (r20, padding 0 24); rows 10 0 with the 44 tile (r11, #F0EDF9), 17/24 700 and 13/20, the ring at the end; "All assignments" 15/24 600 under a rule (16 0 20). */
+export const AssignedListWeb: React.FC<{
+  rows: { key: string; title: string; line?: string; trailing: React.ReactNode; onClick: () => void }[];
+  more?: { label: string; onClick: () => void };
+}> = ({ rows, more }) => (
+  <div className="flex flex-col" style={{ boxSizing: "border-box", borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", padding: "0 24px" }}>
+    {rows.map((r, i) => (
+      <button key={r.key} type="button" onClick={r.onClick} className="flex items-center text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ gap: 16, padding: "10px 0", borderBottom: i < rows.length - 1 ? "1px solid rgba(36,31,27,0.06)" : "none" }}>
+        <span className="flex shrink-0 items-center justify-center" style={{ width: 44, height: 44, borderRadius: 11, background: "#F0EDF9" }}>
+          <UserRound size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D67D9" }} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B", overflowWrap: "anywhere" }}>{r.title}</span>
+          {r.line && <span className="block" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{r.line}</span>}
+        </span>
+        {r.trailing}
+      </button>
+    ))}
+    {more && (
+      <button type="button" onClick={more.onClick} className="flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ gap: 2, padding: "16px 0 20px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093", borderTop: rows.length ? "1px solid rgba(36,31,27,0.06)" : "none" }}>
+        {more.label}
+        <ChevronRight size={16} strokeWidth={2.4} aria-hidden />
+      </button>
+    )}
+  </div>
+);

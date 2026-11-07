@@ -8,7 +8,7 @@ import { JumpToToday } from "../../ui/JumpToToday";
 import { weekdayNarrow } from "../proDates";
 import { primaryLine, REQUEST_GOLD, type CalItem } from "../calendar/calendarItems";
 import { appLocale } from "../../../i18n/format";
-import { t } from "../../../i18n/core";
+import { t, tn } from "../../../i18n/core";
 
 // Professional handover v1, WP-CA.1-.3 (WP-CA Calendar Web v4.dc.html, the
 // markup's W tokens): the calendar from 1024px. The 64 header (Calendar 28/36,
@@ -517,6 +517,70 @@ export const WeekEmptyWeb: React.FC<{ newLabel: string; onNew: () => void }> = (
         <p style={{ margin: "16px 0 0", fontSize: 22, lineHeight: "30px", fontWeight: 700, color: "#241F1B" }}>{t("No sessions")}</p>
         <NewSessionButton label={newLabel} onNew={onNew} mt={20} />
       </div>
+    </div>
+  );
+};
+
+/**
+ * WP-CA.4 Year (WP-CA Calendar Extras Web, yearWeb): this year and the next,
+ * each a 30/36 800 heading over a rule (8 above, 16 below), then the months 6
+ * across (4 on the rail; 24 by 20 apart): the name 15/24 600 (this month
+ * #7D67D9), the days 13/20 600 in 22 circles (today #9A8CD6 with white), a 4
+ * dot under days with events. A month opens Month.
+ */
+export const YearWeb: React.FC<{ year: number; todayIso: string; eventDays: string[]; onOpenMonth: (y: number, m: number) => void }> = ({ year, todayIso, eventDays, onOpenMonth }) => {
+  const { rail } = useWebLayout();
+  const events = new Set(eventDays);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const thisYear = Number(todayIso.slice(0, 4));
+  const thisMonth = Number(todayIso.slice(5, 7)) - 1;
+  return (
+    <div className="flex flex-col" style={{ gap: 30, paddingTop: 14 }}>
+      {[year, year + 1].map((y) => (
+        <section key={y} aria-label={String(y)} className="flex flex-col">
+          <h2 style={{ margin: 0, fontSize: 30, lineHeight: "36px", fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>{y}</h2>
+          <div aria-hidden style={{ height: 1, background: "rgba(36,31,27,0.08)", margin: "8px 0 16px" }} />
+          <div style={{ display: "grid", gridTemplateColumns: `repeat(${rail ? 4 : 6},minmax(0,1fr))`, columnGap: 24, rowGap: 20 }}>
+            {Array.from({ length: 12 }, (_, mo) => {
+              const lead = (new Date(y, mo, 1).getDay() + 6) % 7;
+              const days = new Date(y, mo + 1, 0).getDate();
+              const name = new Date(y, mo, 1).toLocaleDateString(appLocale("en-US"), { month: "short" });
+              const long = new Date(y, mo, 1).toLocaleDateString(appLocale("en-US"), { month: "long", year: "numeric" });
+              const count = Array.from({ length: days }, (_, i) => events.has(`${y}-${pad(mo + 1)}-${pad(i + 1)}`)).filter(Boolean).length;
+              const cur = y === thisYear && mo === thisMonth;
+              return (
+                <button
+                  key={mo}
+                  type="button"
+                  onClick={() => onOpenMonth(y, mo)}
+                  aria-label={count ? tn(count, "{month}, {n} day with events", "{month}, {n} days with events", { month: long }) : long}
+                  className="flex min-w-0 flex-col text-start hover:bg-[#F7F6FD] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
+                  style={{ padding: 8, margin: -8, borderRadius: 14 }}
+                >
+                  <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: cur ? "#7D67D9" : "#241F1B" }}>{name}</span>
+                  <span aria-hidden style={{ display: "grid", gridTemplateColumns: "repeat(7,minmax(0,1fr))", rowGap: 2, marginTop: 6 }}>
+                    {Array.from({ length: lead }, (_, i) => (
+                      <span key={`b${i}`} style={{ height: 22 }} />
+                    ))}
+                    {Array.from({ length: days }, (_, i) => {
+                      const iso = `${y}-${pad(mo + 1)}-${pad(i + 1)}`;
+                      const today = iso === todayIso;
+                      return (
+                        <span key={iso} className="relative flex items-center justify-center" style={{ height: 22 }}>
+                          <span className="flex items-center justify-center" style={{ width: 22, height: 22, borderRadius: 999, fontSize: 13, lineHeight: "20px", fontWeight: today ? 700 : 600, fontVariantNumeric: "tabular-nums", background: today ? "#9A8CD6" : "transparent", color: today ? "#FFFFFF" : "#241F1B" }}>
+                            {i + 1}
+                          </span>
+                          {events.has(iso) && <span className="absolute" style={{ bottom: 0, insetInlineStart: "50%", marginInlineStart: -2, width: 4, height: 4, borderRadius: 999, background: today ? "#FFFFFF" : "#6F9993" }} />}
+                        </span>
+                      );
+                    })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 };

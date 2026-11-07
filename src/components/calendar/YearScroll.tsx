@@ -99,9 +99,7 @@ export const YearScroll: React.FC<{
   onOpenMonth: (year: number, month: number) => void;
   /** Bumped by the page to scroll back to today's year (a second tap on the Year tab). */
   jumpSignal: number;
-  /** Mini months per row: 3 on mobile; the professional web calendar passes 6 (4 on the rail). */
-  columns?: number;
-}> = ({ year, todayIso, eventDays, onOpenMonth, jumpSignal, columns }) => {
+}> = ({ year, todayIso, eventDays, onOpenMonth, jumpSignal }) => {
   const todayYear = Number(todayIso.slice(0, 4));
   // The years on the page: opens on the viewed year and the next STEP.
   const [span, setSpan] = useState(() => ({ from: year, to: year + STEP }));
@@ -210,7 +208,7 @@ export const YearScroll: React.FC<{
           <div className="h-px bg-charcoal/[0.08] mt-2 mb-4" />
           {/* Month rows 131.6 apart for five-week months (Jan → Apr, 2x
               frame), so 22 between them. */}
-          <div className={columns ? "grid gap-x-4 gap-y-[22px]" : "grid grid-cols-3 gap-x-4 gap-y-[22px]"} style={columns ? { gridTemplateColumns: `repeat(${columns},minmax(0,1fr))` } : undefined}>
+          <div className="grid grid-cols-3 gap-x-4 gap-y-[22px]">
             {Array.from({ length: 12 }, (_, m) => (
               <MiniMonth
                 key={m}

@@ -6,8 +6,6 @@ import { MEAL_PLAN_TABS, PRO_ROUTES, pickTab } from "../../components/pro/subtyp
 import { MealPlansArea } from "../../components/pro/nutrition/MealPlansArea";
 import { useIsWeb } from "../../components/web/useWebLayout";
 import { MobileFrame } from "../../components/web/WebLayout";
-import { ProPageBodyWeb, ProPageHeaderWeb } from "../../components/pro/web/ProPageWeb";
-import { ClientTabBodyWeb } from "../../components/pro/web/ClientPageWeb";
 import { t } from "../../i18n/core";
 
 /**
@@ -28,42 +26,28 @@ export default function MealPlans() {
   const navigate = useNavigate();
   if (tab !== undefined && tab !== area) return <Navigate to={`${PRO_ROUTES.mealPlans}/${area}`} replace />;
   if (lane !== "nutrition") return null;
-  // WP-NU-MP.3 Recipes: its own web page with the area tabs (Plans | Journals | Recipes | Targets, 40, equal).
-  if (web && area === "recipes")
-    return (
-      <Recipes
-        onBack={() => navigate(`${PRO_ROUTES.mealPlans}/plans`)}
-        webTabs={
-          <SegmentedTabs
-            items={[
-              { key: "plans", label: t("Plans") },
-              { key: "journals", label: t("Journals") },
-              { key: "recipes", label: t("Recipes") },
-              { key: "targets", label: t("Targets") },
-            ]}
-            activeKey="recipes"
-            onChange={(k) => navigate(`${PRO_ROUTES.mealPlans}/${k}`)}
-            tabHeight={32}
-            trackStyle={{ height: 40, boxSizing: "border-box", padding: 4, gap: 4, borderRadius: 14 }}
-            tabRadius={10}
-            labelSize={15}
-          />
-        }
-      />
-    );
-  // Website viewport (WP-NU-MP.1): the Plans home gets the page header and its sections across the page; the
-  // builder, journals, recipes and targets keep their mobile screen in the centred column until they are built.
-  if (web && area === "plans" && !params.get("plan"))
-    return (
-      <div>
-        <ProPageHeaderWeb title={t("Meal plans")} />
-        <ProPageBodyWeb>
-          <ClientTabBodyWeb columns={2}>
-            <MealPlansArea lane={lane} area={area} />
-          </ClientTabBodyWeb>
-        </ProPageBodyWeb>
-      </div>
-    );
+  // The web area tabs (Plans | Journals | Recipes | Targets, 40, equal; WP-NU Meal Plans Web v3).
+  const areaTabs = (
+    <SegmentedTabs
+      items={[
+        { key: "plans", label: t("Plans") },
+        { key: "journals", label: t("Journals") },
+        { key: "recipes", label: t("Recipes") },
+        { key: "targets", label: t("Targets") },
+      ]}
+      activeKey={area}
+      onChange={(k) => navigate(`${PRO_ROUTES.mealPlans}/${k}`)}
+      tabHeight={32}
+      trackStyle={{ height: 40, boxSizing: "border-box", padding: 4, gap: 4, borderRadius: 14 }}
+      tabRadius={10}
+      labelSize={15}
+    />
+  );
+  // WP-NU-MP.3 Recipes: its own web page with the area tabs.
+  if (web && area === "recipes") return <Recipes onBack={() => navigate(`${PRO_ROUTES.mealPlans}/plans`)} webTabs={areaTabs} />;
+  // Website viewport (WP-NU-MP.1): the Plans home is its own page (LibraryHome's web branch: the header with the
+  // search, Filter and New meal plan, the area tabs, the boxes, Templates | Assigned).
+  if (web && area === "plans" && !params.get("plan")) return <MealPlansArea lane={lane} area={area} webTabs={<div style={{ marginBottom: 16 }}>{areaTabs}</div>} />;
   // WP-NU-MP.7: the plan builder spans the page (its own web header; Week view by default); WP-NU-MP.2 / .4:
   // Journals and Targets are list-detail pages.
   if (web && ((area === "plans" && params.get("plan")) || area === "journals" || area === "targets")) return <MealPlansArea lane={lane} area={area} />;

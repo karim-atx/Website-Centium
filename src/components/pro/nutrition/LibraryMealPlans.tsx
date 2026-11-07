@@ -11,10 +11,10 @@ import { isNuArea } from "./nav";
  * targets) are chosen by the query (?area=, ?plan=, ?client=, ?day=; see
  * nav.ts). Full coaching only: another lane never reaches the Library route.
  */
-export const LibraryMealPlans: React.FC = () => {
+export const LibraryMealPlans: React.FC<{ webTabs?: React.ReactNode }> = ({ webTabs }) => {
   const { lane } = useProSubtype();
   const [params] = useSearchParams();
   const a = params.get("area");
   if (lane !== "full_coaching") return null;
-  return <MealPlansArea lane={lane} area={isNuArea(a) ? a : "plans"} />;
+  return <MealPlansArea lane={lane} area={isNuArea(a) ? a : "plans"} webTabs={webTabs} />;
 };

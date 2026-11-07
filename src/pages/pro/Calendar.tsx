@@ -11,7 +11,7 @@ import { EventDetailSheet } from "../../components/calendar/EventDetailSheet";
 import { RepeatScopePopup, type RepeatScope } from "../../components/calendar/RepeatScopePopup";
 import { YearScroll } from "../../components/calendar/YearScroll";
 import { useWebLayout } from "../../components/web/useWebLayout";
-import { AgendaCardWeb, AgendaEmptyWeb, CalendarBodyWeb, CalendarTopBarWeb, EyebrowWeb, MonthCardWeb, MonthSplitWeb, PeriodCardWeb, RequestCardWeb, WeekEmptyWeb, WeekTimeGridWeb } from "../../components/pro/web/CalendarWeb";
+import { AgendaCardWeb, AgendaEmptyWeb, CalendarBodyWeb, CalendarTopBarWeb, EyebrowWeb, MonthCardWeb, MonthSplitWeb, PeriodCardWeb, RequestCardWeb, WeekEmptyWeb, WeekTimeGridWeb, YearWeb } from "../../components/pro/web/CalendarWeb";
 import { ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 import { dayBefore } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
@@ -147,7 +147,7 @@ export default function Calendar() {
   const navigate = useNavigate();
   const dark = useIsDark();
   // Website viewport (WP-CA): from 1024px the page header and the web views; mobile is unchanged.
-  const { web, rail } = useWebLayout();
+  const { web } = useWebLayout();
   const reducedMotion = useReducedMotion();
   const [params, setParams] = useSearchParams();
   const clinical = lane === "clinical_overview";
@@ -860,12 +860,10 @@ export default function Calendar() {
           )}
           {view === "year" && (
             <div className="min-h-0 flex-1 overflow-y-auto">
-              <YearScroll
+              <YearWeb
                 year={cursor.year}
                 todayIso={todayIso}
                 eventDays={Object.keys(items).filter((d) => (items[d] ?? []).length > 0)}
-                jumpSignal={yearJump}
-                columns={rail ? 4 : 6}
                 onOpenMonth={(y, m) => {
                   setCursor({ year: y, month: m });
                   setView("month");

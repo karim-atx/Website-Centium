@@ -29,8 +29,7 @@ import { assignedLine, clientsLabel, currentWeek, isActive, templateMeta } from 
 import { t } from "../../../i18n/core";
 import { useIsWeb, useWebLayout } from "../../web/useWebLayout";
 import { ProPageBodyWeb } from "../web/ProPageWeb";
-import { ClientTabBodyWeb } from "../web/ClientPageWeb";
-import { EmptyPanelWeb, LibraryChipsWeb, LibraryHeaderWeb, WorkoutCardWeb } from "../web/ProgrammeWeb";
+import { AssignedListWeb, EmptyPanelWeb, LibSectionHeadWeb, LibraryChipsWeb, LibraryHeaderWeb, WorkoutCardWeb } from "../web/ProgrammeWeb";
 
 /**
  * Release 3 · W5 Library › Programmes (TR1 v7), the content under the
@@ -384,24 +383,61 @@ export const ProgrammesTab: React.FC<{
             onChange={setChip}
           />
           {errors}
+          {/* WP-LI Library Web v2: Templates as cards 3 across (2 on the rail), then Assigned to clients below; the
+              repo's week-by-day programmes keep their section above. */}
           {chip === "programmes" && (
-            <ClientTabBodyWeb columns={2}>
+            <div className="flex flex-col" style={{ gap: 24 }}>
               <WeekProgrammesSection query={query} onOpen={(id) => go({ view: "programme", id })} />
               {empty ? (
-                <EmptyState icon={ClipboardList} title={t("No templates yet. Build your first one.")} />
+                <EmptyPanelWeb line={t("No templates yet. Build your first one.")} minHeight={rail ? 420 : 520} />
               ) : (
                 <>
-                  <div>
-                    <SectionHead label={t("Templates")} right={visible.length > 3 || workoutTemplateFolders.length ? t("See all {n}", { n: visible.length }) : undefined} onRight={() => go({ view: "all" })} />
-                    {latest.length === 0 ? <p style={{ fontSize: textPx(12.5), color: INK.chF, marginBottom: 12 }}>{t("No matches.")}</p> : latest.map(card)}
-                  </div>
-                  <div>
-                    <SectionHead label={t("Assigned to clients")} className="mt-2" />
-                    {assignedList(assignedRows.slice(0, 3), assignedRows.length > 3)}
-                  </div>
+                  <section aria-label={t("Templates")}>
+                    <LibSectionHeadWeb label={t("Templates")} right={visible.length > 3 || workoutTemplateFolders.length ? t("See all {n}", { n: visible.length }) : undefined} onRight={() => go({ view: "all" })} />
+                    {latest.length === 0 ? (
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No matches.")}</p>
+                    ) : (
+                      <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 2 : 3},minmax(0,1fr))`, gap: 24 }}>
+                        {latest.map((tpl) => {
+                          const n = clientCount(tpl);
+                          const folder = tpl.folderId ? workoutTemplateFolders.find((f) => f.id === tpl.folderId) : undefined;
+                          return (
+                            <WorkoutCardWeb
+                              key={tpl.id}
+                              icon={ClipboardList}
+                              colour={folder?.color}
+                              title={tpl.name}
+                              sub={templateMeta(tpl)}
+                              chip={tpl.isPublic ? null : n > 0 ? { label: clientsLabel(n), template: false } : { label: t("Template"), template: true }}
+                              extra={tpl.isPublic ? <UnverifiedProgramNotice isVerified={tpl.isVerified} isPublic={tpl.isPublic} variant="compact" /> : undefined}
+                              onOpen={() => go({ view: "template", id: tpl.id })}
+                              onMenu={(anchor) => setMenu({ template: tpl, anchor })}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </section>
+                  <section aria-label={t("Assigned to clients")}>
+                    <LibSectionHeadWeb label={t("Assigned to clients")} />
+                    {assignedRows.length === 0 ? (
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+                    ) : (
+                      <AssignedListWeb
+                        rows={assignedRows.slice(0, 3).map(({ a, tpl }) => ({
+                          key: a.id,
+                          title: `${clientName(a.clientId)} · ${tpl.name}`,
+                          line: assignedLine(currentWeek(a.startsOn, a.joinWeek, tpl.durationWeeks, today), rings[a.clientId]) ?? undefined,
+                          trailing: <StatusRing value={rings[a.clientId] ?? null} lane="full_coaching" scale={48 / 56} />,
+                          onClick: () => go({ view: "template", id: tpl.id }),
+                        }))}
+                        more={assignedRows.length > 3 ? { label: t("All assignments"), onClick: () => go({ view: "assignments" }) } : undefined}
+                      />
+                    )}
+                  </section>
                 </>
               )}
-            </ClientTabBodyWeb>
+            </div>
           )}
           {chip === "workouts" &&
             (workouts.length === 0 ? (

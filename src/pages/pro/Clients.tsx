@@ -879,14 +879,15 @@ export default function Clients() {
     </div>
   );
 
-  if (web && webEntry)
+  // On web the header and status tabs stay on every segment; Requests (no client to preview) leaves the pane empty.
+  if (web)
     return (
       <ClientsSplit
         head={webHead}
         tabs={webTabs}
         list={page}
         detail={
-          <ClientDetailPanel
+          webEntry && <ClientDetailPanel
             lane={lane}
             facts={{
               name: webEntry.name,

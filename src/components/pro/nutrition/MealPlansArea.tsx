@@ -24,7 +24,8 @@ import { t } from "../../../i18n/core";
  * reaches here: ProRoutes / LaneSlot); this renders only for Full coaching
  * and Nutrition.
  */
-export const MealPlansArea: React.FC<{ lane: ProLane; area: NuArea }> = ({ lane, area }) => {
+/** webTabs: the tabs the web Plans page shows under its header (WP-NU-MP.1, WP-LI.2). */
+export const MealPlansArea: React.FC<{ lane: ProLane; area: NuArea; webTabs?: React.ReactNode }> = ({ lane, area, webTabs }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
@@ -64,7 +65,7 @@ export const MealPlansArea: React.FC<{ lane: ProLane; area: NuArea }> = ({ lane,
       <TargetsList lane={lane} onBack={back(() => go("plans", {}, true))} onOpen={(c) => go("targets", { client: c })} />
     );
   } else {
-    screen = <LibraryHome lane={lane} onArea={(a) => go(a)} onOpenPlan={(id) => go("plans", { plan: id })} />;
+    screen = <LibraryHome lane={lane} onArea={(a) => go(a)} onOpenPlan={(id) => go("plans", { plan: id })} webTabs={webTabs} />;
   }
 
   return (

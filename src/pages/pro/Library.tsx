@@ -19,8 +19,7 @@ import { isMealPlansSubview } from "../../components/pro/nutrition/nav";
 import { t, tk } from "../../i18n/core";
 import { useIsWeb } from "../../components/web/useWebLayout";
 import { MobileFrame } from "../../components/web/WebLayout";
-import { ProPageBodyWeb, ProPageHeaderWeb } from "../../components/pro/web/ProPageWeb";
-import { ClientTabBodyWeb, ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
+import { ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 
 /**
  * Release 3 · Library (/app/pro/library/:tab, Full coaching only; TR1 v7 and
@@ -59,19 +58,11 @@ export default function Library() {
   // WP-LI.3 to .3.3: a programme, its Progress, a client's copy and a workout log are web pages of their own.
   if (web && current === "programmes" && ["template", "progress", "copy", "log"].includes(q.get("view") ?? "")) return content;
   if (web && inner) return <MobileFrame>{content}</MobileFrame>;
-  const webTabs = <ClientTabsWeb label={t("Library")} items={LIBRARY_TABS.map((k) => ({ key: k, label: t(LABEL[k]) }))} active={current} onChange={(k) => navigate(`${PRO_ROUTES.library}/${k}`, { replace: true })} />;
+  const webTabs = <ClientTabsWeb label={t("Library")} items={LIBRARY_TABS.map((k) => ({ key: k, label: t(LABEL[k]) }))} active={current} onChange={(k) => navigate(`${PRO_ROUTES.library}/${k}`, { replace: true })} mb={16} />;
   // WP-LI.1 / WP-LI.6: the Programmes list is its own web page (search, Filter and New programme in the header).
   if (web && current === "programmes") return <ProgrammesTab webTabs={webTabs} />;
-  if (web)
-    return (
-      <div>
-        <ProPageHeaderWeb title={t("Library")} />
-        <ProPageBodyWeb>
-          {webTabs}
-          <ClientTabBodyWeb columns={2}>{content}</ClientTabBodyWeb>
-        </ProPageBodyWeb>
-      </div>
-    );
+  // WP-LI.2: the Meal plans list is LibraryHome's web page (search, Filter and New meal plan in the header).
+  if (web && current === "meal-plans") return <LibraryMealPlans webTabs={webTabs} />;
   return (
     <div>
       {!inner && (
