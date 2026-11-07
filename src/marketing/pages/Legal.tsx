@@ -460,6 +460,15 @@ export const Legal: React.FC = () => {
               >
                 {t("Contact us")}
               </a>
+              {/* Round K (K-DEL): the account-deletion page, in Contact us's style. */}
+              <a
+                href="/delete-account"
+                onClick={pageLink("/delete-account")}
+                className="cl-hbd"
+                style={{ padding: "13px 22px", borderRadius: "999px", border: "1px solid #CFC5EA", color: "#221E1A", fontWeight: 600, fontSize: "14.5px", "--hbd": "#775FD7" } as React.CSSProperties}
+              >
+                {t("Delete your account")}
+              </a>
             </div>
           </div>
           <p style={{ marginTop: "20px", fontSize: "12.5px", lineHeight: "1.6", color: "#5B5349" }}>{GOVERNING}</p>

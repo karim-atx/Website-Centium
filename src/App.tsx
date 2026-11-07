@@ -17,6 +17,7 @@ import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
+import { DeleteAccount as MarketingDeleteAccount } from "./marketing/pages/DeleteAccount";
 import { CommunityGuidelines } from "./marketing/pages/CommunityGuidelines";
 import { RefundPolicy } from "./marketing/pages/RefundPolicy";
 import { GetSupportPage } from "./pages/settings/GetSupportPage";
@@ -398,6 +399,9 @@ function AppRoutes() {
         <Route path="/legal/community-guidelines" element={<CommunityGuidelines />} />
         {/* Round F: the Refund and Cancellation Policy, English and Arabic on one URL. */}
         <Route path="/legal/refund-policy" element={<RefundPolicy />} />
+        {/* Round K (K-DEL): Google Play's account-deletion page. A stable address
+            (it is in Play's Data safety form); public, signed in or not. */}
+        <Route path="/delete-account" element={<MarketingDeleteAccount />} />
         {/* v3 landing handoff: branded 404 for anything else under the
             marketing site. Ranked below every explicit path above (and
             below /app/* below, a more specific splat) by React Router's own

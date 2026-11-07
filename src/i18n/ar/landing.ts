@@ -49,6 +49,7 @@ export const FILES: string[] = [
   "marketing/layouts/MarketingLayout.tsx",
   "marketing/pages/CommunityGuidelines.tsx",
   "marketing/pages/Contact.tsx",
+  "marketing/pages/DeleteAccount.tsx",
   "marketing/pages/Home.tsx",
   "marketing/pages/NotFound.tsx",
 ];
@@ -874,6 +875,36 @@ const landing: Catalogue = {
   "Something not right?": "هل هناك ما لا يبدو صحيحًا؟",
   "Report it in the app, or tell us. Our team reads every message.": "أبلغ عنه في التطبيق، أو أخبرنا. فريقنا يقرأ كل رسالة.",
   "Back to the app": "العودة إلى التطبيق",
-};
+  // == Round K (K-DEL): the account-deletion page, and its links in the footer and on Legal ==
+  "Delete your account": "حذف حسابك",
+  "Delete your Centium account": "حذف حسابك على Centium",
+  "How to delete your Centium account and what happens to your data.": "كيف تحذف حسابك على Centium وماذا يحدث لبياناتك.",
+  "Centium is an app by Atraxia. You can delete your account, and the data that goes with it, at any time.":
+    "Centium تطبيق من Atraxia. يمكنك حذف حسابك والبيانات المرتبطة به في أي وقت.",
+  "How to delete your account": "كيف تحذف حسابك",
+  "In the Centium app or on the website, sign in, open Settings, then Privacy, and choose Delete my account. A business account chooses Delete business account.":
+    "في تطبيق Centium أو على الموقع، سجّل الدخول، وافتح الإعدادات ثم الخصوصية، واختر «حذف حسابي». أما حساب النشاط التجاري فيختار «حذف حساب النشاط التجاري».",
+  "30 days to change your mind": "30 يومًا لتغيير رأيك",
+  "What is deleted": "ما الذي يُحذف",
+  "After the 30 days, your sign-in, your profile and everything your account holds are permanently removed.":
+    "بعد انقضاء الثلاثين يومًا، تُزال بيانات تسجيل دخولك وملفك الشخصي وكل ما يحتويه حسابك نهائيًا.",
+  "Files you uploaded, such as photos, documents and message attachments, are removed from storage before your account is erased.":
+    "تُزال الملفات التي رفعتها، مثل الصور والمستندات ومرفقات الرسائل، من التخزين قبل مسح حسابك.",
+  "Courses you published are removed, and anyone enrolled is told the course is no longer available.":
+    "تُزال الدورات التي نشرتها، ويُبلَّغ كل المسجّلين فيها بأن الدورة لم تعد متاحة.",
+  "What is kept, and why": "ما الذي يُحتفظ به، ولماذا",
+  "Messages you sent stay in the other person's conversation, without your name, so they keep their side of it.":
+    "تبقى الرسائل التي أرسلتها في محادثة الطرف الآخر من دون اسمك، كي يحتفظ بجانبه من المحادثة.",
+  "Bug reports and app reviews you wrote are kept without anything that identifies you.":
+    "يُحتفظ ببلاغات الأخطاء ومراجعات التطبيق التي كتبتها من دون أي شيء يدلّ عليك.",
+  "If you own a business account, the business closes instead of being deleted. Its members keep their records, receipts, bookings and reviews.":
+    "إذا كنت تملك حساب نشاط تجاري، يُغلق النشاط التجاري بدلًا من حذفه، ويحتفظ أعضاؤه بسجلاتهم وإيصالاتهم وحجوزاتهم ومراجعاتهم.",
+  "If you can't sign in": "إذا تعذّر عليك تسجيل الدخول",
+  "Email {email} from the address on your account and ask us to delete it. We aim to respond within a few business days.":
+    "راسل {email} من عنوان البريد الإلكتروني المسجّل في حسابك واطلب منا حذفه. نسعى إلى الرد خلال أيام عمل قليلة.",
+  "Delete your account now": "احذف حسابك الآن",
+  "Go to Delete my account": "الانتقال إلى «حذف حسابي»",
+  "Sign in to delete your account": "سجّل الدخول لحذف حسابك",
+  "Email {email}": "راسل {email}",};
 
 export default landing;

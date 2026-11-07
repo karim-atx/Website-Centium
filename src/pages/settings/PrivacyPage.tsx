@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCheck, Trash2, Users } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
@@ -27,7 +27,9 @@ import { BusinessLegalSections } from "../../components/business-more/BusinessLe
 export default function PrivacyPage() {
   const { authUserId, user } = useApp();
   const navigate = useNavigate();
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  // Round K (K-DEL): /delete-account's button arrives with ?delete=1 and opens the sheet.
+  const [params] = useSearchParams();
+  const [deleteOpen, setDeleteOpen] = useState(() => params.get("delete") === "1");
 
   // Read receipts: null until the server answers, so the switch never shows a
   // position it might have to jump out of. Re-read on every visit, because the
