@@ -462,9 +462,40 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
   const dark = useIsDark();
   const m = marketPalette(dark);
   const ref = useRef<HTMLDivElement>(null);
+  const { web, rail } = useWebLayout();
   useEffect(() => {
+    if (web) return;
     ref.current?.querySelector<HTMLElement>("[aria-pressed=true]")?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [chosen]);
+  }, [chosen, web]);
+  if (web) {
+    // WC-EX Explore Web v4: 14 equal days across (10 on the rail), 8 apart; each 56 high, r12,
+    // #F5F5F6 (the chosen one #8F7FCB, white), the weekday 13/18 500, the date 17/22 700, the 4 dot.
+    const n = rail ? 10 : 14;
+    return (
+      <div role="group" aria-label={t("Day")} style={{ display: "grid", gridTemplateColumns: `repeat(${n},minmax(0,1fr))`, gap: 8, marginTop: 12 }}>
+        {days.slice(0, n).map((d) => {
+          const on = d === chosen;
+          const date = atNoon(d);
+          const has = withClasses.has(d);
+          return (
+            <button
+              key={d}
+              type="button"
+              aria-pressed={on}
+              aria-label={has ? formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) : t("{date}, no classes", { date: formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) })}
+              onClick={() => onPick(d)}
+              className="market-focus flex flex-col items-center justify-center"
+              style={{ height: 56, borderRadius: 12, border: 0, background: on ? "#8F7FCB" : "#F5F5F6", color: on ? "#FFFFFF" : "#241F1B", font: "inherit", cursor: "pointer" }}
+            >
+              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 500, color: on ? "#FFFFFF" : "#5B5349" }}>{formatShortDate(date, { weekday: "short" })}</span>
+              <span style={{ fontSize: 17, lineHeight: "22px", fontWeight: 700 }}>{date.getDate()}</span>
+              <span aria-hidden style={{ marginTop: 2, width: 4, height: 4, borderRadius: 999, background: has ? (on ? "#FFFFFF" : "#AEA1DC") : "transparent" }} />
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div ref={ref} role="group" aria-label={t("Day")} className="scroll-row no-scrollbar" style={{ margin: "12px -16px 0", padding: "0 16px", display: "flex", gap: 8, scrollbarWidth: "none" }}>
       {days.map((d) => {

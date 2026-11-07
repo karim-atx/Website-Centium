@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight } from "lucide-react";
 import { LEGAL_UPDATED, legalCopyFor, legalDate, legalHref, type LegalSection } from "../../pages/settings/legalCopy";
 import { t } from "../../i18n/core";
+import { useIsWeb } from "../web/useWebLayout";
 
 // The shared parts of MO1.8.7 Privacy and MO1.8.8 Terms of Service, as both
 // frames draw them (measured on the 2x boards): the "Last updated" line
@@ -33,6 +34,24 @@ export const LegalSections: React.FC<{ doc: "privacy" | "terms"; sections: Legal
   // whose slug is the website's id.
   const local = legalCopyFor()[doc === "terms" ? "TERMS_SECTIONS" : "PRIVACY_SECTIONS"];
   const shown = local.length === sections.length ? local : sections;
+  // Website viewport (WC-SE Settings Web, b.legal): the headings are the 15/24 700 ink of the
+  // text (not the accent), 4 above the 15/24 #5B5349 body. Still links to the website.
+  const web = useIsWeb();
+  if (web)
+    return (
+      <div className={`space-y-6 ${className ?? ""}`}>
+        {sections.map((s, i) => (
+          <section key={s.heading} className="flex flex-col" style={{ gap: 4 }}>
+            <h2 style={{ margin: 0 }}>
+              <a href={legalHref(doc, s.heading)} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
+                {shown[i].heading}
+              </a>
+            </h2>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349", maxWidth: "72ch", textWrap: "pretty" }}>{shown[i].body}</p>
+          </section>
+        ))}
+      </div>
+    );
   return (
     <div className={`space-y-6 ${className ?? ""}`}>
       {sections.map((s, i) => (

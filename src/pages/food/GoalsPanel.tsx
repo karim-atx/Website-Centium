@@ -123,6 +123,12 @@ export interface GoalsPanelPro {
   weightGoalUnknown?: boolean;
   /** Draw the caller's own macro card instead of the editor. */
   hideMacros?: boolean;
+  /**
+   * Website viewport (WP-NU-MP.4): the professional Targets page draws the panel
+   * in two columns: "goals" renders the weight goal, weight and TDEE, and daily
+   * target cards; "macros" renders only the macro distribution. Unset, all of it.
+   */
+  webPart?: "goals" | "macros";
   today: string;
 }
 
@@ -360,6 +366,8 @@ export default function GoalsPanel({
           </p>
         </section>
       ) : (
+      <>
+      {pro?.webPart !== "macros" && (
       <>
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>{t("Weight goal")}</p>
@@ -672,8 +680,10 @@ export default function GoalsPanel({
           </p>
         )}
       </section>
+      </>
+      )}
 
-      {!pro?.hideMacros && (
+      {!pro?.hideMacros && pro?.webPart !== "goals" && (
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>{t("Macro distribution")}</p>
         <MacroSplitEditor split={nutritionGoal.macroSplit} calories={targets.calories} onChange={setMacroSplit} disabled={locked} squares />

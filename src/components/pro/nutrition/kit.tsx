@@ -129,14 +129,15 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
 };
 
 /** NU2 / NU6 "{client_name}'s dietary needs" strip. */
-export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; shared: boolean; allergiesShared: boolean; loading: boolean }> = ({ name, needs, shared, allergiesShared, loading }) => {
+/** `web` (WP-NU-MP.2): 12 14, the caps 13/20 with 8 under, the lines 13/20, no bottom margin (the web body spaces it). */
+export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; shared: boolean; allergiesShared: boolean; loading: boolean; web?: boolean }> = ({ name, needs, shared, allergiesShared, loading, web }) => {
   const restrictions = (needs?.restrictions ?? []).filter((r) => r.kind !== "preference");
   const prefs = (needs?.restrictions ?? []).filter((r) => r.kind === "preference");
   const allergies = needs?.allergies ?? [];
   const none = !!needs && !allergies.length && !restrictions.length && !prefs.length;
   return (
-    <div role="region" aria-label={t("Dietary needs")} style={{ borderRadius: 14, background: INK.raised, border: `1px solid ${INK.b06}`, padding: "9px 10px", marginBottom: 12 }}>
-      <p style={{ fontSize: textPx(10.5), fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: 6, overflowWrap: "anywhere" }}>{t("{name}'s dietary needs", { name })}</p>
+    <div role="region" aria-label={t("Dietary needs")} style={{ borderRadius: 14, background: INK.raised, border: `1px solid ${INK.b06}`, padding: web ? "12px 14px" : "9px 10px", marginBottom: web ? 0 : 12 }}>
+      <p style={{ fontSize: web ? 13 : textPx(10.5), lineHeight: web ? "20px" : undefined, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: web ? 8 : 6, overflowWrap: "anywhere" }}>{t("{name}'s dietary needs", { name })}</p>
       {!shared ? (
         <p style={{ fontSize: textPx(12), color: INK.chS }}>{t("{name} hasn't shared allergies or dietary needs with you.", { name: name.split(" ")[0] })}</p>
       ) : loading ? (

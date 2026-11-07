@@ -21,6 +21,7 @@ export const FILES: string[] = [
   "components/pro/nutrition/Recipes.tsx",
   "components/pro/nutrition/Targets.tsx",
   "components/pro/nutrition/useNutritionOverview.ts",
+  "components/pro/web/JournalDayWeb.tsx",
   "pages/pro/MealPlans.tsx",
   "services/pro/nutrition.ts",
 ];
@@ -308,6 +309,16 @@ const pronutrition: Catalogue = {
   "Per serving. Totals ÷ {n} servings.": { zero: "للحصة. المجموع ÷ {n} حصص.", one: "للحصة. المجموع ÷ حصة واحدة.", two: "للحصة. المجموع ÷ حصتين.", few: "للحصة. المجموع ÷ {n} حصص.", many: "للحصة. المجموع ÷ {n} حصة.", other: "للحصة. المجموع ÷ {n} حصة." },
   "{name}, no meaningful macros": "{name}، بلا عناصر غذائية تُذكر",
   "{name}, protein {p}, carbs {c}, fat {f}": "{name}، بروتين {p}، كربوهيدرات {c}، دهون {f}",
+  // Website viewport (WP-NU-MP.2): the web journal day.
+  "Which food": "أيّ طعام",
+  "Food, day totals": "الطعام، مجموع اليوم",
+  "Calories {n} of {target}": "السعرات {n} من {target}",
+  "Calories {n}": "السعرات {n}",
+  "{n} g left": "متبقٍّ {n} غ",
+  "{n} g over": "{n} غ فوق الهدف",
+  "{slot}: {kcal} kcal, protein {p} g, carbs {c} g, fat {f} g": "{slot}: {kcal} سعرة، بروتين {p} غ، كربوهيدرات {c} غ، دهون {f} غ",
+  "C {n}g": "ك {n} غ",
+  "F {n}g": "د {n} غ",
 };
 
 export default pronutrition;

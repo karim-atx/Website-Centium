@@ -27,6 +27,7 @@ import { macroGrams, shiftDate, splitTotalOk, tdeeView } from "./nutritionModel"
 import { useNutritionOverview } from "./useNutritionOverview";
 import { appLocale } from "../../../i18n/format";
 import { t } from "../../../i18n/core";
+import { useWebLayout } from "../../web/useWebLayout";
 
 /**
  * Release 3 · NU8 v3 "Targets · weight goal rate and TDEE" (source gen
@@ -109,6 +110,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   const { clients } = useNuRoster(lane);
   const client = clients?.find((c) => c.clientId === clientId) ?? null;
   const access = useClientAccess(clientId);
+  const { rail } = useWebLayout();
   const [nonce, setNonce] = useState(0);
   const { data, stale, progress } = useTargetsData(clientId, access, nonce);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -150,11 +152,30 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   );
 
   const head = <NuHead eyebrow={client?.name ?? ""} title={t("Targets and dietary needs")} onBack={pane ? undefined : onBack} />;
+  // Website viewport (WP-NU-MP.4, WP-NU Meal Plans Web v3 isTargets): the editor is one #FAFAFB
+  // section (r20): a white 14 24 head (the caps name and the 22/28 title on one baseline), the
+  // body (16 24, the panel in two columns 12 apart, one on the rail) and a white 14 24 footer
+  // with the set-on line and the 44 Save button.
+  const webHead = (
+    <div className="flex items-baseline flex-wrap" style={{ columnGap: 12, padding: "14px 24px", borderBottom: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{client?.name ?? ""}</p>
+      <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Targets and dietary needs")}</h2>
+    </div>
+  );
+  const webShell = (body: React.ReactNode, footer?: React.ReactNode) => (
+    <section aria-label={t("Targets and dietary needs")} className="min-w-0 flex flex-col overflow-hidden" style={{ boxSizing: "border-box", borderRadius: 20, background: "#FAFAFB", border: "1px solid rgba(36,31,27,0.08)" }}>
+      {webHead}
+      <div style={{ padding: "16px 24px" }}>{body}</div>
+      {footer}
+    </section>
+  );
   if (!data || !draft) {
+    const body = stale?.error && !stale.offline ? <ProError onRetry={() => setNonce((n) => n + 1)} /> : <ProCardSkeleton lines={5} height={260} />;
+    if (pane) return webShell(body);
     return (
       <div>
         {head}
-        {stale?.error && !stale.offline ? <ProError onRetry={() => setNonce((n) => n + 1)} /> : <ProCardSkeleton lines={5} height={260} />}
+        {body}
       </div>
     );
   }
@@ -181,9 +202,12 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
             <LockLine what={t("Progress")} clientFirstName={first || t("Your client")} action={askBtn("progress")} />
           </div>
         )}
-        <p style={{ fontSize: textPx(10.5), color: INK.chF }}>
-          {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
-        </p>
+        {/* On web the footer carries this line (WP-NU-MP.4). */}
+        {!pane && (
+          <p style={{ fontSize: textPx(10.5), color: INK.chF }}>
+            {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
+          </p>
+        )}
       </div>
     ),
     desiredWeightEditable: true,
@@ -212,6 +236,54 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
     setMsg({ ok: true, text: t("Saved. {name} has been notified.", { name: first }) });
     setNonce((n) => n + 1);
   };
+
+  if (pane) {
+    const card: React.CSSProperties = { boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "12px 18px" };
+    return webShell(
+      <div className="flex flex-col" style={{ gap: 12 }}>
+        {data.error && data.offline && <OfflineLine />}
+        {data.error && !data.offline && <ProError onRetry={() => setNonce((n) => n + 1)} />}
+        {/* Safety: the allergies and dietary needs stay in full above the targets (the frame shows a one-line note in the head). */}
+        <DietaryNeedsCard clientId={clientId} firstName={first || t("Your client")} access={access} onAsk={() => ask("allergies_dietary")} asked={asked.has("allergies_dietary")} />
+        <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 12 }}>
+          <div className="min-w-0">
+            <GoalsPanel pro={{ ...pro, webPart: "goals" }} />
+          </div>
+          <div className="min-w-0 flex flex-col" style={{ gap: 12 }}>
+            <GoalsPanel pro={{ ...pro, webPart: "macros" }} />
+            <div className="flex items-center justify-between" style={{ ...card, gap: 12 }}>
+              <span className="min-w-0">
+                <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Lock these targets")}</span>
+                <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
+              </span>
+              <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
+            </div>
+            {lane === "nutrition" && (
+              <div style={card}>
+                <div className="flex items-center justify-between" style={{ gap: 8 }}>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" }}>{t("Micronutrient targets")}</p>
+                  <ComingSoonPill />
+                </div>
+                <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        {msg && (
+          <p role={msg.ok ? "status" : "alert"} style={{ margin: 0, fontSize: 13, fontWeight: 600, color: msg.ok ? INK.good : INK.hi }}>
+            {msg.text}
+          </p>
+        )}
+      </div>,
+      <div className="flex items-center" style={{ gap: 16, padding: "14px 24px", borderTop: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
+        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          {data.mine ? `${t("You set these on {date}.", { date: fmtDay(data.mine.setAt, true) })} ` : ""}
+          {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
+        </span>
+        <CtaButton size="page" icon={<Check size={18} />} label={t("Save and notify {name}", { name: first })} loading={busy} disabled={!(draft.targetCalories > 0)} onClick={() => void save()} />
+      </div>
+    );
+  }
 
   return (
     <div>

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { CalendarDays, LogOut, Mail, MapPin, Phone, TrendingDown, TrendingUp } from "lucide-react";
+import { CalendarDays, ChevronRight, LogOut, Mail, MapPin, Phone, TrendingDown, TrendingUp } from "lucide-react";
+import { useWebLayout } from "../../../components/web/useWebLayout";
 import { Toast } from "../../../components/ui/Toast";
 import { SectionHead, ListCard, type ListRow } from "../../../components/pro/client/kit";
 import { ListSkeleton, OfflineLine, ProError } from "../../../components/pro/states";
@@ -50,6 +51,7 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
   const [toast, setToast] = useState<string | null>(null);
   /** Batch 2 CO: an accept the server refused as withdrawn or expired, kept until the list is read again. */
   const [refused, setRefused] = useState<AcceptRefusalKind | null>(null);
+  const { rail } = useWebLayout();
 
   const e = data?.employments.find((x) => x.businessId === id) ?? null;
   const ownSeat = access.seats.find((s) => s.businessId === id && s.isOwner) ?? null;
@@ -154,6 +156,49 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
           onDecline={() => setDeclining(true)}
           onRemove={() => void removeDead()}
         />
+      ) : idProp ? (
+        // WP-MO Businesses Web (wTeam): the 120 cover (96 on the rail, r18, 24 under), then two
+        // columns 24 apart (one on the rail): Classes this month (#F7F7FC r16 16 20) and the
+        // Business console; Your schedule here and Contact. Section heads 13/20 caps #7D67D9 over
+        // the 1.5 #AEA1DC rule; rows 56 with the 32 r10 icon tile, 15/24 600 over 13/20.
+        <>
+          <div aria-hidden className="overflow-hidden" style={{ height: rail ? 96 : 120, borderRadius: 18, border: "1px solid rgba(36,31,27,0.10)", marginBottom: 24, background: "repeating-linear-gradient(45deg,#F5F5F6 0 8px,#FFFFFF 8px 16px)" }}>
+            {facts?.coverUrl && /^https?:/.test(facts.coverUrl) && <img src={facts.coverUrl} alt="" className="w-full h-full object-cover" />}
+          </div>
+          <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 24 }}>
+            <div className="flex flex-col min-w-0" style={{ gap: 24 }}>
+              <div style={{ borderRadius: 16, background: "#F7F7FC", padding: "16px 20px" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Classes this month")}</p>
+                <p className="flex items-baseline" style={{ margin: "4px 0 0", gap: 8 }}>
+                  <span style={{ fontSize: 28, lineHeight: "36px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B" }}>{thisMonth}</span>
+                  {delta !== 0 && (
+                    <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: delta > 0 ? "#3F9165" : "#C0392B" }}>
+                      {delta > 0 ? <TrendingUp size={16} aria-hidden /> : <TrendingDown size={16} aria-hidden />}
+                      <bdi>{t("{delta} vs {month}", { delta: delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`, month: new Date(`${lastMonth}-01T00:00:00`).toLocaleDateString(appLocale("en-GB"), { month: "long" }) })}</bdi>
+                    </span>
+                  )}
+                </p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("At {name}", { name })}</p>
+              </div>
+              <div>
+                <WebSectionHead label={t("Business console")} />
+                <ConsoleLinks businessId={id} businessName={name} bare />
+              </div>
+            </div>
+            <div className="flex flex-col min-w-0" style={{ gap: 24 }}>
+              <div>
+                <WebSectionHead label={t("Your schedule here")} />
+                {schedule.length > 0 ? <WebRows rows={schedule} /> : <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No classes scheduled for you here.")}</p>}
+              </div>
+              {contact.length > 0 && (
+                <div>
+                  <WebSectionHead label={tx("Contact", "section")} />
+                  <WebRows rows={contact} />
+                </div>
+              )}
+            </div>
+          </div>
+        </>
       ) : (
         <>
           {/* bizDetail13 cover: 110, r18, 1px 10% border, the soft stripes (or the cover photo); 12 below. */}
@@ -216,3 +261,39 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
     </div>
   );
 }
+
+const WebSectionHead: React.FC<{ label: string }> = ({ label }) => (
+  <h3 style={{ margin: "0 0 8px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D67D9" }}>{label}</h3>
+);
+
+const WebRows: React.FC<{ rows: ListRow[] }> = ({ rows }) => (
+  <div>
+    {rows.map((r, i) => {
+      const Icon = r.icon;
+      const inner = (
+        <>
+          {Icon && (
+            <span className="flex items-center justify-center shrink-0" style={{ width: 32, height: 32, borderRadius: 10, background: "#F0EDF9" }}>
+              <Icon size={16} aria-hidden style={{ color: "#5F5093" }} />
+            </span>
+          )}
+          <span className="flex-1 min-w-0 text-start">
+            <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{r.title}</span>
+            {r.meta && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{r.meta}</span>}
+          </span>
+          {r.onClick && <ChevronRight size={18} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} />}
+        </>
+      );
+      const style: React.CSSProperties = { minHeight: 56, gap: 12, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : "none" };
+      return r.onClick ? (
+        <button key={r.key} type="button" onClick={r.onClick} className="w-full flex items-center hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={style}>
+          {inner}
+        </button>
+      ) : (
+        <div key={r.key} className="flex items-center" style={style}>
+          {inner}
+        </div>
+      );
+    })}
+  </div>
+);

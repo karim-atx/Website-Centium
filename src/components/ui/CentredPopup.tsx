@@ -4,7 +4,9 @@ import clsx from "clsx";
 import { CtaButton, type CtaButtonProps } from "./PinnedCta";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useIsDark } from "../../hooks/useIsDark";
+import { X } from "lucide-react";
 import { useIsWeb } from "../web/useWebLayout";
+import { t } from "../../i18n/core";
 
 // Mobile v5.1 handover, Foundations 2.5 "Centred popup": a white card, radius
 // 20, shadow.sheet, padding 24 x 20, at most 342 wide with 16 pt side margins,
@@ -81,6 +83,12 @@ export const CentredPopup: React.FC<{
   swipeToClose?: boolean;
   /** role="alertdialog" instead of "dialog" (a confirmation; MO1.7 delete confirm). */
   alert?: boolean;
+  /**
+   * Website viewport only (WC-SE crisis popup, WC-SE Settings Web): the head as one row
+   * (the 44 r14 icon well, the 19/28 700 title, a 36 close button), the body 15/24 at the
+   * start, padding 24, radius 24, 16 apart. Ignored below 1024.
+   */
+  webRowHead?: boolean;
 }> = ({
   open,
   onClose,
@@ -104,6 +112,7 @@ export const CentredPopup: React.FC<{
   describeBody,
   swipeToClose,
   alert,
+  webRowHead,
 }) => {
   // Batch E (E5): the phone's back closes this first.
   useBackCloses(open, onClose);
@@ -151,6 +160,7 @@ export const CentredPopup: React.FC<{
   const cardRadius = partB ? 24 : geometry === "ours" ? 22 : 20;
   // Part B: shadow.sheet in light, off in dark (the tables' "shadow off").
   const shadow = partB && dark ? "none" : "var(--shadow-sheet)";
+  const row = web && !!webRowHead;
 
   return createPortal(
     <div
@@ -179,11 +189,33 @@ export const CentredPopup: React.FC<{
         className={clsx(
           "relative w-full max-h-full overflow-y-auto overscroll-contain",
           "bg-cream-card outline-none animate-popup-in",
-          partB ? "p-5" : "px-5 py-6",
+          row ? "p-6" : partB ? "p-5" : "px-5 py-6",
           className
         )}
-        style={{ boxShadow: shadow, maxWidth: cardWidth, borderRadius: cardRadius }}
+        style={row ? { boxShadow: "0 24px 60px rgba(36,31,27,0.18)", maxWidth: cardWidth, borderRadius: 24 } : { boxShadow: shadow, maxWidth: cardWidth, borderRadius: cardRadius }}
       >
+        {row ? (
+          <>
+            <div className="flex items-center" style={{ gap: 12 }}>
+              {icon && (
+                <span className="flex items-center justify-center shrink-0" style={{ width: 44, height: 44, borderRadius: 14, background: "#F0EDF9", color: "#7D67D9" }}>
+                  {icon}
+                </span>
+              )}
+              <h2 id={titleId} className="flex-1 min-w-0 text-start" style={{ margin: 0, fontSize: 19, lineHeight: "28px", fontWeight: 700, color: "#241F1B" }}>
+                {title}
+              </h2>
+              <button type="button" aria-label={t("Close")} onClick={onClose} className="flex items-center justify-center shrink-0 rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]" style={{ width: 36, height: 36 }}>
+                <X size={18} aria-hidden style={{ color: "#5B5349" }} />
+              </button>
+            </div>
+            {body && (
+              <div id={bodyId} className="text-start" style={{ marginTop: 16, fontSize: 15, lineHeight: "24px", color: "#5B5349", textWrap: "pretty" }}>
+                {body}
+              </div>
+            )}
+          </>
+        ) : (
         <div className={clsx("flex flex-col", start ? "items-start text-start" : "items-center text-center")}>
           {icon && (
             <span
@@ -227,6 +259,7 @@ export const CentredPopup: React.FC<{
             </div>
           )}
         </div>
+        )}
         {children && <div className="mt-4">{children}</div>}
         {cta && (
           <CtaButton
