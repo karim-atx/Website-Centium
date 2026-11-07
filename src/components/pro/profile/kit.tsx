@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BadgeCheck, CalendarPlus, ChevronLeft, Lock, UserPlus, type LucideIcon } from "lucide-react";
 import { useBack } from "../../../hooks/useBack";
+import { usePaneSpan } from "../../web/paneFill";
 import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
@@ -31,6 +32,21 @@ export const SubPage: React.FC<{
   bottomPad?: number;
 }> = ({ title, subtitle, right, children, bottomPad }) => {
   const back = useBack();
+  // Website viewport: in a spanning More pane the pane header replaces the back row (no chevron; the column is the way back).
+  const inPane = usePaneSpan();
+  if (inPane)
+    return (
+      <div style={{ paddingBottom: bottomPad }}>
+        <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
+          <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
+            <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
+            {subtitle && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle}</p>}
+          </div>
+          {right}
+        </header>
+        <div>{children}</div>
+      </div>
+    );
   return (
     <div style={{ paddingBottom: bottomPad }}>
       <div className="flex items-start justify-between" style={{ marginBottom: 20 }}>

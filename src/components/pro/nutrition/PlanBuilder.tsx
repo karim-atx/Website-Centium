@@ -46,8 +46,9 @@ import { appLocale } from "../../../i18n/format";
 import { useSearchParams } from "react-router-dom";
 import { useIsWeb } from "../../web/useWebLayout";
 import { PlanHeaderWeb, WeekBuilderWeb, type MealIO } from "../web/WeekBuilderWeb";
+import { convertUnit } from "../web/planUnits";
 import { PlanDayWeb } from "../web/PlanDayWeb";
-import { convertUnit, planTargets, targetsLine } from "../web/weekBuilderModel";
+import { planTargets, servingGrams, targetsLine } from "../web/weekBuilderModel";
 import { t } from "../../../i18n/core";
 
 /**
@@ -258,7 +259,7 @@ export const PlanBuilder: React.FC<{ planId: string; lane: ProLane; onBack: () =
       setItemMenu({ item, anchor });
     },
     onQty: (item, value) => saveItem(item, item.grams != null ? { grams: value, servings: null } : { grams: null, servings: value }),
-    onUnit: (item, unit) => saveItem(item, convertUnit(item, unit)),
+    onUnit: (item, unit) => saveItem(item, convertUnit(item, servingGrams(item), unit)),
     onPick: async (dayIndex, draft) => {
       const d = days.find((x) => x.dayIndex === dayIndex);
       if (!d) return;

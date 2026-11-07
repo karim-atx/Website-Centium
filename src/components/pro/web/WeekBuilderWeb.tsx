@@ -3,7 +3,8 @@ import { ChevronDown, ChevronLeft, MoreHorizontal, Plus } from "lucide-react";
 import { useHoldRail, useWebLayout } from "../../web/useWebLayout";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { InlineFoodSearch } from "./InlineFoodSearch";
-import { unitOptions } from "./weekBuilderModel";
+import { unitOptions, type PlanUnit } from "./planUnits";
+import { servingGrams } from "./weekBuilderModel";
 import type { ItemDraft, PlanItem } from "../../../services/pro/nutrition";
 import { itemMacros, type FactSources } from "../nutrition/itemFacts";
 import { SLOT_LABEL, SLOT_ORDER, sumMacros, type Macros, type MealSlot } from "../nutrition/nutritionModel";
@@ -189,7 +190,7 @@ export interface MealIO {
   clientId: string | null;
   onItemMenu: (item: PlanItem, dayIndex: number, anchor: HTMLElement) => void;
   onQty: (item: PlanItem, value: number) => Promise<void>;
-  onUnit: (item: PlanItem, unit: "g" | "serving") => Promise<void>;
+  onUnit: (item: PlanItem, unit: PlanUnit) => Promise<void>;
   onPick: (dayIndex: number, draft: ItemDraft) => Promise<void>;
   /** A flagged search result: the Add Food sheet for that day and meal, on the same search. */
   onFlagged: (dayIndex: number, slot: MealSlot, query: string) => void;
@@ -197,13 +198,13 @@ export interface MealIO {
   flag: (item: PlanItem) => React.ReactNode;
 }
 
-const unitLabel = (it: PlanItem, u: "g" | "serving") => (u === "g" ? tx("g", "unit") : it.kind === "food" || it.kind === "custom_food" ? it.facts?.servingLabel ?? t("serving") : t("serving"));
+const unitLabel = (it: PlanItem, u: PlanUnit) => (u === "g" ? tx("g", "unit") : it.kind === "food" || it.kind === "custom_food" ? it.facts?.servingLabel ?? t("serving") : t("serving"));
 
 /** The unit chip (32 high, #F0EDF9, 13/20 #5F5093) and its anchored menu when the item has two units. */
 export const UnitChip: React.FC<{ item: PlanItem; readOnly: boolean; onUnit: MealIO["onUnit"] }> = ({ item, readOnly, onUnit }) => {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
-  const opts = unitOptions(item);
-  const cur: "g" | "serving" = item.grams != null ? "g" : "serving";
+  const opts = unitOptions(item.kind === "food" || item.kind === "custom_food", servingGrams(item));
+  const cur: PlanUnit = item.grams != null ? "g" : "serving";
   const style: React.CSSProperties = { height: 32, boxSizing: "border-box", gap: 1, padding: "0 5px", borderRadius: 8, background: "#F0EDF9", color: "#5F5093", fontSize: 13, lineHeight: "20px", fontWeight: 600, maxWidth: 96 };
   if (readOnly || opts.length < 2)
     return (

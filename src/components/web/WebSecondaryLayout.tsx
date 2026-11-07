@@ -40,7 +40,7 @@ import { formatShortDate } from "../../utils/date";
 import { tk, tn } from "../../i18n/core";
 import { bizSettingsSection, type BizSettingsSection, type SecondaryKind } from "./webNav";
 import { AppSettingsLayout, ProMoreLayout } from "./WebAppSecondary";
-import { PaneFillContext } from "./paneFill";
+import { PaneFillContext, PaneSpanContext } from "./paneFill";
 import { useWebLayout, WEB_READING_MAX } from "./useWebLayout";
 
 const under = (pathname: string, base: string) => pathname === base || pathname.startsWith(base + "/");
@@ -395,8 +395,10 @@ export const Pane: React.FC<{ banners: React.ReactNode; children: React.ReactNod
           style={!fill && span ? { maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: `${pad}px ${pad}px 48px` } : undefined}
         >
           <PaneFillContext.Provider value={setFill}>
-            {banners}
-            {children}
+            <PaneSpanContext.Provider value={!!span && !fill}>
+              {banners}
+              {children}
+            </PaneSpanContext.Provider>
           </PaneFillContext.Provider>
         </div>
       </div>
