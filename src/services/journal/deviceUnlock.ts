@@ -3,7 +3,7 @@ import { isNative } from "../../platform/index";
 import { CentiumNative } from "../../platform/native";
 import { biometrics, journalMessage, type UnlockPurpose } from "../../platform/biometrics";
 import { describeLockError } from "./lockLogic";
-import { edgeOutcome, phoneLabel, signFailure, type DeviceOutcome } from "./deviceUnlockModel";
+import { edgeOutcome, phoneLabelFrom, signFailure, type DeviceOutcome } from "./deviceUnlockModel";
 import { t } from "../../i18n/core";
 
 // Round K (DB-Z8; App-Centium ROUND_K.md §3): a locked folder opened with this
@@ -97,10 +97,14 @@ export type RegisterOutcome =
 export async function registerThisPhone(publicKey: string, reauth?: DeviceReauth): Promise<RegisterOutcome> {
   const deviceId = await thisInstallId();
   if (!deviceId) return { ok: false, line: t("Couldn't add this phone. Try again."), reauth: false };
+  const model = await CentiumNative.deviceModel().then(
+    (r) => r.model,
+    () => undefined
+  );
   const { data, error } = await rpc<{ registered: boolean; message: string } | { registered: boolean; message: string }[]>("register_device_key", {
     p_device_id: deviceId,
     p_public_key: publicKey,
-    p_label: phoneLabel(typeof navigator === "undefined" ? "" : navigator.userAgent),
+    p_label: phoneLabelFrom(model, typeof navigator === "undefined" ? "" : navigator.userAgent),
     p_password: reauth && "password" in reauth ? reauth.password : null,
     p_code: reauth && "code" in reauth ? reauth.code : null,
   });

@@ -136,3 +136,14 @@ export function phoneLabel(userAgent: string): string {
   if (!model || model === "K" || /^wv$/i.test(model)) return t("Android phone");
   return model.slice(0, 80);
 }
+
+/**
+ * The name to register: the phone's model from CentiumNative.deviceModel()
+ * (Build.MODEL, never the owner's own name for the phone) when the app has
+ * it, else the user agent's (phoneLabel). App builds before Round K lack the
+ * call, so model is undefined there.
+ */
+export function phoneLabelFrom(model: string | undefined, userAgent: string): string {
+  const clean = (model ?? "").replace(/\s+/g, " ").trim();
+  return clean ? clean.slice(0, 80) : phoneLabel(userAgent);
+}

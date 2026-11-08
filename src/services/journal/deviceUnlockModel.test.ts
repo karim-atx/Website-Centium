@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { deviceButtonLabel, deviceUnlockStatus, edgeOutcome, enrolFirstLine, phoneLabel, signFailure, turnOnLabel } from "./deviceUnlockModel";
+import { deviceButtonLabel, deviceUnlockStatus, edgeOutcome, enrolFirstLine, phoneLabel, phoneLabelFrom, signFailure, turnOnLabel } from "./deviceUnlockModel";
 
 test("the phone's status: off, enrol, setup or ready", () => {
   assert.equal(deviceUnlockStatus({ ok: false, reason: "not_native" }, false, false), "off");
@@ -66,4 +66,14 @@ test("the phone's name comes from the WebView's user agent", () => {
   assert.equal(phoneLabel("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"), "Android phone");
   assert.equal(phoneLabel("Mozilla/5.0 (Windows NT 10.0; Win64; x64)"), "Android phone");
   assert.ok(phoneLabel(`Mozilla/5.0 (Linux; Android 14; ${"X".repeat(120)})`).length <= 80);
+});
+
+test("phoneLabelFrom: the app's model first, else the user agent's", () => {
+  const reduced = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36";
+  assert.equal(phoneLabelFrom("Pixel 8", reduced), "Pixel 8");
+  assert.equal(phoneLabelFrom("  Galaxy\nS24  ", reduced), "Galaxy S24");
+  assert.equal(phoneLabelFrom("X".repeat(120), reduced).length, 80);
+  // App builds before Round K have no deviceModel(): the user agent decides.
+  assert.equal(phoneLabelFrom(undefined, reduced), "Android phone");
+  assert.equal(phoneLabelFrom("", "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36"), "SM-S918B");
 });
