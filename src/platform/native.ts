@@ -13,7 +13,17 @@ import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
  * The native features of Round J, each its own module in src/platform/.
  * `available` answers per feature, so iOS can catch up one at a time.
  */
-export type RoundJFeature = "push" | "health" | "camera" | "widgets" | "shortcuts" | "calendar" | "sessions";
+export type RoundJFeature =
+  | "push"
+  | "health"
+  | "camera"
+  | "widgets"
+  | "shortcuts"
+  | "calendar"
+  | "sessions"
+  // Round K (App-Centium ROUND_K.md §3, §4); "wallet" answers no until the Google Wallet build.
+  | "biometrics"
+  | "wallet";
 
 export interface CentiumNativePlugin {
   /**
@@ -45,6 +55,13 @@ export interface CentiumNativePlugin {
    * none. Asking clears it.
    */
   takeLaunchPath(): Promise<{ path: string | null }>;
+
+  /**
+   * The phone's model ("Pixel 8") and maker, to name this phone in lists such
+   * as the fingerprint keys (App-Centium ROUND_K.md §3.3). Never the name the
+   * owner gave the phone. Missing on app builds before Round K.
+   */
+  deviceModel(): Promise<{ model: string; manufacturer: string }>;
 
   /** The app's language, for what Android draws itself: channel names, widgets, shortcuts. */
   setLanguage(options: { language: "en" | "ar" }): Promise<void>;
