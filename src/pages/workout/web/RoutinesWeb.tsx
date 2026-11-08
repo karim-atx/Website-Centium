@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { CyclePhaseStrip } from "../../../components/cycle/CyclePhaseStrip";
+import { ReadinessCard } from "../../../components/readiness/ReadinessCard";
 import { CentredPopup } from "../../../components/ui/CentredPopup";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
@@ -553,6 +554,7 @@ export default function RoutinesWeb({ onCreateRoutine }: { onCreateRoutine: (fol
       {/* The folders column (both Option A columns when nothing is selected). */}
       <div className="min-w-0 flex flex-col" style={{ gap: 14 }}>
         <CyclePhaseStrip />
+        <ReadinessCard web />
         <ProgrammeSection
           routines={routines}
           today={today}

@@ -16,7 +16,7 @@
 
 import { clock12 } from "../../utils/time12";
 import { DAY_LONG, mondayIndex } from "../../utils/week";
-import { getLanguage, t, tn } from "../../i18n/core";
+import { getLanguage, t, tn, tx } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 
 export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
@@ -820,6 +820,28 @@ export interface PendingShareAsk {
 }
 
 /** Release 3 · W8 CU29 "{pro} would like to share your win": level 2, needs an answer. */
+/**
+ * Round K · DW: a professional asked for "Before you start" (my_readiness_requests).
+ * Level 3, like an intake: a card on Home, never a pop-up. The next form
+ * answers every professional waiting, so each card opens the same form.
+ */
+export function readinessReminder(r: { requestId: string; professionalId: string; professionalFirstName: string; requestedAt: string }): Reminder {
+  const proName = r.professionalFirstName || t("Your professional");
+  return {
+    key: `readiness:${r.requestId}`,
+    kind: "readiness",
+    level: 3,
+    at: new Date(r.requestedAt).getTime() || 0,
+    proId: r.professionalId,
+    proName,
+    tone: "gold",
+    title: t("{name} asked you to fill in Before you start", { name: proName }),
+    detail: t("About a minute"),
+    // «ابدأ», DW's own Start (Karim 2026-11-08), not the app-wide «البداية».
+    action: tx("Start", "readiness"),
+  };
+}
+
 export function shareReminder(s: PendingShareAsk): Reminder {
   return {
     key: `share:${s.id}`,

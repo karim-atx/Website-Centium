@@ -326,8 +326,8 @@ describe("answers", () => {
 describe("forms list", () => {
   it("lists the Database's templates for the tab, available first", () => {
     const t = (key: string, kind: "intake" | "check_in", available: boolean, n = 5): FormTemplate => ({ key, lane: "any", kind, title: key, description: "About it", questionCount: n, available });
-    const all = [t("par_q", "intake", false, 0), t("weekly_check_in", "check_in", true, 9), t("coaching_intake", "intake", false), t("health_history", "intake", true)];
-    assert.deepEqual(templatesFor(all, "intake").map((x) => x.key), ["health_history", "par_q", "coaching_intake"]);
+    const all = [t("coming_soon_intake", "intake", false, 0), t("weekly_check_in", "check_in", true, 9), t("coaching_intake", "intake", false), t("health_history", "intake", true)];
+    assert.deepEqual(templatesFor(all, "intake").map((x) => x.key), ["health_history", "coming_soon_intake", "coaching_intake"]);
     assert.deepEqual(templatesFor(all, "check_in").map((x) => x.key), ["weekly_check_in"]);
     assert.equal(templateMetaLine(all[1]), "About it · 9 questions");
     assert.equal(templateMetaLine(all[0]), "About it");

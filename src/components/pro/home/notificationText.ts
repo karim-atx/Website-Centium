@@ -130,6 +130,10 @@ export function notificationText(n: ProNotification, names: Record<string, strin
     // form_response, so it opens the response as pro.form.flagged does.
     case "pro.form.urgent":
       return { title: who, line: t("Urgent: a check-in needs your attention"), icon: "clipboard", tone: "att" };
+    // Round K · DW (Database 20261226550000): the client filled in "Before you start";
+    // the payload is empty and the outcome is never in the row.
+    case "pro.readiness.completed":
+      return { title: t("{name} filled in Before you start", name), line: t("Open their page to see it"), icon: "clipboard", tone: "pr" };
     case "pro.result.shared": {
       const marker = str(p.marker);
       return { title: who, line: marker ? t("Shared a result: {marker}", { marker }) : t("Shared a result with you"), icon: "share", tone: "pr" };

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
+import { ReadinessCard } from "../../components/readiness/ReadinessCard";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PopupMenu } from "../../components/ui/PopupMenu";
@@ -632,6 +633,9 @@ export default function RoutinesTab() {
           again; the strip itself shows the cycle phase (cycle offered,
           tracker on) or the pregnancy guidance (cycle offered, a pregnancy). */}
       <CyclePhaseStrip />
+
+      {/* Round K · DW: "Before you start" (the readiness form). */}
+      <ReadinessCard />
 
       {/* Round D · DT1: week-by-day programmes (today's workouts, the week view). */}
       <ProgrammeSection
