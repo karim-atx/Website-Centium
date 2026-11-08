@@ -9,6 +9,7 @@ import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { Toast } from "../../../components/ui/Toast";
 import { MusicSection } from "../../../components/music/MusicSection";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../../components/mind/JournalLock";
+import { useJournalDeviceUnlock } from "../../../components/mind/useJournalDeviceUnlock";
 import { entryMenuTarget } from "../../../components/mind/entryMenu";
 import { JOURNAL_LIMITS, folderLockAuth, type FolderLockAuth } from "../../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../../services/journal/lockLogic";
@@ -207,6 +208,14 @@ export default function JournalWeb() {
     then?.();
     return null;
   };
+
+  // Round K: this phone's fingerprint or face, first in the prompt (the app only).
+  const deviceUnlock = useJournalDeviceUnlock(asking, () => {
+    const then = asking?.then;
+    setAsking(null);
+    setLockNotice(undefined);
+    then?.();
+  });
 
   const since = shiftDate(today, -30);
   const visible = journalEntries.filter((e) => e.id !== pendingDelete?.id);
@@ -638,6 +647,7 @@ export default function JournalWeb() {
           method={lockAuth?.method}
           email={lockAuth?.email}
           notice={lockNotice}
+          device={deviceUnlock}
         />
       )}
     </MindSectionWeb>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Eye, EyeOff, KeyRound, Lock } from "lucide-react";
+import { Eye, EyeOff, Fingerprint, KeyRound, Lock } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CodeBoxes } from "../ui/CodeBoxes";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
@@ -7,6 +7,7 @@ import { useCooldown } from "../security/useCooldown";
 import { formatCountdown } from "../../services/auth/cooldown";
 import { sendFolderUnlockCode } from "../../services/journal";
 import type { UnlockMethod } from "../../services/journal/lockLogic";
+import type { DeviceFailure } from "../../services/journal/deviceUnlockModel";
 import { t, tk } from "../../i18n/core";
 
 // MO1.1.2.2 · Journal · Locked folder, and the password prompt that stands in
@@ -108,6 +109,8 @@ export function JournalPasswordPopup({
   method = "password",
   email = "",
   notice,
+  device,
+  copy,
 }: {
   purpose: PasswordPurpose;
   folderName: string;
@@ -120,9 +123,79 @@ export function JournalPasswordPopup({
   email?: string;
   /** A line shown on open, e.g. why the prompt switched to the password. */
   notice?: string;
+  /** Round K: this phone's fingerprint or face, offered first (the app only). */
+  device?: DeviceUnlockOption;
+  /** Other words for the same check (Settings asks it before adding this phone). */
+  copy?: PromptCopy;
 }) {
-  if (method === "code") return <JournalCodePopup purpose={purpose} folderName={folderName} email={email} onClose={onClose} onSubmit={onSubmit} />;
-  return <PasswordPopup purpose={purpose} folderName={folderName} onClose={onClose} onSubmit={onSubmit} notice={notice} />;
+  if (method === "code")
+    return <JournalCodePopup purpose={purpose} folderName={folderName} email={email} onClose={onClose} onSubmit={onSubmit} device={device} copy={copy} />;
+  return <PasswordPopup purpose={purpose} folderName={folderName} onClose={onClose} onSubmit={onSubmit} notice={notice} device={device} copy={copy} />;
+}
+
+/** The prompt's title, line and button, when it isn't for a folder. */
+export interface PromptCopy {
+  title: string;
+  body: string;
+  cta: string;
+}
+
+/** Round K (DB-Z8): "Unlock with fingerprint", above the password or the code. */
+export interface DeviceUnlockOption {
+  label: string;
+  /** Null once the folder is open (the caller closes the prompt), or what went wrong. */
+  onUse: () => Promise<DeviceFailure | null>;
+  /** Settings › Privacy, to set this phone up (again). */
+  onSetup: () => void;
+}
+
+/**
+ * The fingerprint or face button, first in the prompt (Round K). The phone's
+ * own sheet asks for the finger; a refusal leaves the password or the code
+ * below as the way in: cancelling says nothing, a lock-out or a failure says
+ * so, and a key the phone lost (a fingerprint was added) offers set-up again.
+ */
+function DeviceUnlockButton({ option, disabled }: { option: DeviceUnlockOption; disabled: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<DeviceFailure | null>(null);
+  const use = async () => {
+    if (busy || disabled) return;
+    setBusy(true);
+    setFailure(null);
+    const result = await option.onUse();
+    setBusy(false);
+    if (result) setFailure(result);
+  };
+  return (
+    <div className="mb-3">
+      <button
+        type="button"
+        onClick={() => void use()}
+        disabled={busy || disabled}
+        aria-busy={busy || undefined}
+        className="tap w-full h-11 rounded-xl inline-flex items-center justify-center gap-2 border border-primary-accent/40 bg-cream-soft text-sm font-bold text-th-7d6bb5 dark:text-primary-deep-text disabled:opacity-50"
+      >
+        <Fingerprint size={18} strokeWidth={1.75} aria-hidden />
+        {option.label}
+      </button>
+      <div aria-live="polite">
+        {failure?.line && (
+          <p className="mt-1.5 text-[11.5px] leading-4 font-medium text-status-high">
+            {failure.line}
+            {failure.setup && (
+              <>
+                {" "}
+                <button type="button" onClick={option.onSetup} className="tap underline font-semibold">
+                  {t("Set up again")}
+                </button>
+              </>
+            )}
+          </p>
+        )}
+      </div>
+      <p className="mt-3 text-center text-[11.5px] leading-4 font-medium text-charcoal-faint">{t("Or")}</p>
+    </div>
+  );
 }
 
 function PasswordPopup({
@@ -131,12 +204,16 @@ function PasswordPopup({
   onClose,
   onSubmit,
   notice,
+  device,
+  copy: custom,
 }: {
   purpose: PasswordPurpose;
   folderName: string;
   onClose: () => void;
   onSubmit: (password: string) => Promise<string | null>;
   notice?: string;
+  device?: DeviceUnlockOption;
+  copy?: PromptCopy;
 }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(notice ?? null);
@@ -173,10 +250,11 @@ function PasswordPopup({
       open
       onClose={busy ? () => {} : onClose}
       icon={<Lock size={22} strokeWidth={1.75} />}
-      title={t(copy.title)}
-      body={copy.body(folderName)}
-      cta={{ label: t(copy.cta), onClick: () => void submit(), loading: busy }}
+      title={custom ? custom.title : t(copy.title)}
+      body={custom ? custom.body : copy.body(folderName)}
+      cta={{ label: custom ? custom.cta : t(copy.cta), onClick: () => void submit(), loading: busy }}
     >
+      {device && <DeviceUnlockButton option={device} disabled={busy} />}
       <label className="block relative">
         <span className="sr-only">{t("Password")}</span>
         <input
@@ -241,12 +319,16 @@ function JournalCodePopup({
   email,
   onClose,
   onSubmit,
+  device,
+  copy: custom,
 }: {
   purpose: PasswordPurpose;
   folderName: string;
   email: string;
   onClose: () => void;
   onSubmit: (code: string) => Promise<string | null>;
+  device?: DeviceUnlockOption;
+  copy?: PromptCopy;
 }) {
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
@@ -294,14 +376,15 @@ function JournalCodePopup({
       open
       onClose={busy ? () => {} : onClose}
       icon={<Lock size={22} strokeWidth={1.75} />}
-      title={purpose === "remove" ? t("Remove the lock?") : t("Confirm it's you")}
-      body={copy.body(folderName)}
+      title={custom ? custom.title : purpose === "remove" ? t("Remove the lock?") : t("Confirm it's you")}
+      body={custom ? custom.body : copy.body(folderName)}
       cta={
         sent
-          ? { label: t(copy.cta), onClick: () => void submit(), loading: busy, disabled: code.length !== 6 }
+          ? { label: custom ? custom.cta : t(copy.cta), onClick: () => void submit(), loading: busy, disabled: code.length !== 6 }
           : { label: t("Email me a code"), onClick: () => void send(false), loading: busy, disabled: cooldown.active }
       }
     >
+      {device && <DeviceUnlockButton option={device} disabled={busy} />}
       {!sent ? (
         <p className="text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("We'll email a 6-digit code to {email}.", { email: shownEmail })}</p>
       ) : (
