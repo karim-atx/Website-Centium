@@ -2,14 +2,17 @@
 // ROUND_J.md §2; Database DB-Z4). Read only: steps, sleep, workouts, heart
 // rate, and weight and body fat only while recovery-sensitive mode is off (D1).
 //
-// WHO DOES WHAT (§2.7). The phone reads Health Connect and hands this module
-// each sync's samples, already in ingest_health_samples' shape; this module
-// makes every server call with the WebView's session, so the session lives in
-// one place and iOS reuses all of it.
+// WHO DOES WHAT (ROUND_K.md §2.4, D-EL3). The phone runs the whole sync, the
+// server calls included, with the session it shares with this website
+// (lib/supabase/nativeSession.ts): one implementation for "Sync now", the
+// sync on opening and the hourly one in the background, which never overlap.
+// This module asks for it and reads its outcome.
 //
-// WHEN IT SYNCS (D2): when the app opens or comes back to the foreground, at
-// most every 15 minutes (syncHealthIfDue), plus "Sync now" (syncNow). Nothing
-// in the background yet. The first sync reads 30 days (D3).
+// WHEN IT SYNCS (D2, D-EL4): when the app opens or comes back to the
+// foreground, at most every 15 minutes (syncHealthIfDue), plus "Sync now"
+// (syncNow); and every hour in the background once the member turns on "Sync
+// in the background" (setBackground), off by default. The first sync reads 30
+// days (D3).
 //
 // A SYNC IS SAFE TO REPEAT. Every sample is keyed (a record's id, or a day or
 // an hour), the server answers "duplicate" for what it has, and the phone only
@@ -22,21 +25,19 @@
 import { App } from "@capacitor/app";
 import { registerPlugin } from "@capacitor/core";
 import { supabase } from "../../lib/supabase/client";
-import { isOffline } from "../services/network-error";
 import { nativeFeatureOn } from "./appConfig";
-import type { HealthAvailability, HealthModule, HealthType } from "./contracts";
+import type { HealthAvailability, HealthBackgroundState, HealthModule, HealthType } from "./contracts";
 import { featureAvailable } from "./features";
-import { autoSyncDue, runSync, type SyncResult } from "./healthModel";
+import { autoSyncDue, type SyncResult } from "./healthModel";
 import { isNative, platform } from "./index";
-
-type Sample = Record<string, unknown>;
-type Deletion = { kind: string; external_id: string };
 
 interface CentiumHealthPlugin {
   status(): Promise<{ connected: boolean; granted: HealthType[] }>;
   connect(options: { recoverySensitive: boolean }): Promise<{ granted: HealthType[]; refused: HealthType[]; scopes: string[] }>;
-  collect(options: { recoverySensitive: boolean }): Promise<{ syncId: string; samples: Sample[]; deleted: Deletion[] }>;
-  commit(options: { syncId: string }): Promise<void>;
+  /** One sync, native end to end; "not_connected": the server hasn't heard of the connection yet. */
+  syncNow(): Promise<{ saved: number; skipped: number; error?: "offline" | "server" | "access_off" | "not_connected" }>;
+  background(): Promise<{ available: boolean; on: boolean }>;
+  setBackground(options: { on: boolean }): Promise<{ state: HealthBackgroundState }>;
   openSettings(): Promise<void>;
   disconnect(): Promise<void>;
   setRecoverySensitive(options: { on: boolean }): Promise<void>;
@@ -67,32 +68,18 @@ let running: Promise<SyncResult> | null = null;
 // server has heard of the connection: no automatic sync until connect() ends.
 let connecting = false;
 
-/** One line for report_health_integration_sync: the call and its code, never health data. */
-function report(accessState: "ok" | "access_off" | "error", lastSyncedAt: string | null, error?: string) {
-  return rpc("report_health_integration_sync", {
-    p_provider: provider(),
-    p_last_synced_at: lastSyncedAt,
-    p_access_state: accessState,
-    p_error: error ?? null,
-  }).then(
-    ({ error: e }) => e && console.warn("[health] Couldn't report the sync:", e.message),
-    () => undefined,
-  );
-}
-
-function sync(): Promise<SyncResult> {
-  return runSync<Sample, Deletion>({
-    collect: () => CentiumHealth.collect({ recoverySensitive: recoverySensitive ?? true }),
-    ingest: (batch) => rpc("ingest_health_samples", { p_source: provider(), p_samples: batch.samples, p_deleted: batch.deleted }),
-    commit: (syncId) => CentiumHealth.commit({ syncId }),
-    report,
-    isOffline,
-    // Not an attempt worth waiting 15 minutes after.
-    notConnected: () => {
-      lastAttemptAt = null;
-    },
-    now: () => new Date().toISOString(),
+/** One sync on the phone. The server reports its outcome there, before this resolves. */
+async function sync(): Promise<SyncResult> {
+  const r = await CentiumHealth.syncNow().catch((e: unknown): Awaited<ReturnType<CentiumHealthPlugin["syncNow"]>> => {
+    console.error("[health] The sync failed on the phone:", e);
+    return { saved: 0, skipped: 0, error: "server" };
   });
+  if (r.error === "not_connected") {
+    // Not an attempt worth waiting 15 minutes after.
+    lastAttemptAt = null;
+    return { saved: 0, skipped: 0, error: "server" };
+  }
+  return r.error ? { saved: r.saved, skipped: r.skipped, error: r.error } : { saved: r.saved, skipped: r.skipped };
 }
 
 export const health: HealthModule = {
@@ -151,6 +138,15 @@ export const health: HealthModule = {
   },
 
   openSettings: () => CentiumHealth.openSettings(),
+
+  async background() {
+    return CentiumHealth.background().catch(() => ({ available: false, on: false }));
+  },
+
+  async setBackground(on) {
+    const r = await CentiumHealth.setBackground({ on }).catch(() => ({ state: "unavailable" as const }));
+    return r.state;
+  },
 
   async disconnect({ removeSyncedData }) {
     const { error } = await rpc("disconnect_health_integration", { p_provider: provider(), p_remove_synced: removeSyncedData });

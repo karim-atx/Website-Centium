@@ -37,7 +37,21 @@ export interface HealthModule {
   disconnect(opts: { removeSyncedData: boolean }): Promise<void>;
   /** Stops reading weight and body fat at once when the mode turns on. */
   setRecoverySensitive(on: boolean): Promise<void>;
+  /**
+   * "Sync in the background" (App-Centium ROUND_K.md §2.4, D-EL4): whether this
+   * phone's Health Connect can read in the background at all, and whether it
+   * does. Off by default.
+   */
+  background(): Promise<{ available: boolean; on: boolean }>;
+  /**
+   * Turns it on (asking Health Connect for its background permission, in its
+   * own sheet, the first time) or off. "refused": the member said no in that
+   * sheet; "unavailable": not on this phone, or not connected.
+   */
+  setBackground(on: boolean): Promise<HealthBackgroundState>;
 }
+
+export type HealthBackgroundState = "on" | "off" | "refused" | "unavailable";
 
 // ---- Native push (§3) ----
 
