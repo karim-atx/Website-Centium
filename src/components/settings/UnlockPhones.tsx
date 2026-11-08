@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Fingerprint, Smartphone } from "lucide-react";
 import { SettingsRow, SettingsSection } from "../ui/SettingsRows";
 import { ConfirmCard } from "../ui/ConfirmCard";
@@ -8,6 +8,8 @@ import { registerThisPhone, removeThisPhone, type DeviceReauth } from "../../ser
 import { enrolFirstLine, signFailure, turnOnLabel } from "../../services/journal/deviceUnlockModel";
 import { biometrics } from "../../platform/biometrics";
 import { useDeviceUnlock } from "../../hooks/useDeviceUnlock";
+import { useApp } from "../../context/AppContext";
+import { setTurnOn, subscribeTurnOn, turnOnFor, turnOnSnapshot } from "./turnOnStore";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
 
@@ -34,12 +36,24 @@ export function UnlockPhones() {
   const { reload: reloadDevice } = device;
   const [keys, setKeys] = useState<DeviceKey[] | null>(null);
   const [removing, setRemoving] = useState<DeviceKey | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
-  // Turning it on: the public key made on the phone, waiting for a re-authentication.
-  const [pending, setPending] = useState<{ publicKey: string; auth: FolderLockAuth } | null>(null);
-  const [notice, setNotice] = useState<string | undefined>(undefined);
+  // busy, error, the pending re-authentication and the "added" line live in
+  // turnOnStore, so a remount while the fingerprint sheet or
+  // register_device_key is open keeps them.
+  const { authUserId } = useApp();
+  const owner = authUserId ?? null;
+  const { busy, error, pending, notice, done, added } = turnOnFor(useSyncExternalStore(subscribeTurnOn, turnOnSnapshot), owner);
+  const setBusy = (b: boolean) => setTurnOn(owner, { busy: b });
+  const setError = (e: string | null) => setTurnOn(owner, { error: e });
+  const setPending = (p: { publicKey: string; auth: FolderLockAuth } | null) => setTurnOn(owner, { pending: p });
+  const setNotice = (n: string | undefined) => setTurnOn(owner, { notice: n });
+  const setDone = (d: string | null) => setTurnOn(owner, { done: d });
+
+  // A fresh visit starts without the last visit's lines; a turn-on still in
+  // flight (busy, or waiting for "Confirm it's you") keeps everything.
+  useEffect(() => {
+    const now = turnOnFor(turnOnSnapshot(), owner);
+    if (!now.busy && !now.pending) setTurnOn(owner, { error: null, done: null });
+  }, [owner]);
 
   const load = useCallback(async () => {
     setKeys(await fetchDeviceKeys());
@@ -51,13 +65,17 @@ export function UnlockPhones() {
     void fetchDeviceKeys().then((k) => {
       if (live) setKeys(k);
     });
+    if (added > 0) reloadDevice();
     return () => {
       live = false;
     };
-  }, []);
+  }, [added, reloadDevice]);
 
   const canTurnOn = device.status === "setup" || device.status === "enrol";
-  if (!keys || (keys.length === 0 && !canTurnOn)) return null;
+  // A turn-on in progress keeps the section (and its sheet or error) on screen
+  // while the phone's status and the list are read again after a remount.
+  const turningOn = busy || !!pending || !!error;
+  if (!turningOn && (!keys || (keys.length === 0 && !canTurnOn))) return null;
 
   const isMine = (k: DeviceKey) => !!device.installId && k.deviceId === device.installId;
 
@@ -81,15 +99,20 @@ export function UnlockPhones() {
   const finishRegister = async (publicKey: string, reauth?: DeviceReauth): Promise<string | null> => {
     const result = await registerThisPhone(publicKey, reauth);
     if (result.ok) {
-      setPending(null);
-      setNotice(undefined);
-      setDone(result.message);
-      await load();
+      // One update, read by whichever UnlockPhones is mounted now: its list and
+      // the phone's status are read again through `added`.
+      setTurnOn(owner, { pending: null, notice: undefined, done: result.message, added: turnOnSnapshot().added + 1 });
       return null;
     }
     if (result.reauth) {
-      const auth = await folderLockAuth();
-      if (!auth) return t("Couldn't add this phone. Try again.");
+      const auth = await folderLockAuth().catch((e: unknown) => {
+        console.error("[journal] folderLockAuth failed after ATXB1:", e);
+        return null;
+      });
+      if (!auth) {
+        console.error("[journal] No way to confirm it's you after ATXB1");
+        return t("Couldn't add this phone. Try again.");
+      }
       setPending({ publicKey, auth });
       return null;
     }
@@ -124,7 +147,7 @@ export function UnlockPhones() {
       <SettingsSection label={t("Phones that can unlock locked folders")} className="mt-8">
         {device.status === "setup" && <SettingsRow icon={Fingerprint} title={turnOnLabel(device.kind)} onClick={() => void turnOn()} />}
         {device.status === "enrol" && <SettingsRow icon={Fingerprint} title={turnOnLabel(device.kind)} subtitle={enrolFirstLine(device.kind)} dimmed />}
-        {keys.map((k) => (
+        {(keys ?? []).map((k) => (
           <SettingsRow
             key={k.deviceId}
             icon={Smartphone}
