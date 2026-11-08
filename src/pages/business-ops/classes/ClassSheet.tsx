@@ -1281,7 +1281,7 @@ function SheetBody({
         subtitle={mode === "edit" ? t("You haven't saved them yet. Your changes will be lost.") : t("You haven't saved it yet. Everything you entered will be lost.")}
         cancelLabel={t("Keep editing")}
         confirmLabel={t("Discard")}
-        confirmStyle={{ background: m.high, color: m.onfill }}
+        confirmStyle={{ background: m.high, color: m.onhigh }}
         onCancel={() => setDiscardOpen(false)}
         onConfirm={() => {
           setDiscardOpen(false);

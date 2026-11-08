@@ -187,7 +187,7 @@ export default function CalendarAvailability() {
         const on = w.length > 0;
         return (
           <div key={wd} className="relative flex items-center" style={web ? { gap: 12, minHeight: 52, boxSizing: "border-box", padding: "6px 0" } : { gap: 12, padding: "11px 0" }}>
-            <span className="flex-1 min-w-0" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: on ? "#241F1B" : "#8C8378" } : { fontSize: textPx(14), fontWeight: 600, color: on ? INK.ch : INK.chF }}>
+            <span className="flex-1 min-w-0" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: on ? "#241F1B" : "#71685E" } : { fontSize: textPx(14), fontWeight: 600, color: on ? INK.ch : INK.chF }}>
               {weekdayLong(wd - 1)}
             </span>
             {on ? (
@@ -205,7 +205,7 @@ export default function CalendarAvailability() {
                 {w.map((x) => range12(x.start, x.end)).join(", ")}
               </button>
             ) : (
-              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { fontSize: textPx(12.5), color: INK.chF }}>{t("Day off")}</span>
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#71685E" } : { fontSize: textPx(12.5), color: INK.chF }}>{t("Day off")}</span>
             )}
             <Toggle checked={on} label={t("{weekday}, working", { weekday: weekdayLong(wd - 1) })} disabled={busyDay === wd} onChange={(v) => void toggleDay(wd, v)} />
             {i < 6 && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, height: 1, background: INK.b06 }} />}
@@ -247,7 +247,7 @@ export default function CalendarAvailability() {
           />
         );
       })}
-      {types.length === 0 && <p style={web ? { margin: 0, padding: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { padding: "13px 0 0", fontSize: textPx(12.5), color: INK.chF }}>{t("Session types are what clients book: a name, a length and a price.")}</p>}
+      {types.length === 0 && <p style={web ? { margin: 0, padding: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" } : { padding: "13px 0 0", fontSize: textPx(12.5), color: INK.chF }}>{t("Session types are what clients book: a name, a length and a price.")}</p>}
       <button type="button" onClick={() => setTypeSheet({ type: null })} className={addClass} style={addStyle}>
         <Plus size={web ? 16 : 14} strokeWidth={2.4} aria-hidden />{t("Add session type")}</button>
     </SettingsSection>
@@ -303,7 +303,7 @@ export default function CalendarAvailability() {
           </button>
           <div className="flex-1 min-w-0">
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>{t("Availability")}</h1>
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#8C8378" }}>{t("When clients can book you")}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#71685E" }}>{t("When clients can book you")}</p>
           </div>
         </header>
         <div style={{ maxWidth: WEB_READING_MAX, boxSizing: "border-box", padding: `32px ${margin}px` }}>

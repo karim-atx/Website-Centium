@@ -23,14 +23,14 @@ export const COMMUNITY_WEB_CSS = `
 export const CO_CATEGORY: Record<string, { ink: string; strong: string; dot: string }> = {
   workouts: { ink: "#5F5093", strong: "#6E5BB0", dot: "#7D6BB5" },
   nutrition: { ink: "#8A6A1F", strong: "#B07F22", dot: "#D9A441" },
-  progress: { ink: "#2C6A4A", strong: "#4E8B6A", dot: "#3F9165" },
+  progress: { ink: "#2C6A4A", strong: "#4E8B6A", dot: "#1D744A" },
   motivation: { ink: "#7A3A60", strong: "#8E4670", dot: "#9C4F7C" },
   general: { ink: "#2E5E8E", strong: "#3C78B5", dot: "#4C8FD1" },
 };
 export const coCategory = (key: string) => CO_CATEGORY[key] ?? CO_CATEGORY.general;
 
 /** The caps label (13/20 700, .14em, #8C8378). */
-export const coCaps: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#8C8378" };
+export const coCaps: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#71685E" };
 
 /** The 44 primary button of the Community pages (#9A8CD6, r12, 15/24 600). */
 export const coPrimary: React.CSSProperties = {

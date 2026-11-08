@@ -121,7 +121,7 @@ export function MenuWeb<V extends string>({
               {o.icon && <span className="flex shrink-0" style={{ color: ink }}>{o.icon}</span>}
               <span className="flex flex-col min-w-0" style={{ flex: 1, padding: o.note ? "4px 0" : undefined }}>
                 <span className="truncate" title={o.label} style={{ fontSize: 15, lineHeight: "24px", color: ink }}>{o.label}</span>
-                {o.note && <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{o.note}</span>}
+                {o.note && <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{o.note}</span>}
               </span>
               {on && <Check size={16} strokeWidth={2.6} color="#7D6BB5" className="shrink-0" aria-hidden />}
             </button>

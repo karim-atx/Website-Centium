@@ -346,7 +346,7 @@ function Tiles({ state, ratings, scorecard, onTile }: { state: TeamState; rating
 
 function IndexSkeleton() {
   return (
-    <div aria-busy="true" aria-label={t("Loading")}>
+    <div role="status" aria-busy="true" aria-label={t("Loading")}>
       <div className="an5-hero" style={{ minHeight: 330 }}>
         <div className="an5-hero-grid" style={{ marginTop: 26 }}>
           <div className="flex flex-col items-center gap-2">

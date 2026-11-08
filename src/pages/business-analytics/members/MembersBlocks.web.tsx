@@ -38,8 +38,8 @@ type Block = {
 };
 
 const INK = "#241F1B";
-const FAINT = "#8C8378";
-const TERT = "#A79E93";
+const FAINT = "#71685E";
+const TERT = "#776E64";
 const SOFT_INK = "#5B5349";
 
 const pad = (rail: boolean) => (rail ? "12px 14px" : "14px 16px");
@@ -381,7 +381,7 @@ export const MembersBlocksWeb: React.FC<{
                   l: w.t,
                   v1: wk[i].joined ? String(wk[i].joined) : "",
                   h1: Math.round((wk[i].joined / den) * 100),
-                  c1: "#3F9165",
+                  c1: "#1D744A",
                   v2: wk[i].ended ? String(wk[i].ended) : "",
                   h2: Math.round((wk[i].ended / den) * 100),
                   c2: "#C0392B",

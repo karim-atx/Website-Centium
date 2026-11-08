@@ -121,8 +121,8 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
               <ChefHat size={52} strokeWidth={1.5} aria-hidden style={{ color: "#7D6BB5" }} />
             </span>
             <p style={{ margin: "24px 0 0", fontSize: 28, lineHeight: "36px", fontWeight: 700, color: "#241F1B" }}>{t("No recipes yet")}</p>
-            <p style={{ margin: "8px 0 0", maxWidth: 440, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#8C8378" }}>{t("Recipes you save here can go into any meal plan.")}</p>
-            <button type="button" onClick={() => setCreating(true)} className={`flex items-center justify-center hover:bg-[#8E7FD0] ${ring}`} style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#FFFFFF", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+            <p style={{ margin: "8px 0 0", maxWidth: 440, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#71685E" }}>{t("Recipes you save here can go into any meal plan.")}</p>
+            <button type="button" onClick={() => setCreating(true)} className={`flex items-center justify-center hover:bg-[#8E7FD0] ${ring}`} style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#241F1B", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
               <Plus size={20} strokeWidth={2} aria-hidden />
               {t("New recipe")}
             </button>
@@ -140,7 +140,7 @@ export const Recipes: React.FC<{ onBack: () => void; webTabs?: React.ReactNode }
                   <span className="block truncate" title={r.title} style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
                     {r.title}
                   </span>
-                  <span className="block" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <span className="block" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {t("{kcal} kcal · {protein} g protein", { kcal: Math.round(per.kcal).toLocaleString(appLocale("en-GB")), protein: Math.round(per.p) })}
                   </span>
                 </span>
@@ -227,13 +227,13 @@ const WebRecipesPage: React.FC<{
         {!detail && (
         <>
         <label className="flex items-center shrink-0" style={{ width: rail ? 260 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 14px", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
-          <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
-          <input type="search" value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t("Search recipes")} aria-label={t("Search recipes")} className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]" style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }} />
+          <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
+          <input type="search" value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t("Search recipes")} aria-label={t("Search recipes")} className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#71685E]" style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }} />
         </label>
         <button type="button" aria-label={t("Sort")} title={t("Sort")} aria-haspopup="menu" aria-expanded={sortOn} onClick={(e) => onSort(e.currentTarget)} className={`flex items-center justify-center shrink-0 hover:bg-[#F0EDF9] ${ring}`} style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 12, background: sortOn ? "#F0EDF9" : "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
           <SlidersHorizontal size={20} strokeWidth={1.75} aria-hidden style={{ color: "#5B5349" }} />
         </button>
-        <button type="button" onClick={onNew} className={`flex items-center shrink-0 hover:bg-[#8E7FD0] ${ring}`} style={{ height: 40, padding: "0 18px", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}>
+        <button type="button" onClick={onNew} className={`flex items-center shrink-0 hover:bg-[#8E7FD0] ${ring}`} style={{ height: 40, padding: "0 18px", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}>
           <Plus size={20} strokeWidth={2} aria-hidden />
           {t("New recipe")}
         </button>

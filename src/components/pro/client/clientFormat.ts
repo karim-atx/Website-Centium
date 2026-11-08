@@ -20,7 +20,7 @@ export function toneOf(tone: Tone): { bg: string; ink: string; bar: string } {
     case "pau":
       return { bg: INK.soft, ink: INK.chF, bar: INK.chT };
     case "done":
-      return { bg: INK.tealPale, ink: "rgb(var(--th-3c6b65))", bar: INK.teal };
+      return { bg: INK.tealPale, ink: "rgb(var(--thi-3c6b65))", bar: INK.teal };
     default:
       return { bg: INK.prPale, ink: INK.prDeep, bar: INK.pr };
   }

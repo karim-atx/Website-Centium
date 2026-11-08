@@ -109,7 +109,7 @@ const Sk: React.FC<{ w: number | string; h: number; r?: number; style?: React.CS
 
 /** Loading (AN3-001 O1, AN3-006 O1): the card keeps its layout. */
 export const LoadingBody: React.FC = () => (
-  <div aria-busy="true" aria-label={t("Loading your class numbers")}>
+  <div role="status" aria-busy="true" aria-label={t("Loading your class numbers")}>
     <div className="an3-fr">
       <Sk w="60%" h={11.5} />
       <Sk w={64} h={30} r={8} style={{ marginTop: 22 }} />

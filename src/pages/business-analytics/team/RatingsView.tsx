@@ -177,7 +177,7 @@ export function RatingsView({
 /** AN5-040 O4: header card skeleton + graphic skeleton (60×46 block, five 18 star outlines, five 7-tall tracks). */
 function RatingsSkeleton() {
   return (
-    <div aria-busy="true" aria-label={t("Loading")}>
+    <div role="status" aria-busy="true" aria-label={t("Loading")}>
       <div className="an5-card an5-head">
         <div className="an5-head-grid">
           <div className="an5-head-cell">

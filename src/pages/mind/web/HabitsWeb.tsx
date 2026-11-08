@@ -223,7 +223,7 @@ export default function HabitsWeb() {
             {h.label}
           </span>
           {!hideNumbers && (
-            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {tn(h.streakDays, "{n} day streak", "{n} day streak")} · {t("best {n}", { n: best })}
             </span>
           )}
@@ -236,7 +236,7 @@ export default function HabitsWeb() {
             const dot: CSSProperties = { width: 22, height: 22, borderRadius: 999, boxSizing: "border-box", background: on ? shade.ink : "transparent", border: on ? "none" : `1.5px solid ${shade.tile}`, display: "block" };
             return (
               <span key={day} className="flex flex-col items-center" style={{ width: 30, gap: 4 }}>
-                <span aria-hidden style={{ fontSize: 11, fontWeight: 600, color: "#8C8378", lineHeight: "16px" }}>{dayLabel(day, "narrow")}</span>
+                <span aria-hidden style={{ fontSize: 11, fontWeight: 600, color: "#71685E", lineHeight: "16px" }}>{dayLabel(day, "narrow")}</span>
                 {future ? (
                   <span role="img" aria-label={t("{day}: upcoming", { day: dayLabel(day, "long") })} style={{ ...dot, opacity: 0.5 }} />
                 ) : (
@@ -273,7 +273,7 @@ export default function HabitsWeb() {
           className="mind-web-back grid place-items-center"
           style={{ width: 28, height: 36, borderRadius: 8, flex: "none", marginInlineStart: -6 }}
         >
-          <EllipsisVertical size={18} color="#8C8378" aria-hidden />
+          <EllipsisVertical size={18} color="#71685E" aria-hidden />
         </button>
       </div>
     );
@@ -321,7 +321,7 @@ export default function HabitsWeb() {
                   style={{ flex: 1, minWidth: 0, height: 44, borderRadius: 12, background: "#F5F5F6", padding: "0 14px", fontSize: 15, color: "#241F1B", border: panelError === DUPLICATE_HABIT ? "1px solid #C0392B" : "1px solid transparent", outline: "none" }}
                 />
                 <button type="button" onClick={closePanel} aria-label={t("Close")} className="mind-web-back grid place-items-center" style={{ width: 36, height: 36, borderRadius: 999, flex: "none" }}>
-                  <X size={16} color="#8C8378" aria-hidden />
+                  <X size={16} color="#71685E" aria-hidden />
                 </button>
               </div>
               <div className="scroll-row mind-web-noscroll flex" style={{ gap: 8, padding: 2, margin: -2 }}>
@@ -362,7 +362,7 @@ export default function HabitsWeb() {
                       >
                         <Icon size={16} color="#7D6BB5" aria-hidden />
                         {t(s.label)}
-                        <Plus size={14} color="#8C8378" aria-hidden />
+                        <Plus size={14} color="#71685E" aria-hidden />
                       </button>
                     );
                   })}
@@ -421,7 +421,7 @@ export default function HabitsWeb() {
                   <Leaf size={30} strokeWidth={1.5} color="#7D6BB5" aria-hidden />
                 </span>
                 <p style={{ margin: "10px 0 0", fontSize: 17, fontWeight: 700, color: "#241F1B" }}>{t("No habits yet")}</p>
-                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{hideNumbers ? t("Add one to get started") : t("Add a habit to start a streak.")}</p>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{hideNumbers ? t("Add one to get started") : t("Add a habit to start a streak.")}</p>
               </div>
             )
           )}
@@ -448,7 +448,7 @@ export default function HabitsWeb() {
                   );
                 })}
               </div>
-              <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Auto streaks count from what you log across the app.")}</p>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Auto streaks count from what you log across the app.")}</p>
             </>
           )}
         </aside>

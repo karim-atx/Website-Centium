@@ -14,7 +14,7 @@ import { t, tn, tx } from "../../../i18n/core";
 // actions and copy are the mobile tabs' (LabsTab / ImagingTab); the swipe
 // Edit / Delete become each card's ⋮ menu.
 
-const MUTED = "#8C8378";
+const MUTED = "#71685E";
 const GOOD = "#357A4D";
 const OUT = "#C2453F";
 

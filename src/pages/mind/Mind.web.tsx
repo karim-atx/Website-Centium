@@ -210,7 +210,7 @@ function MindHubWeb() {
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>
             {t("Mind")}
           </h1>
-          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {t("Habits, journalling & meditation")}
           </p>
         </div>
@@ -233,7 +233,7 @@ function MindHubWeb() {
                 <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
                   {x.title}
                 </span>
-                <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
+                <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", fontVariantNumeric: "tabular-nums" }}>
                   {x.line ?? (
                     <>
                       <span aria-hidden className="inline-block align-middle bg-cream-soft" style={{ width: 48, height: 11, borderRadius: 4 }} />
@@ -242,7 +242,7 @@ function MindHubWeb() {
                   )}
                 </span>
               </span>
-              <ChevronRight size={16} color="#8C8378" className="shrink-0" aria-hidden />
+              <ChevronRight size={16} color="#71685E" className="shrink-0" aria-hidden />
             </button>
           ))}
         </div>
@@ -272,7 +272,7 @@ function MindHubWeb() {
                 <React.Fragment key={g.professionalId}>
                   <div className="flex items-center" style={{ gap: 8, padding: "10px 16px", borderBottom: `1px solid ${ruleSoft}`, borderTop: gi > 0 ? `1px solid ${ruleSoft}` : undefined, background: "rgba(174,161,220,0.08)" }}>
                     <CoachAvatar name={name} avatarUrl={info?.avatarUrl} size={20} tone={coachTone(gi)} />
-                    <span className="truncate" style={{ ...caps, color: "#8C8378", minWidth: 0 }}>
+                    <span className="truncate" style={{ ...caps, color: "#71685E", minWidth: 0 }}>
                       {t("From {name}", { name })}
                     </span>
                   </div>
@@ -320,7 +320,7 @@ function MindHubWeb() {
                     </p>
                   </div>
                 </div>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                   {t("Personal best")} · <b style={{ color: "#241F1B" }}>{tn(leadBest, "{n} day", "{n} days")}</b>
                 </p>
               </div>
@@ -329,7 +329,7 @@ function MindHubWeb() {
               {autoStreaks.length > 0 && (
                 <>
                   <div className="flex items-center" style={{ flex: "none", gap: 8, padding: "12px 16px", borderBottom: `1px solid ${ruleSoft}`, background: "rgba(174,161,220,0.08)" }}>
-                    <span className="whitespace-nowrap" style={{ ...caps, color: "#8C8378" }}>
+                    <span className="whitespace-nowrap" style={{ ...caps, color: "#71685E" }}>
                       {t("Auto-tracked")}
                     </span>
                     <span style={{ minWidth: 24, height: 20, padding: "0 7px", boxSizing: "border-box", borderRadius: 999, background: "#F0EDF9", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#7D6BB5", textAlign: "center" }}>
@@ -354,14 +354,14 @@ function MindHubWeb() {
                   })}
                 </>
               )}
-              <p style={{ margin: 0, flex: "none", padding: "12px 16px 14px", borderTop: autoStreaks.length > 0 ? `1px solid ${ruleSoft}` : "none", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p style={{ margin: 0, flex: "none", padding: "12px 16px 14px", borderTop: autoStreaks.length > 0 ? `1px solid ${ruleSoft}` : "none", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {hideNumbers ? t("To track something new, add a habit.") : t("Auto streaks count from what you log across the app. To track something new, add a habit.")}
               </p>
               {coachGroups.map((g) => {
                 const name = coach.coaches[g.professionalId]?.name ?? t("your coach");
                 const Name = name.charAt(0).toUpperCase() + name.slice(1);
                 return (
-                  <p key={g.professionalId} style={{ margin: 0, padding: "0 16px 14px", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <p key={g.professionalId} style={{ margin: 0, padding: "0 16px 14px", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {t("Habits from {name} can be ticked but not edited.", { name })}
                     {coach.sharedWith.has(g.professionalId) ? ` ${t("{name} sees your streaks.", { name: Name })}` : ""}
                   </p>

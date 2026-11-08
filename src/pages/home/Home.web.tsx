@@ -135,7 +135,7 @@ export default function HomeWeb() {
                   className="home-web-x absolute flex items-center justify-center"
                   style={{ top: 16, insetInlineEnd: 16, width: 32, height: 32, borderRadius: 999 }}
                 >
-                  <X size={16} color="#8C8378" aria-hidden />
+                  <X size={16} color="#71685E" aria-hidden />
                 </button>
               </div>
             )}

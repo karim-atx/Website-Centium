@@ -124,7 +124,7 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
         // The frame puts Leave {business} beside the head (40 high, r14, the red 25% border, logOut 18, 15/24 600).
         <div className="flex items-start" style={{ gap: 16, marginBottom: 16 }}>
           <div className="flex-1 min-w-0">
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Business")}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{t("Business")}</p>
             <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{name || " "}</h2>
           </div>
           {e?.acceptedAt && (
@@ -168,17 +168,17 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
           <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr)" : "repeat(2,minmax(0,1fr))", gap: 24 }}>
             <div className="flex flex-col min-w-0" style={{ gap: 24 }}>
               <div style={{ borderRadius: 16, background: "#F7F7FC", padding: "16px 20px" }}>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Classes this month")}</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{t("Classes this month")}</p>
                 <p className="flex items-baseline" style={{ margin: "4px 0 0", gap: 8 }}>
                   <span style={{ fontSize: 28, lineHeight: "36px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B" }}>{thisMonth}</span>
                   {delta !== 0 && (
-                    <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: delta > 0 ? "#3F9165" : "#C0392B" }}>
+                    <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: delta > 0 ? "#1D744A" : "#C0392B" }}>
                       {delta > 0 ? <TrendingUp size={16} aria-hidden /> : <TrendingDown size={16} aria-hidden />}
                       <bdi>{t("{delta} vs {month}", { delta: delta > 0 ? `+${delta}` : `−${Math.abs(delta)}`, month: new Date(`${lastMonth}-01T00:00:00`).toLocaleDateString(appLocale("en-GB"), { month: "long" }) })}</bdi>
                     </span>
                   )}
                 </p>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("At {name}", { name })}</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("At {name}", { name })}</p>
               </div>
               <div>
                 <WebSectionHead label={t("Business console")} />
@@ -188,7 +188,7 @@ export default function BusinessDetail({ id: idProp }: { id?: string } = {}) {
             <div className="flex flex-col min-w-0" style={{ gap: 24 }}>
               <div>
                 <WebSectionHead label={t("Your schedule here")} />
-                {schedule.length > 0 ? <WebRows rows={schedule} /> : <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No classes scheduled for you here.")}</p>}
+                {schedule.length > 0 ? <WebRows rows={schedule} /> : <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("No classes scheduled for you here.")}</p>}
               </div>
               {contact.length > 0 && (
                 <div>
@@ -279,9 +279,9 @@ const WebRows: React.FC<{ rows: ListRow[] }> = ({ rows }) => (
           )}
           <span className="flex-1 min-w-0 text-start">
             <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{r.title}</span>
-            {r.meta && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{r.meta}</span>}
+            {r.meta && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{r.meta}</span>}
           </span>
-          {r.onClick && <ChevronRight size={18} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} />}
+          {r.onClick && <ChevronRight size={18} aria-hidden className="shrink-0" style={{ color: "#71685E" }} />}
         </>
       );
       const style: React.CSSProperties = { minHeight: 56, gap: 12, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : "none" };

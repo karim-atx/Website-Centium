@@ -134,13 +134,13 @@ export function CoursesWeb({ userId }: { userId: string }) {
       <div className="flex items-center" style={{ flex: "none", gap: 10 }} data-co-courses-bar>
         {!certificates && (
           <label className="flex items-center" style={{ flex: 1, minWidth: 0, height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", padding: "0 14px", gap: 8 }}>
-            <Search size={16} color="#8C8378" className="shrink-0" aria-hidden />
+            <Search size={16} color="#71685E" className="shrink-0" aria-hidden />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("Search courses")}
               aria-label={t("Search courses")}
-              className="placeholder:text-[#8C8378]"
+              className="placeholder:text-[#71685E]"
               style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
             />
           </label>
@@ -195,13 +195,13 @@ export function CoursesWeb({ userId }: { userId: string }) {
                   style={{ borderRadius: 20, border: "0.5px solid rgba(36,31,27,0.1)", padding: "14px 16px", gap: 8, color: "#241F1B", background: "#FFFFFF" }}
                 >
                   <span className="[overflow-wrap:anywhere]" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700 }}>{course.title}</span>
-                  <span className="[overflow-wrap:anywhere]" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <span className="[overflow-wrap:anywhere]" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {t("Week {week} · Lesson {n}: {title}", { week, n, title: next.title })}
                   </span>
                   <span aria-hidden style={{ height: 6, borderRadius: 3, background: "#F0EDF9" }}>
                     <span className="block" style={{ height: 6, borderRadius: 3, width: `${percent}%`, background: "#9A8CD6" }} />
                   </span>
-                  <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{t("{n}% complete", { n: percent })}</span>
+                  <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{t("{n}% complete", { n: percent })}</span>
                 </Link>
               ))}
             </div>
@@ -212,7 +212,7 @@ export function CoursesWeb({ userId }: { userId: string }) {
                 <GraduationCap size={26} strokeWidth={1.75} />
               </span>
               <p style={{ margin: "10px 0 0", fontSize: 17, lineHeight: "24px", fontWeight: 700 }}>{query || filter ? t("No courses match") : t("No courses yet")}</p>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{query || filter ? t("Try another category or search.") : t("Check back soon.")}</p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{query || filter ? t("Try another category or search.") : t("Check back soon.")}</p>
             </div>
           ) : (
             <div data-co-course-grid style={{ display: "grid", gridTemplateColumns: `repeat(${rail ? 2 : 3},minmax(260px,1fr))`, gridAutoRows: "auto", alignContent: "start", gap: 24 }}>
@@ -242,13 +242,13 @@ export function CoursesWeb({ userId }: { userId: string }) {
                     </div>
                     <div style={{ flex: "none", padding: "12px 16px" }}>
                       <p className="[overflow-wrap:anywhere]" style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700 }}>{c.title}</p>
-                      <p className="truncate" style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                      <p className="truncate" style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                         {[data.names.get(c.authorId ?? "") ?? t("Professional"), coursePill(c.level, weeks)].filter(Boolean).join(" · ")}
                       </p>
                       <p className="flex items-center" style={{ margin: "6px 0 0", gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#9A7424" }}>
                         <Star size={13} color="#D9A441" fill="#D9A441" aria-hidden />
                         {s?.averageRating != null ? s.averageRating.toFixed(1) : tx("New", "course")}
-                        {learners && <span className="truncate" style={{ fontWeight: 600, color: "#8C8378" }}>· {learners}</span>}
+                        {learners && <span className="truncate" style={{ fontWeight: 600, color: "#71685E" }}>· {learners}</span>}
                         <span style={{ marginInlineStart: "auto", color: "#5F5093" }}>{formatPrice(c.priceCents)}</span>
                       </p>
                     </div>

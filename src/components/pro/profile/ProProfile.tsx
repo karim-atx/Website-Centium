@@ -96,7 +96,7 @@ export const ProProfile: React.FC = () => {
 
       <div className="flex flex-col items-center text-center" style={{ margin: "-4px 0 18px" }}>
         <button type="button" onClick={() => setSheet("photo")} aria-label={t("Change profile photo")} className="tap relative">
-          <span className="flex items-center justify-center overflow-hidden" style={{ width: 88, height: 88, borderRadius: 9999, background: INK.tealPale, fontSize: 28, fontWeight: 800, color: INK.tealDark }}>
+          <span className="flex items-center justify-center overflow-hidden" style={{ width: 88, height: 88, borderRadius: 9999, background: INK.tealPale, fontSize: 28, fontWeight: 800, color: INK.tealDarkInk }}>
             {picker.url ? <img src={picker.url} alt="" className="w-full h-full object-cover" /> : initials}
           </span>
           <span className="absolute flex items-center justify-center" style={{ insetInlineEnd: -2, bottom: -2, width: 32, height: 32, borderRadius: 9999, background: INK.fill, border: `3px solid ${INK.cream}` }}>

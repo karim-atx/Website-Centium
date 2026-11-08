@@ -98,7 +98,7 @@ export const MsgTabs: React.FC<{ tabs: ProTab[]; active: ProTab; unread: Partial
               fontSize: textPx(14),
               fontWeight: 700,
               background: on ? (dark ? "#A991FE" : "#A79AD5") : dark ? "#2B2C3A" : "#F5F4FE",
-              color: on ? (dark ? "#0D0B1A" : "#FFFFFF") : dark ? "#B7ABDE" : "#6D50D3",
+              color: on ? (dark ? "#0D0B1A" : "#241F1B") : dark ? "#B7ABDE" : "#6D50D3",
             }}
           >
             <span>{t(TAB_LABEL[tab])}</span>

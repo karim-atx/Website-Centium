@@ -437,7 +437,7 @@ export function ProductEditorSheet({ open, onClose, businessId, businessType, st
                 <div id={`${ids}-vis`} style={docked ? { fontSize: 15, lineHeight: "24px", fontWeight: 700 } : { fontSize: px(14), fontWeight: 700 }}>
                   {t("Show in showcase")}
                 </div>
-                <div id={`${ids}-vis-sub`} style={docked ? { fontSize: 13, lineHeight: "20px", color: "#8C8378" } : { fontSize: px(11.5), color: m.faint }}>
+                <div id={`${ids}-vis-sub`} style={docked ? { fontSize: 13, lineHeight: "20px", color: "#71685E" } : { fontSize: px(11.5), color: m.faint }}>
                   {stockShipped ? t("Off hides it from members") : t(SOON)}
                 </div>
               </div>

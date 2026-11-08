@@ -215,7 +215,7 @@ export const WorkoutLogReplies: React.FC<{
       {webReviewSlot &&
         createPortal(
           reviewed ? (
-            <span className="flex items-center" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#3F9165" }}>
+            <span className="flex items-center" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#1D744A" }}>
               <Check size={20} strokeWidth={2} aria-hidden />
               {tx("Reviewed", "log review")}
               <button type="button" onClick={() => void setReviewed(false)} disabled={busy === "review"} className="hover:underline disabled:opacity-40" style={{ marginInlineStart: 4, fontSize: 13, fontWeight: 600, color: "#5B5349" }}>
@@ -228,7 +228,7 @@ export const WorkoutLogReplies: React.FC<{
               onClick={() => void setReviewed(true)}
               disabled={busy === "review"}
               className="flex items-center whitespace-nowrap hover:bg-[#8E7FD0] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-              style={{ height: 40, padding: "0 18px", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+              style={{ height: 40, padding: "0 18px", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
             >
               <Check size={20} strokeWidth={2} aria-hidden />
               {t("Mark as reviewed")}

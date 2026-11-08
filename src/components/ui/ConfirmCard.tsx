@@ -167,7 +167,7 @@ export const ConfirmCard: React.FC<{
   // AN3-066 O7: under High contrast the decision layout's outlined safe action
   // takes a faint-ink border (#8C8378; dark #B8B3C7, the OpsTabsV4 dark faint).
   const hc = typeof document !== "undefined" && document.documentElement.classList.contains("high-contrast");
-  const decisionOutline = hc ? (dark ? "#B8B3C7" : "#8C8378") : outline;
+  const decisionOutline = hc ? (dark ? "#B8B3C7" : "#71685E") : outline;
   const destructive = tone === "destructive";
 
   if (layout === "row") {

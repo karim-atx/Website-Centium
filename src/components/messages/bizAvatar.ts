@@ -13,7 +13,7 @@ export function useBizChatColours() {
     maskBg: dark ? "#262932" : "#F5F5F6",
     tealInk: dark ? "#B2D4CF" : "#3E6B67",
     readTick: dark ? "#7FB0F0" : "#3A7BD5",
-    online: "#3F9165",
+    online: "#1D744A",
   };
 }
 

@@ -282,10 +282,10 @@ const DetailCard: React.FC<{
     style={{ border: "1px solid rgba(36,31,27,0.11)", borderRadius: 20, padding: rail ? 16 : 20, boxSizing: "border-box", maxHeight: rail ? undefined : "calc(100dvh - 128px)" }}
   >
     <div className="shrink-0" style={{ marginBottom: rail ? 12 : 16 }}>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{kicker}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{kicker}</p>
       <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{title}</h2>
       {sub && (
-        <p title={sub} className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <p title={sub} className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {sub}
         </p>
       )}

@@ -64,7 +64,7 @@ export default function NutrientSummaryPageWeb() {
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>
             {t("Nutrient Summary")}
           </h1>
-          <span className="whitespace-nowrap" style={{ marginInlineStart: 10, fontSize: 13, fontWeight: 500, color: "#8C8378" }}>
+          <span className="whitespace-nowrap" style={{ marginInlineStart: 10, fontSize: 13, fontWeight: 500, color: "#71685E" }}>
             {day}
           </span>
         </div>
@@ -117,7 +117,7 @@ export default function NutrientSummaryPageWeb() {
             filter,
           }}
         />
-        <p style={{ margin: "16px 2px 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <p style={{ margin: "16px 2px 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {t("% Daily Value based on FDA reference values for adults. Calorie and macro targets come from your Goals.")}
         </p>
       </div>

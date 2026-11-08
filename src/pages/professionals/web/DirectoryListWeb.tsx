@@ -283,7 +283,7 @@ export const LinkedCardWeb: React.FC<{
           </span>
           {detail?.licenceVerified === false && <LicencePendingTag className="mt-0.5" size={13} />}
         </span>
-        <ChevronRight size={16} color="#8C8378" aria-hidden style={{ flex: "none" }} />
+        <ChevronRight size={16} color="#71685E" aria-hidden style={{ flex: "none" }} />
       </button>
 
       {/* The connected professional's profile and CV, for one not in the directory (as on mobile). */}
@@ -310,9 +310,9 @@ export const LinkedCardWeb: React.FC<{
           {detail?.bio && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349", whiteSpace: "pre-line" }}>{detail.bio}</p>}
           {cv &&
             (cvIsEmpty(cv, detail?.skills ?? []) ? (
-              <p style={{ margin: 0, fontSize: 13, color: "#8C8378" }}>{t("{name} hasn't added a CV yet.", { name: name.split(" ")[0] })}</p>
+              <p style={{ margin: 0, fontSize: 13, color: "#71685E" }}>{t("{name} hasn't added a CV yet.", { name: name.split(" ")[0] })}</p>
             ) : (
-              <CvView cv={cv} skills={detail?.skills ?? []} accent={{ label: "#8C8378", pillBg: "#F0EDF9", pillInk: "#5F5093" }} />
+              <CvView cv={cv} skills={detail?.skills ?? []} accent={{ label: "#71685E", pillBg: "#F0EDF9", pillInk: "#5F5093" }} />
             ))}
           {detail?.hasVerifiedLicence && <VerifiedExplainer />}
         </div>

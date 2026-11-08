@@ -209,7 +209,7 @@ export function GymReviews({
         onClick={() => setWriteOpen(true)}
         disabled={writeOff}
         className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-        style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#FFFFFF", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: writeOff ? 0.5 : 1, cursor: writeOff ? "default" : "pointer" }}
+        style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#241F1B", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: writeOff ? 0.5 : 1, cursor: writeOff ? "default" : "pointer" }}
       >
         <Pencil size={18} strokeWidth={1.75} aria-hidden />
         {writeLabel}
@@ -230,13 +230,13 @@ export function GymReviews({
                   <div style={{ display: "flex", justifyContent: "center" }}>
                     <Stars value={summary?.average ?? 0} size={14} m={m} />
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{tn(total, "{n} review", "{n} reviews")}</div>
+                  <div style={{ marginTop: 4, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{tn(total, "{n} review", "{n} reviews")}</div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }} aria-label={t("Ratings breakdown")}>
                   {[5, 4, 3, 2, 1].map((n, i) => {
                     const c = summary?.counts[i] ?? 0;
                     return (
-                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, lineHeight: "16px", color: "#8C8378" }}>
+                      <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, lineHeight: "16px", color: "#71685E" }}>
                         <span style={{ width: 8, fontVariantNumeric: "tabular-nums" }}>{n}</span>
                         <span aria-hidden style={{ flex: 1, height: 6, borderRadius: 999, background: "#F5F5F6", overflow: "hidden" }}>
                           <span style={{ display: "block", height: "100%", borderRadius: 999, background: "#C08A1E", width: `${(c / maxCount) * 100}%` }} />
@@ -247,7 +247,7 @@ export function GymReviews({
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 8 }}>
-                <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Sort reviews")}</p>
+                <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{t("Sort reviews")}</p>
                 <SegmentedTabs
                   items={SORTS.map((s) => ({ key: s.key, label: t(s.label) }))}
                   activeKey={sort}
@@ -275,7 +275,7 @@ export function GymReviews({
                 {reviews.map((r) => (
                   <article key={r.id} style={{ minWidth: 0, borderRadius: 18, border: hair, background: m.card, padding: "14px 16px" }}>
                     {r.redacted ? (
-                      <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontStyle: "italic", color: "#8C8378" }}>{t("This review was removed.")}</p>
+                      <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontStyle: "italic", color: "#71685E" }}>{t("This review was removed.")}</p>
                     ) : (
                       <>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -287,7 +287,7 @@ export function GymReviews({
                               <span className="truncate">{r.isMine ? t("You") : (r.authorName ?? t("Anonymous reviewer"))}</span>
                               {r.authorIsMember && <MemberTag label={t("Member")} tone="member" />}
                             </span>
-                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                            <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                               <Stars value={r.rating ?? 0} size={13} m={m} />
                               <span>
                                 {reviewAge(r.createdAt)}
@@ -317,7 +317,7 @@ export function GymReviews({
                             disabled={r.isMine}
                             aria-pressed={r.viewerFoundHelpful}
                             className="market-focus"
-                            style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: 0, background: "none", font: "inherit", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: r.viewerFoundHelpful ? m.accent : "#8C8378", opacity: r.isMine ? 0.6 : 1, cursor: r.isMine ? "default" : "pointer" }}
+                            style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 6, padding: 0, border: 0, background: "none", font: "inherit", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: r.viewerFoundHelpful ? m.accent : "#71685E", opacity: r.isMine ? 0.6 : 1, cursor: r.isMine ? "default" : "pointer" }}
                           >
                             <ThumbsUp size={13} strokeWidth={1.75} aria-hidden fill={r.viewerFoundHelpful ? "currentColor" : "none"} />
                             {t("Helpful")} · {r.helpfulCount}

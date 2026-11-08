@@ -384,7 +384,7 @@ export const HomeWidget: React.FC<{
       shell(
         bg,
         <>
-          <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
+          <p className={`${capsLabel} text-charcoal/[0.63] dark:text-charcoal/[0.55]`}>{label}</p>
           <div className="flex-1 flex flex-col justify-center gap-2" aria-busy="true">
             <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-skeleton-pulse" />
             <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-skeleton-pulse" />
@@ -509,7 +509,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgb(var(--th-aea1dc) / .16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.88] dark:text-primary-deep-text`}>{t("Food")}</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <p className="text-[12px] font-semibold text-charcoal leading-snug">
                   {logged === 0 ? t("Nothing logged yet today") : tn(logged, "{n} item logged today", "{n} items logged today")}
@@ -540,7 +540,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgb(var(--th-aea1dc) / .16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.88] dark:text-primary-deep-text`}>{t("Food")}</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
                   {Math.round(totals.calories)}
@@ -562,12 +562,12 @@ export const HomeWidget: React.FC<{
           "rgb(var(--th-aea1dc) / .16)",
           <>
             <div className="flex items-center justify-between gap-2.5">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>{t("Food")}</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.88] dark:text-primary-deep-text`}>{t("Food")}</p>
               <span className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
                 <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {Math.round(totals.calories)}
                 </span>
-                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">
+                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.88] dark:text-primary-deep-text">
                   {t("of {n} kcal", { n: targets.calories })}
                   {/* The large widget has the room to say whose number this
                       is; the small one shows the figure alone, and the Food
@@ -594,7 +594,7 @@ export const HomeWidget: React.FC<{
                       style={{ width: `${Math.min(100, (m.consumed / (m.target || 1)) * 100)}%`, background: m.color }}
                     />
                   </span>
-                  <span className="w-14 shrink-0 text-end text-[9px] text-primary-deep-text/[0.68] dark:text-primary-deep-text tabular-nums">
+                  <span className="w-14 shrink-0 text-end text-[9px] text-primary-deep-text/[0.88] dark:text-primary-deep-text tabular-nums">
                     {t("{consumed} / {target}g", { consumed: Math.round(m.consumed), target: Math.round(m.target) })}
                   </span>
                 </div>

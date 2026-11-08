@@ -106,9 +106,9 @@ export const PlanDayWeb: React.FC<{
                 </svg>
                 <div role="img" aria-label={targets?.kcal ? t("{n} of {target} kcal", { n: fmt(total.kcal), target: fmt(targets.kcal) }) : t("{n} kcal", { n: fmt(total.kcal) })} className="flex flex-col items-center justify-center text-center" style={{ position: "absolute", inset: 0 }}>
                   <span style={{ fontSize: 22, lineHeight: "26px", fontWeight: 800, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{fmt(total.kcal)}</span>
-                  <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{targets?.kcal ? t("of {target} kcal", { target: fmt(targets.kcal) }) : t("kcal")}</span>
+                  <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" }}>{targets?.kcal ? t("of {target} kcal", { target: fmt(targets.kcal) }) : t("kcal")}</span>
                   {left != null && (
-                    <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: left >= 0 ? "#3F9165" : "#C0392B", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: left >= 0 ? "#1D744A" : "#C0392B", whiteSpace: "nowrap" }}>
                       {left >= 0 ? t("{n} left", { n: fmt(left) }) : t("{n} over", { n: fmt(-left) })}
                     </span>
                   )}
@@ -159,7 +159,7 @@ const DayMeal: React.FC<{ slot: (typeof SLOT_ORDER)[number]; day: DayTab; io: Me
     <section aria-label={label} className="min-w-0 flex flex-col" style={{ position: "relative", boxSizing: "border-box", background: "#FFFFFF", borderRadius: 16, border: "1px solid rgba(143,104,246,0.16)", padding: "12px 14px" }}>
       <div className="flex items-center justify-between" style={{ gap: 8, minHeight: 32, marginBottom: 8 }}>
         <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800, whiteSpace: "nowrap" }}>
-          {label} <span style={{ fontWeight: 600, fontSize: 13, color: "#8C8378", padding: "1px 4px" }}>{t("{n} kcal", { n: fmt(tt.kcal) })}</span>
+          {label} <span style={{ fontWeight: 600, fontSize: 13, color: "#71685E", padding: "1px 4px" }}>{t("{n} kcal", { n: fmt(tt.kcal) })}</span>
         </h2>
         {!io.readOnly && (
           <button
@@ -222,7 +222,7 @@ const DayMeal: React.FC<{ slot: (typeof SLOT_ORDER)[number]; day: DayTab; io: Me
               className="flex justify-end hover:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
               style={{ borderRadius: 4 }}
             >
-              <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+              <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
             </button>
           </div>
         );

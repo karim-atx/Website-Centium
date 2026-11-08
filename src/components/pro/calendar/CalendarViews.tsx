@@ -46,7 +46,7 @@ export const Eyebrow: React.FC<{ children: React.ReactNode; mb?: number; mt?: nu
   return (
     <p
       className="[.high-contrast_&]:!text-charcoal"
-      style={{ marginTop: mt, marginBottom: mb, fontSize: textPx(9), fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: dark ? "rgba(245,243,250,0.55)" : "rgba(36,31,27,0.42)" }}
+      style={{ marginTop: mt, marginBottom: mb, fontSize: textPx(9), fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: dark ? "rgba(245,243,250,0.55)" : "rgba(36,31,27,0.63)" }}
     >
       {children}
     </p>
@@ -100,7 +100,7 @@ const Badge: React.FC<{ item: CalItem }> = ({ item }) => {
     case "declined":
       return <span style={{ ...style, color: INK.chF }}>{t("Declined")}</span>;
     case "scheduled":
-      return <span style={{ ...style, color: INK.tealDark }}>{t("Scheduled for a client")}</span>;
+      return <span style={{ ...style, color: INK.tealDarkInk }}>{t("Scheduled for a client")}</span>;
     default:
       return null;
   }
@@ -277,7 +277,7 @@ export const WeekDayRow: React.FC<{
       </button>
       <div className="flex-1 min-w-0" style={{ paddingTop: 4 }}>
         {known && (
-          <p className="flex items-center" style={{ gap: 5, fontSize: textPx(10.5), fontWeight: 600, color: off ? INK.chT : INK.tealDark, marginBottom: 6 }}>
+          <p className="flex items-center" style={{ gap: 5, fontSize: textPx(10.5), fontWeight: 600, color: off ? INK.chT : INK.tealDarkInk, marginBottom: 6 }}>
             {off ? <Moon size={11} strokeWidth={2} aria-hidden /> : <Clock size={11} strokeWidth={2} aria-hidden />}
             {off ? t("Day off") : hours}
           </p>
@@ -390,7 +390,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
           return (
             <div key={h} data-hour={h} className="absolute start-0 end-0 flex" style={{ top: k * hp, borderTop: web ? "1px solid rgba(36,31,27,0.06)" : `1px solid ${INK.b06}` }}>
               {/* The board's label: 36 content + 6 padding (content-box), so 42 wide here (border-box), on the page fill. */}
-              <span className="shrink-0 text-end" style={web ? { fontSize: 11, lineHeight: "14px", color: "#8C8378", marginTop: -7, paddingInlineEnd: 8, width: 64, boxSizing: "border-box", background: "#FFFFFF" } : { fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingInlineEnd: 6, width: 42, background: "rgb(var(--c-cream))" }}>
+              <span className="shrink-0 text-end" style={web ? { fontSize: 11, lineHeight: "14px", color: "#71685E", marginTop: -7, paddingInlineEnd: 8, width: 64, boxSizing: "border-box", background: "#FFFFFF" } : { fontSize: textPx(9), color: INK.chF, marginTop: -6, paddingInlineEnd: 6, width: 42, background: "rgb(var(--c-cream))" }}>
                 {hourLabel12(h)}
               </span>
             </div>
@@ -501,7 +501,7 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ from, to, windows, ite
       ) : (
         body
       )}
-      <div className="flex flex-wrap" style={web ? { gap: "10px 18px", marginTop: 14, fontSize: 13, lineHeight: "20px", color: "#8C8378", flex: "none" } : { gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
+      <div className="flex flex-wrap" style={web ? { gap: "10px 18px", marginTop: 14, fontSize: 13, lineHeight: "20px", color: "#71685E", flex: "none" } : { gap: "10px 14px", marginTop: 6, fontSize: textPx(10.5), color: INK.chF }}>
         <span className="flex items-center" style={{ gap: 5 }}>
           <span aria-hidden style={{ width: 14, height: 10, borderRadius: 3, background: `repeating-linear-gradient(135deg, ${INK.soft} 0 3px, transparent 3px 6px)`, border: `1px solid ${INK.b10}` }} />{t("Outside working hours")}</span>
         <span className="flex items-center" style={{ gap: 5 }}>

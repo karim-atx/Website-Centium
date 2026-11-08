@@ -27,7 +27,7 @@ const DOT: Record<string, string> = {
   general: "#4C8FD1",
   nutrition: "#D9A441",
   workouts: fv("accent"),
-  progress: "#3F9165",
+  progress: "#1D744A",
   motivation: "#9C4F7C",
 };
 

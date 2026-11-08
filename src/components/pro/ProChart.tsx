@@ -397,7 +397,7 @@ export const ProChart: React.FC<ProChartProps> = ({
               <g key={`rf${i}`}>
                 <line x1={0} x2={W} y1={Y(r.value)} y2={Y(r.value)} stroke={r.color ?? INK.tealDark} strokeWidth={1.2} strokeDasharray={r.dashed === false ? undefined : "4 3"} opacity={r.dashed === false ? 0.7 : 1} />
                 {r.label && (
-                  <text x={mir(r.side === "right" ? W - 2 : 2)} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={sz(8.5)} fontWeight={800} fill={r.color ?? INK.tealDark}>
+                  <text x={mir(r.side === "right" ? W - 2 : 2)} y={Y(r.value) - 4} textAnchor={r.side === "right" ? "end" : "start"} fontSize={sz(8.5)} fontWeight={800} fill={r.color ?? INK.tealDarkInk}>
                     {r.label}
                   </text>
                 )}
@@ -406,7 +406,7 @@ export const ProChart: React.FC<ProChartProps> = ({
           )}
           {goal != null && <line x1={0} x2={W} y1={Y(goal)} y2={Y(goal)} stroke={INK.tealDark} strokeWidth={1.4} strokeDasharray="4 3" />}
           {goal != null && goalLabel && (
-            <text x={mir(4)} y={Y(goal) - 5} fontSize={sz(9)} fontWeight={800} fill={INK.tealDark}>
+            <text x={mir(4)} y={Y(goal) - 5} fontSize={sz(9)} fontWeight={800} fill={INK.tealDarkInk}>
               {goalLabel}
             </text>
           )}

@@ -77,7 +77,7 @@ export const CycleSharingPage: React.FC<{ onBack: () => void }> = ({ onBack }) =
       )}
 
       {loading ? (
-        <div style={{ marginTop: 20 }} aria-busy="true" aria-label={t("Loading")}>
+        <div role="status" style={{ marginTop: 20 }} aria-busy="true" aria-label={t("Loading")}>
           {[0, 1, 2].map((i) => (
             <div key={i} className="flex items-center" style={{ gap: 14, padding: "12px 0" }}>
               <Skeleton width={36} height={36} radius={18} />

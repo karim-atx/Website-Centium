@@ -35,22 +35,26 @@
   --c-cream-card: 255 255 255;
   --c-charcoal: 36 31 27;
   --c-charcoal-soft: 91 83 73;
-  /* text.muted #8C8378 (the board's value; light mode follows the board,
-     decision 14). */
-  --c-charcoal-faint: 140 131 120;
+  /* text.muted: the board's #8C8378 (3.7:1 on white) darkened in OKLCH
+     lightness only, hue and chroma held, to #71685E: 4.59:1 or better on
+     white, the soft surface, the list wash and the pale tints it sits on
+     (Round K ET, WCAG AA, 2026-11-08). */
+  --c-charcoal-faint: 113 104 94;
   /* Design refinement (App-Centium, Aug 2026): weakest metadata ("of
      10,000 · 84%") and disabled glyphs (inactive chevrons/arrows) each get
      their own step instead of reusing `faint` for both. */
-  --c-charcoal-tertiary: 167 158 147;
+  /* The board's #A79E93 (2.6:1) darkened the same way to #776E64 (4.58:1 on
+     #F5F4FB, 5.00:1 on white): weakest metadata is text too (Round K ET). */
+  --c-charcoal-tertiary: 119 110 100;
   --c-charcoal-disabled: 201 194 184;
   /* Mobile v5.1 surface.raised (#FAFAFB / dark #262932): dropdown option rows
      and the raised rows inside sheets. */
   --c-surface-raised: 250 250 251;
   /* Mobile v5.1 R3 (dark mode, no light islands): two light literals with no
      token yet, so their light value stays exact while dark gets the v5.1 one.
-     text.muted's board value #8C8378 (where a screen has not had its AA pass
-     yet; --c-charcoal-faint is the AA shade) and border.option #E5E6EB. */
-  --c-charcoal-muted: 140 131 120;
+     text.muted (the AA shade #71685E, as --c-charcoal-faint; the board's
+     value is #8C8378) and border.option #E5E6EB. */
+  --c-charcoal-muted: 113 104 94;
   --c-border-option: 229 230 235;
 
   --c-primary: 174 161 220;
@@ -67,7 +71,17 @@
      before v5.1 (decision 15). Dark mode keeps the lighter primary with
      near-black ink (6.6-8.3:1). */
   --c-primary-fill: 174 161 220;
-  --c-on-primary-fill: 255 255 255;
+  /* THE SHARED ON-FILL INK (Round K ET, Karim 2026-11-08): the lavender and
+     teal fills stay as drawn and their text and glyphs take #241F1B, which
+     reaches 4.91:1 or better on every one of them (#9284C4 lowest; 6.4:1 on
+     segmented #A79AD5, 6.9:1 on #AEA1DC), where white reached 1.9-3.3:1.
+     The other colour themes set their own (white on their AA fills), dark
+     keeps #0D0B1A and High contrast keeps white on #5B48B8. */
+  --c-on-primary-fill: 36 31 27;
+  /* The white wash a small badge puts over a filled control (the plan
+     radio's "-n%"). High contrast light thins it so white keeps 4.55:1 on
+     #5B48B8 (0.22 gave #7F70C8 at 4.15:1; 0.17 gives #7767C4 at 4.64:1). */
+  --on-fill-wash: 0.22;
   /* Filled controls the board draws in their own lavender rather than
      primary.fill, kept as drawn in light mode (decision 14); dark mode uses
      primary-fill for all four. Selected sheet chips and menu rows #A092E0,
@@ -124,7 +138,8 @@
   --c-team-blue-light: 143 192 232;
   --c-team-blue-ink: 63 110 147;
   --c-team-rose-ink: 138 88 120;
-  --c-team-gold-ink: 138 106 62;
+  /* The board's #8A6A3E; #836337 reaches 4.58:1 on --c-gold-pale (Round K ET). */
+  --c-team-gold-ink: 131 99 55;
   --c-team-gold-deep: 194 154 61;
 
   /* Iteration 6.1 "Team Dark" gradients — plain custom properties, not
@@ -250,7 +265,9 @@
   /* Design refinement: theme-aware status hues. An out-of-range reading
      must not be decorative — these replace ad-hoc literal hex classes so
      status colour actually adapts in dark mode. */
-  --c-status-good: 63 145 101;
+  /* #3F9165 darkened in lightness only to #1D744A: 4.57:1 or better on
+     status-good-bg, the green chip wash #D9E9E0 and the page (Round K ET). */
+  --c-status-good: 29 116 74;
   --c-status-good-bg: 227 243 233;
   /* The message read tick used to live here, as --c-status-good-deep: this
      hue darkened until it survived a mid-toned bubble. It is now the
@@ -350,7 +367,9 @@
   --metric-water-main: 110 143 201;
   --metric-water-tint: 230 236 247;
   --metric-water-accent: 74 106 163;
-  --metric-water-ink: 74 106 163;
+  /* #4A6AA3 as text -> #44639C: 4.56:1 on the hero pill over the water tint
+     (Round K ET). The accent keeps #4A6AA3. */
+  --metric-water-ink: 68 99 156;
   --metric-water-pattern: 110 143 201;
   --metric-steps-main: 127 160 106;
   --metric-steps-tint: 234 241 228;
@@ -953,7 +972,7 @@ html.high-contrast {
    High contrast light darkens it to #8C6A21 (4.53:1). Used through
    --gold-pill-ink. */
 :root { --gold-pill-ink: #9A7424; }
-html.high-contrast:not(.dark) { --gold-pill-ink: #8C6A21; }
+html.high-contrast:not(.dark) { --gold-pill-ink: #8C6A21; --on-fill-wash: 0.17; }
 html.high-contrast.dark {
   --c-charcoal: 245 243 250;
   --c-charcoal-soft: 245 243 250;
@@ -983,6 +1002,49 @@ html.high-contrast[data-accent="centium"]:not(.dark) {
   --c-fill-cta: 91 72 184;
   /* X-23: the active navbar label #825FE0 (4.50:1). */
   --c-nav-label-active: 130 95 224;
+}
+/* Round K ET (WCAG AA text, 2026-11-08): Centium light, outside High
+   contrast. The text twins of the theme colours (what Tailwind's text-*
+   utilities and the explicit --thi-/-ink reads use) and the two navbar inks
+   take the nearest shade that reaches 4.5:1 on the grounds each is drawn on:
+   lightness only, in OKLCH, hue and chroma held. Fills, borders and chart
+   strokes keep the board's values, because they read the base variables.
+   The other colour themes already have AA twins (generated), and High
+   contrast keeps its own values above. */
+html[data-accent="centium"]:not(.dark):not(.high-contrast) {
+  /* #AEA1DC as text (units, small links) -> #74679E: 4.60:1 on #F5F4FB. */
+  --c-primary-ink: 116 103 158;
+  /* #7D67D9 -> #7159CA: 4.56:1 on primary-pale #F0EDF9, 5.27:1 on white. */
+  --c-primary-accent-ink: 113 89 202;
+  /* #7D6BB5 -> #715EA7: 4.57:1 on the red wash #FBE7E4, 4.71:1 on #F0EDF9. */
+  --c-primary-dark-ink: 113 94 167;
+  --thi-7d6bb5: 113 94 167;
+  /* nav.accentText #8F68F6 -> #7F56E3: 4.60:1 on the navbar over #FBF9F4. */
+  --c-team-nav-accent-text: 127 86 227;
+  /* nav.accent as text (#8F68F6) -> #7D54E0: 4.57:1 on #F5F5F6. */
+  --c-team-nav-accent-ink: 125 84 224;
+  /* nav.idle #9A94B3 -> #726C8A, labels and glyphs (glyphs were 2.9:1, under
+     the 3:1 for icons too): 4.56:1 on #F5F5F6, 4.72:1 on the bar. The same
+     shade for the #9A94B3 text twin (section labels, BU desc). */
+  --c-team-nav-idle: 114 108 138;
+  --thi-9a94b3: 114 108 138;
+  /* The More hub's mint hero and tile captions #8A9796 / #869595 -> #647170 /
+     #637171: 4.56:1 on #EBF5F2 / #ECF5F3. */
+  --thi-8a9796: 100 113 112;
+  --thi-869595: 99 113 113;
+  /* teal.dark #6F9993 as text (pro chips, labels) -> #4C7570: 4.58:1 on
+     teal-pale #EAF4F2. Chart lines and dots keep #6F9993. */
+  --c-teal-dark-ink: 76 117 112;
+}
+/* The same rule in Centium dark, lifted instead of darkened, for the three
+   text twins the dark sweep found under 4.5:1. */
+html.dark[data-accent="centium"]:not(.high-contrast) {
+  /* #9A8CD6 -> #9F91DB: 4.60:1 on the lavender wash #303141. */
+  --c-primary-accent-ink: 159 145 219;
+  /* #4F8F8A -> #64A59F: 5.14:1 on #262932, 4.56:1 on the teal wash #293339. */
+  --c-teal-dark-ink: 100 165 159;
+  /* #3C6B65 (drawn for light, no dark value) -> #73A39C: 4.58:1 on #293339. */
+  --thi-3c6b65: 115 163 156;
 }
 /* The hairlines are literal `border-charcoal/[0.06]`-style classes whose
    alpha no token reaches, so they are matched by class here, with focus

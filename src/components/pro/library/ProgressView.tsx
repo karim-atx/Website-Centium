@@ -159,7 +159,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
         <div style={{ minWidth: 232 + length * 48 }}>
           <div className="flex" style={{ gap: 8, paddingInlineStart: 232, paddingBottom: 12, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
             {weeksRow.map((w) => (
-              <span key={w} className="flex-1 text-center" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("W{n}", { n: w })}</span>
+              <span key={w} className="flex-1 text-center" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{t("W{n}", { n: w })}</span>
             ))}
           </div>
           {rows.map((r) => (
@@ -169,7 +169,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
                 <span className="truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{r.initials ? r.name.split(" ")[0] : r.name}</span>
               </span>
               {r.cells === null ? (
-                <span className="flex items-center flex-1" style={{ gap: 8, height: 56, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+                <span className="flex items-center flex-1" style={{ gap: 8, height: 56, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                   <Lock size={16} strokeWidth={2} aria-hidden /> {t("Not sharing workout activity.")}
                 </span>
               ) : (
@@ -205,7 +205,7 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
             <section aria-label={t("Top lifts this block")} style={{ marginTop: 24 }}>
               <CapsHeadWeb label={t("Top lifts this block")} />
               {lifts.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No sessions logged yet.")}</p>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No sessions logged yet.")}</p>
               ) : (
                 <div className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 24 }}>
                   {lifts.map(({ a, c, l }) => {
@@ -218,11 +218,11 @@ export const ProgressView: React.FC<{ template: WorkoutTemplate; onBack: () => v
                         </span>
                         <span className="flex-1 min-w-0">
                           <span className="block" style={{ fontSize: 22, lineHeight: "30px", fontWeight: 700, color: "#241F1B" }}>{`${c.name} · ${l.exercise}`}</span>
-                          <span className="block" style={{ marginTop: 4, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+                          <span className="block" style={{ marginTop: 4, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                             {t("{from} to {to} kg x {reps}", { from: fmtKg(l.firstKg), to: fmtKg(l.lastKg), reps: l.reps })}
                           </span>
                         </span>
-                        <span className="flex items-center shrink-0" style={{ gap: 8, fontSize: 40, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.02em", color: up ? "#3F9165" : "#C0392B" }}>
+                        <span className="flex items-center shrink-0" style={{ gap: 8, fontSize: 40, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.02em", color: up ? "#1D744A" : "#C0392B" }}>
                           <Trend size={28} strokeWidth={2} aria-hidden />
                           {deltaKg(l)}
                         </span>

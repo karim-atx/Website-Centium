@@ -18,7 +18,7 @@ const OPTIONS: LayoutOptions = {
   before: { notice: 12, heading: 28, line: 2, empty: 2 },
 };
 const WEIGHT: Record<BlockKind, number> = { title: 800, subtitle: 500, notice: 700, heading: 700, line: 400, empty: 400 };
-const INK: Record<BlockKind, string> = { title: "#241F1B", subtitle: "#5B5349", notice: "#9B2C2C", heading: "#241F1B", line: "#241F1B", empty: "#8C8378" };
+const INK: Record<BlockKind, string> = { title: "#241F1B", subtitle: "#5B5349", notice: "#9B2C2C", heading: "#241F1B", line: "#241F1B", empty: "#71685E" };
 const font = (k: BlockKind) => `${WEIGHT[k]} ${OPTIONS.size[k]}px Manrope, "IBM Plex Sans Arabic", sans-serif`;
 const FOOT = `500 18px Manrope, "IBM Plex Sans Arabic", sans-serif`;
 
@@ -51,7 +51,7 @@ export async function makeSummaryPdf(blocks: readonly Block[], footer: string, r
       ctx.fillText(l.text, x, l.y);
     }
     ctx.font = FOOT;
-    ctx.fillStyle = "#8C8378";
+    ctx.fillStyle = "#71685E";
     ctx.fillText(`${footer} · ${i + 1}/${pages.length}`, x, OPTIONS.height - OPTIONS.margin + 20);
     const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png"));
     const img = await doc.embedPng(new Uint8Array(await png.arrayBuffer()));

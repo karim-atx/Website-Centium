@@ -84,6 +84,9 @@ export const SegmentedTabs: React.FC<{
    * Light mode is unaffected.
    */
   activeFillDark?: string;
+  /** The active tab's DARK ink, paired with `activeFillDark` when white
+   *  does not reach 4.5:1 on it (Round K ET: #0D0B1A on the literal #79A8A1). */
+  activeInkDark?: string;
   /**
    * The idle tabs' DARK fill, when a frame draws other than the variant's
    * (MO1.2 #13 / MO1.3 #11: the category chips sit transparent on the rail
@@ -115,6 +118,7 @@ export const SegmentedTabs: React.FC<{
   darkTone = "default",
   variant = "default",
   activeFillDark,
+  activeInkDark,
   idleFillDark,
   iconGap,
   lineHeight,
@@ -124,7 +128,7 @@ export const SegmentedTabs: React.FC<{
   // drawn ones (track #F3F3FD, 5 padding, r14, gap 4; tabs r10, 15/24 600; on: white, #7D67D9, the soft shadow;
   // off: #8C8378). A page that sets its own light colours keeps them. False everywhere else, mobile included.
   const paneTabs = usePaneSpan() && !light && variant === "default" && !scroll && !dark;
-  const lit = dark ? undefined : paneTabs ? { activeFill: "#FFFFFF", activeInk: "#7D67D9", idleFill: "transparent", idleInk: "#8C8378" } : light;
+  const lit = dark ? undefined : paneTabs ? { activeFill: "#FFFFFF", activeInk: "#7D67D9", idleFill: "transparent", idleInk: "#71685E" } : light;
   const teal = variant === "teal";
   const partB = darkTone === "partB";
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -152,7 +156,9 @@ export const SegmentedTabs: React.FC<{
   // contrast; dark the primary fill with #0D0B1A), or the teal secondary.
   const activeFill =
     dark && activeFillDark ? activeFillDark : teal ? "rgb(var(--c-fill-prep))" : "rgb(var(--c-seg-active))";
-  const activeInk = teal ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
+  // Round K ET (Karim 2026-11-08): the fills stay, the ink is the shared on-fill
+  // ink (#241F1B in Centium light). Teal in dark keeps white on #4F7F78 (4.53:1).
+  const activeInk = dark && activeInkDark ? activeInkDark : teal && dark ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
   const idleFill = dark && idleFillDark
     ? idleFillDark
     : teal
@@ -185,11 +191,12 @@ export const SegmentedTabs: React.FC<{
             role="tab"
             aria-selected={active}
             onClick={() => onChange(item.key)}
-            className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : "whitespace-nowrap"}`}
+            className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : scroll ? "whitespace-nowrap" : "text-center"}`}
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
               minWidth: scroll ? (teal && scrollMinWidth === 86 ? 0 : scrollMinWidth) : 0,
-              height,
+              // Round K · ET: a minimum height, and (outside a scrolling row) labels that wrap at spaces, so 200% text stays inside its tab.
+              minHeight: height,
               gap: item.icon ? iconGap ?? 6 : undefined,
               padding: pad,
               borderRadius: radius,

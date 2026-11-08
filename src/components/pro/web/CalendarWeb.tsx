@@ -109,7 +109,7 @@ export const MonthSplitWeb: React.FC<{ left: React.ReactNode; right: React.React
 
 /** The markup's eyebrow: 13/20 700, .08em, caps, rgba(36,31,27,0.42), 12 below. */
 export const EyebrowWeb: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <p className="shrink-0" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "rgba(36,31,27,0.42)" }}>
+  <p className="shrink-0" style={{ margin: "0 0 12px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "rgba(36,31,27,0.63)" }}>
     {children}
   </p>
 );
@@ -172,7 +172,7 @@ export const MonthCardWeb: React.FC<{
               aria-pressed={sel}
               aria-label={[new Date(`${id}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "long", month: "long", day: "numeric" }), dot.own ? t("sessions booked") : null, dot.cls ? (hiredLive ? t("hired classes") : t("classes")) : null, off ? t("day off") : null].filter(Boolean).join(t(", "))}
               className={`flex min-h-0 min-w-0 flex-col items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8] ${sel ? "" : "hover:bg-[#F6F4FE]"}`}
-              style={{ gap: 6, borderRadius: 10, fontSize: 17, fontWeight: sel ? 600 : 500, background: sel ? "#9A8CD6" : id === todayIso ? "rgba(174,161,220,0.16)" : "transparent", color: sel ? "#FFFFFF" : off ? "#A79E93" : "#241F1B" }}
+              style={{ gap: 6, borderRadius: 10, fontSize: 17, fontWeight: sel ? 600 : 500, background: sel ? "#9A8CD6" : id === todayIso ? "rgba(174,161,220,0.16)" : "transparent", color: sel ? "#FFFFFF" : off ? "#776E64" : "#241F1B" }}
             >
               <span>{d}</span>
               <span aria-hidden className="flex" style={{ gap: 4 }}>
@@ -186,7 +186,7 @@ export const MonthCardWeb: React.FC<{
           <div key={`a${i}`} />
         ))}
       </div>
-      <div className="flex shrink-0 flex-wrap" style={{ gap: 14, marginTop: 10, paddingTop: 10, borderTop: LINE, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+      <div className="flex shrink-0 flex-wrap" style={{ gap: 14, marginTop: 10, paddingTop: 10, borderTop: LINE, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
         <span className="flex items-center whitespace-nowrap" style={{ gap: 6 }}>
           <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: SESSION_DOT }} />
           {t("Sessions booked")}
@@ -199,7 +199,7 @@ export const MonthCardWeb: React.FC<{
         )}
         {firstOff && (
           <span className="flex items-center whitespace-nowrap" style={{ gap: 6 }}>
-            <span aria-hidden style={{ fontWeight: 700, color: "#A79E93" }}>
+            <span aria-hidden style={{ fontWeight: 700, color: "#776E64" }}>
               {firstOff}
             </span>
             {t("Greyed: day off")}
@@ -222,12 +222,12 @@ export const AgendaCardWeb: React.FC<{ item: CalItem; onOpen: (i: CalItem) => vo
   const title = item.kind === "request" ? (item.name ? t("Request · {name} wants this slot", { name: item.name }) : t("Request · {title}", { title: item.title })) : primaryLine(item);
   const online = !!item.place && /^online$/i.test(item.place);
   const badge =
-    item.badge === "completed" ? { text: t("Completed"), ink: "#3F9165", icon: <Check size={16} strokeWidth={2.4} aria-hidden /> }
+    item.badge === "completed" ? { text: t("Completed"), ink: "#1D744A", icon: <Check size={16} strokeWidth={2.4} aria-hidden /> }
     : item.badge === "request" ? { text: t("Request"), ink: "#9A7424", icon: null }
     : item.badge === "followup" ? { text: t("Follow-up"), ink: "#5B5349", icon: null }
     : item.badge === "invitation" ? { text: t("Invitation"), ink: "#9A7424", icon: null }
     : item.badge === "going" ? { text: t("Going"), ink: "#5F5093", icon: null }
-    : item.badge === "declined" ? { text: t("Declined"), ink: "#8C8378", icon: null }
+    : item.badge === "declined" ? { text: t("Declined"), ink: "#71685E", icon: null }
     : item.badge === "scheduled" ? { text: t("Scheduled for a client"), ink: "#3E6E68", icon: null }
     : null;
   return (
@@ -278,7 +278,7 @@ export const RequestCardWeb: React.FC<{ item: CalItem; busy: boolean; onAccept: 
       <div className="flex min-w-0 flex-1 justify-between" style={{ gap: 10 }}>
         <div className="min-w-0">
           <p className="truncate" style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{`${who} · ${item.title}`}</p>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{range12(item.start, item.end)}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{range12(item.start, item.end)}</p>
         </div>
         <span className="shrink-0" style={{ fontSize: 13, fontWeight: 600, color: "#9A7424" }}>
           {t("Request")}
@@ -361,7 +361,7 @@ export const WeekTimeGridWeb: React.FC<{
                 className={`flex flex-col items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8] ${today ? "" : "hover:bg-[#F6F4FE]"}`}
                 style={{ minWidth: 64, boxSizing: "border-box", padding: "4px 12px", borderRadius: 16, background: today ? "#9A8CD6" : "transparent" }}
               >
-                <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: today ? "#FFFFFF" : "#8C8378" }}>
+                <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: today ? "#FFFFFF" : "#71685E" }}>
                   {d.toLocaleDateString(appLocale("en-US"), { weekday: "short" })}
                 </span>
                 <span style={{ fontSize: 22, lineHeight: "30px", fontWeight: 700, color: today ? "#FFFFFF" : "#241F1B" }}>{d.getDate()}</span>
@@ -371,7 +371,7 @@ export const WeekTimeGridWeb: React.FC<{
         })}
         {anyAllDay && (
           <>
-            <div style={{ fontSize: 11, lineHeight: "16px", fontWeight: 700, color: "#8C8378", padding: "8px 10px 8px 0", borderTop: LINE, textAlign: "end" }}>{t("All day")}</div>
+            <div style={{ fontSize: 11, lineHeight: "16px", fontWeight: 700, color: "#71685E", padding: "8px 10px 8px 0", borderTop: LINE, textAlign: "end" }}>{t("All day")}</div>
             {days.map((iso) => (
               <div key={iso} className="flex min-w-0 flex-col" style={{ gap: 4, padding: 4, borderTop: LINE, borderInlineStart: LINE }}>
                 {(items[iso] ?? [])
@@ -393,7 +393,7 @@ export const WeekTimeGridWeb: React.FC<{
         <div className="relative" style={{ height: bodyH, display: "grid", gridTemplateColumns: cols }}>
           <div className="relative">
             {Array.from({ length: LAST_HOUR - FIRST_HOUR + 1 }, (_, k) => (
-              <span key={k} className="absolute whitespace-nowrap" style={{ insetInlineEnd: 10, top: yy((FIRST_HOUR + k) * 60) - 10, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <span key={k} className="absolute whitespace-nowrap" style={{ insetInlineEnd: 10, top: yy((FIRST_HOUR + k) * 60) - 10, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {hourLabel12(FIRST_HOUR + k)}
               </span>
             ))}
@@ -434,7 +434,7 @@ export const WeekTimeGridWeb: React.FC<{
               <div key={iso} className="relative min-w-0" style={{ borderInlineStart: LINE, backgroundImage: lines, backgroundPosition: `0 ${PAD_T}px` }}>
                 {off && (
                   <div className="absolute inset-x-0 flex items-center justify-center" style={{ top: yy(FIRST_HOUR * 60), height: yy(LAST_HOUR * 60) - yy(FIRST_HOUR * 60) }}>
-                    <span className="flex items-center" style={{ gap: 6, padding: "4px 10px", borderRadius: 999, background: "#F5F5F6", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#A79E93" }}>
+                    <span className="flex items-center" style={{ gap: 6, padding: "4px 10px", borderRadius: 999, background: "#F5F5F6", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#776E64" }}>
                       <Moon size={16} strokeWidth={2} aria-hidden />
                       {t("Day off")}
                     </span>
@@ -457,10 +457,10 @@ export const WeekTimeGridWeb: React.FC<{
                     >
                       <span className="flex min-w-0 items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#241F1B" }}>
                         <span className="min-w-0 truncate">{i.name ?? i.title}</span>
-                        {i.done && <Check size={14} strokeWidth={2.4} color="#3F9165" aria-hidden className="shrink-0" />}
+                        {i.done && <Check size={14} strokeWidth={2.4} color="#1D744A" aria-hidden className="shrink-0" />}
                       </span>
                       {tall && (
-                        <span className="truncate" style={{ fontSize: 11, lineHeight: "16px", color: "#8C8378" }}>
+                        <span className="truncate" style={{ fontSize: 11, lineHeight: "16px", color: "#71685E" }}>
                           {range12(i.start, i.end)}
                         </span>
                       )}

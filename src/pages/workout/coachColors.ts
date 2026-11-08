@@ -7,7 +7,7 @@
 const COACH_COLORS = {
   deep: ["rgb(var(--th-5f5093))", "#C3B3FB"],
   pale: ["rgb(var(--th-f0edf9))", "#303141"],
-  faint: ["#8C8378", "#B8B3C7"],
+  faint: ["#71685E", "#B8B3C7"],
   soft: ["#F5F5F6", "#242730"],
 } as const;
 

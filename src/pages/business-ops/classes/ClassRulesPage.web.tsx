@@ -27,7 +27,7 @@ const LATE = [2, 4, 6, 12, 24, 48];
 const hoursBefore = (h: number): string => (h === 0 ? t("Until class time") : tn(h, "{n} hour before", "{n} hours before"));
 
 const CAPS: React.CSSProperties = { fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#7D6BB5" };
-const SUBHEAD: React.CSSProperties = { fontSize: 13, lineHeight: "20px", color: "#8C8378", textTransform: "none", letterSpacing: 0, fontWeight: 400 };
+const SUBHEAD: React.CSSProperties = { fontSize: 13, lineHeight: "20px", color: "#71685E", textTransform: "none", letterSpacing: 0, fontWeight: 400 };
 
 const Switch: React.FC<{ checked: boolean; label: string; disabled: boolean; onChange: (v: boolean) => void }> = ({ checked, label, disabled, onChange }) => (
   <button
@@ -78,7 +78,7 @@ const Picker: React.FC<{ value: string; aria: string; minW: number; disabled: bo
       style={{ minHeight: 40, boxSizing: "border-box", paddingInline: "12px 10px", borderRadius: 12, border: "1px solid rgba(36,31,27,0.11)", gap: 6, minWidth: minW, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}
     >
       {value}
-      <ChevronDown size={16} style={{ color: "#8C8378" }} aria-hidden />
+      <ChevronDown size={16} style={{ color: "#71685E" }} aria-hidden />
     </button>
   );
 
@@ -188,7 +188,7 @@ export default function ClassRulesPageWeb() {
       </div>
       <div className="max-w-[1344px] flex flex-col" style={{ padding: 32, gap: 16, boxSizing: "border-box" }}>
         <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{lead}</p>
-        {access.ready && !canWrite && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Only staff who manage the schedule can change these.")}</p>}
+        {access.ready && !canWrite && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Only staff who manage the schedule can change these.")}</p>}
         {!api.online && <MarketOffline loaded />}
         {api.businessId && <PremiumBookingSetting businessId={api.businessId} canWrite={canWrite && api.online} />}
         {loading ? (
@@ -256,7 +256,7 @@ export default function ClassRulesPageWeb() {
                     <div title={r.title} className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                       {r.title}
                     </div>
-                    {r.note && <div style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>{r.note}</div>}
+                    {r.note && <div style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>{r.note}</div>}
                   </div>
                   <div role="cell" className="flex justify-center">
                     <Switch

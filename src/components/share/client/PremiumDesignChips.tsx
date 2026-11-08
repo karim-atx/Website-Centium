@@ -58,7 +58,7 @@ export const PremiumDesignChips: React.FC<{ background: string; onPick: (bg: Pre
               fontWeight: a ? 700 : 600,
               border: `1px solid ${a ? m.fill : m.border}`,
               background: a ? m.fill : m.card,
-              color: a ? (dark ? m.onfill : "#FFFFFF") : m.ink2,
+              color: a ? m.onfill : m.ink2,
             }}
           >
             <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, background: PREMIUM_SWATCH[bg], boxShadow: "0 0 0 1px rgba(36,31,27,0.1)", flex: "none" }} />

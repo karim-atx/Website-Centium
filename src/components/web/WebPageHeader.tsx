@@ -40,7 +40,7 @@ export const WebPageHeader: React.FC<{
       )}
       <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 12 }}>
         {kicker && (
-          <span className="shrink-0 uppercase" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", color: "#8C8378" }}>
+          <span className="shrink-0 uppercase" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", color: "#71685E" }}>
             {kicker}
           </span>
         )}
@@ -48,7 +48,7 @@ export const WebPageHeader: React.FC<{
           {title}
         </h1>
         {sub && (
-          <p title={sub} className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p title={sub} className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {sub}
           </p>
         )}

@@ -112,7 +112,7 @@ function MessagesHero() {
   const empty = !s.loading && !s.hasAny;
   const clear = !s.loading && s.hasAny && s.unread === 0 && s.newEnquiries === 0;
   const title = dark ? "#D5EAE5" : "#32544D";
-  const sub = dark ? "#A5BDB9" : "#869595";
+  const sub = dark ? "#A5BDB9" : "#637171";
   const heroBg = dark ? "rgba(162,200,194,0.12)" : "#ECF5F3";
 
   const card = s.latest && (

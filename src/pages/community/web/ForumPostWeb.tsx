@@ -325,7 +325,7 @@ export function ForumPostWeb({
   if (thread === null || thread.withdrawn || hiddenByMode) {
     return (
       <div style={grid}>
-        <p data-co-unavailable style={{ margin: 0, padding: "32px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+        <p data-co-unavailable style={{ margin: 0, padding: "32px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
           {error ?? t("This post isn't available.")}
         </p>
         <RulesCard />
@@ -472,7 +472,7 @@ export function ForumPostWeb({
                 placeholder={t("Write a reply")}
                 aria-label={t("Write a reply")}
                 maxLength={4000}
-                className="placeholder:text-[#8C8378]"
+                className="placeholder:text-[#71685E]"
                 style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
               />
               <button
@@ -489,7 +489,7 @@ export function ForumPostWeb({
         ) : (
           thread.locked &&
           thread.status === "published" && (
-            <p style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("This post isn't taking new replies.")}</p>
+            <p style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("This post isn't taking new replies.")}</p>
           )
         )}
       </div>
@@ -598,7 +598,7 @@ function ReplyRow({
               <span>{author.label}</span>
             )}
             {author.professionalId && <ProChip />}
-            <span style={{ fontWeight: 500, color: "#8C8378" }}>
+            <span style={{ fontWeight: 500, color: "#71685E" }}>
               · {forumAgeText(reply.createdAt)}
               {reply.editedAt ? ` · ${tx("edited", "forum reply")}` : ""}
             </span>
@@ -614,7 +614,7 @@ function ReplyRow({
               className="co-web-more co-web-back absolute grid place-items-center"
               style={{ top: 6, insetInlineEnd: 6, width: 28, height: 28, borderRadius: 999 }}
             >
-              <EllipsisVertical size={16} color="#8C8378" aria-hidden />
+              <EllipsisVertical size={16} color="#71685E" aria-hidden />
             </button>
           )}
           {reply.status === "held" && (

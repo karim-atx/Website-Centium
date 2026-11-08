@@ -115,9 +115,10 @@ export function SegmentedTicketStrip<K extends string>({
         const idleBg = dark ? hexAlpha(ink, 0.16) : tint;
         const idleInk = dark ? m.ink : "#17142A";
         // Dark: the step ink darkened just enough for the white label to reach
-        // 4.5:1 (W2 lead decision); light keeps the drawn ink, except under High
-        // contrast (R2 gate), where it takes the same darkening.
-        const activeBg = dark || highContrast() ? darkenForWhite(ink) : ink;
+        // 4.5:1 (W2 lead decision), and the same under High contrast (R2 gate).
+        // Light (Round K ET, Karim 2026-11-08): the same rule with a small margin,
+        // 4.55:1, so the About tab #7D67D9 (4.36:1) becomes #7964D2 (4.60:1).
+        const activeBg = dark || highContrast() ? darkenForWhite(ink) : darkenForWhite(ink, 4.55);
         const Icon = it.icon;
         return (
           <button

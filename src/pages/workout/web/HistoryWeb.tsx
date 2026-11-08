@@ -191,7 +191,7 @@ export default function HistoryWeb() {
     <div className="flex flex-col" style={{ gap: 16 }}>
       <HistoryWindowLine />
       <div className="flex items-center justify-between">
-        <p style={capsLabel("#8C8378")}>{t("Summary")}</p>
+        <p style={capsLabel("#71685E")}>{t("Summary")}</p>
         <button
           type="button"
           onClick={(e) => setMenuAnchor(e.currentTarget)}
@@ -243,11 +243,11 @@ export default function HistoryWeb() {
 
       {error && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#C0392B" }}>{t(error)}</p>}
 
-      <p style={{ ...capsLabel("#8C8378"), margin: "8px 0 -4px" }}>{t("Logged sessions")}</p>
+      <p style={{ ...capsLabel("#71685E"), margin: "8px 0 -4px" }}>{t("Logged sessions")}</p>
 
       {listed.length === 0 ? (
         <EmptyCard>
-          <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No logged workouts yet. Finish a routine to see it here.")}</p>
+          <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No logged workouts yet. Finish a routine to see it here.")}</p>
         </EmptyCard>
       ) : (
         <div style={{ columns: rail ? 1 : 2, columnGap: 16 }}>
@@ -405,7 +405,7 @@ const SessionCard: React.FC<{
             <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
               {session.routineName}
             </span>
-            <span className="block truncate" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span className="block truncate" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {`${session.totalVolumeKg.toLocaleString(appLocale())} kg · ${formatCompactDuration(session.durationSec)} · ${tn(exercises.length, "{n} ex", "{n} ex")}`}
             </span>
             {sentText && (
@@ -420,7 +420,7 @@ const SessionCard: React.FC<{
             {onShare && action(t("Share {name}", { name: session.routineName }), <ShareGlyph size={16} color="currentColor" />, onShare, "#F0EDF9", "#7D6BB5")}
             {action(t("Delete"), <Trash2 size={16} />, onDelete, "#FCEDEC", "#B4372C")}
           </span>
-          <button type="button" onClick={onToggle} aria-hidden tabIndex={-1} className="flex" style={{ color: "#8C8378" }}>
+          <button type="button" onClick={onToggle} aria-hidden tabIndex={-1} className="flex" style={{ color: "#71685E" }}>
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>

@@ -42,7 +42,7 @@ export const MoPage: React.FC<{ title: string; sub?: string; action?: React.Reac
             {title}
           </h1>
           {sub && (
-            <p title={sub} className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <p title={sub} className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {sub}
             </p>
           )}
@@ -96,6 +96,6 @@ export const MoLinkRow: React.FC<{ icon: LucideIcon; label: string; onClick: () 
     <span className="flex-1 min-w-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
       {label}
     </span>
-    <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+    <ChevronRight size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
   </button>
 );

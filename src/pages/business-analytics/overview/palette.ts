@@ -42,7 +42,7 @@ export interface AnPalette extends DashPalette {
 
 export function anPalette(dark: boolean, hc: boolean): AnPalette {
   const base = dashPalette(dark, hc);
-  const faint = hc ? (dark ? "#F5F3FA" : "#5B5349") : dark ? "#B8B3C7" : "#8C8378";
+  const faint = hc ? (dark ? "#F5F3FA" : "#5B5349") : dark ? "#B8B3C7" : "#71685E";
   const cls = dark ? "rgb(var(--th-a991fe))" : "rgb(var(--th-8e7fd0))";
   const evc = dark ? "#A2C8C2" : "#6F9993";
   return {
@@ -79,7 +79,7 @@ export function anPalette(dark: boolean, hc: boolean): AnPalette {
       ink: dark ? "#F5F3FA" : "#241F1B",
       inkSoft: dark ? "#B8B3C7" : "#5B5349",
       faint,
-      tert: dark ? "#9F9CAC" : "#A79E93",
+      tert: dark ? "#9F9CAC" : "#776E64",
       divider: base.divider,
       soft: base.soft,
       pale: base.pale,

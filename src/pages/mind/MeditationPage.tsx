@@ -31,7 +31,7 @@ type SubTab = "breathing" | "stretching" | "yoga";
 // keep their v5.1 values (K1): intermediate #B08A2E on #FBF1DD / dark #CAB082
 // on #3A342C; advanced #C0392B on #FBE7E4 / dark #FF6B5E on #3C2A30.
 const difficultyColor: Record<string, string> = {
-  beginner: "text-[#3F9165] bg-[#E3F3E9] dark:text-[#7FC79C] dark:bg-[#192A20]",
+  beginner: "text-[#1D744A] bg-[#E3F3E9] dark:text-[#7FC79C] dark:bg-[#192A20]",
   intermediate: "text-[#B08A2E] bg-[#FBF1DD] dark:text-[#CAB082] dark:bg-[#3A342C]",
   advanced: "text-[#C0392B] bg-[#FBE7E4] dark:text-[#FF6B5E] dark:bg-[#3C2A30]",
 };

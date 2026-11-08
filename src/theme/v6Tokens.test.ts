@@ -48,12 +48,14 @@ test("Weight trend follows the theme through th- variables", () => {
 test("filled controls take the handover fills, #5B48B8 under High contrast (V6-01)", () => {
   assert.equal(root["--c-fill-pinned"], "154 140 214");
   assert.equal(root["--c-seg-active"], "167 154 213");
-  assert.equal(root["--c-on-primary-fill"], "255 255 255");
+  // Round K ET (2026-11-08): the fills stay, their ink is #241F1B in light.
+  assert.equal(root["--c-on-primary-fill"], "36 31 27");
   assert.equal(dark["--c-fill-pinned"], "var(--c-primary-fill)");
   assert.equal(dark["--c-on-primary-fill"], "13 11 26");
   const hc = merged(index, 'html.high-contrast[data-accent="centium"]:not(.dark)');
   assert.equal(hc["--c-fill-pinned"], "91 72 184");
   assert.equal(hc["--c-seg-active"], "91 72 184");
+  assert.equal(hc["--c-on-primary-fill"], "255 255 255");
 });
 
 test("dark ink on light fills (X-11) and the scrim in both modes (X-07)", () => {

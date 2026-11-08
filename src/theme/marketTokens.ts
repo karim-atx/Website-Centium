@@ -19,16 +19,20 @@ export const MARKET_LIGHT = {
   soft: "#F5F5F6",
   ink: "#241F1B",
   ink2: "#5B5349",
-  faint: "#8C8378",
-  tert: "#A79E93",
+  faint: "#71685E",
+  tert: "#776E64",
   hair: "rgba(36,31,27,0.08)",
   border: "rgba(36,31,27,0.11)",
   div: "rgba(36,31,27,0.06)",
   pale: "#F0EDF9",
-  accent: "#7D67D9",
-  pdark: "#7D6BB5",
+  accent: "#7159CA",
+  pdark: "#715EA7",
   fill: "#AEA1DC",
-  onfill: "#FFFFFF",
+  // Ink on the lavender and teal fills: #241F1B (6.4:1 or better on every
+  // light fill; Round K ET, Karim 2026-11-08). onhigh: the ink on the red and
+  // green fills, which keep white.
+  onfill: "#241F1B",
+  onhigh: "#FFFFFF",
   segtrack: "#F3F3FD",
   segactive: "#A79AD5",
   segidle: "#F5F4FE",
@@ -38,7 +42,7 @@ export const MARKET_LIGHT = {
   subink: "#5B5349",
   tealbg: "#E4F0EE",
   tealink: "#2F5F58",
-  good: "#3F9165",
+  good: "#1D744A",
   goodbg: "#E3F3E9",
   caution: "#B07D16",
   cautionbg: "#F6E9C9",
@@ -83,6 +87,7 @@ export const MARKET_DARK: MarketPalette = {
   pdark: "#C3B3FB",
   fill: "#A991FE",
   onfill: "#0D0B1A",
+  onhigh: "#0D0B1A",
   segtrack: "rgb(36 39 48)",
   segactive: "#A991FE",
   segidle: "rgb(48 49 65)",
@@ -126,6 +131,9 @@ export const MARKET_DARK: MarketPalette = {
  */
 export const MARKET_HC_LIGHT: MarketPalette = {
   ...MARKET_LIGHT,
+  // High contrast keeps white on its #5B48B8 fills.
+  onfill: "#FFFFFF",
+  onhigh: "#FFFFFF",
   ink: "#111111",
   ink2: "#111111",
   faint: "#111111",
@@ -296,7 +304,7 @@ export const STATUS_STEPS = {
   SHORTLISTED: ["#ECEFF5", "#667BB1"],
   OFFERED: ["#EBF2F4", "#5A859E"],
   HIRED: ["#E6F1EF", "#4F8F8A"],
-  DECLINED: ["#F5F5F6", "#8C8378"],
+  DECLINED: ["#F5F5F6", "#71685E"],
 } as const;
 
 /** tokens.json "share". */

@@ -363,13 +363,13 @@ export const ProgrammesTab: React.FC<{
               <ChevronLeft size={18} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
             </button>
             <div className="min-w-0">
-              <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: "#8C8378" }}>{t("Programmes")}</p>
+              <p style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: "0.11em", textTransform: "uppercase", color: "#71685E" }}>{t("Programmes")}</p>
               <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("All assignments")}</h2>
             </div>
-            <span style={{ marginInlineStart: "auto", fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{tn(clients, "{n} client on a programme", "{n} clients on a programme")}</span>
+            <span style={{ marginInlineStart: "auto", fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" }}>{tn(clients, "{n} client on a programme", "{n} clients on a programme")}</span>
           </div>
           {assignedRows.length === 0 ? (
-            <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+            <p style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Not assigned to anyone yet.")}</p>
           ) : (
             <div className="grid" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: "0 20px", gridTemplateColumns: `repeat(${cols},minmax(0,1fr))`, columnGap: 32 }}>
               {assignedRows.map(({ a, tpl }, i) => (
@@ -449,7 +449,7 @@ export const ProgrammesTab: React.FC<{
                   <section aria-label={t("Templates")}>
                     <LibSectionHeadWeb label={t("Templates")} right={visible.length > 3 || workoutTemplateFolders.length ? t("See all {n}", { n: visible.length }) : undefined} onRight={() => go({ view: "all" })} />
                     {latest.length === 0 ? (
-                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No matches.")}</p>
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No matches.")}</p>
                     ) : (
                       <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 2 : 3},minmax(0,1fr))`, gap: 24 }}>
                         {latest.map((tpl) => {
@@ -475,7 +475,7 @@ export const ProgrammesTab: React.FC<{
                   <section aria-label={t("Assigned to clients")}>
                     <LibSectionHeadWeb label={t("Assigned to clients")} />
                     {assignedRows.length === 0 ? (
-                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Not assigned to anyone yet.")}</p>
+                      <p style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Not assigned to anyone yet.")}</p>
                     ) : (
                       <AssignedListWeb
                         rows={assignedRows.slice(0, 3).map(({ a, tpl }) => ({

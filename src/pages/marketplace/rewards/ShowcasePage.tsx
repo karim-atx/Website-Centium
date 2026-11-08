@@ -289,7 +289,7 @@ export function ShowcasePage({ businessId, source }: { businessId: string; sourc
               <section aria-labelledby="showcase-products" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                   <WebCaps id="showcase-products">{t("Products")}</WebCaps>
-                  <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textAlign: "end" }}>{productsNote(extras?.website ?? null)}</span>
+                  <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textAlign: "end" }}>{productsNote(extras?.website ?? null)}</span>
                 </div>
                 {products.state === "loading" ? (
                   <MarketSkeleton radius={18} count={1} rows={2} label={tk("Loading products")} />
@@ -510,7 +510,7 @@ const ShowcaseOffers: React.FC<{ state: Offers; balance: number; onRetry: () => 
               >
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: "block", fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{o.headline}</span>
-                  <span style={{ display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: prog.can ? "#3C6B65" : "#8C8378" }}>{prog.note}</span>
+                  <span style={{ display: "block", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: prog.can ? "#3C6B65" : "#71685E" }}>{prog.note}</span>
                 </span>
                 <PointsFigure value={o.pointsCost} mark="leaf" size={17} />
               </button>

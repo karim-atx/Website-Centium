@@ -265,12 +265,12 @@ export const LibraryHome: React.FC<{
                 <UtensilsCrossed size={52} strokeWidth={1.5} aria-hidden style={{ color: "#7D6BB5" }} />
               </span>
               <p style={{ margin: "24px 0 0", fontSize: 28, lineHeight: "36px", fontWeight: 700, color: "#241F1B" }}>{t("No meal plans yet")}</p>
-              <p style={{ margin: "8px 0 0", maxWidth: 440, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#8C8378" }}>{t("Build a template once, then give each client their own copy.")}</p>
+              <p style={{ margin: "8px 0 0", maxWidth: 440, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#71685E" }}>{t("Build a template once, then give each client their own copy.")}</p>
               <button
                 type="button"
                 onClick={() => setCreating(true)}
                 className="flex items-center justify-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-                style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#FFFFFF", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+                style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#241F1B", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
               >
                 <Plus size={20} strokeWidth={2} aria-hidden />
                 {t("New meal plan")}
@@ -282,7 +282,7 @@ export const LibraryHome: React.FC<{
                 <section aria-label={t("Templates")} className="min-w-0">
                   <LibSectionHeadWeb label={t("Templates")} right={!term && tList.length > TEMPLATES_SHOWN ? (seeAll ? t("Show less") : t("See all")) : undefined} onRight={() => setSeeAll((v) => !v)} />
                   {shownTemplates.length === 0 ? (
-                    <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{term ? t("No templates match.") : t("No templates yet.")}</p>
+                    <p style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{term ? t("No templates match.") : t("No templates yet.")}</p>
                   ) : (
                     <div className="flex flex-col" style={{ gap: 12 }}>
                       {shownTemplates.map((p, i) => {
@@ -309,7 +309,7 @@ export const LibraryHome: React.FC<{
                               {!webRail && chips}
                             </button>
                             <button type="button" aria-label={t("{name} options", { name: p.name })} onClick={(e) => setMenu({ plan: p, anchor: e.currentTarget })} className="flex shrink-0 items-center justify-center hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ width: 40, height: 40, borderRadius: 999 }}>
-                              <EllipsisVertical size={18} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+                              <EllipsisVertical size={18} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
                             </button>
                           </div>
                         );
@@ -322,7 +322,7 @@ export const LibraryHome: React.FC<{
                 <section aria-label={t("Assigned")} className="min-w-0">
                   <LibSectionHeadWeb label={t("Assigned")} />
                   {aList.length === 0 ? (
-                    <p style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{term ? t("No assigned plans match.") : t("No meal plans assigned yet.")}</p>
+                    <p style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{term ? t("No assigned plans match.") : t("No meal plans assigned yet.")}</p>
                   ) : (
                     <div className="flex flex-col" style={{ gap: 12 }}>
                       {aList.map((a) => {
@@ -535,7 +535,7 @@ const Chip11: React.FC<{ label: string; tone: "pr" | "pau" }> = ({ label, tone }
 
 /** The web row chips: 13/20 700, padding 2 8. */
 const ChipWeb: React.FC<{ label: string; tone: "pr" | "pau" }> = ({ label, tone }) => (
-  <span className="whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: tone === "pr" ? "#F0EDF9" : "#F5F5F6", color: tone === "pr" ? "#5F5093" : "#8C8378" }}>
+  <span className="whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, padding: "2px 8px", borderRadius: 9999, background: tone === "pr" ? "#F0EDF9" : "#F5F5F6", color: tone === "pr" ? "#5F5093" : "#71685E" }}>
     {label}
   </span>
 );

@@ -151,7 +151,7 @@ export const SettingsSection: React.FC<{ label: string; first?: boolean; web?: b
     </section>
   ) : web ? (
     <section aria-label={label}>
-      <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", color: "#8C8378" }}>{label}</h2>
+      <h2 style={{ margin: 0, fontSize: 12, fontWeight: 600, lineHeight: "16px", textTransform: "uppercase", letterSpacing: "0.14em", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", color: "#71685E" }}>{label}</h2>
       <div>{children}</div>
     </section>
   ) : (
@@ -195,8 +195,8 @@ export const SettingsRow: React.FC<{
           </span>
         )}
         <span className="flex-1 min-w-0 flex items-center justify-between" style={{ gap: 16 }}>
-          <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", color: muted ? "#8C8378" : "#241F1B" }}>{title}</span>
-          {(sub ?? value) !== undefined && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub ?? value}</span>}
+          <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", color: muted ? "#71685E" : "#241F1B" }}>{title}</span>
+          {(sub ?? value) !== undefined && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{sub ?? value}</span>}
         </span>
         {right ?? (onClick ? <ChevronRight size={18} strokeWidth={2} aria-hidden style={{ color: "#9A94B3", flexShrink: 0 }} /> : null)}
       </>
@@ -221,17 +221,17 @@ export const SettingsRow: React.FC<{
           </span>
         )}
         <span className="flex-1 min-w-0">
-          <span className="block truncate" style={{ fontSize: 15, fontWeight: 600, lineHeight: "24px", color: muted ? "#8C8378" : "#241F1B" }}>
+          <span className="block truncate" style={{ fontSize: 15, fontWeight: 600, lineHeight: "24px", color: muted ? "#71685E" : "#241F1B" }}>
             {title}
           </span>
           {sub && (
-            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {sub}
             </span>
           )}
         </span>
-        {value !== undefined && <span style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>}
-        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} /> : null)}
+        {value !== undefined && <span style={{ flexShrink: 0, whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{value}</span>}
+        {right ?? (onClick ? <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E", flexShrink: 0 }} /> : null)}
         {!last && <span aria-hidden className="absolute" style={{ bottom: 0, insetInlineStart: Icon || tile ? 54 : 0, insetInlineEnd: 0, height: 1, background: "rgba(36,31,27,0.06)" }} />}
       </>
     );
@@ -258,7 +258,7 @@ export const SettingsRow: React.FC<{
           {title}
         </span>
         {sub && (
-          <span className="block" style={{ marginTop: 1, fontSize: textPx(12), lineHeight: "16px", color: INK.chF }}>
+          <span className="block" style={{ marginTop: 1, fontSize: textPx(12), lineHeight: "16px", color: INK.chF, overflowWrap: "anywhere" }}>
             {sub}
           </span>
         )}

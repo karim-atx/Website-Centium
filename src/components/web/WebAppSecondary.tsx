@@ -57,7 +57,7 @@ const under = (pathname: string, base: string) => pathname === base || pathname.
 const VerifiedChip: React.FC = () => {
   const { t } = useApp();
   return (
-    <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#3F9165" }}>
+    <span className="inline-flex items-center" style={{ gap: 4, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#1D744A" }}>
       <BadgeCheck size={14} strokeWidth={2} aria-hidden />
       {t("Verified")}
     </span>

@@ -118,7 +118,7 @@ const Table: React.FC<{
 }> = ({ label, heads, cols, onAdd, empty, children }) => (
   <section aria-label={label} className="shrink-0 flex flex-col" style={{ gap: 12 }}>
     <div className="shrink-0 flex items-end justify-between" style={{ borderBottom: "1.5px solid #AEA1DC", padding: "0 2px 8px" }}>
-      <h2 className="uppercase whitespace-nowrap" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.1em", color: "#8C8378" }}>
+      <h2 className="uppercase whitespace-nowrap" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.1em", color: "#71685E" }}>
         {label}
       </h2>
       <button
@@ -332,7 +332,7 @@ const ServicesTable: React.FC<{ services: Service[]; cols: string; onAdd: () => 
                 letterSpacing: "0.04em",
                 padding: "3px 10px",
                 background: x.active ? "#E3F3E9" : "#F5F5F6",
-                color: x.active ? "#2F7A52" : "#8C8378",
+                color: x.active ? "#2F7A52" : "#71685E",
               }}
             >
               {x.active ? t("Visible") : t("Hidden")}

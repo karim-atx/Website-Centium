@@ -163,7 +163,7 @@ export const ProgrammeDetail: React.FC<{
       if (!c.access.workoutActivity)
         return (
           <div className="flex items-start" style={{ gap: 10, borderRadius: 14, background: "#F5F5F6", padding: "10px 14px" }}>
-            <Lock size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2, color: "#8C8378" }} />
+            <Lock size={16} strokeWidth={2} aria-hidden className="shrink-0" style={{ marginTop: 2, color: "#71685E" }} />
             <p className="flex-1 min-w-0" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
               {t("Workout activity not shared, so hidden. {name} can change this any time.", { name: c.name.split(" ")[0] })}
             </p>
@@ -172,7 +172,7 @@ export const ProgrammeDetail: React.FC<{
       if (state === "error" && !sessions) return <ProError onRetry={() => setReload((x) => x + 1)} />;
       if (!sessions) return <ProCardSkeleton lines={2} />;
       const mine = sessions.filter((s) => s.userId === clientId && s.routineId === routineId);
-      if (mine.length === 0) return <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No sessions logged yet.")}</p>;
+      if (mine.length === 0) return <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("No sessions logged yet.")}</p>;
       return (
         <div className="flex flex-col">
           {mine.slice(0, 3).map((s) => (
@@ -180,13 +180,13 @@ export const ProgrammeDetail: React.FC<{
               <span className="whitespace-nowrap shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                 {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(s.totalVolumeKg).toLocaleString(appLocale()) })}
               </span>
-              <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {reviewStateText(reviewStates[s.id]) ? `${reviewStateText(reviewStates[s.id])} · ` : ""}
                 {s.exercises.map((e) => e.name).join(", ")}
               </span>
             </button>
           ))}
-          {mine.length > 3 && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{tn(mine.length - 3, "{n} earlier session not shown.", "{n} earlier sessions not shown.")}</p>}
+          {mine.length > 3 && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{tn(mine.length - 3, "{n} earlier session not shown.", "{n} earlier sessions not shown.")}</p>}
         </div>
       );
     };
@@ -207,7 +207,7 @@ export const ProgrammeDetail: React.FC<{
             <section aria-label={t("Workout")} className="flex flex-col min-w-0" style={{ gridColumn: `span ${rail ? 5 : 7}`, boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, padding: 24 }}>
               <div style={{ borderRadius: 12, background: "rgba(125,107,181,0.11)", padding: "16px 20px", marginBottom: 16 }}>
                 <p style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.01em", color: "#241F1B", overflowWrap: "anywhere" }}>{template.name}</p>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                   {[tn(template.exercises.length, "{n} exercise", "{n} exercises"), template.durationMin ? tn(template.durationMin, "{n} min", "{n} min") : null].filter(Boolean).join(" · ")}
                 </p>
               </div>
@@ -252,7 +252,7 @@ export const ProgrammeDetail: React.FC<{
                               <InitialsWeb name={c?.name ?? ""} url={c?.avatarUrl} />
                               <span className="flex-1 min-w-0">
                                 <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{c?.name ?? t("A client")}</span>
-                                {line && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{line}</span>}
+                                {line && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{line}</span>}
                               </span>
                             </button>
                             <button type="button" onClick={() => end(a.id)} className="shrink-0 hover:text-[#C0392B]" style={{ padding: "8px 0", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: confirmEnd === a.id ? "#C0392B" : "#5B5349" }}>
@@ -275,7 +275,7 @@ export const ProgrammeDetail: React.FC<{
                           <InitialsWeb name={c?.name ?? ""} url={c?.avatarUrl} size={36} />
                           <span className="flex-1 min-w-0 flex flex-wrap items-baseline justify-between" style={{ columnGap: 12 }}>
                             <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{c?.name ?? t("A client")}</span>
-                            <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                            <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                               {dateSpan([...new Set([a.startsOn ? fmtDay(a.startsOn, true) : null, a.endsOn ? fmtDay(a.endsOn, true) : null].filter((d): d is string => !!d))])}
                             </span>
                           </span>

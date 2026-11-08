@@ -77,7 +77,7 @@ const EyeTag: React.FC<{ on: boolean; name: string }> = ({ on, name }) => {
   const w = useClientWebSizes();
   const ic = w ? 14 : 11;
   return (
-    <span className="inline-flex items-center whitespace-nowrap" style={{ gap: w ? 4 : 3, fontSize: textPx(w ? 13 : 10), lineHeight: w ? "16px" : undefined, fontWeight: 700, color: on ? INK.tealDark : INK.chF }}>
+    <span className="inline-flex items-center whitespace-nowrap" style={{ gap: w ? 4 : 3, fontSize: textPx(w ? 13 : 10), lineHeight: w ? "16px" : undefined, fontWeight: 700, color: on ? INK.tealDarkInk : INK.chF }}>
       {on ? <Eye size={ic} strokeWidth={2} aria-hidden /> : <EyeOff size={ic} strokeWidth={2} aria-hidden />}
       {on ? t("{name} sees", { name }) : t("Only you")}
     </span>

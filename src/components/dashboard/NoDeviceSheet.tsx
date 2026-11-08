@@ -61,7 +61,7 @@ export const NoDeviceSheet: React.FC<{ open: boolean; metric: NoDeviceMetric; on
           onClick={onClose}
           aria-label={t("Close")}
           className="tap absolute grid place-items-center rounded-full"
-          style={{ top: 12, insetInlineEnd: 12, width: 26, height: 26, border: `1.09545px solid ${dark ? "#B8B3C7" : "#8C8378"}`, color: dark ? "#B8B3C7" : "#8C8378" }}
+          style={{ top: 12, insetInlineEnd: 12, width: 26, height: 26, border: `1.09545px solid ${dark ? "#B8B3C7" : "#71685E"}`, color: dark ? "#B8B3C7" : "#71685E" }}
         >
           <span aria-hidden className="absolute" style={{ insetInlineStart: "50%", top: "50%", width: 44, height: 44, transform: "translate(-50%, -50%)" }} />
           <X size={12} strokeWidth={2} aria-hidden />

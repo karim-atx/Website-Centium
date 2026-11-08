@@ -278,7 +278,7 @@ export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pi
         <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, columnGap: 24, rowGap: 16 }}>
           {tab !== "rewards" && (
             <label className="min-w-0 flex items-center" style={{ gridColumn: `span ${rail ? 4 : 5}`, height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", padding: "0 14px", gap: 8 }}>
-              <Search size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
+              <Search size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E", flexShrink: 0 }} />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
@@ -392,7 +392,7 @@ export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pi
       {tab === "rewards" && <RewardsTab />}
 
       {loading && tab !== "rewards" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label={t("Loading")}>
+        <div role="status" style={{ display: "flex", flexDirection: "column", gap: tab === "gyms" ? 10 : 16, marginTop: 14 }} aria-busy="true" aria-label={t("Loading")}>
           {[0, 1, 2].map((i) => (
             <div key={i} aria-hidden="true" className="animate-skeleton-pulse" style={{ height: tab === "gyms" ? 166 : 117, borderRadius: 18, background: m.soft }} />
           ))}
@@ -485,11 +485,11 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
               aria-label={has ? formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) : t("{date}, no classes", { date: formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) })}
               onClick={() => onPick(d)}
               className="market-focus flex flex-col items-center justify-center"
-              style={{ height: 56, borderRadius: 12, border: 0, background: on ? "#8F7FCB" : "#F5F5F6", color: on ? "#FFFFFF" : "#241F1B", font: "inherit", cursor: "pointer" }}
+              style={{ height: 56, borderRadius: 12, border: 0, background: on ? "#8F7FCB" : "#F5F5F6", color: "#241F1B", font: "inherit", cursor: "pointer" }}
             >
-              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 500, color: on ? "#FFFFFF" : "#5B5349" }}>{formatShortDate(date, { weekday: "short" })}</span>
+              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 500, color: on ? "#241F1B" : "#5B5349" }}>{formatShortDate(date, { weekday: "short" })}</span>
               <span style={{ fontSize: 17, lineHeight: "22px", fontWeight: 700 }}>{date.getDate()}</span>
-              <span aria-hidden style={{ marginTop: 2, width: 4, height: 4, borderRadius: 999, background: has ? (on ? "#FFFFFF" : "#AEA1DC") : "transparent" }} />
+              <span aria-hidden style={{ marginTop: 2, width: 4, height: 4, borderRadius: 999, background: has ? (on ? "#241F1B" : "#AEA1DC") : "transparent" }} />
             </button>
           );
         })}

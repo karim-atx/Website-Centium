@@ -133,7 +133,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
   };
   return (
     <div className="animate-fade-slide-up">
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{t("Quick actions")}</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.63] dark:text-charcoal/[0.55]">{t("Quick actions")}</p>
 
       {/* One drawing with its taps on fixed sides: kept left to right in Arabic too. */}
       <div ref={rowRef} dir="ltr" className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>

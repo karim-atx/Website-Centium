@@ -91,6 +91,8 @@ const Pill: React.FC<{ text: Text; onOpen: () => void; onDone: () => void }> = (
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [hover, setHover] = useState(false);
+  // Round K · ET: while it has keyboard or screen-reader focus it stays (no time limit); Escape still dismisses.
+  const [focused, setFocused] = useState(false);
   const drag = useRef<{ y: number; moved: boolean } | null>(null);
   const exitTimer = useRef<number | null>(null);
   const leaving = useRef(false);
@@ -119,10 +121,10 @@ const Pill: React.FC<{ text: Text; onOpen: () => void; onDone: () => void }> = (
   // The hold: restarted when the same push comes again (its text) and by the
   // pointer leaving; longer while it is over the card.
   useEffect(() => {
-    if (stage !== "in" || dragging) return;
+    if (stage !== "in" || dragging || focused) return;
     const id = window.setTimeout(leave, (hover ? HOVER_HOLD_MS : HOLD_MS) + ENTER_MS);
     return () => window.clearTimeout(id);
-  }, [stage, hover, dragging, text, leave]);
+  }, [stage, hover, dragging, focused, text, leave]);
 
   const open = () => {
     onOpen();
@@ -174,6 +176,8 @@ const Pill: React.FC<{ text: Text; onOpen: () => void; onDone: () => void }> = (
         }}
         onPointerEnter={() => setHover(true)}
         onPointerLeave={() => setHover(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();

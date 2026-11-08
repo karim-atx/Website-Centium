@@ -316,7 +316,7 @@ export default function TwoFactorPage() {
       {loading ? (
         // Foundations loading state: skeleton blocks at the widgets' places
         // (surface.soft, radius 20; 200 and 230 tall as MO1.8.4 draws them).
-        <div aria-busy="true" aria-label={t("Loading two-factor status")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading two-factor status")}>
           <div className="mt-5 h-[200px] rounded-[20px] bg-cream-soft" />
           <div className="mt-4 h-[230px] rounded-[20px] bg-cream-soft" />
         </div>

@@ -166,13 +166,13 @@ export const OverviewWeb: React.FC<{ rail: boolean }> = ({ rail }) => {
             >
               {k && !loading ? (
                 <>
-                  <p className="rtl:tracking-normal" style={{ margin: 0, alignSelf: "start", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#8C8378", whiteSpace: "nowrap" }}>
+                  <p className="rtl:tracking-normal" style={{ margin: 0, alignSelf: "start", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#71685E", whiteSpace: "nowrap" }}>
                     {k.label}
                   </p>
-                  <p data-cell-value style={{ margin: 0, fontSize: 40, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums lining-nums", color: k.value === "–" ? "#A79E93" : "#3F3272", whiteSpace: "nowrap" }}>
+                  <p data-cell-value style={{ margin: 0, fontSize: 40, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.04em", fontVariantNumeric: "tabular-nums lining-nums", color: k.value === "–" ? "#776E64" : "#3F3272", whiteSpace: "nowrap" }}>
                     {k.value}
                   </p>
-                  <p style={{ margin: 0, alignSelf: "end", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.01em", color: k.dir === "down" ? "#C0392B" : k.dir === "up" ? "#7D6BB5" : "#8C8378", whiteSpace: "nowrap", minHeight: 20 }}>
+                  <p style={{ margin: 0, alignSelf: "end", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.01em", color: k.dir === "down" ? "#C0392B" : k.dir === "up" ? "#7D6BB5" : "#71685E", whiteSpace: "nowrap", minHeight: 20 }}>
                     {k.delta ? `${k.dir === "up" ? "↑ " : k.dir === "down" ? "↓ " : ""}${k.delta}` : ""}
                   </p>
                 </>
@@ -241,19 +241,19 @@ function InsightCard({ rail, Icon, col, title, data, onOpen }: { rail: boolean; 
         <span aria-hidden style={{ width: rail ? 24 : 32, height: rail ? 24 : 32, borderRadius: 10, background: tint(col, 0.14), color: col, display: "flex", alignItems: "center", justifyContent: "center", flex: "none" }}>
           <Icon size={rail ? 16 : 18} strokeWidth={2.2} />
         </span>
-        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden style={{ color: "#8C8378", flex: "none" }} />}
+        {onOpen && <ChevronRight size={rail ? 14 : 16} aria-hidden style={{ color: "#71685E", flex: "none" }} />}
       </div>
       <span style={{ marginTop: rail ? 6 : 8, fontSize: rail ? 15 : 17, lineHeight: rail ? "20px" : "24px", fontWeight: 700, whiteSpace: "nowrap", color: "#241F1B", textAlign: "start" }}>{title}</span>
       {data ? (
         <>
           <div style={{ marginTop: rail ? 6 : 10, display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-            <span data-insight-value style={{ fontSize: rail ? 24 : 28, lineHeight: rail ? "32px" : "36px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", color: data.value === "–" ? "#A79E93" : "#241F1B", whiteSpace: "nowrap" }}>{data.value}</span>
+            <span data-insight-value style={{ fontSize: rail ? 24 : 28, lineHeight: rail ? "32px" : "36px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", color: data.value === "–" ? "#776E64" : "#241F1B", whiteSpace: "nowrap" }}>{data.value}</span>
             {data.delta && (
-              <span style={{ borderRadius: 999, padding: "2px 8px", background: data.up ? "rgba(63,145,101,0.14)" : "#F5F5F6", fontSize: 12, lineHeight: "16px", fontWeight: 700, color: data.up ? "#3F9165" : "#8C8378", whiteSpace: "nowrap" }}>{data.delta}</span>
+              <span style={{ borderRadius: 999, padding: "2px 8px", background: data.up ? "rgba(63,145,101,0.14)" : "#F5F5F6", fontSize: 12, lineHeight: "16px", fontWeight: 700, color: data.up ? "#1D744A" : "#71685E", whiteSpace: "nowrap" }}>{data.delta}</span>
             )}
           </div>
           <span />
-          <p style={{ margin: `${rail ? 6 : 10}px 0 0`, alignSelf: "start", fontSize: 13, lineHeight: "20px", color: "#8C8378", textAlign: "start", textWrap: "pretty" } as React.CSSProperties}>{data.sub}</p>
+          <p style={{ margin: `${rail ? 6 : 10}px 0 0`, alignSelf: "start", fontSize: 13, lineHeight: "20px", color: "#71685E", textAlign: "start", textWrap: "pretty" } as React.CSSProperties}>{data.sub}</p>
         </>
       ) : (
         <>

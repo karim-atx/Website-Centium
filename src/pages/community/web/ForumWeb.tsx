@@ -65,7 +65,7 @@ function HeldLine({ text }: { text: string }) {
     };
   }, [text]);
   return (
-    <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+    <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
       {gentle ? `${t("Only you can see this for now.")} ${t("If you're going through something hard, you don't have to face it alone.")}` : `${t("Held for review.")} ${t("Only you can see this until our team checks it.")}`}
     </p>
   );
@@ -286,7 +286,7 @@ export function ForumWeb({
                 <MessageCircle size={26} strokeWidth={1.75} />
               </span>
               <p style={{ margin: "10px 0 0", fontSize: 17, lineHeight: "24px", fontWeight: 700 }}>{t("No posts here yet")}</p>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Start the conversation.")}</p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Start the conversation.")}</p>
             </div>
           )
         ) : (
@@ -323,7 +323,7 @@ export function ForumWeb({
               </>
             )}
             {loadingMore && (
-              <p role="status" style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p role="status" style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {t("Loading older posts…")}
               </p>
             )}
@@ -334,7 +334,7 @@ export function ForumWeb({
       <aside className="flex flex-col" style={{ minWidth: 0, gap: 12, position: "sticky", top: 88 }}>
         {nickname && (
           <div data-co-nickname className="flex items-start justify-between" style={{ borderRadius: 20, border: "0.5px solid rgba(36,31,27,0.1)", padding: "14px 16px", gap: 10 }}>
-            <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {t("Your nickname:")} <b style={{ color: "#241F1B" }}>{nickname}</b>. {t("You choose nickname or name each time you post.")}
             </span>
             <Link to="/app/forum/nickname" className="co-web-focus shrink-0 no-underline" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#7D6BB5", borderRadius: 4 }}>
@@ -482,7 +482,7 @@ function PostCard({
         className="co-web-more co-web-back absolute grid place-items-center"
         style={{ top: 12, insetInlineEnd: 12, width: 32, height: 32, borderRadius: 999 }}
       >
-        <EllipsisVertical size={18} color="#8C8378" aria-hidden />
+        <EllipsisVertical size={18} color="#71685E" aria-hidden />
       </button>
       <div className="flex items-center" style={{ gap: 10 }}>
         <Initials author={author} nickname={thread.identity === "nickname"} size={36} />
@@ -504,7 +504,7 @@ function PostCard({
                 {categoryName}
               </span>
             )}
-            <span className="inline-flex items-center whitespace-nowrap" style={{ height: 24, padding: "0 9px", borderRadius: 999, fontSize: 13, lineHeight: "20px", fontWeight: 600, background: "#F5F5F6", color: "#8C8378" }}>
+            <span className="inline-flex items-center whitespace-nowrap" style={{ height: 24, padding: "0 9px", borderRadius: 999, fontSize: 13, lineHeight: "20px", fontWeight: 600, background: "#F5F5F6", color: "#71685E" }}>
               {forumMetaLine(thread.createdAt, thread.pinned, true)}
             </span>
           </span>

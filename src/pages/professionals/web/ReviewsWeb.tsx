@@ -157,7 +157,7 @@ export const ReviewsWeb: React.FC<{ id: string }> = ({ id }) => {
                     {own ? t("You") : r.reviewerName ?? t("A client")}
                   </span>
                   <PrStars n={r.rating} />
-                  <span style={{ marginInlineStart: "auto", fontSize: 13, color: "#8C8378", whiteSpace: "nowrap" }}>{monthYear(r.createdAt, locale)}</span>
+                  <span style={{ marginInlineStart: "auto", fontSize: 13, color: "#71685E", whiteSpace: "nowrap" }}>{monthYear(r.createdAt, locale)}</span>
                   {!own && (
                     <button
                       type="button"
@@ -168,12 +168,12 @@ export const ReviewsWeb: React.FC<{ id: string }> = ({ id }) => {
                       className="pr-web-back grid place-items-center"
                       style={{ width: 28, height: 28, marginBlock: -6, marginInlineEnd: -8, borderRadius: 999, flex: "none" }}
                     >
-                      <EllipsisVertical size={16} color="#8C8378" aria-hidden />
+                      <EllipsisVertical size={16} color="#71685E" aria-hidden />
                     </button>
                   )}
                 </div>
                 {r.redactedAt ? (
-                  <p style={{ margin: "6px 0 0", fontSize: 15, lineHeight: "22px", fontStyle: "italic", color: "#8C8378" }}>{t("A moderator removed this review. It no longer counts toward the rating.")}</p>
+                  <p style={{ margin: "6px 0 0", fontSize: 15, lineHeight: "22px", fontStyle: "italic", color: "#71685E" }}>{t("A moderator removed this review. It no longer counts toward the rating.")}</p>
                 ) : r.body ? (
                   <p style={{ margin: "6px 0 0", fontSize: 15, lineHeight: "22px", color: "#5B5349", whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{r.body}</p>
                 ) : null}

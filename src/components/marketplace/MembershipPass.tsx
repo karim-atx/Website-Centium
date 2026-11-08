@@ -154,7 +154,7 @@ export function MembershipPass({
                   aria-selected={on}
                   onClick={() => setMethod(m.key)}
                   className={`tap flex-1 min-w-0 rounded-[10px] inline-flex items-center justify-center gap-1.5 text-[12px] font-bold ${
-                    on ? "bg-th-a79ad5 text-white dark:bg-primary-fill dark:text-on-primary-fill" : "text-charcoal-soft"
+                    on ? "bg-th-a79ad5 text-on-primary-fill dark:bg-primary-fill" : "text-charcoal-soft"
                   }`}
                 >
                   <m.Icon size={13} strokeWidth={1.75} aria-hidden />

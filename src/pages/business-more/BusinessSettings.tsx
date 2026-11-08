@@ -177,7 +177,7 @@ export default function BusinessSettings() {
       >
         <p
           className={paneWeb ? undefined : "text-[12px] font-bold text-charcoal"}
-          style={paneWeb ? { margin: "0 0 10px", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" } : { marginBottom: 12 }}
+          style={paneWeb ? { margin: "0 0 10px", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" } : { marginBottom: 12 }}
         >
           {t("Color theme")}
         </p>
@@ -305,7 +305,7 @@ export default function BusinessSettings() {
           yet (package.json 0.0.0), so the line names the app only. */}
       {paneWeb ? (
         // The pane's note (13/20 #8C8378) and its delete line (40, 15/24 600 #B4372C, at the start).
-        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Centium for Business")}</p>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Centium for Business")}</p>
       ) : (
         <p className="text-center text-[10.5px] text-th-9a94b3" style={{ margin: "4px 0 6px" }}>
           {t("Centium for Business")}

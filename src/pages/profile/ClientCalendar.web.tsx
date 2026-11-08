@@ -110,7 +110,7 @@ function CalendarWeb() {
             style={{ borderRadius: 15, border: "0.5px solid rgba(125,107,181,0.16)", padding: 12, gridTemplateColumns: "repeat(7,minmax(0,1fr))", gridTemplateRows: "auto", gridAutoRows: "minmax(0,1fr)", gap: 4 }}
           >
             {weekdays().map((d) => (
-              <span key={d} role="columnheader" className="text-center uppercase rtl:tracking-normal" style={{ fontSize: 12, lineHeight: "24px", fontWeight: 700, letterSpacing: ".1em", color: "#8C8378" }}>
+              <span key={d} role="columnheader" className="text-center uppercase rtl:tracking-normal" style={{ fontSize: 12, lineHeight: "24px", fontWeight: 700, letterSpacing: ".1em", color: "#71685E" }}>
                 {d}
               </span>
             ))}
@@ -254,7 +254,7 @@ function CalendarWeb() {
               })}
               {selectedEvents.length === 0 && (
                 <div className="grid place-items-center" style={{ minHeight: 120, borderRadius: 15, background: "#FAFAFB" }}>
-                  <p style={{ margin: 0, fontSize: 15, color: "#8C8378" }}>{t("No events")}</p>
+                  <p style={{ margin: 0, fontSize: 15, color: "#71685E" }}>{t("No events")}</p>
                 </div>
               )}
             </>

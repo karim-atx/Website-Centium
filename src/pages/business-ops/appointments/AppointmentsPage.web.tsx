@@ -359,9 +359,9 @@ function ApptPane({ id, rail, onChanged }: { id: string; rail: boolean; onChange
         style={{ border: "1px solid rgba(36,31,27,0.11)", borderRadius: 20, padding: pad, boxSizing: "border-box", maxHeight: rail ? undefined : "calc(100dvh - 128px)" }}
       >
         <div className="shrink-0" style={{ marginBottom: rail ? 12 : 16 }}>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{t("Appointments")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{t("Appointments")}</p>
           <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{a.serviceName}</h2>
-          <p className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{`${dayTitle(new Date(a.startsAt))}, ${rangeClock12(a.startsAt, a.endsAt)}`}</p>
+          <p className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{`${dayTitle(new Date(a.startsAt))}, ${rangeClock12(a.startsAt, a.endsAt)}`}</p>
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col" style={{ gap: 12, scrollbarWidth: "thin" }}>
           <WebLabel as="h3" label={t("Client")} first />
