@@ -104,14 +104,16 @@ export function toPassCheck(row: VerifyRow | null | undefined): PassCheck {
 
 /**
  * A pass as the member's QR carries it: the static pass_token (32 lowercase
- * hex characters, still accepted: phase one of its retirement), or Round F2
- * AB5's 30-second code "pd:<device id>:<6 digits>" (20261226070000), passed
- * to check_in_with_pass / verify_gym_pass's p_token as it is, lowercased.
+ * hex characters, still accepted: phase one of its retirement), Round F2
+ * AB5's 30-second code "pd:<device id>:<6 digits>" (20261226070000), or a
+ * Google Wallet pass's rotating code "gw:<wallet pass id>:<6 digits>"
+ * (App-Centium ROUND_K.md §4.2; Database DB-Z7), passed to
+ * check_in_with_pass / verify_gym_pass's p_token as it is, lowercased.
  */
 export function normalizePassToken(raw: string): string | null {
   const s = raw.trim().toLowerCase();
   if (/^[0-9a-f]{32}$/.test(s)) return s;
-  return /^pd:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9]{6}$/.test(s) ? s : null;
+  return /^(pd|gw):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}:[0-9]{6}$/.test(s) ? s : null;
 }
 
 export type ResultTone = "good" | "warn" | "high" | "primary" | "soft";

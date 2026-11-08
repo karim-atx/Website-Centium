@@ -283,6 +283,10 @@ test("Round F2 AB5: the 30-second code reaches the server as scanned; a stale on
   assert.equal(normalizePassToken(`pd:${D}:12345`), null);
   assert.equal(normalizePassToken(`pd:not-a-uuid:012345`), null);
   assert.equal(normalizePassToken(`pd:${D}:0123456`), null);
+  // A Google Wallet pass's rotating code reads the same way (ROUND_K.md §4.2).
+  assert.equal(normalizePassToken(` GW:${D.toUpperCase()}:654321 `), `gw:${D}:654321`);
+  assert.equal(normalizePassToken(`gw:${D}:65432`), null);
+  assert.equal(normalizePassToken(`gx:${D}:654321`), null);
   const stale = toPassCheck({ valid: false, pass_state: "code_expired", membership_id: null, gym_id: null, member_first_name: null, member_is_minor: null, expires_on: null });
   assert.equal(stale.state, "code_expired");
   assert.equal(stale.valid, false);
