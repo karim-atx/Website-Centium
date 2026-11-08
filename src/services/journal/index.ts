@@ -383,19 +383,30 @@ export interface FolderLockAuth {
  * without one (Google- or Apple-only) unlocks with an emailed code, so Lock
  * is offered to it too, but only once the Database has the code calls:
  * my_device_keys ships with them, and "function not found" means it hasn't,
- * so Lock stays hidden rather than lock a folder nothing can open. A Google
- * account that later set a password reads as code-only here (see
- * hasEmailPassword); the server answers ATXB2 and the prompt switches to the
+ * so Lock stays hidden rather than lock a folder nothing can open. Whether
+ * the account has a password comes from the server (my_account_has_password,
+ * DB-Z8), which is right even for a Google account that later set one; if it
+ * can't answer, the providers on the user object stand in (hasEmailPassword),
+ * and a wrong guess is caught by ATXB2, which switches the prompt to the
  * password.
  */
 export async function folderLockAuth(): Promise<FolderLockAuth | null> {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   if (!user) return null;
-  const password = hasEmailPassword(user);
-  const codeReady = password ? false : await codeUnlockAvailable();
+  const server = await accountHasPasswordRemote();
+  const password = server ?? hasEmailPassword(user);
+  // The server answering at all means DB-Z8, and so the code calls, are live.
+  const codeReady = password ? false : server !== null || (await codeUnlockAvailable());
   const method = unlockMethodFor(password, codeReady);
   return method ? { method, email: user.email ?? "" } : null;
+}
+
+/** my_account_has_password(): null when the server can't say (not live yet, or offline). */
+async function accountHasPasswordRemote(): Promise<boolean | null> {
+  const { data, error } = await rpc<boolean>("my_account_has_password", {});
+  if (error || typeof data !== "boolean") return null;
+  return data;
 }
 
 async function codeUnlockAvailable(): Promise<boolean> {
