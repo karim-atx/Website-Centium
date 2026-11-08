@@ -54,7 +54,7 @@ export function WebSegmented<K extends string>({
 
 /** The caps section label (13/20 600, 0.08em, #8C8378). */
 export const WebCapsLabel: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
-  <p className="rtl:tracking-normal" style={{ flex: "none", margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#8C8378", ...style }}>
+  <p className="rtl:tracking-normal" style={{ flex: "none", margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: "#71685E", ...style }}>
     {children}
   </p>
 );

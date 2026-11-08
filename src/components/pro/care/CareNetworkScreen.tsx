@@ -497,7 +497,7 @@ export const CareNetworkScreen: React.FC = () => {
         </button>
         <div className="min-w-0 flex-1">
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("Care network")}</h1>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Referrals between you and colleagues")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Referrals between you and colleagues")}</p>
         </div>
         <button
           type="button"

@@ -17,7 +17,7 @@ export const JournalCardWeb: React.FC<{ eyebrow: string; title: string; right?: 
   <section aria-label={t("Food journal")} className="min-w-0 flex flex-col overflow-hidden" style={{ boxSizing: "border-box", borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)" }}>
     <div className="flex items-start justify-between" style={{ gap: 12, padding: "20px 24px 0" }}>
       <div className="min-w-0">
-        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{eyebrow}</p>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{eyebrow}</p>
         <h2 style={{ margin: "2px 0 0", fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", overflowWrap: "anywhere" }}>{title}</h2>
       </div>
       {right}
@@ -80,7 +80,7 @@ export const DayTotalsWeb: React.FC<{ rail: boolean; totals: { kcal: number; pro
         <span className="relative flex flex-col items-center text-center">
           <span style={{ fontSize: 28, lineHeight: "32px", fontWeight: 800, letterSpacing: "-0.03em", color: "#241F1B", fontVariantNumeric: "tabular-nums" }}>{n0(totals.kcal)}</span>
           <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600, color: "#5F5093" }}>{k ? t("of {n} kcal", { n: n0(k) }) : t("No target set")}</span>
-          {leftK != null && <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 800, color: leftK >= 0 ? "#3F9165" : "#C0392B" }}>{leftK >= 0 ? t("{n} left", { n: n0(leftK) }) : t("{n} over", { n: n0(-leftK) })}</span>}
+          {leftK != null && <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 800, color: leftK >= 0 ? "#1D744A" : "#C0392B" }}>{leftK >= 0 ? t("{n} left", { n: n0(leftK) }) : t("{n} over", { n: n0(-leftK) })}</span>}
         </span>
       </span>
       <div className="flex-1 min-w-0 flex flex-col" style={{ gap: 14 }}>
@@ -103,7 +103,7 @@ export const DayTotalsWeb: React.FC<{ rail: boolean; totals: { kcal: number; pro
                 <span className="block" style={{ height: "100%", width: `${pct.toFixed(1)}%`, borderRadius: 5, background: c }} />
               </span>
               <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5F5093", textAlign: "end", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{tg == null ? t("{n} g", { n: n0(a) }) : `${n0(a)} / ${n0(tg)} g`}</span>
-              {!rail && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: diff != null && diff < 0 ? "#C0392B" : "#3F9165", textAlign: "end", whiteSpace: "nowrap" }}>{diff == null ? "" : diff >= 0 ? t("{n} g left", { n: n0(diff) }) : t("{n} g over", { n: n0(-diff) })}</span>}
+              {!rail && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: diff != null && diff < 0 ? "#C0392B" : "#1D744A", textAlign: "end", whiteSpace: "nowrap" }}>{diff == null ? "" : diff >= 0 ? t("{n} g left", { n: n0(diff) }) : t("{n} g over", { n: n0(-diff) })}</span>}
             </div>
           );
         })}
@@ -120,7 +120,7 @@ export const MealCardWeb: React.FC<{ slot: string; totals: { kcal: number; prote
   return (
     <div className="min-w-0 flex flex-col" style={{ boxSizing: "border-box", gap: 10, borderRadius: 18, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", padding: "14px 16px" }}>
       <div className="flex items-center" style={{ gap: 12 }}>
-        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{slot}</span>
+        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{slot}</span>
         <span role="img" aria-label={t("{slot}: {kcal} kcal, protein {p} g, carbs {c} g, fat {f} g", { slot, kcal: n0(totals.kcal), p, c, f })} className="flex flex-col shrink-0" style={{ gap: 4, width: 132 }}>
           <span className="flex overflow-hidden" style={{ height: 8, borderRadius: 3, background: "rgba(36,31,27,0.07)" }}>
             {seg.map(([v, col], i) => (

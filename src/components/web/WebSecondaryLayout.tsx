@@ -159,7 +159,7 @@ export const SecondaryGroups: React.FC<{ title: string; groups: SecondaryGroup[]
           <section key={g.label} aria-label={t(g.label)} className="shrink-0 flex flex-col">
             <p
               className="shrink-0 uppercase rtl:tracking-normal"
-              style={{ margin: "0 4px 10px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".14em", color: "#8C8378" }}
+              style={{ margin: "0 4px 10px", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".14em", color: "#71685E" }}
             >
               {t(g.label)}
             </p>

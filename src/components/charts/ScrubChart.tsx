@@ -118,7 +118,7 @@ const MK: Record<
   },
   rise: {
     icon: TrendingUp,
-    light: ["#3F9165", "#E3F3E9", "#2F7A50"],
+    light: ["#1D744A", "#E3F3E9", "#2F7A50"],
     dark: ["#7FC79C", "#192A20", "#7FC79C"],
   },
 };

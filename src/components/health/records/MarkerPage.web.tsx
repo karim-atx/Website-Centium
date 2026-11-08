@@ -101,14 +101,14 @@ export const MarkerPageWeb: React.FC<{
               <div className="min-w-0" style={{ flex: "1 1 240px" }}>
                 <p className="flex items-baseline flex-wrap" style={{ margin: 0, columnGap: 8 }}>
                   <span style={{ fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-1.2px", fontVariantNumeric: "tabular-nums", color: colour(status) }}>{latest.value}</span>
-                  <span style={{ fontSize: 17, fontWeight: 600, color: "#8C8378" }}>{latest.unit}</span>
+                  <span style={{ fontSize: 17, fontWeight: 600, color: "#71685E" }}>{latest.unit}</span>
                   {!isThreshold && status && (
                     <span style={{ marginInlineStart: 6 }}>
                       <StatusWord status={status} size={15} line={22} icon={16} long />
                     </span>
                   )}
                 </p>
-                <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{`${t("Latest")} · ${fmtDate(latest.date)} · ${reportLabel(latest)}`}</p>
+                <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{`${t("Latest")} · ${fmtDate(latest.date)} · ${reportLabel(latest)}`}</p>
                 {hasRange && (
                   <p style={{ margin: "12px 0 0", fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                     {t("Reference range {range} {unit}", { range: rangeText(latest.rangeLow, latest.rangeHigh), unit: latest.unit })}
@@ -123,7 +123,7 @@ export const MarkerPageWeb: React.FC<{
                       <span className="block" style={{ fontSize: 20, lineHeight: "26px", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: s.color }}>
                         {s.value}
                       </span>
-                      <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600, color: "#8C8378" }}>
+                      <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "18px", fontWeight: 600, color: "#71685E" }}>
                         {s.label}
                       </span>
                     </div>
@@ -182,7 +182,7 @@ export const MarkerPageWeb: React.FC<{
                     <span className="block" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                       {fmtDate(r.date)}
                     </span>
-                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {reportLabel(r)}
                     </span>
                   </span>
@@ -198,7 +198,7 @@ export const MarkerPageWeb: React.FC<{
                     className="shrink-0 grid place-items-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
                     style={{ width: 32, height: 32, marginInlineEnd: -6 }}
                   >
-                    <MoreVertical size={18} style={{ color: "#8C8378" }} aria-hidden />
+                    <MoreVertical size={18} style={{ color: "#71685E" }} aria-hidden />
                   </button>
                 </div>
               ))}

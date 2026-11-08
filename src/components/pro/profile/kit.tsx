@@ -43,9 +43,9 @@ export const SubPage: React.FC<{
       <div style={{ paddingBottom: bottomPad }}>
         <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 24 }}>
           <div className="flex-1 min-w-0">
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{paneEyebrow}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{paneEyebrow}</p>
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h1>
-            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{subtitle ?? paneSubtitle}</p>}
+            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{subtitle ?? paneSubtitle}</p>}
           </div>
           {right}
         </header>
@@ -56,7 +56,7 @@ export const SubPage: React.FC<{
         <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
           <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
-            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle ?? paneSubtitle}</p>}
+            {(subtitle ?? paneSubtitle) && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" }}>{subtitle ?? paneSubtitle}</p>}
           </div>
           {right}
         </header>

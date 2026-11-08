@@ -159,7 +159,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
                 <span className="truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#241F1B" }}>{r.name}</span>
                 {r.isCustom && <YoursTag />}
               </span>
-              <span className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{meta(r)}</span>
+              <span className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{meta(r)}</span>
             </button>
           ))}
         </div>
@@ -167,7 +167,7 @@ export const ExercisesPanel: React.FC<{ query: string; templates: WorkoutTemplat
       {loading && <SkeletonRows count={8} height={46} divided />}
       {exerciseCatalogError && <LoadErrorCard message={t("Couldn't load exercises.")} onRetry={retryExerciseCatalog} />}
       {!loading && !exerciseCatalogError && rows.length === 0 && (
-        <p className="text-center" style={{ margin: 0, padding: "28px 0", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+        <p className="text-center" style={{ margin: 0, padding: "28px 0", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
           {t("No matches. Use Create exercise above to add your own.")}
         </p>
       )}

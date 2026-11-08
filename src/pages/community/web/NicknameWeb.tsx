@@ -100,7 +100,7 @@ export function NicknameWeb({
           data-co-nickname-field
           style={{ height: 44, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", border: `1.5px solid ${bad ? "#C0392B" : "#9A8CD6"}`, padding: "0 16px", fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B", outline: "none" }}
         />
-        <p id="co-nickname-help" role={bad ? "alert" : undefined} style={{ margin: "-6px 2px 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: bad ? "#C0392B" : "#8C8378" }}>
+        <p id="co-nickname-help" role={bad ? "alert" : undefined} style={{ margin: "-6px 2px 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: bad ? "#C0392B" : "#71685E" }}>
           {shownError ?? t(NICKNAME_PROBLEM_TEXT.format)}
         </p>
         <button type="submit" aria-disabled={!!problem} data-co-continue className="co-web-press" style={{ ...coPrimary, gap: 8, opacity: problem && touched ? 0.4 : bad ? 0.4 : 1 }}>

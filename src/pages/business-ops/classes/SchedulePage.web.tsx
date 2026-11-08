@@ -71,8 +71,8 @@ const readView = (): "list" | "week" => {
 };
 
 const BORDER = "1px solid rgba(36,31,27,0.11)";
-const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" };
-const TONE = { high: ["#FBE7E4", "#C0392B"], caution: ["#F6E9C9", "#B07D16"], good: ["#E3F3E9", "#3F9165"] } as const;
+const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" };
+const TONE = { high: ["#FBE7E4", "#C0392B"], caution: ["#F6E9C9", "#B07D16"], good: ["#E3F3E9", "#1D744A"] } as const;
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
 
 /** The clock the cards read; ticks each minute so "ended" and "within 48 h" stay true (as on mobile). */
@@ -238,9 +238,9 @@ export default function SchedulePageWeb() {
             </span>
             <span className="flex-1 min-w-0">
               <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{r.title}</span>
-              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{r.sub}</span>
+              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{r.sub}</span>
             </span>
-            <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
           </button>
         ))}
       </div>
@@ -441,7 +441,7 @@ export default function SchedulePageWeb() {
                             <span className="tabular-nums" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#241F1B" }}>{r.value}</span>
                             <span
                               className="tabular-nums text-end"
-                              style={{ minWidth: 52, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: r.delta === "–" ? "#8C8378" : /^[−-]/.test(r.delta) ? "#C0392B" : "#3F9165" }}
+                              style={{ minWidth: 52, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: r.delta === "–" ? "#71685E" : /^[−-]/.test(r.delta) ? "#C0392B" : "#1D744A" }}
                             >
                               {r.delta}
                             </span>
@@ -542,7 +542,7 @@ function WeekStrip({ days, height, selected, today, onPick }: { days: ReturnType
       {days.map((d) => {
         const on = d.day === selected;
         const ink = on ? "#FFFFFF" : "#241F1B";
-        const dayInk = on ? "#FFFFFF" : "#8C8378";
+        const dayInk = on ? "#FFFFFF" : "#71685E";
         return (
           <button
             key={d.day}
@@ -629,7 +629,7 @@ function SessionCardWeb({
       />
       <div aria-hidden className="relative shrink-0 text-center pointer-events-none" style={{ width: 52, borderRadius: 12, background: "#F0EDF9", padding: "10px 0" }}>
         <div className="tabular-nums" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, color: "#241F1B" }}>{clock?.time ?? s.startTime}</div>
-        <div style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{clock?.meridiem ? t(clock.meridiem) : ""}</div>
+        <div style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{clock?.meridiem ? t(clock.meridiem) : ""}</div>
       </div>
       <div className="relative flex-1 min-w-0 flex flex-col pointer-events-none" style={{ gap: 4 }}>
         <div className="flex justify-between items-center" style={{ gap: 8 }}>
@@ -646,7 +646,7 @@ function SessionCardWeb({
           </span>
           <span className="shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{price}</span>
         </div>
-        <div className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <div className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {whoText} · {durationText(s.startTime, s.endTime)}
         </div>
         {!cancelled && (
@@ -661,7 +661,7 @@ function SessionCardWeb({
           <div className="flex items-center whitespace-nowrap overflow-hidden" style={{ gap: 8, minHeight: 20 }}>
             {flag && tone && <Pill label={flag.label} bg={tone[0]} ink={tone[1]} />}
             {!flag && isNew && <Pill label={t("New")} bg="#E3F1EE" ink="#2F5F58" />}
-            {centium && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: centium.tone === "teal" ? "#2F5F58" : "#8C8378" }}>{centium.text}</span>}
+            {centium && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: centium.tone === "teal" ? "#2F5F58" : "#71685E" }}>{centium.text}</span>}
           </div>
         )}
       </div>
@@ -676,7 +676,7 @@ function SessionCardWeb({
           disabled={menuDisabled}
           onClick={() => menuRef.current && onMenu(menuRef.current)}
           className={`relative shrink-0 flex items-center justify-center hover:bg-[#F5F5F6] disabled:opacity-40 ${FOCUS}`}
-          style={{ zIndex: 1, width: 32, height: 36, marginInlineEnd: -6, borderRadius: 8, color: "#8C8378" }}
+          style={{ zIndex: 1, width: 32, height: 36, marginInlineEnd: -6, borderRadius: 8, color: "#71685E" }}
         >
           <EllipsisVertical size={20} strokeWidth={2} aria-hidden />
         </button>
@@ -734,7 +734,7 @@ function WeekGridWeb({
             onClick={() => onDay(d.day)}
             aria-label={t("{date}: show this day as a list", { date: shortDate(d.day) })}
             className={`text-center hover:bg-[#FAF8FE] ${FOCUS}`}
-            style={{ paddingBottom: 8, borderRadius: 10, color: d.day === today ? "#7D6BB5" : "#8C8378" }}
+            style={{ paddingBottom: 8, borderRadius: 10, color: d.day === today ? "#7D6BB5" : "#71685E" }}
           >
             <span className="block" style={{ fontSize: 12, lineHeight: "16px", fontWeight: 800 }}>{d.w}</span>
             <span className="block tabular-nums" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{d.n}</span>
@@ -744,7 +744,7 @@ function WeekGridWeb({
       <div className="relative grid" style={{ gridTemplateColumns: cols, columnGap: 6, height: gridH }}>
         <div className="relative">
           {hours.map((h) => (
-            <span key={h} className="absolute whitespace-nowrap tabular-nums" style={{ insetInlineEnd: 6, top: (h - h0) * px, transform: "translateY(-50%)", fontSize: 11, lineHeight: "16px", fontWeight: 700, color: "#8C8378" }}>
+            <span key={h} className="absolute whitespace-nowrap tabular-nums" style={{ insetInlineEnd: 6, top: (h - h0) * px, transform: "translateY(-50%)", fontSize: 11, lineHeight: "16px", fontWeight: 700, color: "#71685E" }}>
               {hourLabel(h)}
             </span>
           ))}
@@ -793,7 +793,7 @@ function WeekGridWeb({
           );
         })}
       </div>
-      <div className="flex flex-wrap" style={{ gap: 20, paddingTop: 12, paddingInlineStart: 58, paddingInlineEnd: 8, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+      <div className="flex flex-wrap" style={{ gap: 20, paddingTop: 12, paddingInlineStart: 58, paddingInlineEnd: 8, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
         <span className="flex items-center" style={{ gap: 6 }}>
           <span aria-hidden style={{ width: 12, height: 12, borderRadius: 3, background: "#AEA1DC" }} />
           {t("Class")}
@@ -823,8 +823,8 @@ function SeriesCardWeb({ card, who, price, onOpen }: { card: SeriesCard; who: st
         {price && <span className="shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{price}</span>}
       </span>
       <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#7D6BB5" }}>{card.typeLine}</span>
-      <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{card.whenLine}</span>
-      <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{`${t("Max {n}", { n: s.maxCapacity })}${who ? ` · ${who}` : ""}`}</span>
+      <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{card.whenLine}</span>
+      <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{`${t("Max {n}", { n: s.maxCapacity })}${who ? ` · ${who}` : ""}`}</span>
     </button>
   );
 }

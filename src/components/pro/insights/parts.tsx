@@ -236,7 +236,7 @@ export const ClientPicker: React.FC<{ clients: PickerClient[]; value: string | n
       >
         {cur && <Avatar name={cur.name} url={cur.avatarUrl} size={web ? 28 : 24} />}
         <span className="flex-1 min-w-0 truncate text-start">{label}</span>
-        <ChevronDown size={web ? 16 : 14} strokeWidth={2} aria-hidden style={{ color: web ? "#8C8378" : INK.chF, flexShrink: 0 }} />
+        <ChevronDown size={web ? 16 : 14} strokeWidth={2} aria-hidden style={{ color: web ? "#71685E" : INK.chF, flexShrink: 0 }} />
       </button>
       <PopupMenu
         open={!!el}

@@ -31,6 +31,8 @@ export const INK = {
   teal: "rgb(var(--c-teal))",
   tealPale: "rgb(var(--c-teal-pale))",
   tealDark: "rgb(var(--c-teal-dark))",
+  /** teal.dark as text: the AA twin (Round K ET), #4C7570 in Centium light. */
+  tealDarkInk: "rgb(var(--c-teal-dark-ink))",
   sky: "rgb(var(--c-sky))",
   skyPale: "rgb(var(--c-sky-pale))",
   doneLeaf: "var(--c-pro-done-leaf)",

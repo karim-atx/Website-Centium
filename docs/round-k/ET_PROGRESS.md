@@ -130,13 +130,118 @@ on the doctor's patient Care plan, "Add recommendation" was cut off at the defau
 ("Add recommendati…") in a half-width button. It now shows in full on two lines inside the same
 48 px button.
 
+## Colour contrast to WCAG AA (Karim's decision, 2026-11-08)
+
+The decision: text reaches AA (4.5:1, or 3:1 at 24 px / 18.66 px bold) with the smallest colour
+changes. Method:
+- the 2901 color-contrast nodes on the PR head (233 routes, English, light) grouped by
+  foreground/background pair and traced to the token, CSS variable or literal they come from;
+- each colour moved in **OKLCH lightness only** (hue and chroma held) until it just clears 4.55:1
+  against **every** ground it was found on, then rounded to a hex that passes;
+- a token changed once rather than per component. Where the colour is also a fill, border or
+  chart stroke, its existing **text twin** (`--c-*-ink` / `--thi-*`, which Tailwind's `text-*`
+  utilities and the explicit ink reads use) changes instead, so fills and lines keep the board's
+  value;
+- Centium only, light and dark, outside High contrast (its own values are unchanged). The greys
+  are fixed in every colour theme, so the grey tokens change for all of them; the theme-colour
+  twins change only for Centium (`html[data-accent="centium"]:not(.dark):not(.high-contrast)` and
+  its `.dark` twin in `index.css`). Nothing under `src/marketing/` is touched (it uses its own
+  `centium.*` literals, which already have AA values).
+
+**The changes** (ΔL is the OKLCH lightness shift; ratios on white, then on the weakest ground the
+colour was found on):
+
+| Token / colour | Old | New | Old → new ratio | ΔL | Where it's used |
+| --- | --- | --- | --- | --- | --- |
+| `--c-charcoal-faint`, `--c-charcoal-muted`, literal `#8C8378` (530 code uses) | #8C8378 | #71685E | 3.73 → 5.46; 3.13 → 4.59 on #FBE7E4 | −0.092 | muted text everywhere: subtitles, meta, captions |
+| `--c-charcoal-tertiary`, literal `#A79E93` (56) | #A79E93 | #776E64 | 2.64 → 5.00; 2.42 → 4.58 on #F5F4FB | −0.160 | weakest metadata, macro grams |
+| `--c-team-nav-idle` (Centium light) | #9A94B3 | #726C8A | 2.89 → 4.97; 2.65 → 4.56 on #F5F5F6 | −0.134 | bottom-bar idle labels and glyphs, date strip |
+| `--thi-9a94b3` + the phone's literal `#9A94B3` caps labels (3) | #9A94B3 | #726C8A | same | −0.134 | section labels (Home, Health), BU descriptions (`--c-desc`) |
+| `--c-team-nav-accent-text` (Centium light) | #8F68F6 | #7F56E3 | 3.83 → 4.84; 3.64 → 4.60 on the bar over #FBF9F4 | −0.055 | active bottom-bar label |
+| `--c-team-nav-accent-ink` (Centium light) | #8F68F6 | #7D54E0 | 3.83 → 4.98; 3.52 → 4.57 on #F5F5F6 | −0.063 | `text-team-nav-accent` links |
+| `--c-primary-accent-ink` (Centium light) | #7D67D9 | #7159CA | 4.36 → 5.27; 3.78 → 4.56 on #F0EDF9 | −0.045 | `text-primary-accent`: Settings headings, links |
+| `--c-primary-dark-ink`, `--thi-7d6bb5` (Centium light) | #7D6BB5 | #715EA7 | 4.52 → 5.44; 3.80 → 4.57 on #FBE7E4 | −0.043 | `text-primary-dark` on tints, Retry |
+| Market `pdark` / `accent` (`marketTokens.ts`, light) | #7D6BB5 / #7D67D9 | #715EA7 / #7159CA | as the two rows above | −0.043 / −0.045 | marketplace text (133 / 52 uses); 3 small `accent` fills |
+| `--c-primary-ink` (Centium light) | #AEA1DC | #74679E | 2.35 → 5.03; 2.15 → 4.60 on #F5F4FB | −0.193 | `text-primary` (17 uses: units, small links, check glyphs); the cycle phase pill text |
+| `--c-status-good`, literal `#3F9165` (46) | #3F9165 | #1D744A | 3.85 → 5.75; 3.06 → 4.57 on #D9E9E0 | −0.096 | Live / Active / good-status text and chips |
+| `--c-teal-dark-ink` via new `INK.tealDarkInk` (Centium light) | #6F9993 | #4C7570 | 3.16 → 5.14; 2.81 → 4.58 on #EAF4F2 | −0.120 | pro chips, "From you", chart labels (lines and dots keep #6F9993) |
+| `--thi-8a9796` (Centium light) | #8A9796 | #647170 | 3.02 → 5.08; 2.72 → 4.56 on #EBF5F2 | −0.128 | More hub tile captions |
+| `--thi-869595` (Centium light) + pro More literal (2) | #869595 | #637171 | 3.11 → 5.08; 2.80 → 4.57 on #EBF5F2 | −0.121 | More hub mint hero caption |
+| `--c-team-gold-ink` | #8A6A3E | #836337 | 4.99 → 5.52; 4.14 → 4.58 on #F6E9C9 | −0.024 | gold pills (care network) |
+| `--metric-water-ink` | #4A6AA3 | #44639C | 5.41 → 5.98; 4.12 → 4.56 on #DBE1ED | −0.023 | Water hero pill text (the accent keeps #4A6AA3) |
+| Dark: `--c-primary-accent-ink` (Centium dark) | #9A8CD6 | #9F91DB | 4.32 → 4.60 on #303141 | +0.016 | Settings status lines on the lavender wash |
+| Dark: `--c-teal-dark-ink` (Centium dark) | #4F8F8A | #64A59F | 3.89 → 5.14 on #262932 | +0.071 | pro chips in dark |
+| Dark: `--thi-3c6b65` (Centium dark) | #3C6B65 | #73A39C | 2.14 → 4.58 on #293339 | +0.187 | the client "Completed" status pill (it had no dark value) |
+
+**Per component (an alpha, or a band no token value can serve):**
+- small caps labels at `charcoal/0.42` → **0.63** (2.57 → 4.65:1 on #F5F5F6): Quick actions,
+  calendar day headings, the pro calendar eyebrow, habit sheet labels, the number placeholder;
+- Home's Food labels at `primary-deep-text/0.68` → **0.88** (3.07 → 4.58:1 on #F0EDF9);
+- the gym Live card's "· Change" at opacity 0.8 → **0.95** (4.58:1 on the green chip);
+- the Habits week band (#CEC7EA): weekday letters `charcoal-faint` → `charcoal-soft` (2.30 →
+  4.67:1), today's letter #7D67D9 → **#593FAD** (2.60 → 4.57:1, Centium light only); in dark,
+  weekday letters `charcoal-faint` → `charcoal` (2.54 → 4.71:1 on #7163A8).
+
+**Exempt, not changed** (WCAG exempts inactive controls and decoration):
+- Two-factor: the Authenticator and Recovery codes sections are drawn at 40% until two-factor is
+  on (28 nodes, light and dark);
+- the gym's unavailable payment methods ("Soon") and the locked "Always on for safety"
+  notification row (rows at 50%).
+
+**Flagged, not forced: white text on lavender and teal fills.** Reaching 4.5:1 means darkening
+the fill itself, which repaints the brand's filled controls: the biggest visible change in the
+set. The minimal fills, if wanted (High contrast already uses #5B48B8 for all of them):
+
+| Fill (white text on it) | Nodes (light, EN) | Ratio | Minimal fill for 4.55:1 | ΔL |
+| --- | --- | --- | --- | --- |
+| `--c-seg-active` #A79AD5 (segmented tabs, active) | 96 | 2.55 | #7A6DA5 | −0.149 |
+| `--c-primary-fill` #AEA1DC (primary buttons, onboarding) | 59 | 2.35 | #7A6DA5 | −0.172 |
+| `--c-fill-pinned` #9A8CD6 (pinned CTA) | 11 | 2.96 | #7A6BB2 | −0.109 |
+| Plan badge #C0B6E4 (Subscription, Premium passes) | 6 | 1.90 | #7A709A | −0.230 |
+| `--c-fill-cta` #A198DF (Food sheets) | 4 | 2.60 | #776DB1 | −0.142 |
+| Food quick-add meal tiles #BEB4E6 / #B1A5DF / #B1A5E0 / #9284C4 | 4 | 1.93 to 3.32 | #796F9E to #7B6CAB | −0.08 to −0.23 |
+| Ticket strip, active step #7D67D9 (pro profile About tab) | 3 | 4.36 | #7A64D5 | −0.012 (one line: `darkenForWhite` in light too) |
+| Meal prep teal #79A8A1 (Messages tab) | 1 | 2.65 | #507E78 | −0.138 |
+| Dark: plan badges #BCA9FE / #A991FE | 12 | 2.04 / 2.57 | near-black ink, as the other dark fills | — |
+
+Also flagged: in dark, today's letter on the Habits band (#9F91DB on #7768B1, 1.61:1) needs
+near-white to pass, which loses the "today" accent.
+
+**axe re-run** (same 233 routes, same accounts, same harness; builds of `73967052` and of this
+change):
+
+| Mode | Routes | color-contrast before | after | needs review before → after |
+| --- | --- | --- | --- | --- |
+| English, light | 233 | 2901 | 225 | 339 → 294 |
+| English, dark | 233 | 73 | 55 | 265 → 265 |
+| Arabic, light | 59 (every 4th; 22 in RTL, see below) | 495 | 28 | 39 → 28 |
+| Arabic, dark | 59 | 0 | 0 | 19 → 19 |
+| High contrast, light | 39 (every 6th) | 11 | 6 | 37 → 36 |
+| High contrast, dark | 39 | 8 | 7 | 36 → 36 |
+
+Every other rule stays at 0 in every mode. (The 2907 above was measured on the first code
+commit's build; the PR head before this change measures 2901.)
+
+**What remains, light (225):** 184 white-on-fill (flagged above), 33 inactive (exempt), and 8 on
+the Water, Blood pressure and Weight heroes, where axe reads the hero art (wave, chart bars) as
+the background; on screen the ink sits on the pale metric tint (checked visually). **Dark (55):**
+31 inactive, 13 fills, 10 hero-art reads, 1 Habits today letter. **Arabic (28):** fills only.
+**High contrast (6 / 7):** inactive rows, hero-art reads and the plan badges.
+
+**Arabic:** the language is set on the device. The signed-out route and the client stay in Arabic
+(22 routes in RTL); the professional and gym accounts settle back to their saved language
+(English). The colours don't depend on the language.
+
+**Visual check (430 × 932, the PR's previous build against this one, 12 main screens, light and
+dark):** every text box's position and size is identical on all 24 captures; only colours change
+(light: 918 to 14,868 changed pixels per screen; dark: none on 8 screens, a few hundred on Workout,
+Habits and Calendar, from the dark fixes and the caps-label alpha).
+
 ## Left for later, with reasons
 
-- **Colour contrast (2907 nodes): a design question, not changed here.** These are the handover's
-  own colours, for example #8C8378 muted text on white (3.6:1), #9A94B3 idle nav and labels on
-  white, #7D67D9 and #8F68F6 on white, white on #A79AD5 / #AEA1DC fills. Changing them changes every
-  screen. The in-app High contrast mode is the existing answer; whether it reaches AA everywhere is
-  checked in the PR.
+- **White text on lavender and teal fills** (184 nodes in light): flagged with the minimal fills in
+  the contrast section above, not changed. Needs Karim's call, because it repaints the filled
+  controls.
 - **Pixel line-heights at 200% (needs the App's `nativeTextZoom()`, Website #100):** WebView
   textZoom scales font sizes but not px line-heights (App measurement), and most text uses px line
   heights (`linePx()`). Wrapped text at 200% will draw its lines too close or overlapping. The clean
@@ -157,4 +262,4 @@ on the doctor's patient Care plan, "Add recommendation" was cut off at the defau
 All of the above is committed. Next steps, if continued:
 1. the three gym pages' Performance tab row at 200%;
 2. the line-height zoom variable, once Website #100 (`nativeTextZoom()`) is merged;
-3. the contrast decision from Karim.
+3. the white-on-fill decision (contrast section), if Karim wants the fills darkened.

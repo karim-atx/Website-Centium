@@ -312,7 +312,7 @@ export function LiveNowCard(p: LiveNowProps) {
 
   const rowsA = m.rows.slice(0, 2);
   const rowsB = m.rows.slice(2);
-  const pulseCol = p.offline ? "#A79E93" : c.good;
+  const pulseCol = p.offline ? "#776E64" : c.good;
   const half = m.half;
 
   const row = (it: (typeof m.rows)[number], first: boolean) => (
@@ -379,7 +379,7 @@ export function LiveNowCard(p: LiveNowProps) {
           <span aria-hidden style={{ position: "absolute", insetInlineStart: 0, insetInlineEnd: 0, top: -7, bottom: -7 }} />
           {p.listed ? <Eye size={13} strokeWidth={2.4} aria-hidden /> : <EyeOff size={13} strokeWidth={2.4} aria-hidden />}
           {p.listed ? t("Listed") : t("Hidden")}
-          <span style={{ fontWeight: 700, opacity: 0.8 }}>· {t("Change")}</span>
+          <span style={{ fontWeight: 700, opacity: 0.95 }}>· {t("Change")}</span>
         </button>
       </div>
 

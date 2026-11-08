@@ -1568,7 +1568,7 @@ export const ThreadView: React.FC<{
               (theyAreTyping || theyAreOnline) &&
               (cv2 ? (
                 // OP1-180 row 5 / OP1-187 row 1: 12/16, "Online" #3F9165 in both themes, "typing…" italic pDark.
-                <span className={`text-[12px] leading-[16px] ${theyAreTyping ? "italic text-primary-dark" : ""}`} style={theyAreTyping ? undefined : { color: "#3F9165" }}>
+                <span className={`text-[12px] leading-[16px] ${theyAreTyping ? "italic text-primary-dark" : ""}`} style={theyAreTyping ? undefined : { color: "#1D744A" }}>
                   {theyAreTyping ? t("typing…") : t("Online")}
                 </span>
               ) : (

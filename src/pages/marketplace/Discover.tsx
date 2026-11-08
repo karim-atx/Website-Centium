@@ -278,7 +278,7 @@ export default function Discover({ onPinnedChange, web }: { onPinnedChange?: (pi
         <div className="grid" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12},minmax(0,1fr))`, columnGap: 24, rowGap: 16 }}>
           {tab !== "rewards" && (
             <label className="min-w-0 flex items-center" style={{ gridColumn: `span ${rail ? 4 : 5}`, height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", padding: "0 14px", gap: 8 }}>
-              <Search size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
+              <Search size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E", flexShrink: 0 }} />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

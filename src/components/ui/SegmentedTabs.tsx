@@ -124,7 +124,7 @@ export const SegmentedTabs: React.FC<{
   // drawn ones (track #F3F3FD, 5 padding, r14, gap 4; tabs r10, 15/24 600; on: white, #7D67D9, the soft shadow;
   // off: #8C8378). A page that sets its own light colours keeps them. False everywhere else, mobile included.
   const paneTabs = usePaneSpan() && !light && variant === "default" && !scroll && !dark;
-  const lit = dark ? undefined : paneTabs ? { activeFill: "#FFFFFF", activeInk: "#7D67D9", idleFill: "transparent", idleInk: "#8C8378" } : light;
+  const lit = dark ? undefined : paneTabs ? { activeFill: "#FFFFFF", activeInk: "#7D67D9", idleFill: "transparent", idleInk: "#71685E" } : light;
   const teal = variant === "teal";
   const partB = darkTone === "partB";
   const trackRef = useRef<HTMLDivElement | null>(null);

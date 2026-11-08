@@ -105,7 +105,7 @@ function ClientSubscriptionWeb() {
                   aria-pressed={on}
                   onClick={() => setPeriod(p)}
                   className="flex-1 flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2"
-                  style={{ height: 40, borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#9A8CD6" : "#F5F5F6", color: on ? "#FFFFFF" : "#8C8378" }}
+                  style={{ height: 40, borderRadius: 12, gap: 6, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#9A8CD6" : "#F5F5F6", color: on ? "#FFFFFF" : "#71685E" }}
                 >
                   {p === "monthly" ? t("Monthly") : t("Yearly")}
                   {p === "yearly" && best != null && !checking && (
@@ -143,9 +143,9 @@ function ClientSubscriptionWeb() {
                     {isCurrent && <span style={{ ...PILL, background: "#FFFFFF", color: "#7D6BB5" }}>{t("CURRENT")}</span>}
                     {period === "yearly" && saving && <span style={{ ...PILL, background: "#6F9993", color: "#FFFFFF" }}>{savingLabel(saving)}</span>}
                   </div>
-                  <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", color: "#8C8378" }}>{[detail, priceLabel(tier.monthlyPrice, tier.yearlyPrice, period)].filter(Boolean).join(" · ")}</p>
+                  <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", color: "#71685E" }}>{[detail, priceLabel(tier.monthlyPrice, tier.yearlyPrice, period)].filter(Boolean).join(" · ")}</p>
                   {period === "yearly" && tier.yearlyPrice != null && tier.monthlyPrice > 0 && (
-                    <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("{price}/mo, billed yearly", { price: formatPrice(monthlyEquivalent(tier.yearlyPrice)) })}</p>
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("{price}/mo, billed yearly", { price: formatPrice(monthlyEquivalent(tier.yearlyPrice)) })}</p>
                   )}
                 </div>
                 {isCurrent && (
@@ -184,10 +184,10 @@ function ClientSubscriptionWeb() {
                   {t(UPGRADE_ACTION_LABEL)}
                 </a>
               )}
-              <p className="text-center" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p className="text-center" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {t(NO_PAYMENTS_NOTE)}
               </p>
-              <p className="text-center" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p className="text-center" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 <RefundPolicyLink />
               </p>
             </>

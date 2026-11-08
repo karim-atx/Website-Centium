@@ -445,7 +445,7 @@ export default function BusinessProfilePage() {
           )}
           {business && (
             <span
-              className={business.active ? "rounded-full bg-[rgba(63,145,101,0.14)] text-[#3F9165] dark:bg-[rgba(127,199,156,0.16)] dark:text-[#7FC79C]" : "rounded-full bg-cream-soft text-charcoal-faint"}
+              className={business.active ? "rounded-full bg-[rgba(63,145,101,0.14)] text-[#1D744A] dark:bg-[rgba(127,199,156,0.16)] dark:text-[#7FC79C]" : "rounded-full bg-cream-soft text-charcoal-faint"}
               style={{ padding: "2px 8px" }}
             >
               {business.active ? t("Listed") : t("Hidden")}

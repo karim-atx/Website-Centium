@@ -27,7 +27,7 @@ import { isRtl, t, tx } from "../../../i18n/core";
 
 type TipSnap = { tip: NonNullable<ReturnType<typeof growthChart>["tip"]>; mi: number; pinned: boolean };
 
-const L = { card: "#FFFFFF", border: "rgba(36,31,27,0.11)", ink: "#241F1B", inkSoft: "#5B5349", faint: "#8C8378", tert: "#A79E93", pDark: "#7D6BB5", good: "#3F9165", high: "#C0392B", line: "#7D6BB5", lineFill: "rgba(125,107,181,0.12)", grid: "rgba(36,31,27,0.07)", axis: "#A79E93" };
+const L = { card: "#FFFFFF", border: "rgba(36,31,27,0.11)", ink: "#241F1B", inkSoft: "#5B5349", faint: "#71685E", tert: "#776E64", pDark: "#7D6BB5", good: "#1D744A", high: "#C0392B", line: "#7D6BB5", lineFill: "rgba(125,107,181,0.12)", grid: "rgba(36,31,27,0.07)", axis: "#776E64" };
 const D = { card: "#1C1F28", border: "rgba(245,243,250,0.08)", ink: "#F5F3FA", inkSoft: "#B8B3C7", faint: "#B8B3C7", tert: "#9F9CAC", pDark: "#C3B3FB", good: "#7FC79C", high: "#F09A8E", line: "#A393E0", lineFill: "rgba(163,147,224,0.14)", grid: "rgba(238,239,242,0.08)", axis: "#B8B3C7" };
 
 export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey = "" }: { cur: GrowthWeek[]; prev: GrowthWeek[] | null; endsThisWeek: boolean; early?: boolean; resetKey?: string }) {
@@ -276,7 +276,7 @@ export function GrowthChart({ cur, prev, endsThisWeek, early = false, resetKey =
               opacity: live ? 1 : 0,
               transition: live ? "none" : "opacity 150ms",
               background: c.card,
-              border: `1px solid ${hc ? "#8C8378" : c.border}`,
+              border: `1px solid ${hc ? "#71685E" : c.border}`,
               borderRadius: 12,
               boxShadow: "0 8px 22px rgba(36,31,27,0.16)",
               padding: "9px 11px",

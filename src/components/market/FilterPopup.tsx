@@ -139,7 +139,7 @@ const FilterSheetWeb: React.FC<FilterPopupProps> = ({ open, groups, selected, on
     footer={
       <div className="flex flex-col w-full" style={{ gap: 10 }}>
         {count && (
-          <p role="status" style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p role="status" style={{ margin: 0, textAlign: "center", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {count}
           </p>
         )}
@@ -152,7 +152,7 @@ const FilterSheetWeb: React.FC<FilterPopupProps> = ({ open, groups, selected, on
     <div className="flex flex-col" style={{ gap: 18 }}>
       {groups.map((g) => (
         <div key={g.heading} role="group" aria-label={t(g.heading)} className="flex flex-col" style={{ gap: 8 }}>
-          <p aria-hidden style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>
+          <p aria-hidden style={{ margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>
             {t(g.heading)}
           </p>
           <div className="grid" style={{ gridTemplateColumns: `repeat(${Math.min(3, g.options.length)},minmax(0,1fr))`, gap: 8 }}>

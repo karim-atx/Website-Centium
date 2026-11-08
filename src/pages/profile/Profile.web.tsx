@@ -100,14 +100,14 @@ const Stat: React.FC<{ label: string; value: React.ReactNode; unit?: string; onC
       className="flex flex-col justify-between text-start hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
       style={{ minHeight: 72, boxSizing: "border-box", borderRadius: 16, border: "1px solid #79A8A1", padding: "12px 14px", background: "#FFFFFF", gridColumn: wide ? "1 / -1" : undefined }}
     >
-      <span className="uppercase rtl:tracking-normal" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", color: "#8C8378" }}>
+      <span className="uppercase rtl:tracking-normal" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", color: "#71685E" }}>
         {label}
       </span>
       <span className="flex items-baseline" style={{ gap: 5 }}>
-        <span className="tabular-nums" style={{ fontSize: 26, lineHeight: "30px", fontWeight: 700, color: empty ? "#8C8378" : "#241F1B" }}>
+        <span className="tabular-nums" style={{ fontSize: 26, lineHeight: "30px", fontWeight: 700, color: empty ? "#71685E" : "#241F1B" }}>
           {value}
         </span>
-        {unit && <span style={{ fontSize: 13, fontWeight: 600, color: "#8C8378" }}>{unit}</span>}
+        {unit && <span style={{ fontSize: 13, fontWeight: 600, color: "#71685E" }}>{unit}</span>}
       </span>
     </button>
   );
@@ -348,7 +348,7 @@ function ClientProfileWeb() {
                 </button>
               )}
               {avatarBusy && (
-                <p role="status" style={{ margin: "8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
+                <p role="status" style={{ margin: "8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>
                   {t("Saving…")}
                 </p>
               )}
@@ -430,12 +430,12 @@ function ClientProfileWeb() {
                     <span className="block truncate" style={{ fontSize: 15, lineHeight: "20px", fontWeight: 600, color: "#241F1B" }}>
                       {p.name}
                     </span>
-                    <span className="block" style={{ fontSize: 13, lineHeight: "18px", color: "#8C8378" }}>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "18px", color: "#71685E" }}>
                       {t("Manage data sharing")}
                     </span>
                     {p.licenceVerified === false && <LicencePendingTag className="mt-1" />}
                   </span>
-                  <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+                  <ChevronRight size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
                 </button>
               ))}
               {pros.length > 0 && <SharingYourWinsRow me={authUserId} connectedCount={pros.length} />}
@@ -472,11 +472,11 @@ function ClientProfileWeb() {
                       <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                         {s.label}
                       </span>
-                      <span title={s.value} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                      <span title={s.value} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                         {s.value}
                       </span>
                     </span>
-                    <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+                    <ChevronRight size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
                   </button>
                 ))}
               </div>
@@ -517,10 +517,10 @@ function ClientProfileWeb() {
                     {t("Your experience has been updated: calorie totals, weight-related content, deficit language, and streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.")}
                   </p>
                 )}
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                   {t("Saved to your account, so it's the same on every device you sign in on. Professionals you work with are never told whether it's on.")}
                 </p>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                   {t("This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a")}{" "}
                   <button type="button" onClick={() => navigate("/app/professionals")} className="underline hover:text-[#5F5093]" style={{ fontWeight: 600, color: "#7D6BB5" }}>
                     {t("professional")}

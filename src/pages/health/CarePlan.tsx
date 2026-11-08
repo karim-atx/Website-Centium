@@ -29,7 +29,7 @@ type Load = { state: "loading" } | { state: "error"; message: string } | { state
 /** lib.js tokens: light / dark. */
 const tok = (dark: boolean) => ({
   chS: dark ? "#B8B3C7" : "#5B5349",
-  chT: dark ? "#9F9CAC" : "#A79E93",
+  chT: dark ? "#9F9CAC" : "#776E64",
   pr: dark ? "#A991FE" : "#AEA1DC",
   prPale: dark ? "#303141" : "#F0EDF9",
   prDeep: dark ? "#C3B3FB" : "#5F5093",

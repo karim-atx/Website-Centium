@@ -47,9 +47,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, subtitl
     return (
       <div className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
         <div className="min-w-0">
-          {eyebrow && <p style={{ margin: "0 0 2px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{eyebrow}</p>}
+          {eyebrow && <p style={{ margin: "0 0 2px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{eyebrow}</p>}
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h1>
-          {subtitle && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: subtitleColor ?? "#8C8378" }}>{subtitle}</p>}
+          {subtitle && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: subtitleColor ?? "#71685E" }}>{subtitle}</p>}
         </div>
         {right}
       </div>

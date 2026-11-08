@@ -179,7 +179,7 @@ export const SleepStagesCard: React.FC<{ stages: StageMinutes | null; right: str
     >
       <div className="flex items-center justify-between">
         <h2 style={{ fontSize: textPx(13), lineHeight: linePx(19.5), fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{t("Stages")}</h2>
-        {stages && <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: hc ? "rgb(var(--c-charcoal))" : ink("#8C8378") }}>{right}</span>}
+        {stages && <span style={{ fontSize: textPx(10.5), lineHeight: linePx(15.8), fontWeight: 600, color: hc ? "rgb(var(--c-charcoal))" : ink("#71685E") }}>{right}</span>}
       </div>
       {stages ? (
         <div aria-hidden>

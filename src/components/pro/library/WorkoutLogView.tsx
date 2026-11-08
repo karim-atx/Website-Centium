@@ -126,10 +126,10 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
           {state === "offline" && <OfflineLine />}
           {state === "loading" && <ProCardSkeleton lines={4} />}
           {state === "error" && <ProError onRetry={() => setReload((n) => n + 1)} />}
-          {state === "none" && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("This session is no longer shared.")}</p>}
+          {state === "none" && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("This session is no longer shared.")}</p>}
           {session && (
             <>
-              {line && <p style={{ margin: "0 0 16px", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{line}</p>}
+              {line && <p style={{ margin: "0 0 16px", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{line}</p>}
               {swaps.map((s) => (
                 <div key={`${s.from}-${s.to}`} className="flex items-center" style={{ gap: 12, background: "#FDF3D6", borderRadius: 16, padding: "16px 20px", marginBottom: 16 }}>
                   <Repeat2 size={20} strokeWidth={2} aria-hidden className="shrink-0" style={{ color: "#9A7414" }} />
@@ -140,7 +140,7 @@ export const WorkoutLogView: React.FC<{ sessionId: string; template: WorkoutTemp
                 </div>
               ))}
               {rows.length === 0 ? (
-                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Nothing logged in this session.")}</p>
+                <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Nothing logged in this session.")}</p>
               ) : (
                 <div className="flex flex-col" style={{ boxSizing: "border-box", background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.08)", borderRadius: 20, padding: "0 24px" }}>
                   {rows.map((r, i) => (

@@ -328,11 +328,11 @@ const PaneRow: React.FC<{
       )}
       <span className="flex-1 min-w-0">
         <span className="block break-words" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: destructive ? "#B3261E" : "#241F1B" }}>{title}</span>
-        {subtitle && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{subtitle}</span>}
+        {subtitle && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{subtitle}</span>}
         {srDescription && <span className="sr-only">{srDescription}</span>}
       </span>
       {value !== undefined && value !== null && (
-        <span className="shrink-0 max-w-[45%] truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{value}</span>
+        <span className="shrink-0 max-w-[45%] truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{value}</span>
       )}
     </>
   );

@@ -159,7 +159,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   // with the set-on line and the 44 Save button.
   const webHead = (
     <div className="flex items-baseline flex-wrap" style={{ columnGap: 12, padding: "14px 24px", borderBottom: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{client?.name ?? ""}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{client?.name ?? ""}</p>
       <h2 style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Targets and dietary needs")}</h2>
     </div>
   );
@@ -255,7 +255,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
             <div className="flex items-center justify-between" style={{ ...card, gap: 12 }}>
               <span className="min-w-0">
                 <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Lock these targets")}</span>
-                <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
+                <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
               </span>
               <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
             </div>
@@ -265,7 +265,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
                   <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" }}>{t("Micronutrient targets")}</p>
                   <ComingSoonPill web />
                 </div>
-                <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
+                <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Sodium, fibre and vitamin targets per client.")}</p>
               </div>
             )}
           </div>
@@ -277,7 +277,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
         )}
       </div>,
       <div className="flex items-center" style={{ gap: 16, padding: "14px 24px", borderTop: "1px solid rgba(36,31,27,0.06)", background: "#FFFFFF" }}>
-        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {data.mine ? `${t("You set these on {date}.", { date: fmtDay(data.mine.setAt, true) })} ` : ""}
           {lock ? t("{name} sees this as an Existing plan, locked to you.", { name: first }) : t("{name} can still change these targets.", { name: first })}
         </span>

@@ -31,7 +31,7 @@ import { t, tk, tn } from "../../../i18n/core";
 const SHOWN = 12;
 const BORDER = "1px solid rgba(36,31,27,0.11)";
 const DIV = "1px solid rgba(36,31,27,0.06)";
-const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" };
+const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" };
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
 
 const Pill: React.FC<{ label: string; bg: string; ink: string }> = ({ label, bg, ink }) => (
@@ -46,7 +46,7 @@ const Avatar: React.FC<{ label: string }> = ({ label }) =>
       {initialOf(label)}
     </span>
   ) : (
-    <span aria-hidden className="shrink-0 flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: 999, background: "#F5F5F6", color: "#8C8378" }}>
+    <span aria-hidden className="shrink-0 flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: 999, background: "#F5F5F6", color: "#71685E" }}>
       <UserRound size={18} />
     </span>
   );
@@ -169,9 +169,9 @@ export default function SessionPageWeb() {
         ];
 
   const payTag = (e: RosterEntry) => {
-    if (e.paymentStatus === "paid") return <Pill label={t("Paid")} bg="#E3F3E9" ink="#3F9165" />;
+    if (e.paymentStatus === "paid") return <Pill label={t("Paid")} bg="#E3F3E9" ink="#1D744A" />;
     if (e.paymentStatus === "pending") return <Pill label={t("Awaiting payment")} bg="#F6E9C9" ink="#B07D16" />;
-    if (e.paymentStatus === "refunded") return <Pill label={t("Refunded")} bg="#F5F5F6" ink="#8C8378" />;
+    if (e.paymentStatus === "refunded") return <Pill label={t("Refunded")} bg="#F5F5F6" ink="#71685E" />;
     return null;
   };
 
@@ -265,7 +265,7 @@ export default function SessionPageWeb() {
             <h2 style={CAPS}>{t("Bookings · {n}", { n: session.booked })}</h2>
             <div className="flex flex-col overflow-hidden bg-white" style={{ borderRadius: 24, border: BORDER }}>
               {rosterHidden ? (
-                <p style={{ margin: 0, padding: "32px 24px", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Who booked is shown to staff with front desk access.")}</p>
+                <p style={{ margin: 0, padding: "32px 24px", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Who booked is shown to staff with front desk access.")}</p>
               ) : rosterError && !entries ? (
                 <div style={{ padding: 16 }}>
                   <MarketError thing={tk("who's booked")} onRetry={() => setTick((n) => n + 1)} notchBg="#FFFFFF" />
@@ -281,7 +281,7 @@ export default function SessionPageWeb() {
                 </div>
               ) : bookedList.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center" style={{ gap: 8, padding: "32px 24px" }}>
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Nobody has booked yet.")}</p>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Nobody has booked yet.")}</p>
                 </div>
               ) : (
                 <>
@@ -295,10 +295,10 @@ export default function SessionPageWeb() {
                           <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 2 }}>
                             <span className="flex items-center min-w-0" style={{ gap: 8 }}>
                               <span className="truncate" title={e.label} style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{e.label}</span>
-                              {e.isMinor && <Pill label={t("Under 18")} bg="#F5F5F6" ink="#8C8378" />}
+                              {e.isMinor && <Pill label={t("Under 18")} bg="#F5F5F6" ink="#71685E" />}
                               {payTag(e)}
                             </span>
-                            {method && <span className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{method}</span>}
+                            {method && <span className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{method}</span>}
                           </span>
                         </>
                       );
@@ -339,7 +339,7 @@ export default function SessionPageWeb() {
                     </p>
                   )}
                   <div className="flex items-center justify-between" style={{ padding: "0 20px", minHeight: 48, borderTop: DIV, gap: 12 }}>
-                    <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Showing {shown} of {total}", { shown: shown.length, total: bookedList.length })}</span>
+                    <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Showing {shown} of {total}", { shown: shown.length, total: bookedList.length })}</span>
                     <button type="button" onClick={() => setRosterOpen(true)} className={`hover:underline ${FOCUS}`} style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#7D6BB5", borderRadius: 6 }}>
                       {t("See all {n}", { n: bookedList.length })}
                     </button>
@@ -370,9 +370,9 @@ export default function SessionPageWeb() {
                   <span aria-hidden className="shrink-0" style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 999, border: "1.5px dashed #AEA1DC", background: "#F5F5F6" }} />
                 )}
                 <span className="flex-1 min-w-0">
-                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Instructor")}</span>
+                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{t("Instructor")}</span>
                   <span className="block" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: session.professionalId ? "#241F1B" : "#5B5349" }}>{session.professionalId ? instructorName : t(NO_INSTRUCTOR)}</span>
-                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {session.professionalId
                       ? coverFor
                         ? t("Covering for {name} {when}", { name: api.nameOf(coverFor), when: dayWords(session.date, today) })
@@ -384,11 +384,11 @@ export default function SessionPageWeb() {
                         : t("Click to choose who teaches it")}
                   </span>
                 </span>
-                <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+                <ChevronRight size={16} strokeWidth={2} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
               </button>
               {details.map((d) => (
                 <div key={d.l} className="flex flex-col justify-center" style={{ padding: "12px 16px", borderTop: DIV }}>
-                  <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{d.l}</p>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{d.l}</p>
                   <div style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349", textWrap: "pretty" } as React.CSSProperties}>{d.v}</div>
                 </div>
               ))}
@@ -444,9 +444,9 @@ export default function SessionPageWeb() {
 function StatTile({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="min-w-0" style={{ borderRadius: 18, background: "#F5F5F6", padding: "14px 16px" }}>
-      <div style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{label}</div>
+      <div style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{label}</div>
       <div className="tabular-nums" style={{ fontSize: 28, lineHeight: "36px", fontWeight: 800, color: "#241F1B" }}>{value}</div>
-      <div title={sub} className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</div>
+      <div title={sub} className="truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{sub}</div>
     </div>
   );
 }

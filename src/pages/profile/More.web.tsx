@@ -152,7 +152,7 @@ const RecoveryPane: React.FC = () => {
         </p>
       )}
       <BizNote>{t("Saved to your account, so it's the same on every device you sign in on. Professionals you work with are never told whether it's on.")}</BizNote>
-      <p style={{ margin: "8px 0 0", maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+      <p style={{ margin: "8px 0 0", maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
         {t("This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a")}{" "}
         <button type="button" onClick={() => navigate("/app/professionals")} className="underline hover:text-[#5F5093]" style={{ fontWeight: 600, color: "#7D67D9" }}>
           {t("professional")}

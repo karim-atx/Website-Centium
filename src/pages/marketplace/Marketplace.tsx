@@ -60,7 +60,7 @@ export default function Marketplace() {
           <h1 className="m-0 whitespace-nowrap text-charcoal" style={{ fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px" }}>
             {t("Explore")}
           </h1>
-          <p className="m-0 flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p className="m-0 flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {t("Gyms, classes and rewards")}
           </p>
           {params.get("tab") === "rewards" ? <HeaderBalance /> : null}

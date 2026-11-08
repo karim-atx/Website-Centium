@@ -85,7 +85,7 @@ export const DietaryNeedsCard: React.FC<{
   const allergies = d?.allergies ?? [];
   const updated = [...allergies.map((a) => a.updatedAt), ...(d?.restrictions ?? []).map((r) => r.createdAt)].sort().pop() ?? null;
   const none = !!d && !allergies.length && !restrictions.length && !prefs.length;
-  const teal = dark ? "#B2D4CF" : "rgb(var(--c-teal-dark))";
+  const teal = dark ? "#B2D4CF" : "rgb(var(--c-teal-dark-ink))";
 
   return (
     <div

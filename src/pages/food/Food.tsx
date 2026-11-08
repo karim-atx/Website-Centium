@@ -682,11 +682,11 @@ export default function Food() {
                           )}
                         </span>
                         <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
-                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("P {n}g", { n: Math.round(mealProtein) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("P {n}g", { n: Math.round(mealProtein) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("C {n}g", { n: Math.round(mealCarbs) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("C {n}g", { n: Math.round(mealCarbs) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("F {n}g", { n: Math.round(mealFat) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("F {n}g", { n: Math.round(mealFat) })}</span>
                         </span>
                       </span>
                     )}

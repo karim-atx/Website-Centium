@@ -30,11 +30,11 @@ export const ComingSoonPill: React.FC<{ web?: boolean; sheet?: boolean }> = ({ w
   const span = usePaneSpan();
   const isWeb = useIsWeb();
   return sheet && isWeb ? (
-    <span style={{ flex: "none", fontSize: 11, lineHeight: "16px", fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#F5F5F6", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
+    <span style={{ flex: "none", fontSize: 11, lineHeight: "16px", fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#F5F5F6", color: "#71685E", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
   ) : web ? (
     <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#F0EDF9", color: "#5F5093", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
   ) : span ? (
-    <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
+    <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
   ) : (
   <span
     className="inline-flex items-center whitespace-nowrap rounded-full"

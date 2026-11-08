@@ -5,7 +5,7 @@ import type React from "react";
 
 const INK = "#241F1B";
 const INK2 = "#5B5349";
-const FAINT = "#8C8378";
+const FAINT = "#71685E";
 const FIELD = "#F5F5F6";
 const LINE = "1px solid rgba(36,31,27,0.10)";
 

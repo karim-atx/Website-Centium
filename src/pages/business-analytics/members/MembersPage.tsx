@@ -66,12 +66,12 @@ export function MembersEmptyCard({ vocab, ghost, children }: { vocab: MembersVoc
 const PLAN_L = ["#AEA1DC", "#14A08F", "#D9A441"];
 const PLAN_D = ["#A991FE", "#4FD1C0", "#E0B360"];
 // The source palette's good / high / axis / teal / primary / tert / pDark (L, D).
-const GOOD: [string, string] = ["#3F9165", "#7FC79C"];
+const GOOD: [string, string] = ["#1D744A", "#7FC79C"];
 const HIGH: [string, string] = ["#C0392B", "#F09A8E"];
-const AXIS: [string, string] = ["#A79E93", "#B8B3C7"];
+const AXIS: [string, string] = ["#776E64", "#B8B3C7"];
 const TEAL: [string, string] = ["#14A08F", "#4FD1C0"];
 const PRIMARY: [string, string] = ["#AEA1DC", "#A991FE"];
-const TERT: [string, string] = ["#A79E93", "#9F9CAC"];
+const TERT: [string, string] = ["#776E64", "#9F9CAC"];
 const PDARK: [string, string] = ["#7D6BB5", "#C3B3FB"];
 
 export function MembersPage({

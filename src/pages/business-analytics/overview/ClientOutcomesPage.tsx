@@ -184,7 +184,7 @@ export function ClientOutcomesPage() {
 
 /** Attendance spread (OURS #6): 4 buckets; groups under 5 show "–" (no attendance reader yet: all "–"). */
 function SpreadBars({ c }: { c: AnPalette }) {
-  const cols = c.dark ? ["#F09A8E", "#E0B360", "#A2C8C2", "#7FC79C"] : ["#C0392B", "#D9A441", "#6F9993", "#3F9165"];
+  const cols = c.dark ? ["#F09A8E", "#E0B360", "#A2C8C2", "#7FC79C"] : ["#C0392B", "#D9A441", "#6F9993", "#1D744A"];
   return (
     <div data-spread style={{ borderRadius: 18, background: c.listBg, padding: 14, marginBottom: 14 }}>
       <p style={{ fontSize: textPx(13), fontWeight: 800, margin: 0, color: c.ink, lineHeight: 1.5 }}>{t("Attendance spread")}</p>

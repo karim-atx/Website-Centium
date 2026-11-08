@@ -61,7 +61,7 @@ export const AxisBarsWeb: React.FC<{
         {ticks.map((v) => (
           <div key={v} className="absolute" style={{ insetInline: 0, top: `${y(v)}%`, borderTop: "1px solid rgba(36,31,27,0.06)" }} data-tick>
             {tickLabel && (
-              <span className="absolute" style={{ insetInlineStart: -40, top: -9, width: 32, textAlign: "end", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap" }}>
+              <span className="absolute" style={{ insetInlineStart: -40, top: -9, width: 32, textAlign: "end", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap" }}>
                 {tickLabel(v)}
               </span>
             )}
@@ -107,7 +107,7 @@ export const AxisBarsWeb: React.FC<{
       </div>
       <div className="flex" style={{ gap, margin: "8px 0 0", marginInlineStart: 40 }} aria-hidden>
         {bars.map((b) => (
-          <span key={b.key} className="flex-1 min-w-0 text-center whitespace-nowrap" style={{ fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#8C8378" }}>
+          <span key={b.key} className="flex-1 min-w-0 text-center whitespace-nowrap" style={{ fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#71685E" }}>
             {b.label}
           </span>
         ))}
@@ -188,7 +188,7 @@ export const WebPlotFrame: React.FC<{
           {ticks.map((tk) => (
             <div key={tk.v} className="absolute" style={{ insetInline: 0, top: `${y(tk.v)}%`, borderTop: "1px solid rgba(36,31,27,0.06)" }} data-tick>
               {tk.label && (
-                <span className="absolute" style={{ insetInlineStart: -40, top: -9, width: 32, textAlign: "end", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap" }}>
+                <span className="absolute" style={{ insetInlineStart: -40, top: -9, width: 32, textAlign: "end", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap" }}>
                   {tk.label}
                 </span>
               )}
@@ -210,7 +210,7 @@ export const WebPlotFrame: React.FC<{
         </div>
         <div className="flex" style={{ gap, margin: "8px 0 0", marginInlineStart: 40 }} aria-hidden>
           {labels.map((l, i) => (
-            <span key={i} className="flex-1 min-w-0 text-center whitespace-nowrap" style={{ fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#8C8378" }}>
+            <span key={i} className="flex-1 min-w-0 text-center whitespace-nowrap" style={{ fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#71685E" }}>
               {l}
             </span>
           ))}

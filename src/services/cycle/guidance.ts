@@ -127,6 +127,14 @@ export function phaseThemeColor(phase: CyclePhase, alpha?: number): string {
   return alpha === undefined ? `rgb(${rgb})` : `rgb(${rgb} / ${alpha})`;
 }
 
+/** The phase colour as text: its ink twin (--c-*-ink / --thi-*), which reaches
+    4.5:1 on the page where the base colour does not (Round K ET). */
+export function phaseThemeInk(phase: CyclePhase): string {
+  const v = PHASE_THEME_VAR[phase];
+  if (!v) return phaseThemeColor(phase);
+  return `rgb(var(${v.startsWith("--th-") ? v.replace("--th-", "--thi-") : v + "-ink"}))`;
+}
+
 /** The four phases the bar shows, in order. The other three are states, not phases. */
 export const PHASE_BAR: readonly CyclePhase[] = [
   "menstrual",

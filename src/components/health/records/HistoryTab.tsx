@@ -398,7 +398,7 @@ const OwnHistoryWeb: React.FC<{
                 </div>
               ) : col.rows.length === 0 ? (
                 <div className="grid place-items-center" style={{ padding: 24, background: "#FAFAFB" }}>
-                  <p className="text-center" style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+                  <p className="text-center" style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                     {col.empty}
                   </p>
                 </div>
@@ -413,7 +413,7 @@ const OwnHistoryWeb: React.FC<{
                         {r.title}
                       </span>
                       {r.meta && (
-                        <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                        <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                           {r.meta}
                         </span>
                       )}
@@ -428,7 +428,7 @@ const OwnHistoryWeb: React.FC<{
                       className="shrink-0 grid place-items-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
                       style={{ width: 32, height: 32, marginInlineEnd: -6 }}
                     >
-                      <MoreVertical size={18} style={{ color: "#8C8378" }} aria-hidden />
+                      <MoreVertical size={18} style={{ color: "#71685E" }} aria-hidden />
                     </button>
                   </div>
                 ))

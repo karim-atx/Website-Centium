@@ -166,7 +166,7 @@ export function CourseWeb({ courseId, userId, onTitle }: { courseId: string; use
   }
   if (state === null || "error" in state) {
     return (
-      <p data-co-unavailable style={{ margin: 0, padding: "32px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+      <p data-co-unavailable style={{ margin: 0, padding: "32px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
         {state && "error" in state ? state.error : t("This course isn't available.")}
       </p>
     );
@@ -253,7 +253,7 @@ export function CourseWeb({ courseId, userId, onTitle }: { courseId: string; use
 
         {(state.extras?.focus || state.extras?.description) && (
           <div className="flex flex-col" style={{ gap: 6 }}>
-            {state.extras?.focus && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{t("Focus: {focus}", { focus: t(state.extras.focus) })}</span>}
+            {state.extras?.focus && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{t("Focus: {focus}", { focus: t(state.extras.focus) })}</span>}
             {state.extras?.description && (
               <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{state.extras.description}</p>
             )}
@@ -299,7 +299,7 @@ export function CourseWeb({ courseId, userId, onTitle }: { courseId: string; use
             <div className="flex" style={{ gap: 8, marginTop: 4 }}>
               <div className="flex flex-col" style={{ flex: 1, minWidth: 0, borderRadius: 12, border: "0.5px solid rgba(36,31,27,0.1)", padding: 12, gap: 2 }}>
                 <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{t("Watch free")}</span>
-                <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("All video lessons and readings")}</span>
+                <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("All video lessons and readings")}</span>
               </div>
               <div className="flex flex-col" style={{ flex: 1, minWidth: 0, borderRadius: 12, border: "1.5px solid #9A8CD6", background: "#F0EDF9", padding: 12, gap: 2 }}>
                 <span style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{t("Full course · {price}", { price })}</span>
@@ -325,7 +325,7 @@ export function CourseWeb({ courseId, userId, onTitle }: { courseId: string; use
 
         {enrolment && !isAuthor && <RateRow courseId={course.id} initial={state.myRating} onSaved={reload} />}
 
-        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {t("Reviewed by Centium before publishing. Courses share general guidance, not personal medical advice. A certificate of completion is not a professional qualification.")}
         </p>
       </aside>
@@ -337,11 +337,11 @@ function LessonRow({ title, meta, Icon, lock }: { title: string; meta: string; I
   return (
     <div data-co-lesson className="flex items-center" style={{ gap: 10, minHeight: 52, padding: "0 16px", borderTop: "0.5px solid rgba(36,31,27,0.06)" }}>
       <span className="grid place-items-center" style={{ width: 28, height: 28, borderRadius: 8, flex: "none", background: lock ? "#F5F5F6" : "#F0EDF9" }}>
-        <Icon size={15} color={lock ? "#8C8378" : "#5F5093"} aria-hidden />
+        <Icon size={15} color={lock ? "#71685E" : "#5F5093"} aria-hidden />
       </span>
       <span className="[overflow-wrap:anywhere]" style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: "22px", fontWeight: 500 }}>{title}</span>
-      {meta && <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{meta}</span>}
-      {lock && <Lock size={14} color="#8C8378" aria-label={t("Locked")} className="shrink-0" />}
+      {meta && <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" }}>{meta}</span>}
+      {lock && <Lock size={14} color="#71685E" aria-label={t("Locked")} className="shrink-0" />}
     </div>
   );
 }
@@ -402,10 +402,10 @@ function QuestionsCard({ courseId, authorName, questions, canAsk, onAsked }: { c
             rows={2}
             placeholder={t("Ask a question about the course")}
             aria-label={t("Ask {name} a question", { name: authorName })}
-            className="placeholder:text-[#8C8378]"
+            className="placeholder:text-[#71685E]"
             style={{ minHeight: 44, boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", padding: "10px 14px", fontSize: 15, lineHeight: "24px", border: "none", outline: "none", resize: "vertical", color: "#241F1B" }}
           />
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Questions and answers are shared with everyone taking the full course. Your name isn't shown.")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Questions and answers are shared with everyone taking the full course. Your name isn't shown.")}</p>
           {error && <Danger>{error}</Danger>}
           <button type="button" onClick={() => void ask()} disabled={busy} className="co-web-press self-start" style={{ height: 40, padding: "0 16px", borderRadius: 12, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: busy ? 0.6 : 1 }}>
             {busy ? t("Sending…") : t("Ask")}
@@ -415,12 +415,12 @@ function QuestionsCard({ courseId, authorName, questions, canAsk, onAsked }: { c
       {questions.map((q) => (
         <div key={q.id} style={{ borderRadius: 12, background: "#F0EDF9", padding: "10px 12px" }}>
           <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5F5093" }}>{q.body}</p>
-          <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: q.answer ? "#5B5349" : "#8C8378" }}>
+          <p className="whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: q.answer ? "#5B5349" : "#71685E" }}>
             {q.answer ? `${q.answer} — ${authorName}` : t("Waiting for an answer")}
           </p>
         </div>
       ))}
-      {questions.length === 0 && !canAsk && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No questions yet.")}</p>}
+      {questions.length === 0 && !canAsk && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("No questions yet.")}</p>}
     </div>
   );
 }
@@ -443,11 +443,11 @@ function RateRow({ courseId, initial, onSaved }: { courseId: string; initial: { 
       >
         <span style={{ flex: 1, fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>{initial ? t("Your rating") : t("Rate this course")}</span>
         {initial && (
-          <span className="flex items-center" style={{ gap: 4, fontSize: 13, color: "#8C8378" }}>
+          <span className="flex items-center" style={{ gap: 4, fontSize: 13, color: "#71685E" }}>
             <Star size={13} color="#D9A441" fill="#D9A441" aria-hidden /> {initial.stars}
           </span>
         )}
-        <ChevronRight size={16} color="#8C8378" aria-hidden />
+        <ChevronRight size={16} color="#71685E" aria-hidden />
       </button>
       <RatePopup key={opening} open={open} onClose={() => setOpen(false)} courseId={courseId} initial={initial} onSaved={onSaved} />
     </>

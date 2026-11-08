@@ -27,7 +27,7 @@ export const PracticeHeaderWeb: React.FC<{ range?: PageRange; onRange?: (r: Page
     <header className="flex items-center" style={{ height: 64, flex: "none", boxSizing: "border-box", gap: 16, padding: `0 ${rail ? 24 : 32}px`, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
       <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 16 }}>
         <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", whiteSpace: "nowrap", color: "#241F1B" }}>{t("Practice insights")}</h1>
-        <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("How your practice is doing")}</span>
+        <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("How your practice is doing")}</span>
       </div>
       {range && onRange && (
         <div role="tablist" aria-label={t("Range")} className="grid shrink-0" style={{ width: rail ? 264 : 300, height: 40, boxSizing: "border-box", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 4, padding: 4, borderRadius: 12, background: "#F5F5F6" }}>
@@ -80,16 +80,16 @@ export const PracticeEmptyWeb: React.FC<{ onAdd: () => void }> = ({ onAdd }) => 
 );
 
 const BoxWeb: React.FC<{ b: NumBoxData }> = ({ b }) => {
-  const dc = b.dir === "up" ? "#3F9165" : b.dir === "down" ? "#B3261E" : "#8C8378";
+  const dc = b.dir === "up" ? "#1D744A" : b.dir === "down" ? "#B3261E" : "#71685E";
   const Arrow = b.dir === "down" ? ArrowDown : ArrowUp;
   return (
     <div style={{ border: BORDER, borderRadius: 16, padding: "16px 20px", boxSizing: "border-box", minWidth: 0, flex: "1 1 0" }}>
-      <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{b.label}</p>
+      <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{b.label}</p>
       <div className="flex items-end justify-between" style={{ marginTop: 4, gap: 8 }}>
         <p className="flex flex-wrap items-baseline" style={{ margin: 0, gap: "2px 8px" }}>
           <span style={{ fontSize: 32, lineHeight: "40px", fontWeight: 800, letterSpacing: "-0.03em", color: b.value === "–" ? "#B9B3C9" : "#241F1B", fontVariantNumeric: "tabular-nums" }}>
             {b.value}
-            {b.unit && <span style={{ fontSize: 15, fontWeight: 700, color: "#8C8378", marginInlineStart: 2 }}>{b.unit}</span>}
+            {b.unit && <span style={{ fontSize: 15, fontWeight: 700, color: "#71685E", marginInlineStart: 2 }}>{b.unit}</span>}
           </span>
           {b.delta && (
             <span className="inline-flex items-center" style={{ gap: 2, fontSize: 13, lineHeight: "20px", fontWeight: 800, color: dc }}>
@@ -104,7 +104,7 @@ const BoxWeb: React.FC<{ b: NumBoxData }> = ({ b }) => {
           </span>
         )}
       </div>
-      <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{b.line}</p>
+      <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{b.line}</p>
     </div>
   );
 };
@@ -173,7 +173,7 @@ export const PracticeInsightsWeb: React.FC<{
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: on ? "#5F5093" : "#241F1B" }}>{g.title}</span>
-                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{g.line}</span>
+                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{g.line}</span>
                   </span>
                   <ChevronRight size={18} aria-hidden style={{ color: on ? "#7D67D9" : "#9A94B3" }} />
                 </button>
@@ -189,7 +189,7 @@ export const PracticeInsightsWeb: React.FC<{
             </span>
             <div className="min-w-0">
               <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{cur.title}</h2>
-              <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{cur.line}</p>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{cur.line}</p>
             </div>
           </div>
           {cur.id === "out" ? (

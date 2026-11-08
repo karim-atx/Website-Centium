@@ -54,7 +54,7 @@ export const PrEmpty: React.FC<{ icon: React.ReactNode; title: string; body?: st
   bg = "#F5F5F6",
   border,
   tile = "#F0EDF9",
-  bodyInk = "#8C8378",
+  bodyInk = "#71685E",
   maxW = 320,
   children,
   gapTitle = 12,

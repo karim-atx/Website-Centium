@@ -326,7 +326,7 @@ export default function Templates() {
       <div style={{ paddingBottom: 32 }}>
         <div className="flex items-end justify-between" style={{ gap: 16, marginBottom: 20 }}>
           <div className="flex-1 min-w-0">
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Templates")}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{t("Templates")}</p>
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("Reuse what works")}</h1>
           </div>
           {canAdd && (

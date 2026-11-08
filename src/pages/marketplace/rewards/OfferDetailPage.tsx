@@ -285,7 +285,7 @@ export default function OfferDetailPage({ offerId: drawnUnder }: { offerId?: str
                   style={{ width: "100%", height: 48, padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "none", border: 0, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: m.ink, cursor: "pointer" }}
                 >
                   {t("Terms")}
-                  <ChevronDown size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", transform: termsOpen ? "rotate(180deg)" : undefined, transition: reduce ? undefined : "transform 140ms ease" }} />
+                  <ChevronDown size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E", transform: termsOpen ? "rotate(180deg)" : undefined, transition: reduce ? undefined : "transform 140ms ease" }} />
                 </button>
                 {termsOpen ? (
                   <p id={termsId} style={{ margin: 0, padding: "0 16px 14px", fontSize: 15, lineHeight: "24px", color: "#5B5349", whiteSpace: "pre-line" }}>
@@ -294,7 +294,7 @@ export default function OfferDetailPage({ offerId: drawnUnder }: { offerId?: str
                 ) : null}
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("This discount is provided and honoured by {name}.", { name: o.ownerName })}</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("This discount is provided and honoured by {name}.", { name: o.ownerName })}</p>
                 {authUserId && !ownOffer ? (
                   reported ? (
                     <p role="status" style={{ margin: 0, height: 36, display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#5B5349" }}>

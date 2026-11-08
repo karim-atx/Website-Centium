@@ -496,19 +496,19 @@ export default function Clients() {
         {patients ? t("Patients") : t("Clients")}
       </h1>
       <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: webRail ? 280 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 4px 0 14px", borderRadius: 12, background: "#F5F5F6", border: `1px solid ${query ? INK.pr : "rgba(36,31,27,0.10)"}` }}>
-        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={patients ? t("Search patients") : t("Search clients")}
           aria-label={patients ? t("Search patients") : t("Search clients")}
-          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]"
+          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#71685E]"
           style={{ fontSize: 15, lineHeight: "24px", color: INK.ch }}
         />
         {query && (
           <button type="button" onClick={() => setQuery("")} aria-label={t("Clear search")} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
-            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />
+            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E" }} />
           </button>
         )}
       </label>
@@ -645,7 +645,7 @@ export default function Clients() {
               <ChevronDown size={web ? 16 : 12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
             <span className="flex items-center" style={{ gap: web ? 16 : 12 }}>
-              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
               {clients.length > 0 && (
                 <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
               )}

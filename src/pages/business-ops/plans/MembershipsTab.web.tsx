@@ -146,7 +146,7 @@ const MembershipsBody: React.FC<{ onAddRef?: (open: () => void) => void }> = ({ 
         ].map((f, i) => (
           <div key={f.l} style={{ minWidth: 0, padding: "16px 18px 14px", borderInlineStart: i ? DIVIDER : "none" }}>
             <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{f.l}</p>
-            <p style={{ margin: "4px 0 0", fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: f.v === "–" ? "#A79E93" : INK }}>{f.v}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: f.v === "–" ? "#776E64" : INK }}>{f.v}</p>
           </div>
         ))}
       </div>
@@ -211,7 +211,7 @@ const MembershipsBody: React.FC<{ onAddRef?: (open: () => void) => void }> = ({ 
     list = <MarketError thing={tk("your plans")} onRetry={ctx.reload} style={{ marginTop: 18 }} />;
   } else if (empty) {
     list = (
-      <div data-web-empty style={{ flex: 1, minHeight: 280, marginTop: 18, boxSizing: "border-box", background: "#FFFFFF", border: "1px dashed #A79E93", borderRadius: 22, padding: "28px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <div data-web-empty style={{ flex: 1, minHeight: 280, marginTop: 18, boxSizing: "border-box", background: "#FFFFFF", border: "1px dashed #776E64", borderRadius: 22, padding: "28px 20px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
         <span aria-hidden style={{ width: 64, height: 64, borderRadius: 16, background: TINT, display: "inline-flex", alignItems: "center", justifyContent: "center", color: BRAND }}>
           <KeyRound size={28} />
         </span>
@@ -374,7 +374,7 @@ const PlanPane: React.FC<{ plan: MembershipPlanRow; rail: boolean; online: boole
           ].map((x, i) => (
             <div key={x.l} style={{ minWidth: 0, padding: "16px 18px 14px", borderInlineStart: i ? DIVIDER : "none" }}>
               <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x.l}</p>
-              <p style={{ margin: "4px 0 0", fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: x.v === null ? "#A79E93" : INK }}>{x.v === null ? "–" : String(x.v)}</p>
+              <p style={{ margin: "4px 0 0", fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: x.v === null ? "#776E64" : INK }}>{x.v === null ? "–" : String(x.v)}</p>
             </div>
           ))}
         </div>

@@ -215,7 +215,7 @@ export const WorkoutLogReplies: React.FC<{
       {webReviewSlot &&
         createPortal(
           reviewed ? (
-            <span className="flex items-center" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#3F9165" }}>
+            <span className="flex items-center" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#1D744A" }}>
               <Check size={20} strokeWidth={2} aria-hidden />
               {tx("Reviewed", "log review")}
               <button type="button" onClick={() => void setReviewed(false)} disabled={busy === "review"} className="hover:underline disabled:opacity-40" style={{ marginInlineStart: 4, fontSize: 13, fontWeight: 600, color: "#5B5349" }}>

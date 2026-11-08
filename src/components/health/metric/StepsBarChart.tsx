@@ -124,7 +124,7 @@ const GoalBarChartMobile: React.FC<GoalBarChartProps> = ({ metric, mode, bars, g
                 textAnchor="middle"
                 fontSize={10}
                 fontWeight={b.current ? 700 : 600}
-                fill={b.current ? "rgb(var(--c-charcoal))" : hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378"}
+                fill={b.current ? "rgb(var(--c-charcoal))" : hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#71685E"}
               >
                 {b.label}
               </text>

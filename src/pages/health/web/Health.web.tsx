@@ -581,7 +581,7 @@ const HealthWidget: React.FC<{ spec: WidgetSpec; rail: boolean; dark: boolean }>
             <span className="flex-1 min-w-0 uppercase whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", color: ink(w.metric) }}>
               {w.label}
             </span>
-            <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
           </span>
           <span className="relative flex-1 flex flex-col items-center justify-center text-center w-full" style={{ minHeight: 0, gap: has ? 10 : 4 }}>
             {w.loading && skeleton}
@@ -628,7 +628,7 @@ const HealthWidget: React.FC<{ spec: WidgetSpec; rail: boolean; dark: boolean }>
                 {w.unit && <span style={{ fontSize: 13, fontWeight: 600, color: ink(w.metric) }}>{w.unit}</span>}
               </span>
             )}
-            <ChevronRight size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
           </span>
           <span className="min-w-0 flex items-end" style={{ alignSelf: "end" }}>
             {has && gfx}
@@ -677,11 +677,11 @@ const RecordRow: React.FC<{ icon: React.ReactNode; title: string; subtitle?: str
         {title}
       </span>
       {subtitle && (
-        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {subtitle}
         </span>
       )}
     </span>
-    <ChevronRight size={16} aria-hidden className="absolute" style={{ insetInlineEnd: 16, top: "50%", marginTop: -8, color: "#8C8378" }} />
+    <ChevronRight size={16} aria-hidden className="absolute" style={{ insetInlineEnd: 16, top: "50%", marginTop: -8, color: "#71685E" }} />
   </button>
 );

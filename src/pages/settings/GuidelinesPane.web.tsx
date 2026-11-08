@@ -13,7 +13,7 @@ export const GuidelinesPane: React.FC = () => {
   const piece = (p: GuidelinePiece, i: number) => (typeof p === "string" ? <React.Fragment key={i}>{p}</React.Fragment> : <strong key={i}>{p.b}</strong>);
   return (
     <div className="flex flex-col" style={{ gap: 24, color: "#241F1B" }}>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Last updated {date}", { date: guidelinesUpdated() })}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Last updated {date}", { date: guidelinesUpdated() })}</p>
       <p style={{ margin: 0, fontSize: 15, lineHeight: "24px" }}>{intro}</p>
       {sections.map((s) => (
         <section key={s.id} aria-labelledby={`gl-${s.id}`} className="flex flex-col" style={{ gap: 8 }}>

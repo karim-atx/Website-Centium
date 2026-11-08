@@ -100,7 +100,7 @@ export const LatestReviewsShare: React.FC<{ web?: boolean }> = ({ web }) => {
     return (
       <>
         <div style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16 }}>
-          <p style={{ margin: 0, padding: "14px 16px 10px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Latest reviews")}</p>
+          <p style={{ margin: 0, padding: "14px 16px 10px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" }}>{t("Latest reviews")}</p>
           {latest.map((r) => {
             const by = reviewerLabel(r.reviewerName);
             return (
@@ -112,7 +112,7 @@ export const LatestReviewsShare: React.FC<{ web?: boolean }> = ({ web }) => {
                     ))}
                   </span>
                   <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "24px", color: "#241F1B", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{`“${(r.body ?? "").trim()}”`}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{`${by} · ${shareDate(r.createdAt)}`}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{`${by} · ${shareDate(r.createdAt)}`}</p>
                 </div>
                 <button
                   type="button"

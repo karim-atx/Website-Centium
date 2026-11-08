@@ -37,10 +37,10 @@ const GOALS: { value: WeightGoalType; label: string; Icon: typeof Equal }[] = [
 
 const CARD: React.CSSProperties = { background: "#FFFFFF", border: "1px solid #E7E6E6", borderRadius: 16, padding: 24, boxSizing: "border-box", minWidth: 0 };
 const TITLE: React.CSSProperties = { margin: 0, fontSize: 12, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6D50D3" };
-const NOTE: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" };
+const NOTE: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" };
 const FIGURE: React.CSSProperties = { margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 800, color: "#241F1B", whiteSpace: "nowrap" };
 const UNIT: React.CSSProperties = { fontSize: 15, fontWeight: 600, marginInlineStart: 4 };
-const MISSING: React.CSSProperties = { margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#A79E93" };
+const MISSING: React.CSSProperties = { margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#776E64" };
 const ERROR: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#C0392B" };
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2";
 
@@ -250,7 +250,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
   };
 
   const maintain = nutritionGoal.weightGoal === "maintain";
-  const rateColor = nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B";
+  const rateColor = nutritionGoal.weightGoal === "gain" ? "#1D744A" : "#C0392B";
   const rateTint = nutritionGoal.weightGoal === "gain" ? "#9FC8B2" : "#DF9C95";
   const rateFrac = (((nutritionGoal.weeklyRateKg || 0.5) - 0.1) / 0.9) * 100;
   const restrictionOpen = !!restrictionAnchor;
@@ -332,7 +332,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
                       className="text-center focus:outline-none focus:ring-2 focus:ring-[#AEA1DC] disabled:opacity-60"
                       style={{ width: 88, height: 40, borderRadius: 12, background: "#F5F5F6", border: "1px solid #E0DFE0", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}
                     />
-                    <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("kg")}</span>
+                    <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("kg")}</span>
                   </span>
                 </label>
                 <label className="block flex-1 min-w-0">
@@ -352,7 +352,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
                       className="flex-1 min-w-0 h-[6px] rounded-full appearance-none disabled:opacity-50"
                       style={{ accentColor: rateTint, backgroundImage: `linear-gradient(to ${isRtl() ? "left" : "right"}, ${rateTint} ${rateFrac}%, #F5F5F6 ${rateFrac}%)` }}
                     />
-                    <span className="flex-none whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="flex-none whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
                       {t("{n} kg / week", { n: (nutritionGoal.weeklyRateKg || 0.5).toFixed(1) })}
                     </span>
@@ -361,7 +361,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
               </div>
             )}
             {!maintain && weightGoalError && <p style={ERROR}>{t(weightGoalError)}</p>}
-            {locked && <p style={{ ...NOTE, color: "#A79E93" }}>{t("Locked: only your dietitian can edit this plan.")}</p>}
+            {locked && <p style={{ ...NOTE, color: "#776E64" }}>{t("Locked: only your dietitian can edit this plan.")}</p>}
           </section>
 
           {maintain ? (
@@ -533,7 +533,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
           </p>
         )}
         {dietaryRestriction && (
-          <button type="button" onClick={() => setDietaryRestriction(null)} className={clsx("self-start flex items-center text-start hover:underline", FOCUS)} style={{ gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
+          <button type="button" onClick={() => setDietaryRestriction(null)} className={clsx("self-start flex items-center text-start hover:underline", FOCUS)} style={{ gap: 6, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>
             <X size={14} aria-hidden className="shrink-0" />
             {t("{diet} active. Incompatible Diary items are highlighted. Tap to clear.", { diet: t(dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label ?? "") })}
           </button>
@@ -545,7 +545,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
           </p>
         )}
         {myAllergies.status === "error" && (
-          <p className="flex items-center" style={{ gap: 10, margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p className="flex items-center" style={{ gap: 10, margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {t("Couldn't load your allergies.")}
             <button type="button" onClick={myAllergies.reload} className={clsx("hover:underline", FOCUS)} style={{ fontWeight: 700, color: "#5F5093" }}>
               {t("Retry")}

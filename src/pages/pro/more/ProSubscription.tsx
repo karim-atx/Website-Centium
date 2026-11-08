@@ -236,12 +236,12 @@ export default function ProSubscription() {
     // the Monthly / Yearly tabs, the plans as rows (CURRENT and the check on the plan in force, the saving chip),
     // the ask as the block CTA and the notes. The carousel and "All plans at a glance" are mobile only: the
     // rows already list every plan with its limit and price.
-    const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", maxWidth: "72ch", textWrap: "pretty" } as const;
+    const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", maxWidth: "72ch", textWrap: "pretty" } as const;
     return (
       <div className="flex flex-col" style={{ gap: 28 }}>
         <header className="flex flex-col" style={{ gap: 2 }}>
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Centium Professional")}</h1>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Your plan, client limit & upgrades")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Your plan, client limit & upgrades")}</p>
         </header>
         {planLoading ? (
           <ProCardSkeleton lines={2} />
@@ -256,7 +256,7 @@ export default function ProSubscription() {
               {" · "}
               {cap == null ? clientsWord(used) : tn(cap, "{used} of {n} client", "{used} of {n} clients", { used })}
             </span>
-            <p style={{ ...note, color: atCap ? INK.hi : "#8C8378", fontWeight: atCap ? 700 : 400 }}>{limitLine}</p>
+            <p style={{ ...note, color: atCap ? INK.hi : "#71685E", fontWeight: atCap ? 700 : 400 }}>{limitLine}</p>
           </div>
         ) : (
           <p style={note}>{t("Your plan couldn't be identified.")}</p>
@@ -283,7 +283,7 @@ export default function ProSubscription() {
               <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Premium passes")}</span>
               <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{t("Include Centium Premium for your clients")}</span>
             </span>
-            <ChevronRight size={16} strokeWidth={2} style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} strokeWidth={2} style={{ color: "#71685E" }} aria-hidden />
           </button>
         )}
         <SegmentedTabs
@@ -336,7 +336,7 @@ export default function ProSubscription() {
                       )}
                     </span>
                     <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{price}</span>
-                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {tier.maxClients == null ? t("Unlimited active clients") : tn(tier.maxClients, "Up to {n} active client", "Up to {n} active clients")}
                     </span>
                   </span>

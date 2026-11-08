@@ -164,7 +164,7 @@ export default function PublicProfile() {
   const webHead = pane && (
     <div className="flex items-center justify-between" style={{ gap: 16, marginBottom: 16 }}>
       <div className="flex-1 min-w-0">
-        <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Public profile")}</p>
+        <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" }}>{t("Public profile")}</p>
         <h2 style={{ margin: 0, whiteSpace: "nowrap", fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("What clients see")}</h2>
       </div>
       <div className="flex items-center shrink-0" style={{ gap: 8 }}>

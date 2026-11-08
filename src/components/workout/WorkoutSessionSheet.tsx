@@ -152,7 +152,7 @@ function freshLogged(exercises: Exercise[]): LoggedExercise[] {
  * (goldPale #F6E9C9 / #3A342C, icon goldInk) and the results toast's shadow.
  */
 const COACH_LOGGER = {
-  target: ["#8C8378", "#B8B3C7"],
+  target: ["#71685E", "#B8B3C7"],
   off: ["#D9A441", "#E0B360"],
   offHc: ["#8A6A3E", "#DCBB7F"],
   swapBg: ["#F6E9C9", "#3A342C"],
@@ -784,7 +784,7 @@ export const WorkoutSessionSheet: React.FC<{
           >
             <EllipsisVertical size={16} />
           </button>
-          <span className="flex-none tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>
+          <span className="flex-none tabular-nums" style={{ fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>
             {t("{n} of {total}", { n: exIdx + 1, total: logged.length })}
           </span>
         </div>
@@ -839,8 +839,8 @@ export const WorkoutSessionSheet: React.FC<{
               style={
                 dock
                   ? // Web (WO Logger Column v13): 10 16 4, 13/20 600; Set 56, the actions 84.
-                    { padding: "10px 16px 4px", fontSize: textPx(13), lineHeight: linePx(20), fontWeight: 600, letterSpacing: "0.08em", color: dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93" }
-                  : { padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }
+                    { padding: "10px 16px 4px", fontSize: textPx(13), lineHeight: linePx(20), fontWeight: 600, letterSpacing: "0.08em", color: dark ? "rgb(var(--c-charcoal-faint))" : "#776E64" }
+                  : { padding: "9px 15px 1px", fontSize: textPx(9.5), fontWeight: 600, letterSpacing: "0.08em", color: (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }
               }
             >
               <span style={{ width: dock ? 56 : 58 }}>{tx("Set", "workout")}</span>
@@ -905,7 +905,7 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: dock ? "6px 16px 0" : "6px 15px 0", fontSize: textPx(dock ? 13 : 10.5), lineHeight: dock ? linePx(20) : undefined, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("{n} asked for · the rest are yours if you want them.", { n: asked })}</p>
+              <p style={{ margin: dock ? "6px 16px 0" : "6px 15px 0", fontSize: textPx(dock ? 13 : 10.5), lineHeight: dock ? linePx(20) : undefined, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("{n} asked for · the rest are yours if you want them.", { n: asked })}</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
@@ -1044,11 +1044,11 @@ export const WorkoutSessionSheet: React.FC<{
               <p className="truncate" title={routineName} style={{ gridColumn: 1, gridRow: 1, margin: 0, fontSize: 20, lineHeight: "28px", fontWeight: 700, letterSpacing: "-0.3px", color: "rgb(var(--c-charcoal))" }}>
                 {routineName}
               </p>
-              <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 2, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+              <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 2, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#776E64" }}>
                 {started ? t("Started {time}", { time: clock12(startedAt) }) : elapsed > 0 ? t("Paused") : t("Not started")}
               </p>
               {elapsed > 0 && (
-                <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 3, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#A79E93" }}>
+                <p className="tabular-nums whitespace-nowrap" style={{ gridColumn: 1, gridRow: 3, margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#776E64" }}>
                   {t("{elapsed} elapsed", { elapsed: formatDuration(elapsed) })}
                 </p>
               )}
@@ -1083,7 +1083,7 @@ export const WorkoutSessionSheet: React.FC<{
                   }}
                   aria-label={noteUnread ? t("Coach's note, unread") : t("Coach's note")}
                   className={circle}
-                  style={{ width: 36, height: 36, background: "#F5F5F6", color: "#A79E93" }}
+                  style={{ width: 36, height: 36, background: "#F5F5F6", color: "#776E64" }}
                 >
                   <MessageSquareText size={16} />
                 </button>
@@ -1125,7 +1125,7 @@ export const WorkoutSessionSheet: React.FC<{
             <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", lineHeight: linePx(19) }}>
               {routineName}
             </p>
-            <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93"), lineHeight: linePx(14) }}>
+            <p className="tabular-nums" style={{ margin: 0, fontSize: textPx(10.5), fontWeight: 500, color: (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64"), lineHeight: linePx(14) }}>
               {started
                 ? t("Started {time} · {elapsed} elapsed", { time: clock12(startedAt), elapsed: formatDuration(elapsed) })
                 : elapsed > 0
@@ -1285,7 +1285,7 @@ export const WorkoutSessionSheet: React.FC<{
             <div className={dock ? "flex-1 min-w-0" : undefined}>
               <p
                 className="uppercase"
-                style={{ margin: 0, fontSize: textPx(dock ? 13 : 10), lineHeight: dock ? linePx(20) : undefined, fontWeight: 700, letterSpacing: "0.1em", color: dock && !dark ? "#A79E93" : "rgb(var(--c-charcoal-faint))" }}
+                style={{ margin: 0, fontSize: textPx(dock ? 13 : 10), lineHeight: dock ? linePx(20) : undefined, fontWeight: 700, letterSpacing: "0.1em", color: dock && !dark ? "#776E64" : "rgb(var(--c-charcoal-faint))" }}
               >
                 {t("Total volume")}
               </p>
@@ -1751,7 +1751,7 @@ const SetRowMobile: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator
           ) : (
             <span style={{ fontSize: textPx(10.5), fontWeight: 600, color: ty?.label }}>{ty ? tx(ty.short, "set badge") : null}</span>
           )}
-          <ChevronDown size={10} style={{ color: ty?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }} />
+          <ChevronDown size={10} style={{ color: ty?.label ?? (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }} />
         </span>
         <span aria-hidden className="absolute end-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
       </button>
@@ -1946,7 +1946,7 @@ const SetRowWeb: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, f
           onClick={onOptions}
           aria-label={t("Set {label} options", { label })}
           className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
-          style={{ width: 16, height: 28, color: s.notes || s.rpe ? playInk(family, dark) : dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93" }}
+          style={{ width: 16, height: 28, color: s.notes || s.rpe ? playInk(family, dark) : dark ? "rgb(var(--c-charcoal-faint))" : "#776E64" }}
         >
           <EllipsisVertical size={16} />
         </button>

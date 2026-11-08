@@ -75,7 +75,7 @@ export const GetSupportPopup: React.FC<{
                 <HandHeart size={16} className="shrink-0" aria-hidden style={{ color: "#7D6BB5" }} />
                 <span className="flex-1 min-w-0">
                   <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t(RECOVERY_LINK)}</span>
-                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t(RECOVERY_LINK_HINT)}</span>
+                  <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t(RECOVERY_LINK_HINT)}</span>
                 </span>
               </button>
             )}
@@ -87,7 +87,7 @@ export const GetSupportPopup: React.FC<{
             <button type="button" onClick={onClose} className="w-full flex items-center justify-center hover:bg-[#F5F5F6] rounded-xl" style={{ height: 40, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5B5349" }}>
               {t("I'm OK, continue")}
             </button>
-            {guidelines("text-center", { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" })}
+            {guidelines("text-center", { margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" })}
           </div>
         </div>
       </CentredPopup>

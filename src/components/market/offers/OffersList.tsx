@@ -181,7 +181,7 @@ export const OffersList: React.FC<OffersListProps> = ({ variant, owner, canManag
             <PointsLeaf height={24} label={null} />
           </span>
           <div style={{ fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{t("No offers yet")}</div>
-          <div style={{ fontSize: 15, lineHeight: 1.55, color: "#8C8378", maxWidth: 360 }}>
+          <div style={{ fontSize: 15, lineHeight: 1.55, color: "#71685E", maxWidth: 360 }}>
             {variant === "professional"
               ? t("Offer a discount on your services that clients can redeem with their points. You fund it in full.")
               : t("Offer a discount that members can redeem with their points. You fund it in full.")}

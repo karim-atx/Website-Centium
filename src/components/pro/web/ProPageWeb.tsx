@@ -12,7 +12,7 @@ export const ProPageHeaderWeb: React.FC<{ title: string; kicker?: string; action
   return (
     <header className="flex items-center" style={{ minHeight: 64, boxSizing: "border-box", gap: 12, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
       <div className="flex-1 min-w-0">
-        {kicker && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{kicker}</p>}
+        {kicker && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{kicker}</p>}
         <h1 className="truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>
           {title}
         </h1>

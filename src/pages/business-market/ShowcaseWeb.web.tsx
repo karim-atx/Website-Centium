@@ -88,7 +88,7 @@ export function ShowcaseWeb({
             <Package size={28} strokeWidth={1.75} aria-hidden />
           </span>
           <h2 style={{ margin: 0, fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{t("No items yet")}</h2>
-          <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378", maxWidth: 380 }}>{t("Add what you sell or offer. Items show on your Showcase on Explore.")}</p>
+          <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E", maxWidth: 380 }}>{t("Add what you sell or offer. Items show on your Showcase on Explore.")}</p>
           <span style={{ marginTop: 8 }}>{add("0 18px")}</span>
         </div>
       </div>

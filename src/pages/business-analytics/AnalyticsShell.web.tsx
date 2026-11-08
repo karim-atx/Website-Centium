@@ -98,7 +98,7 @@ export default function AnalyticsShellWeb() {
       <header style={{ height: 64, flex: "none", boxSizing: "border-box", display: "flex", alignItems: "center", gap: 12, padding: "0 32px", borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 14 }}>
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", whiteSpace: "nowrap" }}>{t("Analytics")}</h1>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{t("How your business is doing over time")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{t("How your business is doing over time")}</p>
         </div>
         {csv && (
           <button
@@ -143,7 +143,7 @@ export default function AnalyticsShellWeb() {
                   onChange={(k) => (k === "custom" ? setCustomOpen(true) : setRange(presetRange(k as Exclude<RangeKey, "custom">)))}
                 />
                 {!isMembers && (
-                  <p data-range-line style={{ margin: 0, textAlign: "end", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <p data-range-line style={{ margin: 0, textAlign: "end", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {rangeLine(range)}
                   </p>
                 )}

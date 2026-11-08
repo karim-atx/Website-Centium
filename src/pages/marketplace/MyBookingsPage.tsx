@@ -479,7 +479,7 @@ const BookingTicket: React.FC<{ row: BookingRow; onOpen?: () => void; menu?: (an
 const WEB_TONES: Record<BookingRow["tone"], { bg: string; ink: string; perf: string }> = {
   teal: { bg: "#E4F0EE", ink: "#2F5F58", perf: "#7FB2AA" },
   pale: { bg: "#F0EDF9", ink: "#7D6BB5", perf: "#AEA1DC" },
-  muted: { bg: "#F5F5F6", ink: "#8C8378", perf: "rgba(36,31,27,0.2)" },
+  muted: { bg: "#F5F5F6", ink: "#71685E", perf: "rgba(36,31,27,0.2)" },
 };
 
 /**

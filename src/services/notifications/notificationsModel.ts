@@ -666,7 +666,7 @@ export const NOTIF_TONES: Record<NotifTone, [string, string]> = {
   teal: ["#E6F1EF", "#4F8F8A"],
   red: ["#FBE7E4", "#C0392B"],
   gold: ["#FDF3D6", "#9A7414"],
-  grey: ["#F5F5F6", "#8C8378"],
+  grey: ["#F5F5F6", "#71685E"],
 };
 
 /** `NI`: the 18 glyph paths (stroke 1.9, 24 viewBox). */
