@@ -15,11 +15,11 @@ test("the Android app with Google Wallet, the switch on and a valid pass shows G
   assert.equal(walletButton(ready), "google");
 });
 
-test("a browser and the iPhone app keep the disabled placeholder, whatever the rest says", () => {
-  assert.equal(walletButton({ ...ready, platform: "web", availability: { ok: false, reason: "not_native" } }), "placeholder");
-  assert.equal(walletButton({ ...ready, platform: "web" }), "placeholder");
-  assert.equal(walletButton({ ...ready, platform: "ios" }), "placeholder");
-  assert.equal(walletButton({ ...ready, platform: "ios", availability: { ok: true, wallet: "apple" } }), "placeholder");
+test("a browser and the iPhone app show no Wallet button at all, whatever the rest says", () => {
+  assert.equal(walletButton({ ...ready, platform: "web", availability: { ok: false, reason: "not_native" } }), "none");
+  assert.equal(walletButton({ ...ready, platform: "web" }), "none");
+  assert.equal(walletButton({ ...ready, platform: "ios" }), "none");
+  assert.equal(walletButton({ ...ready, platform: "ios", availability: { ok: true, wallet: "apple" } }), "none");
 });
 
 test("on Android it hides while availability is being asked, and where Google Wallet can't save passes", () => {

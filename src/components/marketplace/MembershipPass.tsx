@@ -14,7 +14,7 @@ import { PassDevicesSheet } from "./PassDevicesSheet";
 import { EntrySharingStatus } from "./EntrySharingStatus";
 import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
 import { entrySystemDisplay } from "../../services/venues/entrySystem";
-import { getLanguage, t, tk, tx } from "../../i18n/core";
+import { getLanguage, t, tk } from "../../i18n/core";
 import { platform } from "../../platform";
 import { onAppConfig, nativeFeatureOn } from "../../platform/appConfig";
 import { wallet, type WalletAvailability } from "../../platform/wallet";
@@ -30,15 +30,14 @@ import { WALLET_ART, WALLET_BUTTON_HEIGHT, walletArtWidth, walletButton, walletO
 //
 // QR IS THE WEB'S METHOD. Tap (NFC Wallet passes / in-app tap) and Bluetooth
 // (the gym's access-control SDK) are native-only: their panels are drawn as
-// the frames do, inert, with one line saying where they work. The Wallet
-// button (BR-05, Apple on iPhone, Google on Android, never both) is native too:
-// drawn, disabled, in a browser and on iPhone.
+// the frames do, inert, with one line saying where they work.
 //
-// Round K · BJ (Karim 2026-11-08): in the Android app the placeholder gives
-// way to Google's official "Add to Google Wallet" button (the black
-// wallet-button SVG, en or ar, unchanged), shown only when wallet.available()
-// says Google, the wallet_passes switch is on and the pass is valid; hidden
-// otherwise (walletButtonModel). 48 tall, the artwork's own ratio. "added"
+// Round K · BJ (Karim 2026-11-08): the only Wallet button is Google's official
+// "Add to Google Wallet" (the black wallet-button SVG, en or ar, unchanged),
+// in the Android app, shown only when wallet.available() says Google, the
+// wallet_passes switch is on and the pass is valid. Everywhere else, a browser
+// and the iPhone app included, nothing shows (walletButtonModel); the old
+// greyed-out placeholder is gone. 48 tall, the artwork's own ratio. "added"
 // says so under the pass and re-reads "Your devices" (Google Wallet joins the
 // list), "cancelled" says nothing, "failed" is the one error line.
 //
@@ -96,8 +95,6 @@ function passTagText(m: Pick<GymMembership, "passState" | "startedOn">): string 
       return t("Status unavailable");
   }
 }
-
-const isIOS = () => typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent);
 
 export function MembershipPass({
   membership,
@@ -347,27 +344,14 @@ export function MembershipPass({
         </p>
       )}
 
-      {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. In a
-          browser and on iPhone it is drawn disabled, as before. */}
-      {walletShows === "placeholder" && (
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          title={t("Available in the Centium phone app")}
-          className="mt-2.5 w-[201px] h-[46px] rounded-xl bg-black text-white text-[14px] font-semibold disabled:opacity-40"
-        >
-          {isIOS() ? t("Add to Apple Wallet") : t("Add to Google Wallet")}
-        </button>
-      )}
-      {/* BJ: Google's own button, live, in the Android app only. */}
+      {/* BJ: Google's own button, live, in the Android app only; nothing elsewhere. */}
       {walletShows === "google" && (
         <button
           type="button"
           onClick={() => void addToWallet()}
           disabled={walletBusy}
           aria-busy={walletBusy || undefined}
-          aria-label={tx("Add to Google Wallet", "Google's button")}
+          aria-label={t("Add to Google Wallet")}
           className="tap mt-2.5 p-0 border-0 bg-transparent rounded-full"
           style={{ height: WALLET_BUTTON_HEIGHT }}
         >

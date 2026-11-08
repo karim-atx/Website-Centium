@@ -6,11 +6,10 @@
 // wallet.available() says ok with Google Wallet (which already folds in the
 // "wallet_passes" switch, and Google's own SAVE_PASSES availability, country
 // included: anything but AVAILABLE answers no_wallet), the switch is on, and
-// the pass is valid. Everywhere else in the app it is hidden; the pass, its QR
-// and its code keep working as before.
-//
-// THE BROWSER IS UNCHANGED. A browser (and the iPhone app, where Apple Wallet
-// "stays disabled, as today", PLAN §3) keeps the drawn, disabled placeholder.
+// the pass is valid. Everywhere else (a browser, the iPhone app, and the
+// Android app in any other case) nothing shows; the pass, its QR and its code
+// keep working as before. Google's live button is the only Wallet button
+// anywhere (Karim 2026-11-08: the greyed-out placeholder is gone).
 //
 // No imports: wallet.ts and index.ts pull in Capacitor and the Supabase
 // client, which the tests' type check (no DOM) can't read. The shapes below
@@ -23,8 +22,6 @@ type WalletAddResult = "added" | "cancelled" | "failed";
 export type WalletButton =
   /** Google's official "Add to Google Wallet" button, live. */
   | "google"
-  /** The disabled placeholder the website has always drawn ("Available in the Centium phone app"). */
-  | "placeholder"
   /** Nothing. */
   | "none";
 
@@ -43,8 +40,7 @@ export type WalletButtonInput = {
 };
 
 export function walletButton(i: WalletButtonInput): WalletButton {
-  if (!i.centiumEntry) return "none";
-  if (i.platform === "web" || i.platform === "ios") return "placeholder";
+  if (!i.centiumEntry || i.platform !== "android") return "none";
   const a = i.availability;
   if (!a?.ok || a.wallet !== "google") return "none";
   if (!i.switchOn || i.passState !== "valid" || !i.passCodeOn) return "none";
@@ -76,9 +72,9 @@ export const WALLET_ART = {
 } as const;
 
 /**
- * Drawn 48 tall: Karim's floor (48 dp), taller than every other button on the
- * pass (the placeholder is 46, the text buttons 32), the width kept to the
- * artwork's own ratio.
+ * Drawn 48 tall: Karim's floor (48 dp), and never smaller than the other
+ * buttons on the pass (the popup's Done is 48, the text buttons 32), the width
+ * kept to the artwork's own ratio.
  */
 export const WALLET_BUTTON_HEIGHT = 48;
 
