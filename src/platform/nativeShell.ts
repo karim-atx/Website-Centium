@@ -1,6 +1,7 @@
-// The two moments the phone's own side has to hear about from the website
-// (App-Centium ROUND_J.md §1.3, §1.4). Native only, best effort: neither may
-// ever hold up a language change or a sign-out.
+// What the phone's own side has to hear about from the website: the
+// language and sign-out (App-Centium ROUND_J.md §1.3, §1.4), reduced motion
+// and the text size (ROUND_K.md §1.3, §1.4). Native only, best effort: none
+// may ever hold up a setting change or a sign-out.
 import { isNative } from "./index";
 import { CentiumNative } from "./native";
 import { refreshNativePushLocale } from "./push";
@@ -20,6 +21,33 @@ export function mirrorLanguage(language: "en" | "ar"): void {
   });
   // The push row's locale: the Database writes notification text in it.
   refreshNativePushLocale();
+}
+
+let mirroredMotion: boolean | null = null;
+
+/** The Reduce motion setting, for what the phone draws itself (ROUND_K.md §1.4). */
+export function mirrorReducedMotion(on: boolean): void {
+  if (!isNative() || mirroredMotion === on) return;
+  mirroredMotion = on;
+  CentiumNative.setReducedMotion({ on }).catch(() => {
+    mirroredMotion = null;
+  });
+}
+
+/**
+ * The WebView's text size from the phone's font size, in percent, and the
+ * most the total may reach (ROUND_K.md D-ET1); 100 of 200 in a browser or
+ * when the phone can't say. "Larger text" uses it to stay within the total.
+ */
+export async function nativeTextZoom(): Promise<{ percent: number; max: number }> {
+  const plain = { percent: 100, max: 200 };
+  if (!isNative()) return plain;
+  try {
+    const z = await CentiumNative.textZoom();
+    return Number.isFinite(z.percent) && Number.isFinite(z.max) ? z : plain;
+  } catch {
+    return plain;
+  }
 }
 
 const SIGN_OUT_WAIT_MS = 2000;

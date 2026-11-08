@@ -50,6 +50,20 @@ export interface CentiumNativePlugin {
   setLanguage(options: { language: "en" | "ar" }): Promise<void>;
 
   /**
+   * The website's Reduce motion setting, so what the phone draws itself
+   * follows it too, as well as the phone's own "Remove animations"
+   * (App-Centium ROUND_K.md §1.4).
+   */
+  setReducedMotion(options: { on: boolean }): Promise<void>;
+
+  /**
+   * The WebView's text size in percent: the phone's font size, at most `max`
+   * (200). The website's "Larger text" goes on top of it, keeping the total
+   * within `max` (ROUND_K.md D-ET1).
+   */
+  textZoom(): Promise<{ percent: number; max: number }>;
+
+  /**
    * Sign-out, on the phone's side: the widget snapshot and shortcuts are
    * cleared and a running session stops. Health Connect access and the
    * Centium calendar are left as they are.
