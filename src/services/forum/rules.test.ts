@@ -10,8 +10,10 @@ import {
   initialsOf,
   nicknameNextChange,
   nicknameProblem,
+  shownAuthorLabel,
   type ForumCategory,
 } from "./rules.ts";
+import { addCatalogue, setActiveLanguage } from "../../i18n/core.ts";
 import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes.ts";
 import { detailDate } from "../../utils/date.ts";
 
@@ -71,6 +73,19 @@ test("initials", () => {
   assert.equal(initialsOf("Elie S."), "ES");
   assert.equal(initialsOf("Rami"), "R");
   assert.equal(initialsOf(""), "?");
+});
+
+test("a deleted author shows Deleted member, in the reader's language (K-DEL)", () => {
+  assert.equal(shownAuthorLabel("Deleted account"), "Deleted member");
+  assert.equal(shownAuthorLabel("runnerMaya"), "runnerMaya");
+  assert.equal(shownAuthorLabel("Member"), "Member");
+  addCatalogue("ar", { "Deleted member": "عضو محذوف" });
+  setActiveLanguage("ar");
+  try {
+    assert.equal(shownAuthorLabel("Deleted account"), "عضو محذوف");
+  } finally {
+    setActiveLanguage("en");
+  }
 });
 
 test("forum age: day counts past a week (MO1.3)", () => {

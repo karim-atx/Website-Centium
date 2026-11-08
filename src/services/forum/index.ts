@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import { describeForumError, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
+import { describeForumError, shownAuthorLabel, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
 import { contactRefusal } from "../moderation/text";
 import { t, tk } from "../../i18n/core";
 
@@ -261,7 +261,8 @@ export async function fetchAuthors(threadIds: string[], replyIds: string[]): Pro
     professional_id: string | null;
   }[]) {
     out.set(r.post_id, {
-      label: r.label,
+      // A deleted account's post: "Deleted member", in the reader's language (K-DEL).
+      label: shownAuthorLabel(r.label),
       isProfessional: r.is_professional,
       isVerified: r.is_verified,
       isMine: r.is_mine,

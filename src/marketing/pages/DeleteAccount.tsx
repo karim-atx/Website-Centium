@@ -22,7 +22,14 @@ import { t, tk } from "../../i18n/core";
 //   * sent messages survive without the sender (20260911200000);
 //   * bug reports and app reviews survive without the author (20260911210000);
 //   * a business closes rather than being deleted (20261130000000);
-//   * an author's courses go, enrolled learners told (20261226120000).
+//   * an author's courses go, enrolled learners told (20261226120000);
+//   * a professional's notes about the member cascade with the account
+//     (client_health_notes 20260906001600, session_notes 20261124030200);
+//   * forum posts and comments survive with author_id SET NULL (20261014020000),
+//     and the forum shows them as "Deleted member" (shownAuthorLabel, services/forum/rules.ts).
+// Karim's decisions (2026-11-08) add: purchases through the App Store or Google Play
+// are Apple's or Google's to manage, cancel and refund; payment records are kept only
+// as long as the law requires, without health data.
 
 function vals(vw: number) {
   const lg = vw >= LG,
@@ -60,6 +67,7 @@ const SECTIONS: { id: string; h: string; items: string[] }[] = [
       tk("After the 30 days, your sign-in, your profile and everything your account holds are permanently removed."),
       tk("Files you uploaded, such as photos, documents and message attachments, are removed from storage before your account is erased."),
       tk("Courses you published are removed, and anyone enrolled is told the course is no longer available."),
+      tk("Notes a professional kept about you, including clinical notes, are deleted with your account."),
     ],
   },
   {
@@ -69,6 +77,17 @@ const SECTIONS: { id: string; h: string; items: string[] }[] = [
       tk("Messages you sent stay in the other person's conversation, without your name, so they keep their side of it."),
       tk("Bug reports and app reviews you wrote are kept without anything that identifies you."),
       tk("If you own a business account, the business closes instead of being deleted. Its members keep their records, receipts, bookings and reviews."),
+      tk("Your forum posts and comments are kept, so the conversations around them still make sense, but they show “Deleted member” instead of your name or nickname."),
+      tk("Payment records are kept only for as long as the law requires, without any health data."),
+    ],
+  },
+  {
+    id: "store-purchases",
+    h: tk("Purchases through the App Store or Google Play"),
+    items: [
+      tk("Plans bought in the Centium app, through the App Store or Google Play, are managed by Apple or Google. You manage or cancel them in your Apple or Google account settings."),
+      tk("Deleting your Centium account doesn't cancel a subscription bought through the App Store or Google Play. Cancel it in your Apple or Google account settings so it stops renewing."),
+      tk("Refunds for these purchases are made by Apple or Google, under their own rules, so ask Apple or Google."),
     ],
   },
 ];

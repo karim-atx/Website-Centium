@@ -227,6 +227,18 @@ export function forumAge(iso: string, now = Date.now()): string {
   return `${days}d`;
 }
 
+/**
+ * Round K (K-DEL), Karim 2026-11-08: a deleted account's posts and comments are kept,
+ * anonymised, and show "Deleted member". Erasure sets author_id to null
+ * (20261014020000), and forum_label_for answers this fixed English label for a null
+ * author (20261015000000). A nickname can't hold a space, so no nickname equals it.
+ * This is where the forum turns it into the shown words, in the reader's language.
+ */
+export const DELETED_AUTHOR_LABEL = "Deleted account";
+export function shownAuthorLabel(label: string): string {
+  return label === DELETED_AUTHOR_LABEL ? t("Deleted member") : label;
+}
+
 /** The initial in an author circle. Never an avatar: a nickname post would otherwise show a face. */
 export function initialOf(label: string): string {
   const ch = Array.from(label.trim())[0];

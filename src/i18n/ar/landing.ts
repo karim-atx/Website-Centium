@@ -905,6 +905,21 @@ const landing: Catalogue = {
   "Delete your account now": "احذف حسابك الآن",
   "Go to Delete my account": "الانتقال إلى «حذف حسابي»",
   "Sign in to delete your account": "سجّل الدخول لحذف حسابك",
-  "Email {email}": "راسل {email}",};
+  "Email {email}": "راسل {email}",
+  // Karim's decisions (2026-11-08): a professional's notes, forum posts, payment records, store purchases.
+  "Notes a professional kept about you, including clinical notes, are deleted with your account.":
+    "تُحذف مع حسابك الملاحظات التي دوّنها عنك أي مختص، بما فيها الملاحظات السريرية.",
+  "Your forum posts and comments are kept, so the conversations around them still make sense, but they show “Deleted member” instead of your name or nickname.":
+    "يُحتفظ بمنشوراتك وتعليقاتك في المنتدى كي تبقى المحادثات من حولها مفهومة، لكنها تظهر باسم «عضو محذوف» بدلًا من اسمك أو اسمك المستعار.",
+  "Payment records are kept only for as long as the law requires, without any health data.":
+    "يُحتفظ بسجلات المدفوعات للمدة التي يفرضها القانون فقط، ومن دون أي بيانات صحية.",
+  "Purchases through the App Store or Google Play": "المشتريات عبر App Store أو Google Play",
+  "Plans bought in the Centium app, through the App Store or Google Play, are managed by Apple or Google. You manage or cancel them in your Apple or Google account settings.":
+    "تتولّى Apple أو Google إدارة الخطط التي تُشترى في تطبيق Centium عبر App Store أو Google Play. ويمكنك إدارتها أو إلغاؤها من إعدادات حسابك على Apple أو Google.",
+  "Deleting your Centium account doesn't cancel a subscription bought through the App Store or Google Play. Cancel it in your Apple or Google account settings so it stops renewing.":
+    "لا يؤدي حذف حسابك على Centium إلى إلغاء اشتراك اشتريته عبر App Store أو Google Play. ألغِه من إعدادات حسابك على Apple أو Google كي يتوقف تجديده.",
+  "Refunds for these purchases are made by Apple or Google, under their own rules, so ask Apple or Google.":
+    "تتولّى Apple أو Google ردّ مبالغ هذه المشتريات، وفق قواعدهما الخاصة، فاطلب ذلك منهما.",
+};
 
 export default landing;
