@@ -11,7 +11,9 @@ export type NativeFeature =
   | "calendar_sync"
   | "voip_calls"
   | "home_widgets"
-  | "native_camera";
+  | "native_camera"
+  // App-Centium Round K (ROUND_K.md D-BK3; Database DB-Z8).
+  | "biometric_unlock";
 
 export interface AppConfig {
   /** The app's own version, as sent (package.json's version on both platforms). */
