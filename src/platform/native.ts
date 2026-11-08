@@ -56,6 +56,13 @@ export interface CentiumNativePlugin {
    */
   takeLaunchPath(): Promise<{ path: string | null }>;
 
+  /**
+   * The phone's model ("Pixel 8") and maker, to name this phone in lists such
+   * as the fingerprint keys (App-Centium ROUND_K.md §3.3). Never the name the
+   * owner gave the phone. Missing on app builds before Round K.
+   */
+  deviceModel(): Promise<{ model: string; manufacturer: string }>;
+
   /** The app's language, for what Android draws itself: channel names, widgets, shortcuts. */
   setLanguage(options: { language: "en" | "ar" }): Promise<void>;
 
