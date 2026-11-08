@@ -26,6 +26,8 @@ export const Toggle: React.FC<{
   checked: boolean;
   onChange: (checked: boolean) => void;
   label?: string;
+  /** The id of the line that describes the switch (aria-describedby). */
+  describedBy?: string;
   /**
    * Renders the switch present but unusable. Added for settings that exist
    * for the user but are not theirs to change right now — the public-listing
@@ -53,7 +55,7 @@ export const Toggle: React.FC<{
    * none (MA1 opening-hours days). Ignored on client sizes.
    */
   knobShadow?: boolean;
-}> = ({ checked, onChange, label, disabled, lead, size = "default", onColor, knobShadow = true }) => {
+}> = ({ checked, onChange, label, describedBy, disabled, lead, size = "default", onColor, knobShadow = true }) => {
   const kind: ToggleSize = lead ? "lead" : size;
   const [w, h, knob] = SIZES[kind];
   const business = kind === "business" || kind === "business-lg" || kind === "onboarding";
@@ -75,6 +77,7 @@ export const Toggle: React.FC<{
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      aria-describedby={describedBy}
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={clsx(

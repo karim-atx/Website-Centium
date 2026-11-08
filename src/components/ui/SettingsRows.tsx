@@ -131,7 +131,7 @@ type RowProps = RowBase &
       }
     | {
         /** A switch at the end; the row itself is not a button. */
-        toggle: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string };
+        toggle: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string; describedBy?: string };
         onClick?: never;
         value?: never;
         valueTight?: never;
@@ -266,6 +266,7 @@ export const SettingsRow: React.FC<RowProps> = ({
           onChange={toggle.onChange}
           disabled={toggle.disabled}
           label={toggle.label ?? title}
+          describedBy={toggle.describedBy}
         />
       </div>
     );

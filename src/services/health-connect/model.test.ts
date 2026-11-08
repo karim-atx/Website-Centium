@@ -1,6 +1,23 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { connectErrorKey, healthView, rowLine, syncResultKey, typesToRead, type HealthStatus } from "./model.ts";
+import { backgroundAfter, connectErrorKey, healthView, rowLine, syncResultKey, typesToRead, type HealthStatus } from "./model.ts";
+
+describe("backgroundAfter (Sync in the background)", () => {
+  it("on and off move the switch, with no line", () => {
+    assert.deepEqual(backgroundAfter("on"), { sw: { available: true, on: true }, note: null });
+    assert.deepEqual(backgroundAfter("off"), { sw: { available: true, on: false }, note: null });
+  });
+  it("refused stays off, says so, and offers Health Connect's settings", () => {
+    const r = backgroundAfter("refused");
+    assert.deepEqual(r.sw, { available: true, on: false });
+    assert.equal(r.note?.settings, true);
+    assert.equal(r.note?.danger, true);
+    assert.match(r.note!.key, /wasn't allowed/);
+  });
+  it("unavailable disables the switch; its reason is the row's own line", () => {
+    assert.deepEqual(backgroundAfter("unavailable"), { sw: { available: false, on: false }, note: null });
+  });
+});
 
 const status = (over: Partial<HealthStatus> = {}): HealthStatus => ({ connected: true, granted: ["steps"], lastSyncedAt: "2026-11-06T08:05:00.000Z", accessState: "ok", ...over });
 
