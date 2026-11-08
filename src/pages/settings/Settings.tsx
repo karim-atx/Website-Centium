@@ -8,6 +8,7 @@ import { RateAppPopup } from "../../components/profile/RateAppPopup";
 import { StorageUsageRow } from "../../components/profile/StorageUsageRow";
 import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
 import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
+import { useSignOutAllDevices } from "../../components/profile/SignOutAllDevices";
 import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
 import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
@@ -40,6 +41,7 @@ import {
   CreditCard,
   ScrollText,
   UserRound,
+  LogOut,
 } from "lucide-react";
 import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { DEVICE_PLACEHOLDER_ICON } from "../../components/settings/DevicePlaceholders";
@@ -220,6 +222,7 @@ function SettingsHub() {
   const [rateAppOpen, setRateAppOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const { requestSignOutAll, signOutAllDialog } = useSignOutAllDevices();
 
   // Website viewport (Addendum A WC-SE, Professional WP-SE): from 1024px the
   // page sits in the Settings pane and shows the one section picked in the
@@ -376,6 +379,8 @@ function SettingsHub() {
           title={t("Two-factor authentication")}
           onClick={() => navigate("/app/settings/two-factor")}
         />
+        {/* Round K: Sign out ends this device only; this ends every session. */}
+        <SettingsRow icon={LogOut} title={t("Sign out of all devices")} onClick={requestSignOutAll} />
       </SettingsSection>
       )}
 
@@ -385,7 +390,8 @@ function SettingsHub() {
 
       {/* MO1.8 draws Data & account (Storage, Time zone, Use device time
           zone, Blocked members). Change password stays here, first (DECIDED),
-          so Security keeps one row and no divider. This section's glyphs take
+          rather than under Security (Security's second row, Sign out of all
+          devices, is Round K's). This section's glyphs take
           #7D6BB5 / #C3B3FB (MO1.8 #49, #53, #60, #69). */}
       {show("data") && (
       <SettingsSection label={t("Data & account")}>
@@ -469,6 +475,7 @@ function SettingsHub() {
         onClose={closing(() => setChangePasswordOpen(false))}
       />
       <DeleteAccountSheet open={deleteOpen || popupParam === "delete"} onClose={closing(() => setDeleteOpen(false))} />
+      {signOutAllDialog}
     </Frame>
   );
 }

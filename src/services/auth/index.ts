@@ -6,6 +6,7 @@ import {
 } from "../../../lib/supabase/suspension";
 import type { AuthError, Session } from "@supabase/supabase-js";
 import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
+import { SIGN_OUT_SCOPE, signOutWithScope, type SignOutError } from "./signOutScope";
 import { getLanguage, tk } from "../../i18n/core";
 import { isNative } from "../../platform";
 import { CentiumNative } from "../../platform/native";
@@ -515,8 +516,23 @@ export async function cancelAccountDeletion(): Promise<AccountDeletionResult> {
   return { ok: true, deletionRequestedAt: row.deletion_requested_at };
 }
 
-/** Clears the Supabase session. Local cached state is cleared by AppContext. */
-export async function signOutRemote(): Promise<void> {
-  const { error } = await supabase.auth.signOut();
+/**
+ * Clears the Supabase session: THIS DEVICE ONLY unless told otherwise (Round
+ * K, ./signOutScope; deleting the account passes "global"). Local cached state
+ * is cleared by AppContext.
+ */
+export async function signOutRemote(scope: "local" | "global" = SIGN_OUT_SCOPE.signOut): Promise<void> {
+  const error = await signOutWithScope(supabase.auth, scope);
   if (error) console.error("[auth] signOut failed:", error.message);
+}
+
+/**
+ * Settings › Security › Sign out of all devices, step 1 (./signOutScope):
+ * every OTHER session, keeping this one, which stays stored even when this
+ * fails.
+ */
+export async function signOutOtherDevices(): Promise<SignOutError | null> {
+  const error = await signOutWithScope(supabase.auth, "others");
+  if (error) console.error("[auth] Could not sign out the other devices:", error.message);
+  return error;
 }

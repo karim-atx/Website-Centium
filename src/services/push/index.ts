@@ -7,6 +7,7 @@ import {
   nativePushPermission,
   nativePushRegistered,
   nativePushSupported,
+  thisInstallPushToken,
   unregisterNativePush,
 } from "../../platform/push";
 import type { PostgrestError } from "@supabase/supabase-js";
@@ -450,6 +451,56 @@ export async function unsubscribeFromPush(): Promise<UnsubscribeResult> {
     };
   }
 }
+
+/**
+ * Round K, "Sign out of all devices" step 2 (services/auth/signOutScope):
+ * removes this account's push registrations on every OTHER device, the Web
+ * Push rows (push_subscriptions) and the app's (push_devices), keeping this
+ * device's own for the ordinary sign-out to remove as it always does.
+ *
+ * A device signed out remotely never deletes its own row, so without this it
+ * would keep receiving the account's notifications. Own-row access only, so it
+ * runs after the other sessions are revoked and before this one is:
+ * push_subscriptions_delete_own scopes the delete, and push_devices has no
+ * direct delete (only unregister_push_device, the caller's own, by token), so
+ * its tokens are read (push_devices_select_own) and unregistered one by one.
+ *
+ * Throws when any part failed, after trying every part; the caller logs it and
+ * finishes the sign-out regardless.
+ */
+export async function removeOtherDevicesPush(): Promise<void> {
+  const failures: string[] = [];
+
+  // This browser's endpoint, read, never subscribed for (as unsubscribeFromPush).
+  let ownEndpoint: string | null = null;
+  if (!isNative() && pushSupported()) {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      ownEndpoint = (await registration?.pushManager.getSubscription())?.endpoint ?? null;
+    } catch {
+      ownEndpoint = null;
+    }
+  }
+  const web = await supabase.from("push_subscriptions").delete().neq("endpoint", ownEndpoint ?? "");
+  if (web.error) failures.push(`push_subscriptions ${web.error.code ?? ""} ${web.error.message}`);
+
+  // The app's rows. In a browser there is no own token, so every one goes.
+  const own = thisInstallPushToken();
+  const keep = (token: string) => !!own && (token === own || token === own.toLowerCase());
+  const { data, error } = await (supabase as unknown as TokensFrom).from("push_devices").select("token");
+  if (error) failures.push(`push_devices ${error.message}`);
+  for (const { token } of data ?? []) {
+    if (keep(token)) continue;
+    const r = await (supabase as unknown as UnregisterRpc).rpc("unregister_push_device", { p_token: token });
+    if (r.error) failures.push(`unregister_push_device ${r.error.message}`);
+  }
+
+  if (failures.length > 0) throw new Error(failures.join("; "));
+}
+
+// Not in the generated types yet (Database DB-Z3 is newer than database.types.ts), as in platform/push.
+type TokensFrom = { from: (table: string) => { select: (cols: string) => PromiseLike<{ data: { token: string }[] | null; error: { message: string } | null }> } };
+type UnregisterRpc = { rpc: (fn: string, args: object) => PromiseLike<{ error: { message: string } | null }> };
 
 /**
  * Whether this browser is registered to receive this account's pushes: it has
