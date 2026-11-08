@@ -425,7 +425,7 @@ export const HistoryCardWeb: React.FC<{ metric: MetricKey; items: HistoryItemWeb
         ))
       ) : items.length === 0 ? (
         <div className="grid place-items-center" style={{ padding: "40px 24px" }}>
-          <p className="text-center" style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#8C8378" }}>
+          <p className="text-center" style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#71685E" }}>
             {empty}
           </p>
         </div>
@@ -450,18 +450,18 @@ export const HistoryCardWeb: React.FC<{ metric: MetricKey; items: HistoryItemWeb
                   <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                     {it.title}
                   </span>
-                  <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {it.meta}
                   </span>
                   {it.meta2 && (
-                    <span className="block truncate" title={it.meta2} style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block truncate" title={it.meta2} style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {it.meta2}
                     </span>
                   )}
                 </span>
                 <span className="shrink-0 flex flex-col items-end text-end whitespace-nowrap">
                   <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: "#241F1B" }}>{it.value}</span>
-                  {it.sub !== undefined && it.sub !== null && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: it.subColor ?? "#8C8378" }}>{it.sub}</span>}
+                  {it.sub !== undefined && it.sub !== null && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: it.subColor ?? "#71685E" }}>{it.sub}</span>}
                 </span>
               </div>
               {actions && (
@@ -473,7 +473,7 @@ export const HistoryCardWeb: React.FC<{ metric: MetricKey; items: HistoryItemWeb
                   className="shrink-0 grid place-items-center rounded-full hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
                   style={{ width: 32, height: 32 }}
                 >
-                  <MoreVertical size={18} style={{ color: "#8C8378" }} aria-hidden />
+                  <MoreVertical size={18} style={{ color: "#71685E" }} aria-hidden />
                 </button>
               )}
             </div>

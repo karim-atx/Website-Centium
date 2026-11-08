@@ -8,7 +8,7 @@ import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfession
 import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
 import { textPx } from "../../theme/textSize";
 import { INK } from "../../components/pro/proInk";
-import { PRO_ROUTES, proClientPath } from "../../components/pro/subtypeLanes";
+import { PRO_ROUTES, proClientPath, proReadinessPath } from "../../components/pro/subtypeLanes";
 import { ProCardSkeleton, ProError, OfflineLine } from "../../components/pro/states";
 import { ProTrendRing, type RingAction } from "../../components/pro/home/ProTrendRing";
 import { LANE_ACTION_ICONS } from "../../components/pro/home/ringActions";
@@ -409,6 +409,14 @@ export default function Home() {
         navigate(imageHome(n.payload.surface, "professional") ?? PRO_ROUTES.more);
         return;
       }
+      case "readiness_request":
+        // Round K · DW: that client's outcome, the block on Files (Health records for patients), scrolled to.
+        if (n.clientId) {
+          setHubOpen(false);
+          navigate(proReadinessPath(n.clientId, lane));
+          return;
+        }
+        break;
       case "care_link":
       case "care_referral":
         setHubOpen(false);

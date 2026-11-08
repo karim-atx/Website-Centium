@@ -109,7 +109,7 @@ export const JournalDatePickerWeb: React.FC<{
         </div>
         <div className="grid" style={{ gridTemplateColumns: "repeat(7,minmax(0,1fr))", gap: 4 }}>
           {heads.map((h, i) => (
-            <span key={i} aria-hidden className="flex items-center justify-center" style={{ height: 24, fontSize: 12, lineHeight: "16px", fontWeight: 700, color: "#8C8378" }}>
+            <span key={i} aria-hidden className="flex items-center justify-center" style={{ height: 24, fontSize: 12, lineHeight: "16px", fontWeight: 700, color: "#71685E" }}>
               {h}
             </span>
           ))}
@@ -144,7 +144,7 @@ export const JournalDatePickerWeb: React.FC<{
             );
           })}
         </div>
-        <p className="flex items-center" style={{ margin: 0, gap: 8, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <p className="flex items-center" style={{ margin: 0, gap: 8, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           <span aria-hidden style={{ width: 6, height: 6, borderRadius: 999, background: "#7D6BB5" }} />
           {firstName ? t("Days {name} logged food", { name: firstName }) : t("Days with food logged")}
         </p>

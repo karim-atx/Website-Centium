@@ -56,7 +56,7 @@ const WO16_GEOMETRY: TrendGeometry = {
 type Tone = "light" | "card";
 
 const TONES = {
-  light: { axis: "#A79E93", grid: "rgba(36,31,27,0.07)", fillTop: 0.18, lineW: 1.5 },
+  light: { axis: "#776E64", grid: "rgba(36,31,27,0.07)", fillTop: 0.18, lineW: 1.5 },
   lightDark: { axis: "#B8B3C7", grid: "rgba(238,239,242,0.08)", fillTop: 0.18, lineW: 1.5 },
   card: { axis: "rgba(255,255,255,0.75)", grid: "rgba(255,255,255,0.1)", fillTop: 0.22, lineW: 2 },
 } as const;

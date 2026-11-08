@@ -237,7 +237,7 @@ export default function SchedulePage() {
       {offline && api.loadedAt !== null && <MarketOffline loaded style={{ marginBottom: 12 }} />}
 
       {firstLoad ? (
-        <div aria-busy="true" aria-label={t("Loading your schedule")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading your schedule")}>
           <div className="flex" style={{ gap: 6 }}>
             {Array.from({ length: 7 }, (_, i) => (
               <span key={i} aria-hidden className="animate-skeleton-pulse" style={{ flex: 1, height: 62, borderRadius: 12, background: m.soft }} />

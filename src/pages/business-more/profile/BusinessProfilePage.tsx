@@ -335,7 +335,7 @@ export default function BusinessProfilePage() {
     return (
       <div>
         <SubHeader title={t("Business Profile")} />
-        <div aria-busy="true" aria-label={t("Loading your profile")}>
+        <div role="status" aria-busy="true" aria-label={t("Loading your profile")}>
           <div className={clsx(LIST_BG, "animate-skeleton-pulse")} style={{ height: 132, borderRadius: 18 }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: 72, height: 72, borderRadius: 20, marginTop: -34, marginInlineStart: 14, boxShadow: "0 0 0 3px rgb(var(--c-cream))" }} />
           <div className="bg-cream-soft animate-skeleton-pulse" style={{ width: "55%", height: 16, borderRadius: 8, marginTop: 12 }} />
@@ -445,7 +445,7 @@ export default function BusinessProfilePage() {
           )}
           {business && (
             <span
-              className={business.active ? "rounded-full bg-[rgba(63,145,101,0.14)] text-[#3F9165] dark:bg-[rgba(127,199,156,0.16)] dark:text-[#7FC79C]" : "rounded-full bg-cream-soft text-charcoal-faint"}
+              className={business.active ? "rounded-full bg-[rgba(63,145,101,0.14)] text-[#1D744A] dark:bg-[rgba(127,199,156,0.16)] dark:text-[#7FC79C]" : "rounded-full bg-cream-soft text-charcoal-faint"}
               style={{ padding: "2px 8px" }}
             >
               {business.active ? t("Listed") : t("Hidden")}

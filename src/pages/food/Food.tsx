@@ -440,7 +440,7 @@ export default function Food() {
         // FO1 O1: skeletons #F5F5F6 / #242730, pulse 1.2 s (static under
         // Reduce motion): date pill 358×41 r9999, card 358×101 r20, four
         // meal cards 358×51 r15.
-        <div aria-busy="true" aria-label={t("Diary, loading")} className="flex flex-col">
+        <div role="status" aria-busy="true" aria-label={t("Diary, loading")} className="flex flex-col">
           <div className="animate-skeleton-pulse bg-cream-soft rounded-full" style={{ height: 41, marginBottom: 13 }} />
           <div className="animate-skeleton-pulse bg-cream-soft rounded-[20px]" style={{ height: 101, marginBottom: 13 }} />
           <div className="flex flex-col gap-2">
@@ -574,10 +574,10 @@ export default function Food() {
                   <button
                     key={meal}
                     onClick={() => openAdd(meal)}
-                    className="tap flex-1 min-w-0 px-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
+                    className="tap flex-1 min-w-0 px-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-on-primary-fill dark:text-white whitespace-nowrap"
                     style={{ background: dark ? fillDark : fill }}
                   >
-                    <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                    <Icon size={19} className="shrink-0" style={{ color: dark ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))" }} />
                     {/* Ends in "…" rather than running into the corner under Larger text (D18). */}
                     <span className="min-w-0 truncate">{t(label)}</span>
                   </button>
@@ -630,25 +630,32 @@ export default function Food() {
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
                 >
+                  {/* Round K · ET: the row stays clickable; the keyboard and screen readers use the
+                      button on the meal's name (a button may not hold the meal menu's button). */}
                   <div
-                    role="button"
-                    tabIndex={0}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       toggleCollapsed(meal);
                     }}
-                    onKeyDown={(ev) => {
-                      if (ev.key === "Enter" || ev.key === " ") {
-                        ev.preventDefault();
-                        toggleCollapsed(meal);
-                      }
-                    }}
                     className="tap w-full flex items-start gap-2.5 cursor-pointer"
                     style={{ background: headBg, padding: "13px 14px", transition: "background-color .18s ease" }}
-                    aria-label={collapsed ? t("Expand {section}", { section: t(mealLabels[meal]) }) : t("Collapse {section}", { section: t(mealLabels[meal]) })}
                   >
                     <span className="flex-1 min-w-0 flex items-start" style={{ gap: 22 }}>
-                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">{t(mealLabels[meal])}</h3>
+                      <h3 className="min-w-0 text-start text-[13.5px] font-bold text-charcoal">
+                        <button
+                          type="button"
+                          aria-expanded={!collapsed}
+                          aria-label={collapsed ? t("Expand {section}", { section: t(mealLabels[meal]) }) : t("Collapse {section}", { section: t(mealLabels[meal]) })}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            toggleCollapsed(meal);
+                          }}
+                          className="text-start"
+                          style={{ font: "inherit", color: "inherit", background: "none", border: 0, padding: 0, margin: 0 }}
+                        >
+                          {t(mealLabels[meal])}
+                        </button>
+                      </h3>
                       {/* FO1.1: the meal menu, with clear space after the title. */}
                       <button
                         onClick={(ev) => {
@@ -675,11 +682,11 @@ export default function Food() {
                           )}
                         </span>
                         <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
-                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("P {n}g", { n: Math.round(mealProtein) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("P {n}g", { n: Math.round(mealProtein) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("C {n}g", { n: Math.round(mealCarbs) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("C {n}g", { n: Math.round(mealCarbs) })}</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>{t("F {n}g", { n: Math.round(mealFat) })}</span>
+                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#776E64") }}>{t("F {n}g", { n: Math.round(mealFat) })}</span>
                         </span>
                       </span>
                     )}

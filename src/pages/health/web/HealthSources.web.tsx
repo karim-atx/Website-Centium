@@ -33,10 +33,10 @@ export default function HealthSourcesWeb() {
       <HealthWebHeader title={t("Sources and guidelines")} back />
       <HealthWebBody gap={20}>
         <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#5B5349", maxWidth: "72ch" }}>{t(HEALTH_DISCLAIMER)}</p>
-        {state.kind === "loading" && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Loading…")}</p>}
+        {state.kind === "loading" && <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Loading…")}</p>}
         {state.kind === "error" && (
           <div className="grid place-items-center" style={{ padding: "40px 24px", borderRadius: 20, background: "#F5F5F6" }}>
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Couldn't load the sources. Please try again.")}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Couldn't load the sources. Please try again.")}</p>
           </div>
         )}
         {state.kind === "ready" && (
@@ -65,7 +65,7 @@ export default function HealthSourcesWeb() {
                             {s.year !== null && ` · ${s.year}`}
                           </span>
                         </span>
-                        <ExternalLink size={16} className="shrink-0 rtl:-scale-x-100" style={{ marginTop: 3, color: "#8C8378" }} aria-hidden />
+                        <ExternalLink size={16} className="shrink-0 rtl:-scale-x-100" style={{ marginTop: 3, color: "#71685E" }} aria-hidden />
                       </a>
                     </li>
                   ))}

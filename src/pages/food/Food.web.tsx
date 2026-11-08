@@ -62,7 +62,7 @@ const QUICK: Record<MealType, { label: string; fill: string; Icon: typeof Sunris
 
 // FO Meal Card Web: the macro bar's segments and the letters' inks.
 const SEG = { p: "#7D6BB5", c: "#AEA1DC", f: "#A2C8C2" };
-const INK = { p: "#7D6BB5", c: "#8175C2", f: "#6F9993", none: "#A79E93" };
+const INK = { p: "#7D6BB5", c: "#8175C2", f: "#6F9993", none: "#776E64" };
 
 const SAVE_FAILED = tk("Couldn't save. Try again.");
 const failedLine = (lead: string, offline: boolean) => t("{lead} {reason}", { lead, reason: offline ? t(OFFLINE_MESSAGE) : t("Try again.") });
@@ -336,7 +336,7 @@ export default function FoodWeb() {
               aria-label={t("{meal} options", { meal: label })}
               aria-haspopup="menu"
               className={clsx("flex items-center justify-center shrink-0 hover:!bg-[rgba(174,161,220,0.2)]", FOCUS)}
-              style={{ width: 24, height: 24, borderRadius: 6, background: mealMenu?.meal === meal ? "rgba(174,161,220,0.2)" : "transparent", color: "#8C8378" }}
+              style={{ width: 24, height: 24, borderRadius: 6, background: mealMenu?.meal === meal ? "rgba(174,161,220,0.2)" : "transparent", color: "#71685E" }}
             >
               <EllipsisVertical size={16} />
             </button>
@@ -366,7 +366,7 @@ export default function FoodWeb() {
               {Math.round(mealCal)}
             </span>
           )}
-          <ChevronDown size={16} aria-hidden className="shrink-0" style={{ color: "#8C8378", transform: collapsed ? "none" : "rotate(180deg)", transition: "transform 0.18s ease" }} />
+          <ChevronDown size={16} aria-hidden className="shrink-0" style={{ color: "#71685E", transform: collapsed ? "none" : "rotate(180deg)", transition: "transform 0.18s ease" }} />
         </div>
 
         {showUndo && (
@@ -463,7 +463,7 @@ export default function FoodWeb() {
                               )}
                               {conflictBadge && <FoodConflictBadge badge={conflictBadge} />}
                             </p>
-                            <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                            <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                               {servingLine(e)}
                               {isQueuedEntry(e.id) && <span className="font-bold text-status-caution"> · {t("Waiting to save")}</span>}
                             </p>
@@ -493,7 +493,7 @@ export default function FoodWeb() {
                                 aria-haspopup="menu"
                                 title={t("More")}
                                 className={clsx("grid place-items-center hover:!bg-[#F0EDF9]", FOCUS)}
-                                style={{ width: 32, height: 32, borderRadius: 8, background: "#FFFFFF", color: "#8C8378" }}
+                                style={{ width: 32, height: 32, borderRadius: 8, background: "#FFFFFF", color: "#71685E" }}
                               >
                                 <EllipsisVertical size={16} aria-hidden />
                               </button>
@@ -537,7 +537,7 @@ export default function FoodWeb() {
                   type="button"
                   onClick={() => setSelecting(null)}
                   className={clsx("shrink-0 hover:!bg-[#F5F5F6]", FOCUS)}
-                  style={{ padding: "0 12px", height: 40, borderRadius: 12, color: "#8C8378", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+                  style={{ padding: "0 12px", height: 40, borderRadius: 12, color: "#71685E", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
                 >
                   {t("Cancel")}
                 </button>
@@ -577,12 +577,12 @@ export default function FoodWeb() {
       <p style={{ margin: "0 0 4px", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
         {todaysEntries.length === 0 ? t("Nothing logged yet today") : tn(todaysEntries.length, "{n} item logged today", "{n} items logged today")}
       </p>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Meals, notes, and how you're feeling, no calorie counting required.")}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Meals, notes, and how you're feeling, no calorie counting required.")}</p>
     </div>
   );
 
   const diary = firstLoad ? (
-    <div aria-busy="true" aria-label={t("Diary, loading")} className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12}, minmax(0, 1fr))`, columnGap: 24 }}>
+    <div role="status" aria-busy="true" aria-label={t("Diary, loading")} className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 8 : 12}, minmax(0, 1fr))`, columnGap: 24 }}>
       <div className="flex flex-col min-w-0" style={{ gridColumn: `span ${rail ? 4 : 8}`, gap: 24 }}>
         <div className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
         <div className="animate-skeleton-pulse bg-cream-soft" style={{ height: 40, borderRadius: 12 }} />
@@ -609,7 +609,7 @@ export default function FoodWeb() {
         )}
 
         {recoveryModePending ? (
-          <div aria-busy="true" aria-label={t("Today, loading")} className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
+          <div role="status" aria-busy="true" aria-label={t("Today, loading")} className="animate-skeleton-pulse bg-cream-soft" style={{ height: 140, borderRadius: 20 }} />
         ) : (
           !recoverySensitive && (
             <button
@@ -715,7 +715,7 @@ export default function FoodWeb() {
                   <p className="truncate" title={panelItem.name} style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                     {panelItem.name}
                   </p>
-                  <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                  <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                     {t(mealLabels[panelItem.meal])} · {servingLine(panelItem)}
                   </p>
                 </div>
@@ -726,7 +726,7 @@ export default function FoodWeb() {
             )}
             <div>
               <NutrientSectionsWeb key={panelItem ? `item-${panelItem.id}` : fullSummary ? "full" : "day"} data={nutrientData} layout="panel" openAll={fullSummary && !panelItem} />
-              <p style={{ margin: "12px 2px 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p style={{ margin: "12px 2px 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {t("% Daily Value based on FDA reference values for adults. Calorie and macro targets come from your Goals.")}
               </p>
             </div>

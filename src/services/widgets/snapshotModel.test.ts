@@ -1,15 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { buildWidgetSnapshot, snapshotKey, WIDGET_HABITS_MAX, type SnapshotInput } from "./snapshotModel.ts";
+import { buildWidgetSnapshot, reloadForWidgetAction, snapshotKey, WIDGET_HABITS_MAX, type SnapshotInput } from "./snapshotModel.ts";
+import { localDayOf } from "../../utils/date.ts";
 
 const NOW = new Date(Date.UTC(2026, 10, 6, 9, 30));
 const base: SnapshotInput = {
   language: "en",
   hideNumbers: false,
+  modeKnown: true,
+  date: "2026-11-06",
   now: NOW,
   steps: { manual: null, synced: 8123, goal: 10000 },
   water: { todayMl: 750, goalMl: 2500 },
-  habits: [{ name: "Read", done: true }],
+  habits: [{ id: "h1", name: "Read", done: true }],
   workout: { kind: "session", title: "Upper body", week: 2, day: 3 },
   dayLabel: (w, d) => `Week ${w} · Day ${d}`,
 };
@@ -19,17 +22,19 @@ describe("buildWidgetSnapshot", () => {
     assert.deepEqual(buildWidgetSnapshot(base), {
       language: "en",
       hideNumbers: false,
+      modeKnown: true,
+      date: "2026-11-06",
       updatedAt: "2026-11-06T09:30:00.000Z",
       steps: { today: 8123, goal: 10000 },
       water: { todayMl: 750, goalMl: 2500 },
-      habits: [{ name: "Read", done: true }],
+      habits: [{ id: "h1", name: "Read", done: true }],
       workout: { title: "Upper body", subtitle: "Week 2 · Day 3" },
     });
   });
 
   it("leaves out what isn't known, and says none for an empty day", () => {
     const unknown = buildWidgetSnapshot({ ...base, steps: null, water: null, habits: null, workout: { kind: "unknown" } });
-    assert.deepEqual(Object.keys(unknown).sort(), ["hideNumbers", "language", "updatedAt"]);
+    assert.deepEqual(Object.keys(unknown).sort(), ["date", "hideNumbers", "language", "modeKnown", "updatedAt"]);
     assert.equal(buildWidgetSnapshot({ ...base, steps: { manual: null, synced: null, goal: 10000 } }).steps, undefined);
     const empty = buildWidgetSnapshot({ ...base, habits: [], workout: { kind: "none" }, water: { todayMl: 0, goalMl: 2500 } });
     assert.deepEqual(empty.habits, []);
@@ -45,7 +50,7 @@ describe("buildWidgetSnapshot", () => {
   });
 
   it("sends the first six habits only", () => {
-    const many = Array.from({ length: 9 }, (_, n) => ({ name: `H${n}`, done: n % 2 === 0 }));
+    const many = Array.from({ length: 9 }, (_, n) => ({ id: `h${n}`, name: `H${n}`, done: n % 2 === 0 }));
     const s = buildWidgetSnapshot({ ...base, habits: many });
     assert.equal(WIDGET_HABITS_MAX, 6);
     assert.deepEqual(s.habits?.map((h) => h.name), ["H0", "H1", "H2", "H3", "H4", "H5"]);
@@ -72,5 +77,45 @@ describe("buildWidgetSnapshot", () => {
     assert.equal(snapshotKey(a), snapshotKey(b));
     assert.notEqual(snapshotKey(a), snapshotKey(buildWidgetSnapshot({ ...base, water: { todayMl: 1000, goalMl: 2500 } })));
     assert.notEqual(snapshotKey(a), snapshotKey(buildWidgetSnapshot({ ...base, language: "ar" })));
+  });
+});
+
+describe("Round K widget actions (ROUND_K.md §2.3)", () => {
+  it("carries each habit's id, the member's day and whether the mode is known", () => {
+    const habits = [
+      { id: "a", name: "Read", done: true },
+      { id: "b", name: "Walk", done: false },
+    ];
+    const s = buildWidgetSnapshot({ ...base, habits, date: "2026-11-08" });
+    assert.deepEqual(s.habits, habits);
+    assert.equal(s.date, "2026-11-08");
+    assert.equal(s.modeKnown, true);
+  });
+
+  it("says the mode is unknown while recovery-sensitive mode is still pending", () => {
+    const pending = buildWidgetSnapshot({ ...base, hideNumbers: true, modeKnown: false });
+    assert.equal(pending.modeKnown, false);
+    assert.equal(pending.hideNumbers, true);
+  });
+
+  it("the day is the member's local day: the same instant reads as two days either side of local midnight", () => {
+    // date is the app's `today` (todayLocal = localDayOf(now)), the day the app's own ticks and water use.
+    const before = new Date(2026, 10, 7, 23, 59);
+    const after = new Date(2026, 10, 8, 0, 1);
+    assert.equal(buildWidgetSnapshot({ ...base, date: localDayOf(before) }).date, "2026-11-07");
+    assert.equal(buildWidgetSnapshot({ ...base, date: localDayOf(after) }).date, "2026-11-08");
+  });
+
+  it("a new day is a change worth sending", () => {
+    assert.notEqual(snapshotKey(buildWidgetSnapshot(base)), snapshotKey(buildWidgetSnapshot({ ...base, date: "2026-11-07" })));
+    assert.notEqual(snapshotKey(buildWidgetSnapshot(base)), snapshotKey(buildWidgetSnapshot({ ...base, modeKnown: false })));
+  });
+
+  it("water reloads today's readings, a habit reloads the habits, saved or not", () => {
+    const calls: string[] = [];
+    const reload = { metrics: () => calls.push("metrics"), habits: () => calls.push("habits") };
+    reloadForWidgetAction("water", reload);
+    reloadForWidgetAction("habit", reload);
+    assert.deepEqual(calls, ["metrics", "habits"]);
   });
 });

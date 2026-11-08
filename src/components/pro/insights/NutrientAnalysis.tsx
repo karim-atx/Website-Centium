@@ -730,7 +730,7 @@ const MealClockView: React.FC<{ clock: MealClock; late: number; pageRange: PageR
               const p = P(m.minute, R);
               return <circle key={m.meal} cx={p[0]} cy={p[1]} r={5 + (m.share * 100) / 6} fill={colour[m.meal]} stroke={INK.card} strokeWidth={2.4} />;
             })}
-            <text x={np[0]} y={np[1]} textAnchor="middle" fontSize={9} fontWeight={800} fill={INK.tealDark}>
+            <text x={np[0]} y={np[1]} textAnchor="middle" fontSize={9} fontWeight={800} fill={INK.tealDarkInk}>
               {t("Fast {time}", { time: hm(clock.fastMinutes) })}
             </text>
           </svg>

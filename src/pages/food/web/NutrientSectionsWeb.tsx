@@ -54,7 +54,7 @@ function RowLine({ view, groupLabel }: { view: RowView; groupLabel?: string }) {
         </span>
       </div>
       <div className="flex items-center" style={{ gap: 6 }}>
-        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>
+        <span className="flex-1 min-w-0" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>
           {targetText}
         </span>
         {hasPartial && partial && (
@@ -76,7 +76,7 @@ function RowLine({ view, groupLabel }: { view: RowView; groupLabel?: string }) {
           <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8A6A1E" }}>{t("Over the {amount} limit", { amount: `${formatAmount(target)}${unit}` })}</span>
         </span>
       )}
-      {row.note && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{row.note}</p>}
+      {row.note && <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{row.note}</p>}
       {hasPartial && partial && (
         <p style={{ margin: "4px 0 0", fontSize: 13, lineHeight: "20px", color: "#8A6A1E" }}>{t("Based on {shown} of {of} foods", { shown: partial.shown, of: partial.of })}</p>
       )}
@@ -132,12 +132,12 @@ function SectionCard({
         <span className="flex-none whitespace-nowrap tabular-nums" style={{ fontSize: 11, lineHeight: "16px", fontWeight: 700, color: LAV, background: "rgba(174,161,220,0.18)", borderRadius: 8, padding: "2px 8px" }}>
           {t("{n} of {total}", { n: logged, total: all.length })}
         </span>
-        <ChevronDown size={14} aria-hidden className="flex-none" style={{ color: "#8C8378", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
+        <ChevronDown size={14} aria-hidden className="flex-none" style={{ color: "#71685E", transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
       </button>
       {open && (
         <div style={{ marginTop: 12, animation: "fade-slide-up .35s cubic-bezier(.22,1,.36,1) both" }}>
           {rows.length === 0 ? (
-            <p style={{ margin: 0, padding: "12px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Nothing logged in this group yet")}</p>
+            <p style={{ margin: 0, padding: "12px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Nothing logged in this group yet")}</p>
           ) : (
             <div className="flex flex-col" style={{ gap: 12 }}>
               {rows.map(({ view, groupLabel }) => (

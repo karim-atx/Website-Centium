@@ -302,7 +302,7 @@ async function renderCardPng(d: CardData, link: { href: string; text: string } |
       ctx.fillText(l, 18, y + 18);
       y += 24;
     }
-    ctx.fillStyle = "#8C8378";
+    ctx.fillStyle = "#71685E";
     ctx.font = `400 12px ${font}`;
     ctx.fillText(d.type, 18, y + 12.5);
     y += 17;

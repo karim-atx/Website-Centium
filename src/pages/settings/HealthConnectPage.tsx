@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Activity, ArrowDownUp, Check, ExternalLink, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { Activity, ArrowDownUp, Check, Clock, ExternalLink, RefreshCw, SlidersHorizontal, X } from "lucide-react";
 import clsx from "clsx";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SettingsBody, SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
@@ -13,6 +13,7 @@ import { isNative } from "../../platform";
 import { health } from "../../platform/health";
 import type { HealthAvailability, HealthType } from "../../platform/contracts";
 import {
+  backgroundAfter,
   connectErrorKey,
   HEALTH_CONNECT_PLAY_URL,
   HEALTH_TYPE_LABEL,
@@ -20,6 +21,7 @@ import {
   rowLine,
   syncResultKey,
   typesToRead,
+  type BackgroundSwitch,
   type HealthStatus,
 } from "../../services/health-connect/model";
 import { syncedWhen } from "../../services/health-connect/when";
@@ -36,6 +38,8 @@ import { t } from "../../i18n/core";
 // - Connected: each type's access, "Last synced {time}", "Sync now", "Change
 //   access" (Health Connect's own screen), the source order (Devices and
 //   sources), and "Disconnect" with its two choices.
+// - Connected, Round K (D-EL4): "Sync in the background", off by default,
+//   from health.background(); disabled with the reason when this phone can't.
 // - Not installed or out of date: a link to Health Connect on Google Play.
 // Automatic syncs are AppContext's (platform/health.ts); nothing here starts one.
 
@@ -57,12 +61,18 @@ export default function HealthConnectPage() {
   const [asked, setAsked] = useState<{ granted: HealthType[]; refused: HealthType[] } | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [removeData, setRemoveData] = useState(false);
+  const [bg, setBg] = useState<BackgroundSwitch | null>(null);
+  const [bgBusy, setBgBusy] = useState(false);
+  const [bgNote, setBgNote] = useState<{ text: string; danger: boolean; settings: boolean } | null>(null);
   const allowed = isNative() && user.accountType === "customer";
 
   const read = useCallback(async () => {
     const a = await health.available().catch((): HealthAvailability => ({ ok: false }));
     setAvail(a);
-    if (a.ok) setStatus(await health.status());
+    if (!a.ok) return;
+    const s = await health.status();
+    setStatus(s);
+    setBg(s.connected ? await health.background() : null);
   }, []);
 
   useEffect(() => {
@@ -128,6 +138,23 @@ export default function HealthConnectPage() {
     setBusy(null);
   };
 
+  const setBackground = async (on: boolean) => {
+    if (!bg) return;
+    const before = bg;
+    setBgBusy(true);
+    setBgNote(null);
+    setBg({ ...bg, on });
+    try {
+      const r = backgroundAfter(await health.setBackground(on));
+      setBg(r.sw);
+      setBgNote(r.note ? { text: t(r.note.key), danger: r.note.danger, settings: r.note.settings } : null);
+    } catch {
+      setBg(before);
+      setBgNote({ text: t("Couldn't change that. Try again."), danger: true, settings: false });
+    }
+    setBgBusy(false);
+  };
+
   const types = typesToRead(recoverySensitive);
   const line = view ? rowLine(view) : null;
 
@@ -180,6 +207,40 @@ export default function HealthConnectPage() {
                 <RefreshCw size={16} aria-hidden /> {busy === "sync" ? t("Syncing…") : t("Sync now")}
               </Button>
             </div>
+            {bg && (
+              <div data-hc-background={bg.available ? (bg.on ? "on" : "off") : "unavailable"}>
+                <SettingsSection label={t("In the background")}>
+                  <SettingsRow
+                    icon={Clock}
+                    title={t("Sync in the background")}
+                    subtitle={
+                      <span id="hc-bg-desc">
+                        {bg.available ? t("About once an hour, while Centium is closed.") : t("This phone can't sync Health Connect in the background.")}
+                      </span>
+                    }
+                    toggle={{ checked: bg.on, onChange: (on) => void setBackground(on), disabled: !bg.available || bgBusy, describedBy: "hc-bg-desc" }}
+                  />
+                </SettingsSection>
+                <div role="status" aria-live="polite" className="-mt-4 mb-6 px-1">
+                  {bgNote && (
+                    <>
+                      <p data-hc-bg-note className={clsx("text-[13px] font-semibold", bgNote.danger ? "text-status-high" : "text-primary-dark")}>
+                        {bgNote.text}
+                      </p>
+                      {bgNote.settings && (
+                        <button
+                          type="button"
+                          onClick={() => void health.openSettings().catch(() => undefined)}
+                          className="tap mt-1 text-[13px] font-semibold text-primary-dark underline underline-offset-2"
+                        >
+                          {t("Open Health Connect settings")}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
             <SettingsSection label={t("Access")}>
               {types.map((x) => {
                 const on = status.granted.includes(x);

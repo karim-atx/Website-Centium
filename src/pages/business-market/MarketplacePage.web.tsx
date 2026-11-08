@@ -80,7 +80,7 @@ function Body() {
         <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 14 }}>
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", whiteSpace: "nowrap" }}>{t("Marketplace")}</h1>
           {kindKnown && (
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.v.subtitle}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>{m.v.subtitle}</p>
           )}
         </div>
         <BizShareButton label={t("Share your profile: Find us on Centium")} getData={async (id) => ({ t: "profile", d: { rating: await fetchRatingLine(id) } })} />

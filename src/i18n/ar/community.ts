@@ -585,6 +585,8 @@ const community: Catalogue = {
   "That time is no longer free. Pick another.": "لم يعد هذا الوقت متاحًا. اختر وقتًا آخر.",
   "That service isn't available. Check it's shown for booking.": "هذه الخدمة غير متاحة. تأكد من أنها معروضة للحجز.",
   "That person isn't on your team any more. Pick another.": "لم يعد هذا الشخص في فريقك. اختر شخصًا آخر.",
+  // Round K (K-DEL): the author of a deleted account's post or comment (services/forum/rules.ts).
+  "Deleted member": "عضو محذوف",
 };
 
 export default community;

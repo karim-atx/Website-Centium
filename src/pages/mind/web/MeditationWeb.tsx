@@ -27,7 +27,7 @@ const TABS: { key: SubTab; label: string }[] = [
 
 // The level pills (reference LV, literal): background and ink.
 const LEVEL: Record<Level, [string, string]> = {
-  beginner: ["#E3F3E9", "#3F9165"],
+  beginner: ["#E3F3E9", "#1D744A"],
   intermediate: ["#FBF1DD", "#B08A2E"],
   advanced: ["#FBE7E4", "#C0392B"],
 };
@@ -174,7 +174,7 @@ export default function MeditationWeb() {
             <div style={{ width: "100%", maxWidth: 358 }}>
               <BreathingRunner pattern={pattern} startSignal={startSignal} />
             </div>
-            <p data-med-line className="absolute whitespace-nowrap" style={{ insetInlineStart: 24, bottom: 18, margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
+            <p data-med-line className="absolute whitespace-nowrap" style={{ insetInlineStart: 24, bottom: 18, margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", fontVariantNumeric: "tabular-nums" }}>
               {medLine}
             </p>
           </section>
@@ -251,7 +251,7 @@ function PosesWeb({ poses, kind, cols }: { poses: WebPose[]; kind: "stretching" 
               className="med-web-btn"
               style={{ ...btn40, maxWidth: 320, padding: "0 12px 0 16px", background: "#FFFFFF", color: "#5F5093" }}
             >
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#8C8378" }}>{t("Next")}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#71685E" }}>{t("Next")}</span>
               <span className="truncate" style={{ minWidth: 0 }}>{next ? next.name : tx("Finish", "button")}</span>
               <ChevronRight size={16} aria-hidden />
             </button>
@@ -292,7 +292,7 @@ function PosesWeb({ poses, kind, cols }: { poses: WebPose[]; kind: "stretching" 
               </span>
               <span className="block" style={{ flex: "none", padding: "12px 16px" }}>
                 <span className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{p.name}</span>
-                <span className="block truncate" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{p.meta}</span>
+                <span className="block truncate" style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{p.meta}</span>
               </span>
             </button>
           );

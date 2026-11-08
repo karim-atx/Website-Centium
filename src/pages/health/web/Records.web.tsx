@@ -58,14 +58,14 @@ export const RecordsWeb: React.FC<{
         {search && (
           <div className="grid" style={{ gridTemplateColumns: rail ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,8fr) minmax(0,4fr)", gap: 24 }}>
           <label className="flex items-center" style={{ height: 40, boxSizing: "border-box", borderRadius: 12, padding: "0 14px", gap: 8, background: "#F5F5F6", border: "0.5px solid rgba(36,31,27,0.06)" }}>
-            <Search size={16} style={{ color: "#8C8378" }} aria-hidden />
+            <Search size={16} style={{ color: "#71685E" }} aria-hidden />
             <input
               type="search"
               value={search.query}
               onChange={(e) => search.onQuery(e.target.value)}
               placeholder={t("Search markers")}
               aria-label={t("Search markers")}
-              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]"
+              className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#71685E]"
               style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
             />
           </label>

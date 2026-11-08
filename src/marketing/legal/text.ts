@@ -107,11 +107,11 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "What we collect",
     items: [
-      "Account data covers your name, email, account type, and billing details processed by our payment provider (we never store full card numbers).",
+      "Account data covers your name, email, account type, and billing details processed by Google Play or the App Store when you buy in the Centium app (we never store full card numbers). The website doesn't take payments itself: anything you pay a professional or business for their services is paid to them directly.",
       "Health and activity data covers food logs, workouts, body metrics, sleep and step data, biomarker results, habits and journal entries, including anything synced from a connected health service with your permission.",
-      "Usage data covers device type, app version and diagnostic events used to keep the product working and improve it.",
+      "Usage data covers the days your account was active and, in the phone app, the app version and an identifier for your installation, used to keep the product working, to tell you about a sign-in from a new device, and to ask you to update when a version is too old. We don't use analytics or crash-reporting services.",
       "Communications data covers message content, call metadata (duration and participants, not recorded audio or video by default), and push notification tokens, where you use messaging or calling features.",
-      "Files you upload, such as profile photos, professional certification documents and calendar attachments, are stored securely and shared only with the parties you've authorised to see them. Certification documents are reviewed by Centium to confirm eligibility to be listed.",
+      "Files you upload, such as profile photos, professional certification documents and calendar attachments, are stored securely and shared only with the parties you've authorised to see them. Certification and other verification documents are private: only you and the Centium staff who review them can open them, every staff view is recorded, and they are used only to verify your eligibility to be listed.",
     ],
   },
   {
@@ -119,7 +119,8 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
     items: [
       "To operate your account, calculate goals and trends, and deliver the features you use. Health data is treated as a special category of personal data and processed on the basis of your explicit consent.",
       "Professionals and businesses only see what you have switched on for them, such as your food diary, workouts, weight, progress or health metrics, and you can revoke any of it at any time.",
-      "We do not sell personal data and do not use health data for advertising. Service providers (hosting, payments, analytics) act on our instructions under contract.",
+      "In the Android app, if you connect Health Connect, Centium reads only the types of data you allow, such as steps, activity, heart rate and sleep. What's read is saved to your Centium account and used only in Centium: to show your health data and trends and to calculate your goals. It's shared only with professionals you choose, who can then see it alongside your other shared health metrics, and it's never sold or used for advertising. You can disconnect at any time and choose whether to keep or remove what was synced.",
+      "We do not sell personal data and do not use health data for advertising. Service providers (hosting, payments, email, calling and notifications) act on our instructions under contract.",
       "Aggregated, de-identified statistics may be used to improve the product and to give businesses anonymised insights that cannot identify an individual.",
       "If you're a client of a professional employed by a business on Centium, other authorised staff of that business may also be able to access data you've shared with that professional, consistent with the employment relationship and the access you've granted.",
       "Reviews are shown to other users without your name attached by default. You can choose to display your name when leaving one.",
@@ -134,8 +135,9 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "Third-party processors",
     items: [
-      "We use a small number of processors to run Centium: Supabase (database and authentication hosting), LiveKit (voice and video calling infrastructure), Resend (transactional email), Cloudflare (content delivery), and Groq (transcribing and reading voice food logs: it receives the recording when you log food by voice). Each is bound by contract to process data only on our instructions.",
-      "Food search sends only the words you search for to USDA FoodData Central and Open Food Facts, public food databases. Nothing else about you is sent to them.",
+      "We use a small number of processors to run Centium: Supabase (database and authentication hosting), LiveKit (voice and video calling infrastructure), Resend (transactional email), Cloudflare (content delivery and the bot check on our forms), and Groq (transcribing and reading voice food logs: it receives the recording when you log food by voice). Each is bound by contract to process data only on our instructions. Notifications reach your devices through Google's Firebase Cloud Messaging in the Android app, Apple's push service on Apple devices, and your browser's own push service on the web; they carry the notification's text, which shows only \"Centium\" and a neutral line if you turn off details on the lock screen.",
+      "Some features use services that receive limited data directly from your device. If you sign in with Google, Google confirms your identity and shares your name and email with us. If you sign in with Apple, Apple confirms your identity and shares your name and email, or a private relay address if you choose to hide it. In the Android app, scanning a barcode and reading a lab report use Google's ML Kit, which works on your phone: the image is not sent to Google. The map of professionals near you loads map images from OpenFreeMap, which receives your device's IP address and the area shown, not your saved location. Course videos play from YouTube's privacy-enhanced domain (youtube-nocookie.com) when you open a lesson that has one, and YouTube receives your IP address and that you watched it.",
+      "Food search sends only the words you search for to USDA FoodData Central and Open Food Facts, and scanning a barcode sends only the barcode number to Open Food Facts. Both are public food databases, and our servers make these requests for you, so nothing else about you, not even your IP address, is sent to them.",
     ],
   },
   {
@@ -153,7 +155,7 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "Cookies and similar technologies",
     items: [
-      "We use essential cookies and local storage to keep you signed in and remember preferences, and limited diagnostic tooling to detect and fix errors. We don't use third-party advertising cookies.",
+      "We use essential cookies and local storage to keep you signed in and remember preferences. We don't use analytics, diagnostic or third-party advertising cookies.",
     ],
   },
   {
@@ -171,7 +173,9 @@ export const PRIVACY_GROUPS: LegalGroup[] = [
   {
     h: "Retention, security and your rights",
     items: [
-      "When you delete your account or reset your health data, most associated data is removed within a defined period. Some data is retained beyond that point for safety, accountability or legal reasons, for example a professional's clinical notes about a shared client, and account-safety settings, even after the underlying health data is deleted.",
+      "When you delete your account or reset your health data, most associated data is removed within a defined period. Some data is retained beyond that point for safety, accountability or legal reasons, for example account-safety settings and, when you reset your health data, a professional's clinical notes about you. When you delete your account, a professional's clinical notes about you are deleted with it.",
+      "If you delete your account, your forum posts and comments are kept so that the conversations around them still make sense, but they no longer show your name or nickname: they show \"Deleted member\" instead. Payment records are kept only for as long as the law requires, and they contain no health data.",
+      "Purchases made in the Centium app through the App Store or Google Play are processed and managed by Apple or Google, under their own terms and privacy policies. You manage or cancel them in your Apple or Google account settings, and ask Apple or Google for any refund. Deleting your Centium account doesn't cancel a subscription bought through the App Store or Google Play, so cancel it there as well.",
       "Data is encrypted in transit and at rest, with access limited to staff who need it. We will notify affected users and regulators of a qualifying breach without undue delay.",
       "You can access, export, correct or delete your data, withdraw consent, or object to certain processing, either from Settings or by emailing support@atraxia.org. We aim to respond within a few business days.",
       "Removed or redacted content, including reviews and messages, may be retained internally for audit, safety or legal purposes even though it's no longer visible to other users.",

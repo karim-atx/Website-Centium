@@ -323,6 +323,13 @@ const notifications: Catalogue = {
   "Keep what's synced so far": "الإبقاء على ما زُومن حتى الآن",
   "Deletes everything Centium synced from Health Connect: steps, sleep, workouts, heart rate, weight and body fat. What you entered yourself stays.": "يحذف كل ما زامنه Centium من Health Connect: الخطوات والنوم والتمارين ونبض القلب والوزن ودهون الجسم. يبقى ما أدخلته بنفسك.",
   "Nothing new is read. What's already in Centium stays.": "لا تتم قراءة أي شيء جديد. يبقى ما هو موجود في Centium.",
+  // == Round K · K-EL3: "Sync in the background" (pages/settings/HealthConnectPage, services/health-connect/model) ==
+  "In the background": "في الخلفية",
+  "Sync in the background": "المزامنة في الخلفية",
+  "About once an hour, while Centium is closed.": "مرة كل ساعة تقريبًا، أثناء إغلاق Centium.",
+  "This phone can't sync Health Connect in the background.": "لا يستطيع هذا الهاتف مزامنة Health Connect في الخلفية.",
+  "Background access wasn't allowed. You can allow it in Health Connect's settings.": "لم يُسمح بالوصول في الخلفية. يمكنك السماح به من إعدادات Health Connect.",
+  "Open Health Connect settings": "فتح إعدادات Health Connect",
   "Disconnecting…": "جارٍ قطع الاتصال…",
   // == Round J · J-2d: "Add to my calendar" (components/settings/CalendarSyncRow, native/PhoneCalendarSync) ==
   "Add to my calendar": "إضافة إلى تقويمي",

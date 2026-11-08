@@ -116,7 +116,7 @@ export default function VoucherPage() {
           <div role="dialog" aria-modal="true" aria-label={t("Voucher")} data-voucher-web="" style={{ width: 440, maxHeight: "calc(100dvh - 48px)", overflowY: "auto", boxSizing: "border-box", background: "#FFFFFF", borderRadius: 24, padding: 24, boxShadow: "0 24px 60px rgba(36,31,27,0.2)", lineHeight: "normal", color: m.ink }}>
             <style>{FOCUS_CSS}</style>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8C8378" }}>{t("Voucher")}</span>
+              <span style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#71685E" }}>{t("Voucher")}</span>
               <button
                 ref={closeRef}
                 type="button"
@@ -168,7 +168,7 @@ export default function VoucherPage() {
         <VoucherCard code={v.code} qr={v.qrPayload} validUntil={v.expiresAt} status={status} usedAt={v.usedAt} onCopied={onCopied} style={{ marginTop: 14 }} />
         {status === "issued" ? (
           <>
-            <h3 style={{ margin: "16px 0 0", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{t("How to use")}</h3>
+            <h3 style={{ margin: "16px 0 0", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{t("How to use")}</h3>
             <ol style={{ margin: "8px 0 0", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8, fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>
               {steps.map((s, i) => (
                 <li key={s} style={{ display: "flex", gap: 10 }}>

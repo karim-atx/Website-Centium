@@ -183,7 +183,7 @@ export default function MetricsWeb() {
   const groupName = (g: string) => (g === "back" ? tx("Back", "muscle") : t(groupLabel(g)));
   const hasSessions = workoutSessions.length > 0;
 
-  const muted: React.CSSProperties = { flex: "none", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" };
+  const muted: React.CSSProperties = { flex: "none", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#71685E" };
   const span = (n: number): React.CSSProperties => ({ gridColumn: `span ${rail ? 8 : n}`, minWidth: 0, minHeight: 0 });
 
   return (
@@ -319,7 +319,7 @@ export default function MetricsWeb() {
               <div className="grid" style={{ gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8 }}>
                 {sortedGroups.slice(0, 4).map(([group, count]) => (
                   <div key={group} className="min-w-0">
-                    <span className="flex items-center truncate" style={{ gap: 5, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="flex items-center truncate" style={{ gap: 5, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       <span className="flex-none" style={{ width: 7, height: 7, borderRadius: 4, background: balanceColors[group] ?? "#B8AFC8" }} />
                       {groupName(group)}
                     </span>
@@ -348,7 +348,7 @@ export default function MetricsWeb() {
               hasSessions ? (
                 <span style={{ flex: "none", whiteSpace: "nowrap", fontSize: 24, fontWeight: 800, color: "#241F1B" }}>
                   {frequency.perWeek}
-                  <span style={{ fontSize: 13, fontWeight: 500, color: "#8C8378", marginInlineStart: 4 }}>{t("/ week")}</span>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#71685E", marginInlineStart: 4 }}>{t("/ week")}</span>
                 </span>
               ) : (
                 <span style={muted}>{t("No sessions yet")}</span>
@@ -364,7 +364,7 @@ export default function MetricsWeb() {
             ))}
           </div>
           <div className="flex justify-between" style={{ marginTop: 8, fontSize: 13, lineHeight: "20px" }}>
-            <span style={{ color: "#8C8378", whiteSpace: "nowrap" }}>{t("8 wks ago")}</span>
+            <span style={{ color: "#71685E", whiteSpace: "nowrap" }}>{t("8 wks ago")}</span>
             <span style={{ color: "#8F68F6", fontWeight: 700, whiteSpace: "nowrap" }}>
               {t("This week")}
               {hasSessions ? ` · ${frequency.weeks[7]}` : ""}
@@ -392,7 +392,7 @@ export default function MetricsWeb() {
             }
           />
           {hideNumbers ? (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t(RECOVERY_HIDDEN_LINE)}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t(RECOVERY_HIDDEN_LINE)}</p>
           ) : measurementsError ? (
             <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#C0392B" }}>{t(measurementsError)}</p>
           ) : (
@@ -402,7 +402,7 @@ export default function MetricsWeb() {
                   const latest = readings[0];
                   const change = readings.length > 1 ? Math.round((latest.value - readings[1].value) * 10) / 10 : null;
                   const unit = site.unit === "%" ? "%" : "cm";
-                  const col = change != null && change < 0 ? "#3C6B65" : change != null && change > 0 ? "#7D6BB5" : "#A79E93";
+                  const col = change != null && change < 0 ? "#3C6B65" : change != null && change > 0 ? "#7D6BB5" : "#776E64";
                   return (
                     <button
                       key={site.type}
@@ -414,9 +414,9 @@ export default function MetricsWeb() {
                     >
                       <span style={{ fontSize: 17, lineHeight: "22px", fontWeight: 800, color: "#241F1B", whiteSpace: "nowrap" }}>
                         {latest.value}
-                        <span style={{ fontSize: 13, fontWeight: 500, color: "#8C8378", marginInlineStart: 2 }}>{unit}</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "#71685E", marginInlineStart: 2 }}>{unit}</span>
                       </span>
-                      <span className="block truncate" style={{ fontSize: 13, lineHeight: "18px", color: "#8C8378" }}>
+                      <span className="block truncate" style={{ fontSize: 13, lineHeight: "18px", color: "#71685E" }}>
                         {t(site.label)}
                       </span>
                       <Spark values={readings.length >= 2 ? [...readings].reverse().map((r) => r.value) : null} color={col} />
@@ -510,7 +510,7 @@ export default function MetricsWeb() {
       />
       <BottomSheet open={balanceOpen} onClose={() => setBalanceOpen(false)} title={t("Training balance")}>
         <div className="flex flex-col" style={{ gap: 10 }}>
-          <p style={{ margin: "0 0 4px", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Completed sets by primary muscle group, all time.")}</p>
+          <p style={{ margin: "0 0 4px", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Completed sets by primary muscle group, all time.")}</p>
           {sortedGroups.map(([group, count]) => (
             <div key={group} className="flex items-center justify-between">
               <span className="flex items-center" style={{ gap: 8, fontSize: 15, color: "#241F1B" }}>

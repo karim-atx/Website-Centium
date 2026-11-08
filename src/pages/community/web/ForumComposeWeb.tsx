@@ -12,7 +12,7 @@ import { GuidelinesLink } from "../../../components/moderation/GuidelinesLink";
 import { t } from "../../../i18n/core";
 import { coCategory, coDanger, coPrimary } from "./communityWebStyles";
 
-const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" } as const;
+const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" } as const;
 const field = { borderRadius: 12, background: "#F5F5F6", padding: "12px 14px", boxSizing: "border-box", border: "none", outline: "none", color: "#241F1B", width: "100%" } as const;
 
 /**
@@ -183,7 +183,7 @@ export function ForumComposeWeb({
           maxLength={140}
           placeholder={t("What's on your mind?")}
           aria-label={t("Title")}
-          className="placeholder:text-[#8C8378]"
+          className="placeholder:text-[#71685E]"
           style={{ ...field, minHeight: 48, fontSize: 17, lineHeight: "24px", fontWeight: 700 }}
         />
         {error?.field === "title" && <div style={{ marginTop: -8 }}>{danger(error.message)}</div>}
@@ -195,7 +195,7 @@ export function ForumComposeWeb({
           placeholder={t("Share a win, ask a question, or pass on a tip…")}
           aria-label={t("Post")}
           aria-describedby={FORUM_PHOTOS_ENABLED && photo ? "co-compose-photo-note" : undefined}
-          className="placeholder:text-[#8C8378]"
+          className="placeholder:text-[#71685E]"
           style={{ ...field, flex: 1, minHeight: 120, resize: "none", fontSize: 15, lineHeight: "22px" }}
         />
         {error?.field === "body" && <div style={{ marginTop: -8 }}>{danger(error.message)}</div>}

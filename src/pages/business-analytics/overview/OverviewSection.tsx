@@ -239,7 +239,7 @@ export function OverviewSection() {
                 <span aria-hidden style={{ display: "block", width: 0, height: 1.5, margin: "6px 0 6px" }} />
                 <p
                   data-cell-value
-                  style={{ fontSize: headlineSize(k.value), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.045em", fontVariantNumeric: "tabular-nums lining-nums", color: k.value === "–" ? (dark ? "#9F9CAC" : "#A79E93") : c.hlNum, whiteSpace: "nowrap", margin: 0 }}
+                  style={{ fontSize: headlineSize(k.value), fontWeight: 700, lineHeight: 1, letterSpacing: "-0.045em", fontVariantNumeric: "tabular-nums lining-nums", color: k.value === "–" ? (dark ? "#9F9CAC" : "#776E64") : c.hlNum, whiteSpace: "nowrap", margin: 0 }}
                 >
                   {k.value}
                 </p>

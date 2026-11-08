@@ -14,7 +14,7 @@ const PLATE: Record<number, { fill: string; text: string; h: number; w: number }
   25: { fill: "#C8403A", text: "#FFFFFF", h: 82, w: 13 },
   20: { fill: "#2E5F8A", text: "#FFFFFF", h: 82, w: 11 },
   15: { fill: "#D9A441", text: "#3F2A08", h: 73, w: 10 },
-  10: { fill: "#3F9165", text: "#FFFFFF", h: 59, w: 9 },
+  10: { fill: "#1D744A", text: "#FFFFFF", h: 59, w: 9 },
   5: { fill: "#F4F4F2", text: "#4A443A", h: 42, w: 7 },
   2.5: { fill: "rgb(var(--th-2b2735))", text: "#FFFFFF", h: 35, w: 6 },
   1.25: { fill: "#C9CCD2", text: "#4A443A", h: 29, w: 5 },

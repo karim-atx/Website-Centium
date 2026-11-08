@@ -11,6 +11,7 @@ import { getRecoveryStatus } from "../../services/recoveryCodes";
 import { PAUSE_OWNER_ONLY, setBusinessPaused, signOutOtherSessions } from "../../services/business-more";
 import { CLOSE_OWNER_ONLY } from "../../services/business-closure";
 import { CloseBusinessSheet } from "./CloseBusinessSheet";
+import { useSignOutAllDevices } from "../../components/profile/SignOutAllDevices";
 import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { formatShortDate } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
@@ -281,6 +282,8 @@ export function SecurityPage() {
   const [error, setError] = useState<string | null>(null);
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Round K: Sign out of all devices, this one included, in the kit's confirm.
+  const { requestSignOutAll, signOutAllDialog } = useSignOutAllDevices("kit");
   const device = thisDevice();
 
   useEffect(() => {
@@ -323,6 +326,7 @@ export function SecurityPage() {
       <BizSection label={t("Active sessions")} footer={t("Your other devices will be listed here soon.")}>
         <BizRow icon={device.phone ? Smartphone : Laptop} title={t("{device} · this device", { device: device.label })} desc={t("Now")} />
         <BizRow icon={LogOut} title={t("Sign out everywhere else")} desc={t("Every other device has to sign in again")} onClick={() => setAsk(true)} />
+        <BizRow icon={LogOut} title={t("Sign out of all devices")} onClick={requestSignOutAll} />
       </BizSection>
       <ChangePasswordSheet key={pwOpen ? "pw-open" : "pw-closed"} open={pwOpen} onClose={() => setPwOpen(false)} />
       <BizConfirm
@@ -342,6 +346,7 @@ export function SecurityPage() {
           showToast(r.ok ? t("Signed out everywhere else.") : r.message);
         }}
       />
+      {signOutAllDialog}
       {toast}
     </BizPage>
   );

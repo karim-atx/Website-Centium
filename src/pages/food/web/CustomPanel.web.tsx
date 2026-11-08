@@ -196,7 +196,7 @@ export default function CustomPanelWeb() {
                           <span className="block truncate" title={r.name} style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
                             {r.name}
                           </span>
-                          <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                          <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                             {r.detail}
                           </span>
                         </span>
@@ -207,7 +207,7 @@ export default function CustomPanelWeb() {
                         aria-label={t("{name} options", { name: r.name })}
                         aria-haspopup="menu"
                         className={clsx("grid place-items-center flex-none hover:!bg-[rgba(255,255,255,0.6)]", FOCUS)}
-                        style={{ width: 40, height: 44, borderRadius: 10, color: "#8C8378" }}
+                        style={{ width: 40, height: 44, borderRadius: 10, color: "#71685E" }}
                       >
                         <EllipsisVertical size={16} aria-hidden />
                       </button>

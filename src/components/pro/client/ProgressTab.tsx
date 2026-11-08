@@ -429,7 +429,7 @@ const GroupRow: React.FC<{ group: Group; selected: boolean; onSelect: () => void
         {group.summary}
       </span>
     </span>
-    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: selected ? "#5F5093" : "#8C8378" }} />
+    <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: selected ? "#5F5093" : "#71685E" }} />
   </button>
 );
 

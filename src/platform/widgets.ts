@@ -1,5 +1,9 @@
 // Home-screen widgets on the phone (App-Centium ROUND_J.md §5.1): steps,
-// water, today's habits and today's workout, read-only (D8).
+// water, today's habits and today's workout. Round K (ROUND_K.md §2.3) adds
+// two actions the phone saves itself, with the app closed: Water's "+250 ml"
+// and ticking a habit. The snapshot carries what they need (each habit's id,
+// the member's date, whether recovery-sensitive mode is known), and onAction
+// tells an open app to reload after one.
 //
 // The website writes a small snapshot whenever these values load or change;
 // the phone keeps it on the device and draws the widgets from it. Nothing is
@@ -10,7 +14,7 @@
 // Shown only where all three agree: the app, the "home_widgets" switch
 // (app_config), and a build that has the feature. Switched off, the widgets
 // are cleared and say to open Centium.
-import { registerPlugin } from "@capacitor/core";
+import { registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { nativeFeatureOn, onAppConfig } from "./appConfig";
 import type { WidgetKind, WidgetSnapshot, WidgetsModule } from "./contracts";
 import { featureAvailable } from "./features";
@@ -21,6 +25,10 @@ interface CentiumWidgetsPlugin {
   clear(): Promise<void>;
   setShortcuts(options: { on: boolean }): Promise<void>;
   pin(options: { kind: WidgetKind }): Promise<{ ok: boolean }>;
+  addListener(
+    eventName: "widgetAction",
+    listener: (action: { kind: "water" | "habit"; saved: boolean }) => void,
+  ): Promise<PluginListenerHandle>;
 }
 
 export const CentiumWidgets = registerPlugin<CentiumWidgetsPlugin>("CentiumWidgets");
@@ -56,5 +64,12 @@ export const widgets: WidgetsModule = {
   async pin(kind) {
     if (!(await widgets.available()).ok) return { ok: false };
     return CentiumWidgets.pin({ kind }).catch(() => ({ ok: false }));
+  },
+  onAction(listener) {
+    if (!isNative()) return () => undefined;
+    const handle = CentiumWidgets.addListener("widgetAction", listener).catch(() => null);
+    return () => {
+      void handle.then((h) => h?.remove());
+    };
   },
 };

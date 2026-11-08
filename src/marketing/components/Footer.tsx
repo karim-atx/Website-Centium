@@ -323,6 +323,24 @@ export const Footer: React.FC = () => {
           >
             {t("Legal")}
           </a>
+          {/* Round K (K-DEL): Google Play's account-deletion page, in Legal's style. */}
+          <a
+            href="/delete-account"
+            onClick={pageLink("/delete-account")}
+            className="cl-hc cl-uline"
+            style={
+              {
+                fontWeight: 700,
+                color: "#3B352D",
+                background: UNDERLINE,
+                transition: "background-size .3s cubic-bezier(.22,1,.36,1),color .2s",
+                "--hc": "#5C48A8",
+                ...(lg ? {} : { minHeight: "44px", display: "inline-flex", alignItems: "center" }),
+              } as React.CSSProperties
+            }
+          >
+            {t("Delete your account")}
+          </a>
         </div>
       </div>
       {/* Kept from the previous footer (audit 2.C): iOS Safari's rubber-band

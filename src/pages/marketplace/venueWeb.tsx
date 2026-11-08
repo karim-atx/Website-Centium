@@ -129,7 +129,7 @@ export function WebHeaderCta({ label, icon, onClick, disabled }: { label: string
       onClick={onClick}
       disabled={disabled}
       className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-      style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#FFFFFF", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: disabled ? 0.5 : 1, cursor: disabled ? "default" : "pointer" }}
+      style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#241F1B", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: disabled ? 0.5 : 1, cursor: disabled ? "default" : "pointer" }}
     >
       {icon}
       {label}
@@ -151,7 +151,7 @@ export function WebPanelCta({ label, onClick, disabled, busy }: { label: string;
       disabled={disabled || busy}
       aria-busy={busy || undefined}
       className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7D67D9]"
-      style={{ width: "100%", height: 44, borderRadius: 12, border: 0, background: "#AEA1DC", color: "#FFFFFF", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, opacity: disabled ? 0.5 : 1, cursor: disabled || busy ? "default" : "pointer" }}
+      style={{ width: "100%", height: 44, borderRadius: 12, border: 0, background: "#AEA1DC", color: "#241F1B", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, opacity: disabled ? 0.5 : 1, cursor: disabled || busy ? "default" : "pointer" }}
     >
       {label}
     </button>

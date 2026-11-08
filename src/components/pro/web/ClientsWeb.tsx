@@ -111,17 +111,17 @@ export const ClientDetailPanel: React.FC<{
           className="flex items-center justify-center shrink-0 rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
           style={{ width: 40, height: 40, marginInlineEnd: -10 }}
         >
-          <MoreVertical size={20} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+          <MoreVertical size={20} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
         </button>
       </div>
       <div className="flex flex-col">
         {rows.map(([Icon, label, value]) => (
           <div key={label} className="flex items-center" style={{ minHeight: 72, gap: 16, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
             <span className="flex items-center justify-center shrink-0" style={{ width: 44, height: 44, borderRadius: 12, background: "#F5F5F6" }}>
-              <Icon size={20} strokeWidth={1.9} aria-hidden style={{ color: "#8C8378" }} />
+              <Icon size={20} strokeWidth={1.9} aria-hidden style={{ color: "#71685E" }} />
             </span>
             <span className="flex-1 min-w-0" style={{ paddingBlock: 8 }}>
-              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {label}
               </span>
               <span className="block" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B", overflowWrap: "anywhere" }}>
@@ -169,7 +169,7 @@ export const ClientsEmptyWeb: React.FC<{ patients: boolean; onAdd: () => void }>
           <Users size={52} strokeWidth={1.5} aria-hidden style={{ color: "#7D67D9" }} />
         </span>
         <h2 style={{ margin: "24px 0 0", fontSize: 28, lineHeight: "36px", fontWeight: 700, color: "#241F1B" }}>{patients ? t("No patients yet") : t("No clients yet")}</h2>
-        <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: "24px", color: "#8C8378", maxWidth: 420, textWrap: "pretty" } as React.CSSProperties}>
+        <p style={{ margin: "8px 0 0", fontSize: 15, lineHeight: "24px", color: "#71685E", maxWidth: 420, textWrap: "pretty" } as React.CSSProperties}>
           {patients ? t("Add your first patient to run their plans, sessions and progress from here.") : t("Add your first client to run their plans, sessions and progress from here.")}
         </p>
         <button

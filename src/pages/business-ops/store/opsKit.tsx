@@ -261,7 +261,7 @@ export const KitTip: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 // States (OP1-001 O1 / O2)
 
 export const ListSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label }) => (
-  <div aria-busy="true" aria-label={label ?? t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
+  <div role="status" aria-busy="true" aria-label={label ?? t("Loading")} className={LIST} style={{ borderRadius: 18, padding: "2px 14px", marginBottom: 14 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: 58, padding: "8px 0" }}>
         <span aria-hidden className={clsx("block shrink-0 animate-skeleton-pulse", PALE)} style={{ width: 36, height: 36, borderRadius: 11 }} />

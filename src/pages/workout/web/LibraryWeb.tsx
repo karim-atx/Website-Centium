@@ -88,7 +88,7 @@ const BACK_ZONE_KEYS: ZoneKey[] = ["shoulders", "back", "triceps", "forearms", "
 const SAVE_FAILED = tk("Couldn't save. Try again.");
 const saveFailure = (error: string) => (isCustomExerciseRule(error) ? error : SAVE_FAILED);
 
-const caps14: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8C8378", whiteSpace: "nowrap" };
+const caps14: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#71685E", whiteSpace: "nowrap" };
 
 export default function LibraryWeb() {
   const {
@@ -230,7 +230,7 @@ export default function LibraryWeb() {
           setHoverZone(null);
         }}
         className="grid place-items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-        style={{ width: 48, borderRadius: 9, background: on ? "#9A8CD6" : "transparent", color: on ? "#FFFFFF" : "#8C8378" }}
+        style={{ width: 48, borderRadius: 9, background: on ? "#9A8CD6" : "transparent", color: on ? "#FFFFFF" : "#71685E" }}
       >
         {icon}
       </button>
@@ -263,13 +263,13 @@ export default function LibraryWeb() {
           {segBtn("body", <User size={20} />, t("Body"))}
         </div>
         <div className="relative flex-1 min-w-0">
-          <Search size={16} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ insetInlineStart: 14, color: "#8C8378" }} />
+          <Search size={16} className="absolute top-1/2 -translate-y-1/2 pointer-events-none" style={{ insetInlineStart: 14, color: "#71685E" }} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("Search exercises…")}
             aria-label={t("Search exercises")}
-            className="w-full placeholder:text-[#8C8378] focus:outline-none focus:ring-2 focus:ring-[#AEA1DC]/40"
+            className="w-full placeholder:text-[#71685E] focus:outline-none focus:ring-2 focus:ring-[#AEA1DC]/40"
             style={{ height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", paddingInlineStart: 38, paddingInlineEnd: 14, fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
           />
         </div>
@@ -306,7 +306,7 @@ export default function LibraryWeb() {
           )}
           {noMatch ? (
             <EmptyCard style={{ gap: 8 }}>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                 {query.trim() ? t("No exercises match '{query}'.", { query: query.trim() }) : t("No exercises match.")}
               </p>
               {query.trim() && (
@@ -318,7 +318,7 @@ export default function LibraryWeb() {
           ) : (
             filtered.length > 0 && (
               <div className="flex flex-col" style={{ gap: 10 }}>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#71685E" }}>
                   {tn(filtered.length, "{n} exercise", "{n} exercises")}
                   {yoursCount > 0 ? ` · ${t("{n} yours", { n: yoursCount })}` : ""}
                 </p>
@@ -327,7 +327,7 @@ export default function LibraryWeb() {
                     <div key={ci} className="flex flex-col" style={{ flex: "none", width: "calc((100% - 48px) / 3)" }}>
                       {col.map(({ e, head, first }) => (
                         <React.Fragment key={e.id + (head ?? "")}>
-                          {head && <p style={{ margin: `${first ? 0 : 10}px 0 4px`, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" }}>{head}</p>}
+                          {head && <p style={{ margin: `${first ? 0 : 10}px 0 4px`, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" }}>{head}</p>}
                           <button
                             type="button"
                             onClick={() => setEditingExercise(e)}
@@ -343,11 +343,11 @@ export default function LibraryWeb() {
                                   <span style={{ flex: "none", borderRadius: 6, padding: "1px 6px", background: "#F0EDF9", color: "#5F5093", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}>{t("Yours")}</span>
                                 )}
                               </span>
-                              <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                              <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                                 {e.tags.length > 0 ? e.tags.map((tag) => muscle(EXERCISE_TAG_LABEL[tag])).join(" · ") : t(classificationLabel[e.classification])}
                               </span>
                             </span>
-                            <ChevronRight size={16} style={{ color: "#A79E93", flex: "none" }} />
+                            <ChevronRight size={16} style={{ color: "#776E64", flex: "none" }} />
                           </button>
                         </React.Fragment>
                       ))}
@@ -386,7 +386,7 @@ export default function LibraryWeb() {
                   label={(zone) => muscle(ZONE_LABEL[zone])}
                 />
               </div>
-              <p className="absolute whitespace-nowrap" style={{ insetInlineStart: 14, bottom: 12, margin: 0, fontSize: 13, lineHeight: "20px", color: "#A79E93" }}>
+              <p className="absolute whitespace-nowrap" style={{ insetInlineStart: 14, bottom: 12, margin: 0, fontSize: 13, lineHeight: "20px", color: "#776E64" }}>
                 {figureAlt}
               </p>
             </div>
@@ -420,7 +420,7 @@ export default function LibraryWeb() {
                 <p style={{ margin: 0, flex: "none", fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{`${muscle(ZONE_LABEL[selectedZoneKey])} · ${tn(filtered.length, "{n} exercise", "{n} exercises")}`}</p>
                 {filtered.length === 0 ? (
                   <div className="grid place-items-center" style={{ flex: "none", padding: 24, borderRadius: 12, background: "#F5F5F6" }}>
-                    <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No exercises for this group.")}</p>
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No exercises for this group.")}</p>
                   </div>
                 ) : (
                   <div className="flex flex-col no-scrollbar" style={{ flex: "0 1 auto", minHeight: 0, overflow: "auto", scrollbarWidth: "none", gap: 8 }}>
@@ -435,7 +435,7 @@ export default function LibraryWeb() {
                         <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                           {e.name}
                         </span>
-                        <span style={{ flex: "none", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t(classificationLabel[e.classification])}</span>
+                        <span style={{ flex: "none", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t(classificationLabel[e.classification])}</span>
                       </button>
                     ))}
                   </div>
@@ -447,7 +447,7 @@ export default function LibraryWeb() {
                   <User size={30} strokeWidth={1.25} absoluteStrokeWidth style={{ color: "#7D67D9" }} />
                 </span>
                 <p style={{ margin: "14px 0 0", maxWidth: 320, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B", textWrap: "balance" } as React.CSSProperties}>{t("Select a muscle to see its exercises")}</p>
-                <p style={{ margin: "4px 0 0", maxWidth: 320, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#8C8378" }}>{t("Click a muscle on the figure, or pick one from Muscle groups.")}</p>
+                <p style={{ margin: "4px 0 0", maxWidth: 320, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#71685E" }}>{t("Click a muscle on the figure, or pick one from Muscle groups.")}</p>
               </div>
             )}
           </div>

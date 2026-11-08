@@ -99,7 +99,7 @@ export function OverviewWeb({ rail }: { rail: boolean }) {
   if (m.error && !business) return <MarketError thing={tk("your marketplace")} onRetry={m.reload} />;
   if (m.loading) {
     return (
-      <div aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "grid", gridTemplateColumns: cols, gap: 24 }}>
+      <div role="status" aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "grid", gridTemplateColumns: cols, gap: 24 }}>
         <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading")} />
         <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading")} />
         {!rail && <MarketSkeleton radius={24} rows={3} height={165} label={t("Loading")} />}

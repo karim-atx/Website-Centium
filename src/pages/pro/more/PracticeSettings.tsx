@@ -77,7 +77,7 @@ export default function PracticeSettings() {
 
 const Note = ({ children }: { children: ReactNode }) =>
   usePaneSpan() ? (
-    <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{children}</p>
+    <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{children}</p>
   ) : (
     <p style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.5, marginTop: 12 }}>{children}</p>
   );
@@ -92,7 +92,7 @@ const Note = ({ children }: { children: ReactNode }) =>
 const PracticeHead: FC<{ title: string; intro?: string }> = ({ title, intro }) =>
   usePaneSpan() ? (
     <div style={{ marginBottom: 24 }}>
-      <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>{t("Practice")}</p>
+      <p className="rtl:tracking-normal" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" }}>{t("Practice")}</p>
       <h2 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{title}</h2>
       {intro && <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "24px", color: "#5B5349" }}>{intro}</p>}
     </div>
@@ -364,7 +364,7 @@ function InvoicePage() {
             </div>
             <Note>{t("Shown on invoices and receipts once payments in the app launch.")}</Note>
             {msg && (
-              <p role="status" style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: msg === "Saved" ? "#3F9165" : "#B3261E" }}>
+              <p role="status" style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: msg === "Saved" ? "#1D744A" : "#B3261E" }}>
                 {t(msg)}
               </p>
             )}
@@ -374,7 +374,7 @@ function InvoicePage() {
                 onClick={() => void save()}
                 disabled={saving}
                 className="flex items-center justify-center hover:bg-[#8E7FD0] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-                style={{ height: 44, minWidth: 160, padding: "0 24px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+                style={{ height: 44, minWidth: 160, padding: "0 24px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
               >
                 <Check size={18} aria-hidden />
                 {saving ? t("Saving…") : t("Save")}

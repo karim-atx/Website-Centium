@@ -35,11 +35,11 @@ const MacroLine: React.FC<{ p: number; c: number; f: number; name: string; bar: 
         ))}
       </span>
       <span className="flex items-center whitespace-nowrap" style={{ gap: 6, fontSize: 11, lineHeight: "16px", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
-        <span style={{ color: none ? "#A79E93" : "#7D6BB5" }}>P {val(p)}</span>
+        <span style={{ color: none ? "#776E64" : "#7D6BB5" }}>P {val(p)}</span>
         <span style={{ color: "#C9C3BA" }}>·</span>
-        <span style={{ color: none ? "#A79E93" : "#8175C2" }}>C {val(c)}</span>
+        <span style={{ color: none ? "#776E64" : "#8175C2" }}>C {val(c)}</span>
         <span style={{ color: "#C9C3BA" }}>·</span>
-        <span style={{ color: none ? "#A79E93" : "#6F9993" }}>F {val(f)}</span>
+        <span style={{ color: none ? "#776E64" : "#6F9993" }}>F {val(f)}</span>
       </span>
     </span>
   );
@@ -55,7 +55,7 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
     .split(/\n+/)
     .map((s) => s.replace(/^\s*\d+[.)]\s*/, "").trim())
     .filter(Boolean);
-  const caps: React.CSSProperties = { margin: "0 0 8px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C8378" };
+  const caps: React.CSSProperties = { margin: "0 0 8px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#71685E" };
   const qty = (i: PrepItem) => `${i.quantity} ${i.unit ?? t("serving")}`;
 
   return (
@@ -72,14 +72,14 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
           >
             <ChevronLeft size={20} strokeWidth={2} aria-hidden style={{ color: "#241F1B" }} />
           </button>
-          <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#8C8378" }}>{t("Recipe")}</span>
+          <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#71685E" }}>{t("Recipe")}</span>
         </div>
         <span className="flex items-center justify-center" style={{ flex: 1, minHeight: 120, borderRadius: 16, background: "#F5F5F6" }}>
           <ChefHat size={48} strokeWidth={1.5} aria-hidden style={{ color: "#7D6BB5" }} />
         </span>
         <div>
           <h2 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B", overflowWrap: "anywhere" }}>{recipe.title}</h2>
-          <p style={{ margin: "2px 0 0", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+          <p style={{ margin: "2px 0 0", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
             {tn(recipe.servings, "{n} serving", "{n} servings")} · {t("{n} kcal total", { n: fmt(total.kcal) })}
           </p>
         </div>
@@ -87,7 +87,7 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
           <div className="flex items-center" style={{ gap: 16 }}>
             <span className="flex items-baseline" style={{ flex: "none", gap: 4 }}>
               <span style={{ fontSize: 28, lineHeight: "36px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B" }}>{fmt(per.kcal)}</span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#8C8378" }}>{t("kcal")}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#71685E" }}>{t("kcal")}</span>
             </span>
             <span className="flex-1 min-w-0 flex flex-col" style={{ gap: 6 }}>
               <span className="flex overflow-hidden" style={{ height: 10, borderRadius: 4, background: "rgba(36,31,27,0.07)" }}>
@@ -101,7 +101,7 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
               </span>
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{tn(recipe.servings, "Per serving. Totals ÷ {n} serving.", "Per serving. Totals ÷ {n} servings.")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{tn(recipe.servings, "Per serving. Totals ÷ {n} serving.", "Per serving. Totals ÷ {n} servings.")}</p>
         </div>
         <button
           type="button"
@@ -129,9 +129,9 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
                   <span className="flex items-baseline" style={{ gap: 12 }}>
                     <span className="flex-1 min-w-0 truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                       {i.food.name}
-                      {i.note && <span style={{ fontSize: 13, fontWeight: 400, fontStyle: "italic", color: "#8C8378" }}> · {i.note}</span>}
+                      {i.note && <span style={{ fontSize: 13, fontWeight: 400, fontStyle: "italic", color: "#71685E" }}> · {i.note}</span>}
                     </span>
-                    <span style={{ flex: "none", fontSize: 15, lineHeight: "22px", color: "#8C8378", whiteSpace: "nowrap" }}>{qty(i)}</span>
+                    <span style={{ flex: "none", fontSize: 15, lineHeight: "22px", color: "#71685E", whiteSpace: "nowrap" }}>{qty(i)}</span>
                     {kcal}
                   </span>
                   {line}
@@ -140,10 +140,10 @@ export const RecipeDetailWeb: React.FC<{ recipe: Recipe; onBack: () => void; onE
                 <div key={k} className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 16, borderRadius: 12, background: "#FFFFFF", padding: "6px 14px" }}>
                   <span className="flex-1 min-w-0">
                     <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>{i.food.name}</span>
-                    {i.note && <span className="block truncate" style={{ fontSize: 13, lineHeight: "18px", fontStyle: "italic", color: "#8C8378" }}>{i.note}</span>}
+                    {i.note && <span className="block truncate" style={{ fontSize: 13, lineHeight: "18px", fontStyle: "italic", color: "#71685E" }}>{i.note}</span>}
                   </span>
                   <span style={{ flex: "0 0 40%", minWidth: 0 }}>{line}</span>
-                  <span style={{ flex: "none", width: 72, textAlign: "end", fontSize: 15, lineHeight: "22px", color: "#8C8378", whiteSpace: "nowrap" }}>{qty(i)}</span>
+                  <span style={{ flex: "none", width: 72, textAlign: "end", fontSize: 15, lineHeight: "22px", color: "#71685E", whiteSpace: "nowrap" }}>{qty(i)}</span>
                   {kcal}
                 </div>
               );

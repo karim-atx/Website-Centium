@@ -16,7 +16,7 @@ import { t } from "../../../i18n/core";
 
 const INK = "#241F1B";
 const LABEL = "#5B5349";
-const MUTED = "#8C8378";
+const MUTED = "#71685E";
 const FAINT = "#A39A90";
 const FIELD: React.CSSProperties = {
   height: 44,

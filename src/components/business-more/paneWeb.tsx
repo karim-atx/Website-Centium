@@ -56,7 +56,7 @@ export const PaneHeader: React.FC<{ title: string; sub?: string; back?: React.Re
     {back}
     <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
       <h2 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" } as React.CSSProperties}>{title}</h2>
-      {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>{sub}</p>}
+      {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>{sub}</p>}
     </div>
   </header>
 );

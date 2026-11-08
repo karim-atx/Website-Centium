@@ -4,6 +4,7 @@ import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { updatePassword } from "../../services/auth";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { usePwnedPassword } from "../../hooks/usePwnedPassword";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import { CodeBoxes } from "../../components/ui/CodeBoxes";
@@ -35,6 +36,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmBlurred, setConfirmBlurred] = useState(false);
   const passwordVisibility = usePasswordVisibility();
+  const breached = usePwnedPassword(password);
   const showPassword = passwordVisibility.shown;
   const [busy, setBusy] = useState(false);
   const singleFlight = useSingleFlight();
@@ -262,7 +264,7 @@ export default function ResetPassword() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           onBlur={() => setConfirmBlurred(true)}
         />
-        {password && <ObStrength password={password} />}
+        {password && <ObStrength password={password} breached={breached} />}
       </form>
       <ObFooter
         error={error}

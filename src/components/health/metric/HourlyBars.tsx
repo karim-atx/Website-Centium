@@ -55,7 +55,7 @@ const HourlyBarsMobile: React.FC<HourlyBarsProps> = ({ metric, values, nowHour, 
   const max = Math.max(1, ...values.map((v) => v ?? 0));
   const pitch = 326 / 24;
   const w = 8;
-  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378";
+  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#71685E";
   const ghost = dark ? "rgba(245,243,250,0.18)" : "rgba(36,31,27,0.18)";
   // Round F (F10): in right to left, the hours run from right to left. Every x
   // on the 326 grid is mirrored (a bar by its far edge); SVG text anchors are

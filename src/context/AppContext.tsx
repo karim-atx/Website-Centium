@@ -125,9 +125,10 @@ import { ensureArabicFont } from "../i18n/fonts";
 import { readAccountLanguage, settleLanguage, writeAccountLanguage } from "../services/preferences/language";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
-import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
+import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutOtherDevices, signOutRemote } from "../services/auth";
+import { SIGN_OUT_SCOPE, signOutEveryDevice } from "../services/auth/signOutScope";
 import { reportInstallOnce } from "../platform/installReport";
-import { mirrorLanguage, nativeSignedOut } from "../platform/nativeShell";
+import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
 import { revokeThisPhoneOnSignOut, unlockFolderWithDevice } from "../services/journal/deviceUnlock";
 import type { DeviceOutcome } from "../services/journal/deviceUnlockModel";
 import type { UnlockPurpose } from "../platform/biometricsModel";
@@ -136,7 +137,7 @@ import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
 import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
-import { unsubscribeFromPush } from "../services/push";
+import { removeOtherDevicesPush, unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
 import {
   createHabit,
@@ -1279,6 +1280,11 @@ interface AppState {
 
   signOut: () => Promise<void>;
   /**
+   * Settings › Security: ends every session, this one included. Nothing local
+   * is cleared and nobody is signed out unless the server took it.
+   */
+  signOutAllDevices: () => Promise<{ ok: boolean; message?: string }>;
+  /**
    * Schedules deletion after a 30-day grace period. Returns the outcome
    * rather than assuming it: nothing local is cleared and the user is not
    * signed out unless the request actually succeeded.
@@ -1630,6 +1636,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             window.location.reload();
             return;
           }
+          // Round K (the App session's finding): a session ended elsewhere —
+          // "Sign out of all devices" on another device, or a refresh token
+          // revoked — clears the phone's widgets and shortcuts too while the
+          // app is open. Nothing in a browser (nativeSignedOut is isNative-guarded).
+          if (!next) void nativeSignedOut();
           lockTab(next ? { kind: "switched", label: accountLabel(next) } : { kind: "signedOut" });
           return;
         }
@@ -2250,6 +2261,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
     document.documentElement.classList.toggle("high-contrast", !!accessibility.highContrast);
     document.documentElement.classList.toggle("big-targets", !!accessibility.biggerTargets);
+    // The phone's own surfaces (widgets, the session notification) follow it too.
+    mirrorReducedMotion(accessibility.reduceMotion);
   }, [accessibility]);
 
   // Starts empty. The seeded demo meals are gone — see services/food, which
@@ -6532,7 +6545,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // real messaging) and `businessMessages`, which kept "business" threads in
   // this browser only. Real conversations are all in /app/messages.
 
-  const signOut = async () => {
+  // Round K: Sign out ends THIS DEVICE's session only; deleting the account
+  // still ends every one (services/auth/signOutScope SIGN_OUT_SCOPE). The
+  // local cleanup is the same for both.
+  const endSession = async (scope: "local" | "global") => {
     signingOutHere = true;
     // Round D (D23): anything kept to save later is health data on a shared
     // device. The person was warned before getting here (SignOutGuard).
@@ -6595,11 +6611,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // session. Best effort and capped at two seconds, like the line above.
     await nativeSignedOut();
 
-    await signOutRemote();
+    await signOutRemote(scope);
     // A fresh page, bound to "signed out": no in-memory state of this account
     // survives into the next sign-in on this tab.
     window.location.reload();
   };
+
+  const signOut = () => endSession(SIGN_OUT_SCOPE.signOut);
+
+  // Round K (Settings › Security): every OTHER session first, while this one
+  // is still good; then the other devices' push rows; then the ordinary
+  // sign-out above, so this device is cleared exactly as it always is. A
+  // failure of the first step changes nothing here and says so; the person is
+  // still signed in and can try again (services/auth/signOutScope).
+  const signOutAllDevices: AppState["signOutAllDevices"] = () =>
+    signOutEveryDevice({ revokeOthers: signOutOtherDevices, removeOtherPush: removeOtherDevicesPush, signOutHere: signOut });
 
   // QA 12.0: "put the ability to delete account". This schedules a real
   // server-side deletion; nothing about it is local-only.
@@ -6624,7 +6650,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setDeletionRequestedAt(result.deletionRequestedAt ?? null);
-    await signOut();
+    // Every device, not just this one (Round K keeps it "global").
+    await endSession(SIGN_OUT_SCOPE.deleteAccount);
     return { ok: true };
   };
 
@@ -6908,6 +6935,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reorderWorkoutTemplateFolders,
       moveWorkoutTemplateFolder,
       signOut,
+      signOutAllDevices,
       deleteAccount,
       cancelDeletion,
       deletionRequestedAt,

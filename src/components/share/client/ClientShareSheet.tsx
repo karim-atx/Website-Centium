@@ -366,7 +366,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                     aria-checked={a}
                     onClick={() => setFormat(f)}
                     className="tap flex items-center justify-center"
-                    style={{ flex: 1, height: 34, borderRadius: 11, background: a ? m.segactive : m.segidle, color: a ? (dark ? m.onfill : "#FFFFFF") : m.segink, fontSize: textPx(12), fontWeight: 700 }}
+                    style={{ flex: 1, height: 34, borderRadius: 11, background: a ? m.segactive : m.segidle, color: a ? m.onfill : m.segink, fontSize: textPx(12), fontWeight: 700 }}
                   >
                     {f === "story" ? t("Story") : f === "post" ? tx("Post", "share format") : t("Sticker")}
                   </button>
@@ -427,7 +427,7 @@ const SheetBody: React.FC<{ spec: ClientCardSpec; onClose: () => void; onDone: (
                           fontWeight: a ? 700 : 600,
                           border: `1px solid ${a ? m.fill : m.border}`,
                           background: a ? m.fill : m.card,
-                          color: a ? (dark ? m.onfill : "#FFFFFF") : m.ink2,
+                          color: a ? m.onfill : m.ink2,
                         }}
                       >
                         <span aria-hidden style={{ width: 14, height: 14, borderRadius: 999, background: sw, boxShadow: "0 0 0 1px rgba(36,31,27,0.1)", flex: "none" }} />

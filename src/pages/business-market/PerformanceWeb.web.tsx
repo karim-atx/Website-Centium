@@ -41,8 +41,8 @@ import { isRtl, t, tk } from "../../i18n/core";
 
 const FILL = "max(560px, calc(100dvh - 192px))";
 const CARD: React.CSSProperties = { minHeight: 0, minWidth: 0, display: "flex", flexDirection: "column", boxSizing: "border-box", borderRadius: 20, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.11)", padding: "16px 20px" };
-const MUTED = "#8C8378";
-const AXIS = "#A79E93";
+const MUTED = "#71685E";
+const AXIS = "#776E64";
 const CSS = ".pfw-btn:hover{background:#F5F5F6}.pfw-sel:hover{border-color:#AEA1DC}.pfw-chip:hover{background:#F5F5F6}";
 
 type Load = { state: "loading" } | { state: "error" } | { state: "ok"; series: Record<OfferMetric, PerfSeries | null> };
@@ -339,7 +339,7 @@ function Plot({ kind, series, labels, prev = [], format, markers = [], marginTop
 }
 
 function deltaInk(d: string | null | undefined): string {
-  return d && (d.startsWith("−") || d.startsWith("-")) ? "#C0392B" : "#3F9165";
+  return d && (d.startsWith("−") || d.startsWith("-")) ? "#C0392B" : "#1D744A";
 }
 
 function Legend({ unit, prev }: { unit: string; prev: boolean }) {

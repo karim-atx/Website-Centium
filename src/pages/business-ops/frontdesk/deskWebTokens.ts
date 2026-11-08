@@ -6,8 +6,8 @@ import { useEffect, useRef } from "react";
 
 export const INK = "#241F1B";
 export const INK2 = "#5B5349";
-export const MUTED = "#8C8378";
-export const FAINT = "#A79E93";
+export const MUTED = "#71685E";
+export const FAINT = "#776E64";
 export const BRAND = "#7D6BB5";
 export const LAV = "#AEA1DC";
 export const TINT = "#F0EDF9";
@@ -19,7 +19,7 @@ export const DIVIDER = "1px solid rgba(36,31,27,0.06)";
 
 export type WebTone = "good" | "high" | "warn" | "pale" | "soft";
 export const TONE: Record<WebTone, { bg: string; ink: string }> = {
-  good: { bg: "#E3F3E9", ink: "#3F9165" },
+  good: { bg: "#E3F3E9", ink: "#1D744A" },
   high: { bg: "#FBE7E4", ink: "#C0392B" },
   warn: { bg: "#F6E9C9", ink: "#8A6A3E" },
   pale: { bg: TINT, ink: BRAND },

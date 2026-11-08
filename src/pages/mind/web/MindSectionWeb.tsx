@@ -42,7 +42,7 @@ export const MindSectionWeb: React.FC<{
           <h1 className="whitespace-nowrap" style={{ margin: 0, fontSize: 24, lineHeight: "32px", fontWeight: 600, letterSpacing: "-0.6px", color: "#241F1B" }}>
             {title}
           </h1>
-          <p className="truncate" style={{ margin: 0, minWidth: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p className="truncate" style={{ margin: 0, minWidth: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {sub}
           </p>
         </div>

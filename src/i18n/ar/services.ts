@@ -14,6 +14,7 @@ export const FILES: string[] = [
   "services/auth/index.ts",
   "services/auth/passwordChange.ts",
   "services/auth/passwordChangeLogic.ts",
+  "services/auth/signOutScope.ts",
   "services/recoveryCodes/index.ts",
   "services/redemption/index.ts",
   "services/redemption/referralLogic.ts",

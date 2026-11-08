@@ -665,7 +665,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                 <h1 className="flex items-center" style={{ margin: 0, gap: 8, fontSize: 24, lineHeight: "32px", fontWeight: 800, letterSpacing: "-0.02em", color: "#241F1B" }}>
                   <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{name}</span>
                   {listing.hasVerifiedLicence && (
-                    <span className="inline-flex items-center" style={{ gap: 3, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#3F9165" }}>
+                    <span className="inline-flex items-center" style={{ gap: 3, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#1D744A" }}>
                       <BadgeCheck size={16} aria-hidden />
                       {t("Verified")}
                     </span>
@@ -677,7 +677,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                     <span className="inline-flex items-center" style={{ gap: 4, fontWeight: 700, color: "#241F1B" }}>
                       <Star size={15} />
                       {avg.toFixed(1)}
-                      <span style={{ fontWeight: 500, color: "#8C8378" }}>· {tn(count, "{n} review", "{n} reviews")}</span>
+                      <span style={{ fontWeight: 500, color: "#71685E" }}>· {tn(count, "{n} review", "{n} reviews")}</span>
                     </span>
                   )}
                 </p>
@@ -686,7 +686,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                 <button type="button" onClick={pw.onHire} className="flex items-center hover:bg-[#E7E2F7]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#F0EDF9", color: "#5F5093", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
                   {t("Hire {name}", { name: first })}
                 </button>
-                <button type="button" onClick={pw.onBook} className="flex items-center hover:bg-[#8E7FD0]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+                <button type="button" onClick={pw.onBook} className="flex items-center hover:bg-[#8E7FD0]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
                   {t("Book a session")}
                 </button>
               </div>
@@ -749,7 +749,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
               <div style={{ minWidth: 0 }}>
                 <h2 style={caps}>{t("Where you'll see {name}", { name: first })}</h2>
                 {whereRows.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("{name} hasn't said where they work yet.", { name: first })}</p>
+                  <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("{name} hasn't said where they work yet.", { name: first })}</p>
                 ) : (
                   <div style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, padding: "0 16px" }}>
                     {whereRows.map((w, i) => {
@@ -761,7 +761,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                           </span>
                           <span className="min-w-0">
                             <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B", overflowWrap: "anywhere" }}>{w.title}</span>
-                            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{w.line}</span>
+                            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{w.line}</span>
                           </span>
                         </div>
                       );

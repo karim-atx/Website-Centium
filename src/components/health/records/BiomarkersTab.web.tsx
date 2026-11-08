@@ -39,13 +39,13 @@ export const BiomarkersWeb: React.FC<{
   const { rail } = useWebLayout();
   const { today } = useApp();
   const focus = markers.find((m) => !isThreshold(m) && m.status && m.status !== "normal") ?? markers[0] ?? null;
-  const caps: React.CSSProperties = { fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "1.3px", textTransform: "uppercase", color: "#8C8378" };
+  const caps: React.CSSProperties = { fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "1.3px", textTransform: "uppercase", color: "#71685E" };
   return (
     <div className="grid items-start" style={{ gridTemplateColumns: rail ? "minmax(0,1fr) minmax(0,1fr)" : "minmax(0,8fr) minmax(0,4fr)", gap: 24 }} data-web-biomarkers>
       <div className="min-w-0 flex flex-col" style={{ gap: 12 }}>
         {confirmation}
         {rows.length === 0 ? (
-          <p style={{ margin: 0, padding: "16px 2px", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No markers match '{query}'.", { query })}</p>
+          <p style={{ margin: 0, padding: "16px 2px", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No markers match '{query}'.", { query })}</p>
         ) : (
           <div className="overflow-hidden" style={{ borderRadius: 18, border: "0.5px solid rgba(36,31,27,0.1)" }}>
             <div aria-hidden className="grid items-center" style={{ gridTemplateColumns: COLS, gap: 12, height: 36, padding: "0 18px", background: "#FAF9FD", borderBottom: "0.5px solid #E5E7EB" }}>
@@ -80,12 +80,12 @@ export const BiomarkersWeb: React.FC<{
                         <span className="truncate" title={m.name} style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                           {m.name}
                         </span>
-                        <span className="truncate" style={{ textAlign: "end", fontSize: 13, fontWeight: 500, color: "#8C8378" }}>
+                        <span className="truncate" style={{ textAlign: "end", fontSize: 13, fontWeight: 500, color: "#71685E" }}>
                           {threshold ? "–" : rangeText(m.rangeLow, m.rangeHigh)}
                         </span>
                         <span className="truncate" style={{ textAlign: "end", fontVariantNumeric: "tabular-nums" }}>
                           <span style={{ fontSize: 15, fontWeight: 800, color: threshold ? "#241F1B" : statusColor(m.status, false) }}>{m.value}</span>{" "}
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#8C8378" }}>{m.unit}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#71685E" }}>{m.unit}</span>
                         </span>
                         <span className="flex flex-col items-end" style={{ gap: 4 }}>
                           {!threshold && <StatusWord status={m.status} size={13} line={20} icon={14} />}
@@ -127,9 +127,9 @@ export const BiomarkersWeb: React.FC<{
             </div>
             <p className="flex items-baseline" style={{ margin: 0, gap: 6 }}>
               <span style={{ fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-1.2px", color: isThreshold(focus) ? "#241F1B" : statusColor(focus.status, false) }}>{focus.value}</span>
-              <span style={{ fontSize: 15, fontWeight: 600, color: "#8C8378" }}>{focus.unit}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "#71685E" }}>{focus.unit}</span>
             </p>
-            <p style={{ margin: "-8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Latest results from {date}", { date: fmtDate(latestDate) })}</p>
+            <p style={{ margin: "-8px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{t("Latest results from {date}", { date: fmtDate(latestDate) })}</p>
             {historyOf && (() => {
               // The small history chart (WC-HE.9 side card, chart() "compact": All, about 3 ticks); the reference grows it to the card (flex 1, min 90): 240 here.
               const h = historyOf(focus);

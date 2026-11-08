@@ -141,16 +141,16 @@ export function ProBusinessBilling() {
                     <span className="flex items-center flex-wrap" style={{ gap: 8 }}>
                       <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700 }}>{periodName(o.period)}</span>
                       {o.current && <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: "#FFFFFF", color: "#5F5093" }}>{t("Current")}</span>}
-                      {o.period === "yearly" && saving && <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: "#E3F1E8", color: "#3F9165" }}>{savingLabel(saving)}</span>}
+                      {o.period === "yearly" && saving && <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 800, borderRadius: 999, padding: "2px 8px", background: "#E3F1E8", color: "#1D744A" }}>{savingLabel(saving)}</span>}
                     </span>
-                    {o.period === "yearly" && o.price !== null && saving && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{perMonthText(o.price, formatPrice)}</span>}
+                    {o.period === "yearly" && o.price !== null && saving && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{perMonthText(o.price, formatPrice)}</span>}
                   </span>
-                  <span className="whitespace-nowrap" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: o.price === null ? "#8C8378" : "#241F1B" }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
+                  <span className="whitespace-nowrap" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: o.price === null ? "#71685E" : "#241F1B" }}>{periodPriceText(o.price, o.period, formatPrice)}</span>
                 </button>
               );
             })}
           </div>
-          <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {options.find((o) => !o.current && o.price === null)
               ? noPriceText(options.find((o) => !o.current && o.price === null)!.period)
               : t("Seat blocks follow your plan's billing. Switching charges nothing now.")}

@@ -8,7 +8,7 @@ export const PaneHeaderWeb: React.FC<{ title: string; subtitle?: string; right?:
   <header className="flex items-start justify-between" style={{ gap: 16, marginBottom: 28 }}>
     <div className="flex flex-col min-w-0" style={{ gap: 2 }}>
       <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B", textWrap: "pretty" }}>{title}</h1>
-      {subtitle && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" }}>{subtitle}</p>}
+      {subtitle && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" }}>{subtitle}</p>}
     </div>
     {right}
   </header>

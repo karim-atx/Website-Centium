@@ -40,7 +40,7 @@ export const ExploreHead: React.FC<{ onBack: () => void }> = ({ onBack }) => (
  */
 export const AffiliationCard: React.FC<{ name: string; onOpen: () => void }> = ({ name, onOpen }) => {
   const dark = useIsDark();
-  const sub = dark ? "#A5BDB9" : "#869595";
+  const sub = dark ? "#A5BDB9" : "#637171";
   return (
     <button type="button" onClick={onOpen} className="tap w-full text-start" style={{ borderRadius: 20, padding: "14px 16px", marginBottom: 14, background: dark ? "rgba(162,200,194,0.12)" : "#ECF5F3" }}>
       <span className="flex items-center" style={{ gap: 12 }}>

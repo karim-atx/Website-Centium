@@ -160,7 +160,7 @@ export const TargetsSheet: React.FC<{
                   />
                   {shown && <span style={{ fontSize: textPx(13), color: INK.chS }}>{t("kg")}</span>}
                   {!overridden && from != null && (
-                    <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.tealDark, background: INK.tealPale, borderRadius: 8, padding: "3px 8px" }}>{t("From 1RM")}</span>
+                    <span style={{ fontSize: textPx(11), fontWeight: 700, color: INK.tealDarkInk, background: INK.tealPale, borderRadius: 8, padding: "3px 8px" }}>{t("From 1RM")}</span>
                   )}
                   {overridden && (
                     <>

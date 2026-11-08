@@ -145,7 +145,7 @@ export const InlineFoodSearch: React.FC<{
   return (
     <div ref={box} style={{ position: "relative", marginTop: day ? 6 : 4 }}>
       <label className="flex items-center" style={{ height: 40, boxSizing: "border-box", gap: 8, padding: day ? "0 12px" : "0 10px", borderRadius: 10, ...boxStyle }}>
-        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", flex: "none" }} />
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E", flex: "none" }} />
         <input
           ref={input}
           autoFocus={!day}
@@ -179,7 +179,7 @@ export const InlineFoodSearch: React.FC<{
               void choose(results[sel]);
             }
           }}
-          className="flex-1 min-w-0 outline-none bg-transparent placeholder:text-[#8C8378]"
+          className="flex-1 min-w-0 outline-none bg-transparent placeholder:text-[#71685E]"
           style={{ fontSize: 15, lineHeight: "24px", fontWeight: day && !query ? 500 : 600, color: "#241F1B" }}
         />
       </label>
@@ -196,7 +196,7 @@ export const InlineFoodSearch: React.FC<{
           }
         >
           {results.length === 0 ? (
-            <p role="status" style={{ margin: 0, padding: "10px", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <p role="status" style={{ margin: 0, padding: "10px", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {searching ? t("Searching…") : failed ? t("Couldn't search foods. Check your connection and try again.") : t("Nothing matches that search.")}
             </p>
           ) : (
@@ -221,7 +221,7 @@ export const InlineFoodSearch: React.FC<{
                         </span>
                         {flag && <AlertTriangle size={14} strokeWidth={2.2} role="img" aria-label={flag.kind === "allergy_confirmed" ? t("Allergy") : t("Check this")} style={{ flex: "none", color: flag.kind === "allergy_confirmed" ? "#C0392B" : "#A86B00" }} />}
                       </span>
-                      <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
+                      <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", fontVariantNumeric: "tabular-nums" }}>
                         {`${r.sub} · P ${fmt(r.per.p)} · C ${fmt(r.per.c)} · F ${fmt(r.per.f)}`}
                       </span>
                     </span>
@@ -258,7 +258,7 @@ export const InlineFoodSearch: React.FC<{
                         />
                       )}
                     </span>
-                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {r.sub}
                     </span>
                   </span>
@@ -283,7 +283,7 @@ export const InlineFoodSearch: React.FC<{
             })
           )}
           {day && (
-            <div className="flex" style={{ gap: 12, padding: "6px 12px 4px", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#8C8378" }}>
+            <div className="flex" style={{ gap: 12, padding: "6px 12px 4px", fontSize: 11, lineHeight: "16px", fontWeight: 600, color: "#71685E" }}>
               <span>{t("↑↓ to move")}</span>
               <span>{t("↵ to add")}</span>
               <span>{t("Esc to close")}</span>

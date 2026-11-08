@@ -170,7 +170,7 @@ function DirectoryPageWeb({ selected }: { selected: string | null }) {
                 {t("Sort: {sort}", { sort: t(sort) })}
                 <ChevronDown size={14} aria-hidden />
               </button>
-              <p className="truncate" style={{ margin: 0, minWidth: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+              <p className="truncate" style={{ margin: 0, minWidth: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {sort === "Nearest" ? t("Nearest first, measured on this device.") : t("Best match first: Centium work history, reviews and distance.")}
               </p>
             </div>
@@ -199,7 +199,7 @@ function DirectoryPageWeb({ selected }: { selected: string | null }) {
   );
 
   return (
-    <PrFrameWeb title={t("Professionals")} sub={t("Trainers, dietitians, physiotherapists & doctors")} subInk="#8C8378" lFr={rail ? 1 : 5} rFr={rail ? 1 : 7}>
+    <PrFrameWeb title={t("Professionals")} sub={t("Trainers, dietitians, physiotherapists & doctors")} subInk="#71685E" lFr={rail ? 1 : 5} rFr={rail ? 1 : 7}>
       {view === "map" ? (
         <MapViewWeb top={top} subtype={type} maxKm={maxKm} where={where} anyCountry={anyCountry} listings={dir.listings} />
       ) : (

@@ -103,7 +103,7 @@ export const GeneralPlanWeb: React.FC<{
                         <span className="block" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
                           {row.name}
                         </span>
-                        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                           {row.frequency}
                         </span>
                         {row.who && <span className="sr-only">{row.who}</span>}
@@ -116,13 +116,13 @@ export const GeneralPlanWeb: React.FC<{
                           <span className="whitespace-nowrap" style={{ fontSize: 13, lineHeight: "18px", color: "#5B5349", fontVariantNumeric: "tabular-nums" }}>
                             {row.state.last !== null && (
                               <>
-                                <span style={{ color: "#8C8378" }}>{t("Last")}</span> {t(row.state.last)}
+                                <span style={{ color: "#71685E" }}>{t("Last")}</span> {t(row.state.last)}
                               </>
                             )}
                             {row.state.last !== null && row.state.next !== null && " · "}
                             {row.state.next !== null && (
                               <>
-                                <span style={{ color: "#8C8378" }}>{tx("Next", "next due")}</span> {t(row.state.next)}
+                                <span style={{ color: "#71685E" }}>{tx("Next", "next due")}</span> {t(row.state.next)}
                               </>
                             )}
                           </span>
@@ -148,7 +148,7 @@ export const GeneralPlanWeb: React.FC<{
                           className="shrink-0 grid place-items-center rounded-full hover:bg-[#F5F5F6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
                           style={{ width: 32, height: 32, marginInlineStart: -8, marginInlineEnd: -6 }}
                         >
-                          <MoreVertical size={18} style={{ color: "#8C8378" }} aria-hidden />
+                          <MoreVertical size={18} style={{ color: "#71685E" }} aria-hidden />
                         </button>
                       )}
                     </div>
@@ -189,7 +189,7 @@ export const GeneralPlanWeb: React.FC<{
               <span className="flex-1" style={{ fontSize: 15, fontWeight: 600, color: "#241F1B" }}>
                 {t("Set a personal reminder")}
               </span>
-              <ChevronRight size={16} style={{ color: "#8C8378" }} aria-hidden />
+              <ChevronRight size={16} style={{ color: "#71685E" }} aria-hidden />
             </button>
             <p style={{ margin: "10px 0 0", fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{t(HEALTH_DISCLAIMER)}</p>
           </aside>

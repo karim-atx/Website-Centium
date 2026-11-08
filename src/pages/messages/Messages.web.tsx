@@ -255,13 +255,13 @@ const ConversationList: React.FC<{ conv: Conv; onPick: (th: MessageThread) => vo
     <div data-wv-msg="list" className="min-w-0 min-h-0 flex flex-col" style={{ gap: 10 }}>
       {/* The search field: 40, r14, #F6F4FE, padding 0 12, gap 8; the glyph 16 #8C8378; 15px. */}
       <label data-wv-msg="search" className="shrink-0 flex items-center focus-within:outline focus-within:outline-2 focus-within:outline-[#AEA1DC]" style={{ height: 40, boxSizing: "border-box", borderRadius: 14, background: "#F6F4FE", padding: "0 12px", gap: 8 }}>
-        <Search size={16} className="shrink-0" style={{ color: "#8C8378" }} aria-hidden />
+        <Search size={16} className="shrink-0" style={{ color: "#71685E" }} aria-hidden />
         <span className="sr-only">{t("Search messages and chats")}</span>
         <input
           value={query}
           onChange={(e) => conv.setQuery(e.target.value)}
           placeholder={t("Search messages")}
-          className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-[#8C8378]"
+          className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-[#71685E]"
           style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }}
         />
       </label>
@@ -568,10 +568,10 @@ const ConversationRow: React.FC<{
               <span className="min-w-0 whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700, color: "#241F1B" }}>
                 {name}
               </span>
-              {s?.pinnedAt && <Pin size={12} aria-label={t("Pinned")} className="shrink-0" style={{ color: "#8C8378" }} />}
-              {isMuted(s) && <BellOff size={12} aria-label={t("Muted")} className="shrink-0" style={{ color: "#8C8378" }} />}
+              {s?.pinnedAt && <Pin size={12} aria-label={t("Pinned")} className="shrink-0" style={{ color: "#71685E" }} />}
+              {isMuted(s) && <BellOff size={12} aria-label={t("Muted")} className="shrink-0" style={{ color: "#71685E" }} />}
             </span>
-            <span className="shrink-0 group-hover:opacity-0 group-focus-within:opacity-0" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span className="shrink-0 group-hover:opacity-0 group-focus-within:opacity-0" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {th.lastMessageAt ? listTime(th.lastMessageAt) : ""}
             </span>
           </span>

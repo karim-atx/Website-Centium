@@ -490,7 +490,7 @@ export const ProfilePaneWeb: React.FC<{
           {who}
         </span>
         <PrStars n={rating} />
-        <span style={{ marginInlineStart: "auto", fontSize: 13, color: "#8C8378", whiteSpace: "nowrap" }}>{monthYear(at, appLocale("en-US") ?? "en-US")}</span>
+        <span style={{ marginInlineStart: "auto", fontSize: 13, color: "#71685E", whiteSpace: "nowrap" }}>{monthYear(at, appLocale("en-US") ?? "en-US")}</span>
       </div>
       {body ? <p style={{ margin: "6px 0 0", fontSize: 15, lineHeight: "22px", color: "#5B5349", whiteSpace: "pre-line", overflowWrap: "anywhere" }}>{body}</p> : null}
       {extra}
@@ -548,7 +548,7 @@ export const ProfilePaneWeb: React.FC<{
             </PrPill>
           )}
           {profile && (
-            <PrPill height={28} bg={profile.card.hiredViaCentiumCount > 0 ? "#E7F2F0" : "#F5F5F6"} ink={profile.card.hiredViaCentiumCount > 0 ? "#3C6B65" : "#8C8378"} icon={<TicketCheck size={13} aria-hidden style={{ flex: "none" }} />}>
+            <PrPill height={28} bg={profile.card.hiredViaCentiumCount > 0 ? "#E7F2F0" : "#F5F5F6"} ink={profile.card.hiredViaCentiumCount > 0 ? "#3C6B65" : "#71685E"} icon={<TicketCheck size={13} aria-hidden style={{ flex: "none" }} />}>
               {hiredText(profile.card.hiredViaCentiumCount)}
             </PrPill>
           )}
@@ -649,13 +649,13 @@ export const ProfilePaneWeb: React.FC<{
               <MarketSkeleton radius={18} rows={2} height={64} count={2} label={tk("Loading services")} />
             )
           ) : rows.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("{name} hasn't added a session to book or a plan to hire.", { name: first || t("This professional") })}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("{name} hasn't added a session to book or a plan to hire.", { name: first || t("This professional") })}</p>
           ) : (
             rows.map((r) => (
               <div key={r.key} className="flex items-center" style={{ borderRadius: 16, border: HAIR, paddingBlock: 10, paddingInlineStart: 16, paddingInlineEnd: 12, gap: 12, minHeight: 64, boxSizing: "border-box", marginBottom: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B", overflowWrap: "anywhere" }}>{r.name}</p>
-                  {r.meta ? <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", overflowWrap: "anywhere" }}>{r.meta}</p> : null}
+                  {r.meta ? <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", overflowWrap: "anywhere" }}>{r.meta}</p> : null}
                 </div>
                 <span style={{ fontSize: 15, fontWeight: 700, color: "#241F1B", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{r.price}</span>
                 <button
@@ -701,13 +701,13 @@ export const ProfilePaneWeb: React.FC<{
               card={reviewCard}
             />
           ) : signedOut ? (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Sign in to read reviews")}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Sign in to read reviews")}</p>
           ) : reviewsLoading && previewRows.length === 0 ? (
             <MarketSkeleton radius={18} rows={2} height={80} count={2} label={tk("Loading reviews")} />
           ) : reviewError && previewRows.length === 0 ? (
             <MarketError thing={tk("reviews")} onRetry={() => void reloadReviews()} />
           ) : previewRows.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("No reviews yet")}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("No reviews yet")}</p>
           ) : (
             previewRows.map((r) => <React.Fragment key={r.id}>{reviewCard(r.reviewerName ?? t("A client"), r.rating, r.createdAt, r.body)}</React.Fragment>)
           )}
@@ -883,7 +883,7 @@ const MyReviewWeb: React.FC<{
     if (opensAt) return <ReviewWaitNote opensAt={opensAt} boxed />;
     return (
       <div className="flex items-center justify-between" style={{ borderRadius: 16, border: HAIR, padding: "14px 16px", gap: 12 }}>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: "22px", color: "#8C8378" }}>{t("You haven't reviewed {name} yet", { name: first })}</p>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "22px", color: "#71685E" }}>{t("You haven't reviewed {name} yet", { name: first })}</p>
         <button type="button" onClick={onOpen} className="pr-web-press" style={{ ...prSecondary, height: 36, padding: "0 14px", flex: "none" }}>
           <Star size={15} aria-hidden />
           {t("Rate & Review")}
@@ -903,11 +903,11 @@ const MyReviewWeb: React.FC<{
         </div>
       )}
       {withdrawn && (
-        <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {t("You withdrew this review. Only you can see it, and it doesn't count toward {name}'s rating.", { name: first })}
         </p>
       )}
-      {review.redactedAt && <p style={{ margin: "6px 0 0", fontSize: 13, fontStyle: "italic", color: "#8C8378" }}>{t("A moderator removed this review. It no longer counts toward the rating.")}</p>}
+      {review.redactedAt && <p style={{ margin: "6px 0 0", fontSize: 13, fontStyle: "italic", color: "#71685E" }}>{t("A moderator removed this review. It no longer counts toward the rating.")}</p>}
       {!withdrawn && (
         <div className="flex items-center" style={{ marginTop: 6, gap: 16 }}>
           {editable ? action(t("Edit"), onOpen) : action(armed ? t("Click again to withdraw your review") : t("Withdraw review"), () => void withdraw(), true)}

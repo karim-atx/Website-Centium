@@ -196,7 +196,7 @@ export function HiddenBanner() {
           onClick={() => void sw.turnOn()}
           disabled={!online || sw.busy}
           className="tap market-focus"
-          style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, background: c.high, color: c.onfill, border: 0, fontSize: px(12), fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0, opacity: !online || sw.busy ? 0.4 : 1, fontFamily: "inherit", cursor: "pointer" }}
+          style={{ minHeight: 34, padding: "0 12px", borderRadius: 10, background: c.high, color: c.onhigh, border: 0, fontSize: px(12), fontWeight: 800, whiteSpace: "nowrap", flexShrink: 0, opacity: !online || sw.busy ? 0.4 : 1, fontFamily: "inherit", cursor: "pointer" }}
         >
           {t("Turn on")}
         </button>

@@ -146,7 +146,7 @@ export const BookSheet: React.FC<{
     whiteSpace: "nowrap",
     flex: "none",
     ...(on
-      ? { background: hc ? m.segactive : dark ? "#A991FE" : "#A092E0", border: `1px solid ${hc ? m.segactive : dark ? "#A991FE" : "#A092E0"}`, color: dark && !hc ? "#0D0B1A" : "#FFFFFF", fontWeight: 700 }
+      ? { background: hc ? m.segactive : dark ? "#A991FE" : "#A092E0", border: `1px solid ${hc ? m.segactive : dark ? "#A991FE" : "#A092E0"}`, color: hc ? "#FFFFFF" : dark ? "#0D0B1A" : "#241F1B", fontWeight: 700 }
       : { background: dark ? "#242730" : "#FAFAFB", border: `1px solid ${hc ? m.border : dark ? "rgba(245,243,250,0.1)" : "#E5E6EB"}`, color: m.ink, fontWeight: 500 }),
   });
 

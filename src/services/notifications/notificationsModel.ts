@@ -31,6 +31,7 @@ import { getSupportPath } from "../moderation/support";
 import { FOOD_REVIEW_COPY, foodReviewCopy } from "../food/onlineSearchModel";
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn } from "../../i18n/core";
+import { shownAuthorLabel } from "../forum/rules";
 import { liftedSentence, NO_SHOW_NOTICE_COPY, pausedSentence, warningSentence } from "../no-shows/noShowModel";
 
 /** member_notification_kind, the whole enum in its declared order (20261210600000). */
@@ -356,10 +357,18 @@ const pText = (p: Readonly<Record<string, unknown>>, k: string): string | null =
   const v = p[k];
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 };
-/** Round I · FD: a forum line from the post's title and the comment's label (empty when the label is missing). */
+/**
+ * Round I · FD: a forum line from the post's title and the comment's label (empty when the label is missing).
+ * Round K (K-DEL): payload.label_key (Database 20261226590000) beside a null label says
+ * "Deleted member" or "Member" in the reader's language; shownAuthorLabel decides, and
+ * reads an older payload's English only when it has no label_key at all.
+ */
 function forumLine(p: Readonly<Record<string, unknown>>, line: (v: { label: string; title: string }) => string): Partial<NotificationCopy> {
   const title = pText(p, "title");
-  return title ? { title: line({ label: pText(p, "label") ?? "", title }) } : {};
+  if (!title) return {};
+  const raw = pText(p, "label"), key = pText(p, "label_key");
+  const label = raw !== null || key !== null ? shownAuthorLabel(raw, "label_key" in p ? key : undefined) : "";
+  return { title: line({ label, title }) };
 }
 /** A positive whole number (a number or a numeric string). */
 const pCount = (p: Readonly<Record<string, unknown>>, k: string): number | null => {
@@ -666,7 +675,7 @@ export const NOTIF_TONES: Record<NotifTone, [string, string]> = {
   teal: ["#E6F1EF", "#4F8F8A"],
   red: ["#FBE7E4", "#C0392B"],
   gold: ["#FDF3D6", "#9A7414"],
-  grey: ["#F5F5F6", "#8C8378"],
+  grey: ["#F5F5F6", "#71685E"],
 };
 
 /** `NI`: the 18 glyph paths (stroke 1.9, 24 viewBox). */

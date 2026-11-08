@@ -32,7 +32,7 @@ export const ClientTopBarWeb: React.FC<{
       <button type="button" onClick={onBack} aria-label={t("Back")} className={`${round} shrink-0`} style={{ width: 40, height: 40, boxSizing: "border-box", borderRadius: 999, border: "1px solid rgba(36,31,27,0.11)" }}>
         <ArrowLeft size={20} strokeWidth={2} aria-hidden style={{ color: "#5B5349" }} />
       </button>
-      <p className="flex-1" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
+      <p className="flex-1" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>
         {kicker}
       </p>
       <div className="flex" style={{ gap: 10 }}>
@@ -108,7 +108,7 @@ export const ClientHeroWeb: React.FC<{
             {status.label}
           </span>
         </div>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{since}</p>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{since}</p>
         <div className="flex flex-wrap" style={{ gap: 8, marginTop: 8 }}>
           {tags.map((g) => (
             <button
@@ -126,7 +126,7 @@ export const ClientHeroWeb: React.FC<{
             type="button"
             onClick={onTags}
             className="inline-flex items-center hover:bg-[#FAFAFB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-            style={{ height: 32, boxSizing: "border-box", gap: 4, padding: "0 12px", borderRadius: 9, border: "1px dashed rgba(36,31,27,0.18)", color: "#8C8378", fontSize: 13, fontWeight: 700 }}
+            style={{ height: 32, boxSizing: "border-box", gap: 4, padding: "0 12px", borderRadius: 9, border: "1px dashed rgba(36,31,27,0.18)", color: "#71685E", fontSize: 13, fontWeight: 700 }}
           >
             <Plus size={16} strokeWidth={2.4} aria-hidden />
             {t("Tag")}

@@ -45,7 +45,7 @@ const Timeline: React.FC<{ items: { title: string; desc: string; value: string; 
 /** OURS-step-states #9: the status screen while the review state loads. */
 export const StatusLoading: React.FC<{ footer: BizFooter }> = ({ footer }) => (
   <BizFrame footer={footer}>
-    <div className="text-center pt-2 pb-1" aria-busy="true" aria-label={t("Loading")}>
+    <div role="status" className="text-center pt-2 pb-1" aria-busy="true" aria-label={t("Loading")}>
       <div className="relative w-[200px] h-[170px] mx-auto" style={{ opacity: 0.5 }}>
         <Shapes shapes={STATUS_SUBMITTED_VIS} size={120} style={{ position: "absolute", insetInlineStart: 40, top: 25 }} />
       </div>

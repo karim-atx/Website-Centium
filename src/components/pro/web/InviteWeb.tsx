@@ -14,7 +14,7 @@ import { t } from "../../../i18n/core";
 // Settings and Joined 7. The state and the actions are InviteClients'.
 
 const SECTION: React.CSSProperties = { display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: 8, borderBottom: "1.5px solid #AEA1DC" };
-const H2: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" };
+const H2: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" };
 const LINK: React.CSSProperties = { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" };
 const PRIMARY: React.CSSProperties = { height: 44, borderRadius: 16, background: "#9A8CD6", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, lineHeight: "24px", fontWeight: 600 };
 
@@ -63,7 +63,7 @@ export const InviteWeb: React.FC<{
       </button>
       <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 14 }}>
         <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", whiteSpace: "nowrap", color: "#241F1B" }}>{t("Invite clients")}</h1>
-        <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>{t("Share your link or QR code")}</p>
+        <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>{t("Share your link or QR code")}</p>
       </div>
     </header>
   );
@@ -184,7 +184,7 @@ export const InviteWeb: React.FC<{
                 <s.icon size={20} strokeWidth={1.75} aria-hidden style={{ color: "#7D67D9" }} />
               </span>
               <span className="flex-1 min-w-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{s.title}</span>
-              <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", padding: "2px 10px", borderRadius: 999, background: "#F5F5F6", color: "#8C8378", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
+              <span style={{ fontSize: 11, lineHeight: "16px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.025em", padding: "2px 10px", borderRadius: 999, background: "#F5F5F6", color: "#71685E", whiteSpace: "nowrap" }}>{t("Coming soon")}</span>
             </div>
           ))}
 
@@ -199,7 +199,7 @@ export const InviteWeb: React.FC<{
           {p.joins === null ? (
             <ProCardSkeleton lines={2} />
           ) : p.joins.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{p.emptyJoins}</p>
+            <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{p.emptyJoins}</p>
           ) : (
             <div className="flex flex-col" style={{ boxSizing: "border-box", borderRadius: 20, border: "1px solid rgba(36,31,27,0.08)", padding: "0 24px" }}>
               {p.shownJoins.map((j, i) => (
@@ -209,10 +209,10 @@ export const InviteWeb: React.FC<{
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{j.firstName}</span>
-                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{p.joinedLine(j.joinedAt)}</span>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{p.joinedLine(j.joinedAt)}</span>
                   </span>
                   <span className="inline-flex items-center" style={{ gap: 6, fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 999, background: "#3F9165" }} />
+                    <span style={{ width: 8, height: 8, borderRadius: 999, background: "#1D744A" }} />
                     {t("Joined")}
                   </span>
                 </div>

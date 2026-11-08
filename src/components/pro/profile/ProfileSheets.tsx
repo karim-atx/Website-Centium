@@ -441,7 +441,7 @@ export const ShareProfileSheet: React.FC<{
             {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : initials}
           </span>
           <p style={{ fontSize: textPx(17), fontWeight: 800, color: INK.ch, marginTop: 6, overflowWrap: "anywhere" }}>{name}</p>
-          <p style={{ fontSize: textPx(12), color: INK.tealDark, fontWeight: 600 }}>{type}</p>
+          <p style={{ fontSize: textPx(12), color: INK.tealDarkInk, fontWeight: 600 }}>{type}</p>
           {rating && rating.count > 0 && (
             <p className="flex items-center" style={{ gap: 5, fontSize: textPx(12), color: INK.chS, marginTop: 4 }}>
               <span className="inline-flex" style={{ gap: 2 }} aria-hidden>

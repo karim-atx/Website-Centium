@@ -67,7 +67,7 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
     aria-busy={loading || undefined}
     onClick={loading ? undefined : onClick}
     className={clsx(
-      "tap w-full min-w-0 inline-flex items-center justify-center gap-[7px] px-4 text-[14px] font-bold leading-none",
+      "tap w-full min-w-0 min-h-fit inline-flex items-center justify-center gap-[7px] px-4 py-1 text-[14px] font-bold leading-none",
       "transition-[filter] duration-150 ease-out active:brightness-[0.92]",
       "disabled:opacity-40 disabled:pointer-events-none",
       loading && "cursor-progress",
@@ -78,7 +78,8 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
     {...rest}
   >
     {loading ? <Loader2 size={15} className="animate-spin shrink-0" aria-hidden /> : icon}
-    <span className="truncate">{label}</span>
+    {/* Round K · ET: the label wraps and the button grows past its height (min-height: fit-content) only when the text needs it, so 200% text is never cut off. */}
+    <span className="min-w-0 overflow-hidden text-center" style={{ overflowWrap: "break-word" }}>{label}</span>
   </button>
 );
 

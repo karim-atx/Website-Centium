@@ -262,7 +262,7 @@ export const MapViewWeb: React.FC<{
           <span className="block truncate" style={{ fontSize: 15, fontWeight: 700, color: fam.deep }}>
             {name}
           </span>
-          <span className="block truncate" style={{ fontSize: 13, color: "#8C8378" }}>
+          <span className="block truncate" style={{ fontSize: 13, color: "#71685E" }}>
             {line}
           </span>
         </span>
@@ -280,7 +280,7 @@ export const MapViewWeb: React.FC<{
       <div data-pr-list-col className="flex flex-col" style={{ minWidth: 0, minHeight: 0, gap: 12 }}>
         {top}
         <div ref={listRef} data-pr-near-list className="pr-web-noscroll flex flex-col" style={{ flex: 1, minHeight: 0, overflow: "auto", gap: 8 }}>
-          <p style={{ ...prCaps, color: "#8C8378", flex: "none" }}>{head}</p>
+          <p style={{ ...prCaps, color: "#71685E", flex: "none" }}>{head}</p>
           {located
             ? rows.map((r) => row(r.p.profileId, r.p.name, r.p.avatarUrl, r.p.subtype, rowPlace(r), ratingShort(r.p.averageRating, r.p.reviewCount), picked ? picked.includes(r.p.profileId) : r.p.profileId === firstId))
             : plain.map((l) => row(l.profileId, l.name, l.avatarUrl, l.subtype, l.location?.trim() || t("Not on the map nearby"), ratingShort(l.averageRating, l.reviewCount), false))}
@@ -297,7 +297,7 @@ export const MapViewWeb: React.FC<{
             </p>
           )}
           {located && nearby.length === 0 && !searching && !searchError && (
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("No professionals have shared an area near {place} yet. Try zooming out.", { place: origin!.label })}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("No professionals have shared an area near {place} yet. Try zooming out.", { place: origin!.label })}</p>
           )}
         </div>
       </div>
@@ -327,7 +327,7 @@ export const MapViewWeb: React.FC<{
                   {t("Choose an area")}
                 </button>
               </div>
-              <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378", maxWidth: 420 }}>
+              <p style={{ margin: "12px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E", maxWidth: 420 }}>
                 {t("Your location stays on this device: Centium only uses a rough area (about 10 km) to find who's nearby, and never saves it.")}
               </p>
             </MapNotice>

@@ -5,6 +5,7 @@ import { useApp } from "../../../context/AppContext";
 import { useOnline } from "../../../hooks/useOnline";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { CyclePhaseStrip } from "../../../components/cycle/CyclePhaseStrip";
+import { ReadinessCard } from "../../../components/readiness/ReadinessCard";
 import { CentredPopup } from "../../../components/ui/CentredPopup";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
@@ -553,6 +554,7 @@ export default function RoutinesWeb({ onCreateRoutine }: { onCreateRoutine: (fol
       {/* The folders column (both Option A columns when nothing is selected). */}
       <div className="min-w-0 flex flex-col" style={{ gap: 14 }}>
         <CyclePhaseStrip />
+        <ReadinessCard web />
         <ProgrammeSection
           routines={routines}
           today={today}
@@ -649,7 +651,7 @@ export default function RoutinesWeb({ onCreateRoutine }: { onCreateRoutine: (fol
               <Dumbbell size={30} strokeWidth={1.25} absoluteStrokeWidth style={{ color: "#7D67D9" }} />
             </span>
             <p style={{ margin: "14px 0 0", fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{t("No routines yet")}</p>
-            <p style={{ margin: "4px 0 0", maxWidth: 300, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#8C8378" }}>
+            <p style={{ margin: "4px 0 0", maxWidth: 300, fontSize: 15, lineHeight: "24px", fontWeight: 500, color: "#71685E" }}>
               {t("Start from a ready-made program, or build your own.")}
             </p>
           </EmptyCard>
@@ -1082,7 +1084,7 @@ const WebRoutineRow: React.FC<{
               </span>
             )}
           </span>
-          <span className="truncate" style={{ display: "block", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <span className="truncate" style={{ display: "block", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {meta}
           </span>
         </button>
@@ -1097,11 +1099,11 @@ const WebRoutineRow: React.FC<{
       >
         {on && running ? <Pause size={15} fill="#FFFFFF" color="#FFFFFF" /> : <Play size={15} fill="#FFFFFF" color="#FFFFFF" style={{ marginInlineStart: 1 }} />}
       </button>
-      <button type="button" data-no-drag onClick={(e) => onMenu?.(e.currentTarget)} aria-label={t("Options for {name}", { name: routine.name })} aria-haspopup="menu" className="flex" style={{ color: "#A79E93" }}>
+      <button type="button" data-no-drag onClick={(e) => onMenu?.(e.currentTarget)} aria-label={t("Options for {name}", { name: routine.name })} aria-haspopup="menu" className="flex" style={{ color: "#776E64" }}>
         <MoreVertical size={20} />
       </button>
       {grip && (
-        <span {...grip} role="button" aria-label={t("Drag {name}", { name: routine.name })} className="flex" style={{ color: "#A79E93", cursor: "grab", ...(grip.style ?? {}) }}>
+        <span {...grip} role="button" aria-label={t("Drag {name}", { name: routine.name })} className="flex" style={{ color: "#776E64", cursor: "grab", ...(grip.style ?? {}) }}>
           <GripVertical size={20} />
         </span>
       )}
@@ -1255,7 +1257,7 @@ const RoutineDetail: React.FC<{
               }
             }}
             className="flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-            style={{ color: "#A79E93", cursor: "grab", flex: "none" }}
+            style={{ color: "#776E64", cursor: "grab", flex: "none" }}
           >
             <GripVertical size={16} />
           </span>
@@ -1264,9 +1266,9 @@ const RoutineDetail: React.FC<{
           <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
             {ex.name}
           </span>
-          {line && <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{line}</span>}
+          {line && <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{line}</span>}
           {targets.map((x) => (
-            <span key={x} className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span key={x} className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {x}
             </span>
           ))}
@@ -1281,7 +1283,7 @@ const RoutineDetail: React.FC<{
                 <Trash2 size={16} />
               </button>
             </span>
-            <button type="button" onClick={() => onSettings(ex)} aria-label={t("Settings for {name}", { name: ex.name })} className="flex" style={{ color: "#A79E93", flex: "none" }}>
+            <button type="button" onClick={() => onSettings(ex)} aria-label={t("Settings for {name}", { name: ex.name })} className="flex" style={{ color: "#776E64", flex: "none" }}>
               <Settings2 size={16} />
             </button>
           </>
@@ -1303,7 +1305,7 @@ const RoutineDetail: React.FC<{
           <h2 className="truncate" title={routine.name} style={{ margin: 0, fontSize: 20, lineHeight: "28px", fontWeight: 700, color: "#241F1B" }}>
             {routine.name}
           </h2>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{meta}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{meta}</p>
         </div>
         <div className="flex" style={{ gap: 8, flex: "none" }}>
           {ctl === "idle" && (
@@ -1334,14 +1336,14 @@ const RoutineDetail: React.FC<{
       </div>
 
       {(selecting || groupProblem) && (
-        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: groupProblem ? "#C0392B" : "#8C8378", flex: "none" }}>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: groupProblem ? "#C0392B" : "#71685E", flex: "none" }}>
           {groupProblem ? t(groupProblem) : picked.length === 0 ? t("Pick exercises that sit next to each other.") : t("{n} selected", { n: picked.length })}
         </p>
       )}
 
       <div className="flex flex-col" style={{ flex: "0 1 auto", minHeight: 0, overflow: "auto", scrollbarWidth: "none", gap: 8 }}>
         {routine.exercises.length === 0 && (
-          <p style={{ margin: 0, padding: "16px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{tn(0, "{n} exercise", "{n} exercises")}</p>
+          <p style={{ margin: 0, padding: "16px 0", textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{tn(0, "{n} exercise", "{n} exercises")}</p>
         )}
         {groupIntoRuns(routine.exercises, blocks).map((r, i) =>
           r.block ? (

@@ -33,7 +33,7 @@ export const HomeHeaderWeb: React.FC<{
         <h1 className="truncate" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>
           {title}
         </h1>
-        <p className="shrink-0" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap" }}>
+        <p className="shrink-0" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap" }}>
           {date}
         </p>
       </div>
@@ -120,7 +120,7 @@ export const LaneCardWeb: React.FC<{
             {t(LANE_TITLE[lane])}
           </span>
           {wired ? (
-            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", minHeight: 20 }}>
+            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", minHeight: 20 }}>
               {sub}
             </span>
           ) : (
@@ -129,7 +129,7 @@ export const LaneCardWeb: React.FC<{
             </span>
           )}
         </span>
-        {open ? <ChevronUp size={20} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} /> : <ChevronDown size={20} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />}
+        {open ? <ChevronUp size={20} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} /> : <ChevronDown size={20} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />}
       </button>
       {open &&
         (error && onRetry ? (
@@ -138,7 +138,7 @@ export const LaneCardWeb: React.FC<{
           </div>
         ) : !wired || n === 0 ? (
           <div className="flex items-center justify-center text-center" style={{ borderTop: divider, padding: 24 }}>
-            <p style={{ margin: 0, maxWidth: 280, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+            <p style={{ margin: 0, maxWidth: 280, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
               {!wired ? t("Referrals awaiting a reply and results due will show here.") : t("Nothing ending yet. Plans show here two weeks before they end.")}
             </p>
           </div>
@@ -160,11 +160,11 @@ export const LaneCardWeb: React.FC<{
                     <span className="block" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B", textWrap: "pretty" } as React.CSSProperties}>
                       {r.name} · <span style={{ fontWeight: 500, color: "#5B5349" }}>{r.item}</span>
                     </span>
-                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {r.line}
                     </span>
                   </span>
-                  <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+                  <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
                 </button>
               ))}
             </div>
@@ -215,11 +215,11 @@ export const WaysToAddWeb: React.FC<{ rows: WayRow[] }> = ({ rows }) => (
             <span className="block" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
               {x.title}
             </span>
-            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {x.line}
             </span>
           </span>
-          {x.onOpen && <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />}
+          {x.onOpen && <ChevronRight size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E" }} />}
         </button>
       );
     })}

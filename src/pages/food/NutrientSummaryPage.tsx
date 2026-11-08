@@ -104,7 +104,7 @@ export default function NutrientSummaryPage() {
           </button>
           <div className="min-w-0">
             <h1
-              className="whitespace-nowrap"
+              className="[overflow-wrap:anywhere]"
               style={{ margin: 0, fontSize: textPx(24), fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.022em", color: "rgb(var(--c-charcoal))" }}
             >
               {t("Nutrient Summary")}

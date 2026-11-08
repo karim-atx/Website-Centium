@@ -14,10 +14,10 @@ import type { ChipTone } from "./opsKit";
 export const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]";
 
 const CHIP: Record<ChipTone, [string, string]> = {
-  good: ["#E3F3E9", "#3F9165"],
+  good: ["#E3F3E9", "#1D744A"],
   warn: ["#F6E9C9", "#8A6A3E"],
   bad: ["#FBE7E4", "#C0392B"],
-  soft: ["#F5F5F6", "#8C8378"],
+  soft: ["#F5F5F6", "#71685E"],
   pale: ["#F0EDF9", "#7D6BB5"],
 };
 
@@ -41,7 +41,7 @@ export function WebTabs<K extends string>({ tabs, active, onChange, label }: { t
             aria-selected={on}
             onClick={() => onChange(x.key)}
             className={`flex justify-center whitespace-nowrap hover:text-[#241F1B] ${FOCUS}`}
-            style={{ fontSize: 15, lineHeight: "24px", padding: "7px 0 8px", marginBottom: -1, borderBottom: `2px solid ${on ? "#AEA1DC" : "transparent"}`, fontWeight: on ? 800 : 600, color: on ? "#241F1B" : "#8C8378" }}
+            style={{ fontSize: 15, lineHeight: "24px", padding: "7px 0 8px", marginBottom: -1, borderBottom: `2px solid ${on ? "#AEA1DC" : "transparent"}`, fontWeight: on ? 800 : 600, color: on ? "#241F1B" : "#71685E" }}
           >
             {x.label}
           </button>
@@ -69,7 +69,7 @@ export const WebBoxes: React.FC<{ items: WebBox[]; rail: boolean; loading?: bool
             {n.v}
           </p>
         )}
-        <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>{n.l}</p>
+        <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>{n.l}</p>
         {n.d && <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8A6A3E" }}>{n.d}</p>}
       </div>
     ))}
@@ -79,7 +79,7 @@ export const WebBoxes: React.FC<{ items: WebBox[]; rail: boolean; loading?: bool
 /** The caps label with its 1.5 lavender rule; an optional text action at the end. */
 export const WebLabel: React.FC<{ label: string; first?: boolean; action?: string; onAction?: () => void; as?: "h2" | "h3" }> = ({ label, first, action, onAction, as: H = "h2" }) => (
   <div className="flex items-end justify-between" style={{ borderBottom: "1.5px solid #AEA1DC", padding: `${first ? 0 : 4}px 2px 8px` }}>
-    <H className="whitespace-nowrap uppercase" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.1em", color: "#8C8378" }}>
+    <H className="whitespace-nowrap uppercase" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, letterSpacing: "0.1em", color: "#71685E" }}>
       {label}
     </H>
     {action && (
@@ -143,7 +143,7 @@ export const WebRow: React.FC<WebRowProps> = ({ icon: Icon, title, sub, subWrap,
           <span
             className={subWrap ? "" : "block overflow-hidden text-ellipsis whitespace-nowrap"}
             title={subWrap ? undefined : sub}
-            style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", ...(subWrap ? { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textWrap: "pretty" } : null) } as React.CSSProperties}
+            style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", ...(subWrap ? { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textWrap: "pretty" } : null) } as React.CSSProperties}
           >
             {sub}
           </span>
@@ -217,7 +217,7 @@ export const WebEmpty: React.FC<{ icon: LucideIcon; title: string; body: string;
 
 /** A row of skeleton rows inside a list card, while loading. */
 export const WebListSkeleton: React.FC<{ rows?: number; label: string; rowH: number }> = ({ rows = 3, label, rowH }) => (
-  <div aria-busy="true" aria-label={label} className="flex flex-col" style={{ background: "#F7F7FC", borderRadius: 18, padding: "4px 16px" }}>
+  <div role="status" aria-busy="true" aria-label={label} className="flex flex-col" style={{ background: "#F7F7FC", borderRadius: 18, padding: "4px 16px" }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ gap: 12, minHeight: rowH }}>
         <span aria-hidden className="animate-skeleton-pulse" style={{ width: 40, height: 40, borderRadius: 12, background: "#ECEBF5" }} />
@@ -244,7 +244,7 @@ export const ExtrasHeader: React.FC<{ kicker: string; title: string; backLabel: 
       <ChevronLeft size={20} style={{ color: "#5B5349" }} aria-hidden />
     </button>
     <div className="flex-1 min-w-0">
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#8C8378" }}>{kicker}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: "#71685E" }}>{kicker}</p>
       <h1 className="whitespace-nowrap overflow-hidden text-ellipsis" style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.022em", color: "#241F1B" }}>
         {title}
       </h1>
@@ -290,7 +290,7 @@ export const ExtrasRow: React.FC<{ icon: LucideIcon; title: string; sub: string;
       <span title={title} className="block overflow-hidden text-ellipsis whitespace-nowrap" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>
         {title}
       </span>
-      <span title={sub} className="block overflow-hidden text-ellipsis whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+      <span title={sub} className="block overflow-hidden text-ellipsis whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
         {sub}
       </span>
     </span>

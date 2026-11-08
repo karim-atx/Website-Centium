@@ -14,7 +14,7 @@ import type { ProLane } from "../subtypeLanes";
 import { fetchAdherenceRow, fetchDayItems, fetchHabits, fetchPregnancySummary, type ClientHabit } from "../../../services/pro/clientPage";
 import { saveCommunicationPreferences, type CommunicationPreferences } from "../../../services/pro/clients";
 import { fetchClientCyclePhase } from "../../../services/cycle";
-import { PHASE_LABEL, PHASE_UNAVAILABLE, phaseThemeColor } from "../../../services/cycle/guidance";
+import { PHASE_LABEL, PHASE_UNAVAILABLE, phaseThemeColor, phaseThemeInk } from "../../../services/cycle/guidance";
 import type { CyclePhase } from "../../../services/cycle/types";
 import { fetchClientSocialHandles } from "../../../services/profile/socialHandles";
 import { instagramUrl, xUrl, type SocialHandles } from "../../../services/profile/socialHandleRules";
@@ -469,7 +469,7 @@ const AboutCard: React.FC<{ data: ClientPageData; lane: ProLane }> = ({ data }) 
                 ) : phase === "unavailable" ? (
                   <span style={{ fontSize: textPx(12), color: INK.chF }}>{t(PHASE_UNAVAILABLE)}</span>
                 ) : (
-                  <span className="inline-block" style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 9999, padding: "4px 10px", color: phaseThemeColor(phase as CyclePhase), background: phaseThemeColor(phase as CyclePhase, 0.12) }}>
+                  <span className="inline-block" style={{ fontSize: textPx(11), fontWeight: 700, borderRadius: 9999, padding: "4px 10px", color: phaseThemeInk(phase as CyclePhase), background: phaseThemeColor(phase as CyclePhase, 0.12) }}>
                     {phase === "menstrual" || phase === "pregnant" || phase === "hormonal_contraception" ? t(PHASE_LABEL[phase as CyclePhase] ?? phase) : t("{phase} phase", { phase: t(PHASE_LABEL[phase as CyclePhase] ?? phase) })}
                   </span>
                 ))}
@@ -532,7 +532,7 @@ const HabitsCard: React.FC<{ data: ClientPageData; lane: ProLane; onAsk: () => v
               icon: Activity,
               title: h.label,
               meta: `${t("{n} of the last 14 days", { n: h.doneDates.length })}${streak > 1 ? ` · ${t("{n} days in a row", { n: streak })}` : ""}`,
-              trailing: h.assignedByMe ? <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: INK.tealDark }}>{t("From you")}</span> : undefined,
+              trailing: h.assignedByMe ? <span style={{ fontSize: textPx(10.5), fontWeight: 700, color: INK.tealDarkInk }}>{t("From you")}</span> : undefined,
             };
           })}
         />

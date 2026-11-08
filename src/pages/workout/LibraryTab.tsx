@@ -616,7 +616,7 @@ export default function LibraryTab() {
               alt={figureAlt}
               label={(zone) => muscle(ZONE_LABEL[zone])}
             />
-            <p className="absolute" style={{ insetInlineStart: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#A79E93" }}>
+            <p className="absolute" style={{ insetInlineStart: 12, bottom: 10, margin: 0, fontSize: textPx(10), color: "#776E64" }}>
               {figureAlt}
             </p>
           </div>

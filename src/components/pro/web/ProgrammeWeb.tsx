@@ -33,7 +33,7 @@ export const ProgHeaderWeb: React.FC<{
   moreRef?: React.Ref<HTMLButtonElement>;
 }> = ({ title, onBack, eyebrow, eyebrowInline, meta, cta, reviewed, slot, onMore, moreRef }) => {
   const { rail } = useWebLayout();
-  const caps: React.CSSProperties = { margin: 0, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" };
+  const caps: React.CSSProperties = { margin: 0, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" };
   return (
     <header className="flex items-center" style={{ height: 64, boxSizing: "border-box", gap: 16, paddingInline: rail ? 24 : 32, borderBottom: "1px solid rgba(36,31,27,0.06)" }}>
       <button
@@ -52,7 +52,7 @@ export const ProgHeaderWeb: React.FC<{
             {title}
           </h1>
           {eyebrow && eyebrowInline && <span className="min-w-0 truncate" style={{ ...caps, fontSize: 12, lineHeight: "16px" }}>{eyebrow}</span>}
-          {meta && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{meta}</span>}
+          {meta && <span className="min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{meta}</span>}
         </div>
       </div>
       {cta && (
@@ -68,7 +68,7 @@ export const ProgHeaderWeb: React.FC<{
         </button>
       )}
       {reviewed && (
-        <span className="flex items-center shrink-0" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#3F9165" }}>
+        <span className="flex items-center shrink-0" style={{ gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#1D744A" }}>
           <Check size={20} strokeWidth={2} aria-hidden />
           {t("Reviewed")}
         </span>
@@ -225,7 +225,7 @@ export const BlockBandWeb: React.FC<{ heading: string; line: string; gap: number
   <section aria-label={heading} className="flex flex-col" style={{ marginInline: -16, borderRadius: 16, background: "rgba(125,107,181,0.08)", borderInlineStart: "4px solid #7D6BB5", paddingBlock: 12, paddingInline: "12px 16px", gap }}>
     <div className="flex flex-wrap items-center justify-between" style={{ columnGap: 16 }}>
       <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, lineHeight: "24px", fontWeight: 800, color: "#5F5093" }}>{heading}</p>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{line}</p>
+      <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{line}</p>
     </div>
     {children}
   </section>
@@ -250,8 +250,8 @@ export const LibraryHeaderWeb: React.FC<{
         {title ?? t("Library")}
       </h1>
       <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: rail ? 260 : 360, height: 44, boxSizing: "border-box", gap: 10, padding: "0 14px", borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.10)" }}>
-        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
-        <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-[#8C8378]" style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }} />
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E", flexShrink: 0 }} />
+        <input value={query} onChange={(e) => onQuery(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="flex-1 min-w-0 bg-transparent focus:outline-none placeholder:text-[#71685E]" style={{ fontSize: 15, lineHeight: "24px", color: "#241F1B" }} />
       </label>
       {filter && (
         <button
@@ -313,10 +313,10 @@ export const WorkoutCardWeb: React.FC<{ icon: LucideIcon; colour?: string; title
         </span>
         <span className="flex-1 min-w-0 flex flex-col" style={{ paddingInlineEnd: 32 }}>
           <span style={{ fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B", overflowWrap: "anywhere" }}>{title}</span>
-          <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</span>
+          <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{sub}</span>
           {chip && (
             <span className="flex" style={{ gap: 5, marginTop: 10 }}>
-              <span className="whitespace-nowrap" style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: chip.template ? "#F5F5F6" : "#F0EDF9", color: chip.template ? "#8C8378" : "#5F5093" }}>{chip.label}</span>
+              <span className="whitespace-nowrap" style={{ fontSize: 12, lineHeight: "16px", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: chip.template ? "#F5F5F6" : "#F0EDF9", color: chip.template ? "#71685E" : "#5F5093" }}>{chip.label}</span>
             </span>
           )}
           {extra}
@@ -330,7 +330,7 @@ export const WorkoutCardWeb: React.FC<{ icon: LucideIcon; colour?: string; title
           className="absolute flex items-center justify-center hover:bg-[#F5F5F6]"
           style={{ top: 12, insetInlineEnd: 12, width: 44, height: 44, borderRadius: 999 }}
         >
-          <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+          <EllipsisVertical size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
         </button>
       )}
     </div>

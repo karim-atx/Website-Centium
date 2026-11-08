@@ -21,7 +21,7 @@ const CARD_H = 800;
 // for high, blue for low, so the shared image itself communicates the
 // reading at a glance.
 const statusGradient: Record<"low" | "normal" | "high", [string, string]> = {
-  normal: ["#3F9165", "#1F5C3D"],
+  normal: ["#1D744A", "#1F5C3D"],
   high: ["#E9736A", "#A9291B"],
   low: ["#6FA8DC", "#2E5F8A"],
 };

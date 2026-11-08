@@ -35,8 +35,8 @@ import { t, tk, tx } from "../../../../i18n/core";
 
 const CAP = 3;
 const BORDER = "1px solid rgba(36,31,27,0.11)";
-const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#8C8378" };
-const TONE = { warn: ["#F6E9C9", "#B07D16"], bad: ["#FBE7E4", "#C0392B"], soft: ["#F5F5F6", "#8C8378"] } as const;
+const CAPS: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#71685E" };
+const TONE = { warn: ["#F6E9C9", "#B07D16"], bad: ["#FBE7E4", "#C0392B"], soft: ["#F5F5F6", "#71685E"] } as const;
 
 type Loaded = { status: "loading" } | { status: "ok"; value: ProductsLoad } | { status: "error"; offline: boolean } | { status: "pending" };
 
@@ -220,7 +220,7 @@ function Showcase({ section }: { section?: string | null }) {
       />
     ) : (
       <div className="flex flex-col items-center justify-center text-center bg-white" style={{ borderRadius: 24, border: BORDER, padding: 32, minHeight: 240 }}>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Nothing in this category yet.")}</p>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Nothing in this category yet.")}</p>
       </div>
     );
   } else if (products.length === 0) {
@@ -230,7 +230,7 @@ function Showcase({ section }: { section?: string | null }) {
           <Package size={28} strokeWidth={1.75} style={{ color: "#7D67D9" }} aria-hidden />
         </span>
         <div style={{ fontSize: 22, lineHeight: "30px", fontWeight: 800 }}>{t("No products yet")}</div>
-        <div style={{ fontSize: 15, lineHeight: "24px", color: "#8C8378", maxWidth: 360 }}>{t("Add your first product with a photo, price and stock.")}</div>
+        <div style={{ fontSize: 15, lineHeight: "24px", color: "#71685E", maxWidth: 360 }}>{t("Add your first product with a photo, price and stock.")}</div>
         {addButton({ marginTop: 8, padding: "0 18px" })}
       </div>
     );
@@ -250,7 +250,7 @@ function Showcase({ section }: { section?: string | null }) {
             {figs.map((f, i) => (
               <div key={f.l} className="min-w-0 flex items-baseline" style={{ padding: rail ? "12px 14px" : "16px 20px", gap: 10, borderInlineStart: i ? "1.5px dashed rgba(36,31,27,0.11)" : 0 }}>
                 <span className="tabular-nums" style={{ fontSize: 22, lineHeight: "30px", fontWeight: 800, color: "#241F1B" }}>{f.v}</span>
-                <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={f.l} style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{f.l}</span>
+                <span className="whitespace-nowrap overflow-hidden text-ellipsis" title={f.l} style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{f.l}</span>
               </div>
             ))}
           </div>
@@ -468,7 +468,7 @@ function ItemCard({
                 style={{ width: 16, height: 16, gridTemplateColumns: "repeat(2,2.8px)", gridTemplateRows: "repeat(3,2.8px)", columnGap: 3.4, rowGap: 4.2, justifyContent: "center", alignContent: "center", cursor: canReorder ? (lifted ? "grabbing" : "grab") : "default", touchAction: "none", opacity: canReorder ? 1 : 0.4, borderRadius: 4 }}
               >
                 {Array.from({ length: 6 }, (_, k) => (
-                  <span key={k} aria-hidden style={{ borderRadius: 999, background: "#A79E93" }} />
+                  <span key={k} aria-hidden style={{ borderRadius: 999, background: "#776E64" }} />
                 ))}
               </button>
               <button
@@ -479,14 +479,14 @@ function ItemCard({
                 style={{ gap: 12, borderRadius: 12, color: "#241F1B" }}
               >
                 <span className="shrink-0 flex items-center justify-center overflow-hidden" style={{ width: photoW, height: photoW, borderRadius: 12, background: "#F5F5F6", opacity: op }}>
-                  {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={20} strokeWidth={1.8} color="#A79E93" aria-hidden />}
+                  {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /> : <ImageIcon size={20} strokeWidth={1.8} color="#776E64" aria-hidden />}
                 </span>
                 <span className="flex-1 min-w-0" style={{ opacity: op }}>
                   <span title={p.name} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 700 }}>
                     {p.name}
                   </span>
                   {p.description ? (
-                    <span title={p.description} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span title={p.description} className="block whitespace-nowrap overflow-hidden text-ellipsis" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {p.description}
                     </span>
                   ) : null}
@@ -502,7 +502,7 @@ function ItemCard({
                     {chipText}
                   </span>
                 ) : null}
-                <ChevronRight size={16} strokeWidth={2} color="#8C8378" aria-hidden className="shrink-0" />
+                <ChevronRight size={16} strokeWidth={2} color="#71685E" aria-hidden className="shrink-0" />
               </button>
             </div>
           );

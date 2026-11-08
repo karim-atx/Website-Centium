@@ -325,8 +325,8 @@ export default function JournalWeb() {
           {name}
         </span>
         {f?.locked &&
-          (shut ? <Lock size={13} color="#8C8378" role="img" aria-label={t("Locked")} /> : <LockOpen size={13} color="#8C8378" role="img" aria-label={t("Unlocked")} />)}
-        {count !== null && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>{count}</span>}
+          (shut ? <Lock size={13} color="#71685E" role="img" aria-label={t("Locked")} /> : <LockOpen size={13} color="#71685E" role="img" aria-label={t("Unlocked")} />)}
+        {count !== null && <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E", fontVariantNumeric: "tabular-nums" }}>{count}</span>}
       </button>
     );
   };
@@ -410,7 +410,7 @@ export default function JournalWeb() {
             </div>
           )}
           {moving && selectedFolder && (
-            <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+            <p role="status" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
               {t("Click where {folder} should go", { folder: selectedFolder.name })}
             </p>
           )}
@@ -453,7 +453,7 @@ export default function JournalWeb() {
               <div data-jr-nofolders className="flex flex-col items-center text-center" style={{ borderRadius: 20, background: "#F5F5F6", padding: "32px 20px", gap: 6 }}>
                 <BookOpen size={28} strokeWidth={1.5} color="#AEA1DC" aria-hidden />
                 <p style={{ margin: "6px 0 0", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{t("No folders yet")}</p>
-                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Entries live in folders. Make the first one to start writing.")}</p>
+                <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Entries live in folders. Make the first one to start writing.")}</p>
                 <div className="flex flex-wrap justify-center" style={{ gap: 8, marginTop: 8 }}>
                   {QUICK_FOLDERS.map((key) => t(key)).map((name) => (
                     <button
@@ -464,7 +464,7 @@ export default function JournalWeb() {
                       style={{ height: 36, gap: 6, padding: "0 14px", borderRadius: 999, background: "#FFFFFF", border: "1px solid rgba(36,31,27,0.11)", fontSize: 13, fontWeight: 600, color: "#5B5349" }}
                     >
                       {name}
-                      <Plus size={13} color="#8C8378" aria-hidden />
+                      <Plus size={13} color="#71685E" aria-hidden />
                     </button>
                   ))}
                 </div>
@@ -516,7 +516,7 @@ export default function JournalWeb() {
                         className="jr-web-icon grid place-items-center"
                         style={{ width: 24, height: 24, borderRadius: 6, flex: "none", marginInlineEnd: -4 }}
                       >
-                        <EllipsisVertical size={16} color="#8C8378" aria-hidden />
+                        <EllipsisVertical size={16} color="#71685E" aria-hidden />
                       </button>
                     </div>
                     <p
@@ -524,7 +524,7 @@ export default function JournalWeb() {
                     >
                       {e.text}
                     </p>
-                    <p className="truncate" style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
+                    <p className="truncate" style={{ margin: "6px 0 0", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>
                       {when}
                     </p>
                   </div>
@@ -533,7 +533,7 @@ export default function JournalWeb() {
             </div>
           ) : (
             <div data-jr-empty className="grid place-items-center text-center" style={{ flex: "none", borderRadius: 20, background: "#F5F5F6", padding: "40px 24px" }}>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                 {recent ? t("Nothing in the last 30 days") : `${t("No entries in {folder} yet", { folder: selectedFolder?.name ?? "" })}. ${t("Write your first one")}`}
               </p>
             </div>
@@ -777,7 +777,7 @@ function EditorPane({
         style={{ flex: "none", width: "100%", maxWidth: "68ch", margin: 0, padding: 0, border: "none", background: "transparent", fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.5px", color: "#241F1B" }}
       />
       {titleMissing && <p role="alert" style={errorLine}>{t("Add a title.")}</p>}
-      <p style={{ margin: 0, flex: "none", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#8C8378" }}>
+      <p style={{ margin: 0, flex: "none", fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#71685E" }}>
         {dateLabel(entry?.date ?? today)}
         {entry ? ` · ${timeLabel(entry.createdAt)}` : ""}
       </p>

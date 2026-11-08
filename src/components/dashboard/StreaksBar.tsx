@@ -136,10 +136,10 @@ export const StreaksBar: React.FC<{ web?: { zoom: number } }> = ({ web }) => {
     // head's species-cycle tap target), and a <button> inside a <button>
     // is invalid HTML — React warns and some browsers mis-handle the
     // nested click entirely. */}
+    {/* Round K · ET: no role="button" here either (it holds two buttons); the keyboard and
+        screen readers open Mind from the button on the streak count. */}
     <div
       onClick={() => navigate("/app/mind")}
-      role="button"
-      tabIndex={0}
       className={
         web
           ? "w-full h-full text-start rounded-[22px] overflow-hidden animate-fade-slide-up cursor-pointer flex flex-col justify-center box-border"
@@ -171,8 +171,19 @@ export const StreaksBar: React.FC<{ web?: { zoom: number } }> = ({ web }) => {
           <div className="flex items-start justify-between gap-2.5">
             <div className="min-w-0">
               <p className="flex items-baseline gap-[5px]">
-                <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{dayStreak}</span>
-                <span className="text-[12px] font-bold text-white/[0.86] dark:text-white">{tn(dayStreak, "day streak", "day streak")}</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate("/app/mind");
+                  }}
+                  aria-label={`${dayStreak} ${tn(dayStreak, "day streak", "day streak")}. ${t("Open Mind")}`}
+                  className="flex items-baseline gap-[5px] text-start"
+                  style={{ font: "inherit", color: "inherit", background: "none", border: 0, padding: 0, margin: 0 }}
+                >
+                  <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{dayStreak}</span>
+                  <span className="text-[12px] font-bold text-white/[0.86] dark:text-white">{tn(dayStreak, "day streak", "day streak")}</span>
+                </button>
               </p>
               <p className="mt-[5px] text-[10.5px] text-white/[0.66] dark:text-white">{t("{n} of 4 goals done today", { n: todayState?.met ?? 0 })}</p>
             </div>

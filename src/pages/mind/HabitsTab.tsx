@@ -461,11 +461,18 @@ export default function HabitsTab() {
                     className={clsx("flex flex-col items-center justify-center", isToday && "bg-primary/10")}
                     style={{ width: COL }}
                   >
-                    {/* #10: 10/12 600 #8C8378 / #B8B3C7; today #7D67D9 (K8). */}
+                    {/* #10: 10/12 600 #8C8378 / #B8B3C7; today #7D67D9 (K8). On the
+                        60% band (#CEC7EA) light mode needs darker inks for 4.5:1
+                        (Round K ET): charcoal-soft (4.67:1), today #593FAD (4.57:1); dark
+                        weekdays text.primary (4.71:1 on #7163A8); dark today #F9F9FF (4.55:1 on
+                        the today column #7768B1), the accent lifted in lightness;
+                        today stays marked by the column tint and the filled day tile. */}
                     <span
                       className={clsx(
                         "text-[10px] leading-[12px] font-semibold",
-                        isToday ? "text-primary-accent" : "text-charcoal-faint"
+                        isToday
+                          ? "text-primary-accent dark:text-[#F9F9FF] [html[data-accent=centium]:not(.dark):not(.high-contrast)_&]:text-[#593FAD]"
+                          : "text-charcoal-soft dark:text-charcoal"
                       )}
                     >
                       {dayName(day, i, "narrow")}
@@ -561,7 +568,7 @@ export default function HabitsTab() {
             className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] shadow-soft dark:shadow-none pt-3 pb-3 ps-3.5"
           >
             {/* #41: "Icon", 9/13.5 700, 1.8 tracking, uppercase, 42% ink. */}
-            <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">{t("Icon")}</p>
+            <p className="mb-1.5 text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.63]">{t("Icon")}</p>
             {/* #42–#57: the app's 20 icons (D-1) in one scrolling row, 38 r11
                 tiles 46 apart, 18 icons in #5B5349 / #B8B3C7; the first on
                 the panel padding (its ring has 2 px of room). */}
@@ -603,7 +610,7 @@ export default function HabitsTab() {
                 fills the name and the icon (S4); ✓ creates it. */}
             {panel.mode === "add" && suggestions.length > 0 && (
               <>
-                <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42]">
+                <p className="mt-2.5 mb-[5px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.63]">
                   {t("Suggestions")}
                 </p>
                 <div className="flex gap-2 scroll-row no-scrollbar pe-3.5">

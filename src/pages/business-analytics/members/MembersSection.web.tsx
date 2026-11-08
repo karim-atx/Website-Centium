@@ -39,7 +39,7 @@ type Tone = [string, string];
 const LAV: Tone = ["#7D6BB5", "#F0EDF9"];
 const TEAL: Tone = ["#3C6B65", "#E8F2F0"];
 const GOLD: Tone = ["#9A6B12", "#FBF3E2"];
-const GREEN: Tone = ["#3F9165", "#E3F3E9"];
+const GREEN: Tone = ["#1D744A", "#E3F3E9"];
 const ICON: Record<string, [LucideIcon, Tone]> = {
   growth: [TrendingUp, LAV],
   first90: [CalendarCheck, TEAL],
@@ -73,7 +73,7 @@ const DeltaChip: React.FC<{ d: Delta; big?: boolean }> = ({ d, big }) => (
       fontSize: big ? 13 : 12,
       lineHeight: big ? "20px" : "18px",
       fontWeight: 700,
-      color: d.tone === "good" ? "#3F9165" : d.tone === "high" ? "#C0392B" : "#8C8378",
+      color: d.tone === "good" ? "#1D744A" : d.tone === "high" ? "#C0392B" : "#71685E",
       whiteSpace: "nowrap",
     }}
   >
@@ -190,7 +190,7 @@ export const MembersWeb: React.FC<{ rail: boolean; outcomes: boolean }> = ({ rai
                       {r.title}
                     </span>
                     {r.delta && !rail && <DeltaChip d={r.delta} />}
-                    <span style={{ flex: "none", fontSize: rail ? 15 : 17, lineHeight: "24px", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: r.value === null ? "#A79E93" : on ? "#5F5093" : "#241F1B", whiteSpace: "nowrap" }}>{r.value ?? "–"}</span>
+                    <span style={{ flex: "none", fontSize: rail ? 15 : 17, lineHeight: "24px", fontWeight: 800, fontVariantNumeric: "tabular-nums", color: r.value === null ? "#776E64" : on ? "#5F5093" : "#241F1B", whiteSpace: "nowrap" }}>{r.value ?? "–"}</span>
                   </button>
                 );
               })}
@@ -204,7 +204,7 @@ export const MembersWeb: React.FC<{ rail: boolean; outcomes: boolean }> = ({ rai
             <div style={{ flex: 1, minWidth: 0 }}>
               <h2 data-an-title style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{selected.title}</h2>
               <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "24px", color: "#5B5349", textWrap: "pretty" } as React.CSSProperties}>{selected.desc}</p>
-              <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{rangeLine(range)}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{rangeLine(range)}</p>
             </div>
             {selected.value !== null && (
               <div style={{ flex: "none", display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
@@ -212,7 +212,7 @@ export const MembersWeb: React.FC<{ rail: boolean; outcomes: boolean }> = ({ rai
                   {selected.delta && <DeltaChip d={selected.delta} big />}
                   <span data-an-figure style={{ fontSize: 40, lineHeight: "48px", fontWeight: 700, letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums lining-nums", color: "#241F1B", whiteSpace: "nowrap" }}>{selected.value}</span>
                 </div>
-                {selected.vLabel && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" }}>{selected.vLabel}</p>}
+                {selected.vLabel && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" }}>{selected.vLabel}</p>}
               </div>
             )}
           </header>

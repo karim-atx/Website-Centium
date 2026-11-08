@@ -7,6 +7,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { X } from "lucide-react";
 import { useIsWeb } from "../web/useWebLayout";
 import { t } from "../../i18n/core";
+import { trapTab } from "./focusTrap";
 
 // Mobile v5.1 handover, Foundations 2.5 "Centred popup": a white card, radius
 // 20, shadow.sheet, padding 24 x 20, at most 342 wide with 16 pt side margins,
@@ -135,10 +136,15 @@ export const CentredPopup: React.FC<{
     document.body.style.overflow = "hidden";
     cardRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
+      if (e.key !== "Escape" && e.key !== "Tab") return;
       // Stacked popups (MO1.8.12.1 over MO1.8.12): only the top one closes.
       const modals = document.querySelectorAll('[aria-modal="true"]');
       if (cardRef.current && modals.length > 1 && modals[modals.length - 1] !== cardRef.current) return;
+      // Round K · ET: Tab stays in the popup, unless a menu inside it holds focus.
+      if (e.key === "Tab") {
+        if (!(document.activeElement as HTMLElement | null)?.closest('[role="menu"]')) trapTab(cardRef.current, e);
+        return;
+      }
       onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);

@@ -295,7 +295,7 @@ export default function InviteClients() {
               style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, minHeight: 96, marginBottom: 14, border: `1px solid ${INK.pr}` }}
             />
           ) : (
-            <p style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 14 }}>{text}</p>
+            <p style={{ borderRadius: 16, background: INK.soft, padding: "12px 14px", fontSize: textPx(13), color: INK.ch, lineHeight: 1.5, marginBottom: 14, overflowWrap: "anywhere" }}>{text}</p>
           )}
 
           <SectionHead label={t("Settings")} />
@@ -387,7 +387,7 @@ const FullScreenQr: React.FC<{ code: string; name: string; type: string | null; 
         <Initials text={initialsOf(name || first)} size={f.av} tone="teal" />
         <div className="flex flex-col items-center">
           <p style={{ margin: 0, fontSize: f.n, lineHeight: `${f.nl}px`, fontWeight: 800, color: "#241F1B" }}>{name || first}</p>
-          {type && <p style={{ margin: 0, fontSize: f.ty, lineHeight: `${f.tyl}px`, color: "#8C8378" }}>{type}</p>}
+          {type && <p style={{ margin: 0, fontSize: f.ty, lineHeight: `${f.tyl}px`, color: "#71685E" }}>{type}</p>}
         </div>
         <div className="flex items-center justify-center" style={{ width: f.q, height: f.q, boxSizing: "border-box", borderRadius: 24, border: "1px solid rgba(36,31,27,0.1)", background: "#FFFFFF" }}>
           <PassQr value={inviteHref(code)} size={f.qr} label={t("Invite link QR code")} failedText={t("Couldn't draw the QR code. Try again.")} />

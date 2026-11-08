@@ -17,7 +17,7 @@ export const MIND_WEB_CSS = `
 `;
 
 /** The caps label (13/20 700, .14em). */
-export const mindCaps: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#8C8378" };
+export const mindCaps: React.CSSProperties = { margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#71685E" };
 
 /** The primary 40 button of the Mind pages (#9A8CD6, r12, 15/24 600). */
 export const mindPrimary: React.CSSProperties = {

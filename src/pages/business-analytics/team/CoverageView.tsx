@@ -154,7 +154,7 @@ export function CoverageView({
 
 function CoverageSkeleton() {
   return (
-    <div aria-busy="true" aria-label={t("Loading")}>
+    <div role="status" aria-busy="true" aria-label={t("Loading")}>
       <div className="an5-card an5-head" style={{ padding: "18px 20px" }}>
         <div className="flex justify-around">
           <Sk w={30} h={32} />

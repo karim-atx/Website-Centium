@@ -452,7 +452,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
       <div className="flex items-center justify-between mb-[9px]">
         <p
           className="uppercase"
-          style={{ margin: 0, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: dark ? "rgb(var(--th-8a8698))" : "rgb(var(--th-9a94b3))" }}
+          style={{ margin: 0, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: dark ? "rgb(var(--th-8a8698))" : "rgb(var(--thi-9a94b3))" }}
         >
           {t("Today")}
         </p>

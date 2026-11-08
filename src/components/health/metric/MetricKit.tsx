@@ -570,7 +570,7 @@ const CapsLabelMobile: React.FC<CapsLabelProps> = ({ children, style }) => {
         lineHeight: linePx(14.3),
         fontWeight: 700,
         letterSpacing: 1.9,
-        color: hc ? "rgb(var(--c-charcoal))" : dark ? "#8A8698" : "#9A94B3",
+        color: hc ? "rgb(var(--c-charcoal))" : dark ? "#8A8698" : "#726C8A",
         ...style,
       }}
     >

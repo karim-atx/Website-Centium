@@ -110,7 +110,7 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
       }}
       aria-label={current ? t("{plan}, your current plan", { plan: tier.name }) : recommended ? t("{plan}, recommended for you", { plan: tier.name }) : tier.name}
     >
-      {current ? badge(t("Current"), INK.pr, "#FFFFFF") : recommended ? badge(t("Recommended for you"), "#C8BFE9", "#241F1B") : null}
+      {current ? badge(t("Current"), INK.pr, INK.onFill) : recommended ? badge(t("Recommended for you"), "#C8BFE9", "#241F1B") : null}
       <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
         <span className="flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 15, background: black ? "rgba(174,161,220,0.22)" : INK.prPale }}>
           <TierGlyph n={rank} color={gl} size={36} />
@@ -236,12 +236,12 @@ export default function ProSubscription() {
     // the Monthly / Yearly tabs, the plans as rows (CURRENT and the check on the plan in force, the saving chip),
     // the ask as the block CTA and the notes. The carousel and "All plans at a glance" are mobile only: the
     // rows already list every plan with its limit and price.
-    const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378", maxWidth: "72ch", textWrap: "pretty" } as const;
+    const note = { margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E", maxWidth: "72ch", textWrap: "pretty" } as const;
     return (
       <div className="flex flex-col" style={{ gap: 28 }}>
         <header className="flex flex-col" style={{ gap: 2 }}>
           <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.02em", color: "#241F1B" }}>{t("Centium Professional")}</h1>
-          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Your plan, client limit & upgrades")}</p>
+          <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Your plan, client limit & upgrades")}</p>
         </header>
         {planLoading ? (
           <ProCardSkeleton lines={2} />
@@ -256,7 +256,7 @@ export default function ProSubscription() {
               {" · "}
               {cap == null ? clientsWord(used) : tn(cap, "{used} of {n} client", "{used} of {n} clients", { used })}
             </span>
-            <p style={{ ...note, color: atCap ? INK.hi : "#8C8378", fontWeight: atCap ? 700 : 400 }}>{limitLine}</p>
+            <p style={{ ...note, color: atCap ? INK.hi : "#71685E", fontWeight: atCap ? 700 : 400 }}>{limitLine}</p>
           </div>
         ) : (
           <p style={note}>{t("Your plan couldn't be identified.")}</p>
@@ -283,7 +283,7 @@ export default function ProSubscription() {
               <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Premium passes")}</span>
               <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{t("Include Centium Premium for your clients")}</span>
             </span>
-            <ChevronRight size={16} strokeWidth={2} style={{ color: "#8C8378" }} aria-hidden />
+            <ChevronRight size={16} strokeWidth={2} style={{ color: "#71685E" }} aria-hidden />
           </button>
         )}
         <SegmentedTabs
@@ -325,7 +325,7 @@ export default function ProSubscription() {
                     <span className="flex items-center flex-wrap" style={{ gap: 8 }}>
                       <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{tier.name}</span>
                       {cur && (
-                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#9A8CD6", color: "#241F1B", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                           {t("Current")}
                         </span>
                       )}
@@ -336,7 +336,7 @@ export default function ProSubscription() {
                       )}
                     </span>
                     <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>{price}</span>
-                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+                    <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                       {tier.maxClients == null ? t("Unlimited active clients") : tn(tier.maxClients, "Up to {n} active client", "Up to {n} active clients")}
                     </span>
                   </span>
@@ -361,7 +361,7 @@ export default function ProSubscription() {
                 type="button"
                 onClick={ask}
                 className="tap inline-flex items-center"
-                style={{ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#FFFFFF" }}
+                style={{ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#241F1B" }}
               >
                 <Mail size={18} strokeWidth={2} aria-hidden />
                 {t("Ask to upgrade to {plan}", { plan: target.name })}
@@ -496,7 +496,7 @@ export default function ProSubscription() {
             >
               {p === "monthly" ? t("Monthly") : t("Yearly")}
               {p === "yearly" && bestSave > 0 && (
-                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgba(255,255,255,0.22)" : "rgb(var(--c-teal))", color: "#FFFFFF" }}>
+                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgb(255 255 255 / var(--on-fill-wash))" : "rgb(var(--c-teal))", color: INK.onFill }}>
                   {`−${bestSave}%`}
                 </span>
               )}
@@ -515,6 +515,9 @@ export default function ProSubscription() {
             <div
               ref={track}
               onScroll={onScroll}
+              role="region"
+              aria-label={t("Plans")}
+              tabIndex={0}
               className="flex scroll-row no-scrollbar"
               style={{ gap: 10, padding: "12px 16px 4px", scrollSnapType: "x mandatory", scrollPaddingInline: 16 }}
             >

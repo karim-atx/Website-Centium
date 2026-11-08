@@ -48,7 +48,7 @@ const WaterDayChartMobile: React.FC<WaterDayChartProps> = ({ totalMl, goalMl, is
   const hour = isToday ? now.getHours() + now.getMinutes() / 60 : 22;
   const x = Math.max(6, Math.min(326 - 6, ((Math.max(6, Math.min(22, hour)) - 6) / 16) * 326));
   const y = yOf(totalMl);
-  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378";
+  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#71685E";
   // Round F (F10): in right to left, time runs from right to left. Every x on
   // the 326 grid is mirrored (edge decisions stay on the unmirrored x); SVG
   // text anchors are logical, so the labels follow.
@@ -128,7 +128,7 @@ export const WaterMonthGrid: React.FC<{
   const { dark, hc } = useHealthMode();
   const days = daysOf(period);
   const lead = weekdayColumn(new Date(`${days[0]}T00:00:00`));
-  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#8C8378";
+  const faint = hc ? "rgb(var(--c-charcoal))" : dark ? "#B8B3C7" : "#71685E";
   const main = mc("water", "main");
   return (
     <div>

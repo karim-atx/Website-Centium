@@ -313,7 +313,7 @@ export const ObStep: React.FC<{
 
 /** OURS-step-states row 1: field 342×52 r16, collapsible ×58 r18, row group r18, 14 gap. */
 export const ObSkeleton: React.FC<{ blocks?: ("field" | "coll" | "rows")[] }> = ({ blocks = ["field", "field", "coll", "rows"] }) => (
-  <div aria-busy="true" aria-label={t("Loading")} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+  <div role="status" aria-busy="true" aria-label={t("Loading")} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
     {blocks.map((b, i) => (
       <div key={i} className="ob-skel" style={{ height: b === "field" ? 52 : b === "coll" ? 58 : 162, borderRadius: b === "field" ? 16 : 18 }} />
     ))}

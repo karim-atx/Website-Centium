@@ -1483,7 +1483,7 @@ function PlanRow({ m, plan, save, onJoin, web }: { m: MarketPalette; plan: Venue
             onClick={onJoin}
             aria-label={t("Join: {plan}, {price}", { plan: plan.name, price: priceOf(plan) })}
             className="market-focus"
-            style={{ height: 36, padding: "0 16px", borderRadius: 10, border: 0, background: "#AEA1DC", color: "#FFFFFF", display: "flex", alignItems: "center", flexShrink: 0, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer" }}
+            style={{ height: 36, padding: "0 16px", borderRadius: 10, border: 0, background: "#AEA1DC", color: "#241F1B", display: "flex", alignItems: "center", flexShrink: 0, font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer" }}
           >
             {t("Join")}
           </button>

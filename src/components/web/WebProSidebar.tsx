@@ -62,7 +62,7 @@ export const WebProSidebar: React.FC<{ rail: boolean; width: number }> = ({ rail
       {!rail && (
         <p
           className="shrink-0 uppercase rtl:tracking-normal"
-          style={{ margin: "0 0 6px", padding: "0 15px", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: ".08em", color: "#8C8378" }}
+          style={{ margin: "0 0 6px", padding: "0 15px", fontSize: 12, lineHeight: "16px", fontWeight: 700, letterSpacing: ".08em", color: "#71685E" }}
         >
           {t("More")}
         </p>

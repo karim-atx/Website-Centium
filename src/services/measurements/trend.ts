@@ -30,7 +30,7 @@ export const goalLabel = (goal: MeasurementGoal | "none"): string =>
 
 /** 02 "Goal colours (WO16)". */
 export const GOAL_COLOR = {
-  toward: "#3F9165",
+  toward: "#1D744A",
   against: "#C45A4E",
   neutral: "#4C8FD1",
 } as const;

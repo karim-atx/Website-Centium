@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
+import { ReadinessCard } from "../../components/readiness/ReadinessCard";
 import { PinnedCta } from "../../components/ui/PinnedCta";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PopupMenu } from "../../components/ui/PopupMenu";
@@ -35,7 +36,7 @@ const ROUTINE_COLORS = {
   newFolder: ["rgb(var(--th-6b41ef))", "#C3B3FB"],
   // Restore round 2 (user, 2026-10-07): the ongoing / paused routine coral, as on main.
   ongoing: ["#E9736A", "#EE8A82"],
-  meta: ["#8C8378", "#B8B3C7"],
+  meta: ["#71685E", "#B8B3C7"],
   checked: ["rgb(var(--th-aea1dc))", "rgb(var(--th-9a8cd6))"],
   tick: ["#FFFFFF", "#121317"],
   off: ["#D6D2CB", "#4A4D57"],
@@ -632,6 +633,9 @@ export default function RoutinesTab() {
           again; the strip itself shows the cycle phase (cycle offered,
           tracker on) or the pregnancy guidance (cycle offered, a pregnancy). */}
       <CyclePhaseStrip />
+
+      {/* Round K · DW: "Before you start" (the readiness form). */}
+      <ReadinessCard />
 
       {/* Round D · DT1: week-by-day programmes (today's workouts, the week view). */}
       <ProgrammeSection

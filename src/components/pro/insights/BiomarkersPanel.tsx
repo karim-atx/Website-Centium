@@ -297,7 +297,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
     const cardTitle = (title: string, q?: string) => (
       <div style={{ minWidth: 0 }}>
         <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{title}</p>
-        {q && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{q}</p>}
+        {q && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{q}</p>}
       </div>
     );
     const row = (key: string, i: number, on: boolean, onClick: () => void, lead: React.ReactNode, title: string, sub: string | null, value: React.ReactNode, aria?: string) => (
@@ -313,10 +313,10 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
         {lead}
         <span className="flex-1 min-w-0">
           <span className="block truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{title}</span>
-          {sub && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</span>}
+          {sub && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{sub}</span>}
         </span>
         {value}
-        <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378", flexShrink: 0 }} />
+        <ChevronRight size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E", flexShrink: 0 }} />
       </button>
     );
     return (
@@ -372,7 +372,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
               </div>
               <div className="flex flex-col" style={{ marginTop: 8 }}>
                 {shown.length === 0 ? (
-                  <p style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", margin: "8px 0 0" }}>{t("No results match this filter.")}</p>
+                  <p style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", margin: "8px 0 0" }}>{t("No results match this filter.")}</p>
                 ) : (
                   shown.map((m, i) => {
                     const L = m.points[m.points.length - 1];
@@ -393,7 +393,7 @@ export const BiomarkersPanel: React.FC<PanelProps & { onMessage: () => void }> =
                 )}
               </div>
             </section>
-            <p style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", margin: 0 }}>{t("Points sit on their real test dates. Ranges are the reporting lab's; where a lab gives none, Centium's reference range for {firstName}'s sex and age is used.", { firstName })}</p>
+            <p style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", margin: 0 }}>{t("Points sit on their real test dates. Ranges are the reporting lab's; where a lab gives none, Centium's reference range for {firstName}'s sex and age is used.", { firstName })}</p>
           </div>
           {sel && (
             <section aria-label={sel.name} style={{ ...card, gridColumn: rail ? "4 / span 5" : "6 / span 7" }}>
@@ -669,7 +669,7 @@ const MarkerTrend: React.FC<{
         <div className="flex items-start justify-between" style={{ gap: 12, marginBottom: 12 }}>
           <div className="min-w-0">
             <p style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{t("{name} · over time", { name: m.name })}</p>
-            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`}</p>
+            <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{`${name} · ${PANEL_LABEL[m.category] ? t(PANEL_LABEL[m.category]) : t("Other")}`}</p>
           </div>
           <RoundBtn icon={Layers} label={t("Compare")} onClick={onCompare} />
         </div>

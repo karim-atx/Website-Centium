@@ -496,19 +496,19 @@ export default function Clients() {
         {patients ? t("Patients") : t("Clients")}
       </h1>
       <label className="flex items-center shrink-0 focus-within:border-[#AEA1DC]" style={{ width: webRail ? 280 : 360, height: 40, boxSizing: "border-box", gap: 10, padding: "0 4px 0 14px", borderRadius: 12, background: "#F5F5F6", border: `1px solid ${query ? INK.pr : "rgba(36,31,27,0.10)"}` }}>
-        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#8C8378" }} />
+        <Search size={16} strokeWidth={2} aria-hidden style={{ color: "#71685E" }} />
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={patients ? t("Search patients") : t("Search clients")}
           aria-label={patients ? t("Search patients") : t("Search clients")}
-          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#8C8378]"
+          className="flex-1 min-w-0 bg-transparent outline-none placeholder:text-[#71685E]"
           style={{ fontSize: 15, lineHeight: "24px", color: INK.ch }}
         />
         {query && (
           <button type="button" onClick={() => setQuery("")} aria-label={t("Clear search")} className="flex items-center justify-center" style={{ width: 32, height: 32 }}>
-            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#8C8378" }} />
+            <X size={16} strokeWidth={1.75} aria-hidden style={{ color: "#71685E" }} />
           </button>
         )}
       </label>
@@ -534,7 +534,7 @@ export default function Clients() {
             aria-selected={on}
             onClick={() => setStatus(key)}
             className="flex items-center justify-center whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#FFFFFF" : "#6D50D3" }}
+            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#241F1B" : "#6D50D3" }}
           >
             {t(STATUS_LABEL[key])}
             <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>{counts[key]}</span>
@@ -616,7 +616,7 @@ export default function Clients() {
 
       {stages.offline && <OfflineLine />}
 
-      <div className="flex items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
+      <div className="flex flex-wrap items-center justify-between" style={web ? { gap: 12, margin: "12px 0 8px", minHeight: 32 } : { gap: 12, marginBottom: 10, minHeight: 32 }}>
         {selecting ? (
           <>
             <span style={{ fontSize: textPx(12.5), fontWeight: 700, color: INK.ch, whiteSpace: "nowrap" }}>{t("{n} selected", { n: picked.size })}</span>
@@ -645,7 +645,7 @@ export default function Clients() {
               <ChevronDown size={web ? 16 : 12} strokeWidth={2} aria-hidden style={{ color: INK.chF }} />
             </button>
             <span className="flex items-center" style={{ gap: web ? 16 : 12 }}>
-              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
+              <span style={web ? { fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap" } : { fontSize: textPx(11.5), color: INK.chF, whiteSpace: "nowrap" }} aria-live="polite">{patients ? tn(shownCount, "{n} patient", "{n} patients") : tn(shownCount, "{n} client", "{n} clients")}</span>
               {clients.length > 0 && (
                 <button type="button" onClick={() => setSelecting(true)} className="tap relative before:absolute before:-inset-3 before:content-['']" style={web ? { fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" } : { fontSize: textPx(12), fontWeight: 700, color: INK.prDeep }}>{t("Select")}</button>
               )}

@@ -18,6 +18,7 @@ import {
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
 import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { usePwnedPassword } from "../../hooks/usePwnedPassword";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useTurnstile } from "../../components/security/useTurnstile";
 import { useCooldown } from "../../components/security/useCooldown";
@@ -96,6 +97,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   // can be direct.
   const [checkEmailReason, setCheckEmailReason] = useState<"signup" | "unconfirmed">("signup");
   const [password, setPassword] = useState("");
+  // Round K (K-PW): a new password only; sign-in never sends anything.
+  const breached = usePwnedPassword(mode === "signUp" ? password : "");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmBlurred, setConfirmBlurred] = useState(false);
   // Default on: the persistent session everyone had before this existed.
@@ -643,7 +646,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 onBlur={() => setConfirmBlurred(true)}
               />
-              {password && <ObStrength password={password} />}
+              {password && <ObStrength password={password} breached={breached} />}
               <div style={{ marginTop: 14 }}>
                 <ObTerms on={termsOn} onChange={setTerms} error={termsError && t(termsError)} tail="." />
               </div>

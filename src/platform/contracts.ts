@@ -37,7 +37,21 @@ export interface HealthModule {
   disconnect(opts: { removeSyncedData: boolean }): Promise<void>;
   /** Stops reading weight and body fat at once when the mode turns on. */
   setRecoverySensitive(on: boolean): Promise<void>;
+  /**
+   * "Sync in the background" (App-Centium ROUND_K.md §2.4, D-EL4): whether this
+   * phone's Health Connect can read in the background at all, and whether it
+   * does. Off by default.
+   */
+  background(): Promise<{ available: boolean; on: boolean }>;
+  /**
+   * Turns it on (asking Health Connect for its background permission, in its
+   * own sheet, the first time) or off. "refused": the member said no in that
+   * sheet; "unavailable": not on this phone, or not connected.
+   */
+  setBackground(on: boolean): Promise<HealthBackgroundState>;
 }
+
+export type HealthBackgroundState = "on" | "off" | "refused" | "unavailable";
 
 // ---- Native push (§3) ----
 
@@ -121,12 +135,28 @@ export type WidgetSnapshot = {
   language: "en" | "ar";
   /** useHideNumbers(): true while recovery-sensitive mode is on or still unknown. */
   hideNumbers: boolean;
+  /**
+   * Whether recovery-sensitive mode is known (on or off), not still loading.
+   * Habits can be ticked from the widget while the mode is on, but not while
+   * it is unknown (App-Centium ROUND_K.md D-EL2). Missing reads as unknown.
+   */
+  modeKnown?: boolean;
+  /**
+   * The member's own today ("2026-11-08", their time zone), the day a habit
+   * ticked from the widget is ticked for. Without it the habits can't be ticked
+   * there (a tap opens habits instead).
+   */
+  date?: string;
   /** When these values were read (ISO). Over 30 minutes old, a widget says "Updated 14:05". */
   updatedAt: string;
   steps?: { today: number; goal: number | null };
   water?: { todayMl: number; goalMl: number | null };
-  /** The first six of today's habits; an empty list reads "No habits for today". */
-  habits?: { name: string; done: boolean }[];
+  /**
+   * The first six of today's habits; an empty list reads "No habits for today".
+   * `id` is the habit_items id, which a tick from the widget saves against;
+   * a habit without one can't be ticked there.
+   */
+  habits?: { id?: string; name: string; done: boolean }[];
   /**
    * Today's routine or programme session; null reads "Nothing planned today".
    * `subtitle` is its day ("Week 2 · Day 3"), never volume or kcal; it is
@@ -147,6 +177,12 @@ export interface WidgetsModule {
    * "Long-press your home screen, then Widgets").
    */
   pin(kind: WidgetKind): Promise<{ ok: boolean }>;
+  /**
+   * A widget saved (or couldn't save) "+250 ml" or a habit tick while the app
+   * was open (ROUND_K.md §2.3): reload water or habits. `saved` false means
+   * the widget has undone it and says "Couldn't save". Nothing in a browser.
+   */
+  onAction(listener: (action: { kind: "water" | "habit"; saved: boolean }) => void): () => void;
 }
 
 // ---- Calendar (§6) ----

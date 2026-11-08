@@ -1124,7 +1124,7 @@ export function WebActivityScreen({
               ))}
               {groups.length === 0 && (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center", padding: 24 }}>
-                  <span aria-hidden style={{ width: 56, height: 56, boxSizing: "border-box", borderRadius: 999, border: "1.5px dashed #A79E93", flex: "none" }} />
+                  <span aria-hidden style={{ width: 56, height: 56, boxSizing: "border-box", borderRadius: 999, border: "1.5px dashed #776E64", flex: "none" }} />
                   <p style={{ margin: 0, maxWidth: 380, fontSize: 15, lineHeight: "24px", color: c.faint, textWrap: "pretty" } as React.CSSProperties}>{t(EMPTY_TEXT)}</p>
                 </div>
               )}

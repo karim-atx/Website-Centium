@@ -197,13 +197,13 @@ test("ticket tones and offer chips are the board's (light)", async () => {
   const { MARKET_LIGHT } = await import("../../theme/marketTokens.ts");
   const m = MARKET_LIGHT;
   assert.deepEqual(stubColors("teal", m, false), { bg: "#E4F0EE", ink: "#2F5F58", perf: "#6F9993" });
-  assert.deepEqual(stubColors("pale", m, false), { bg: "#F0EDF9", ink: "#7D6BB5", perf: "#AEA1DC" });
-  assert.deepEqual(stubColors("muted", m, false), { bg: "#F5F5F6", ink: "#8C8378", perf: "rgba(36,31,27,0.11)" });
+  assert.deepEqual(stubColors("pale", m, false), { bg: "#F0EDF9", ink: "#715EA7", perf: "#AEA1DC" });
+  assert.deepEqual(stubColors("muted", m, false), { bg: "#F5F5F6", ink: "#71685E", perf: "rgba(36,31,27,0.11)" });
   assert.deepEqual(stubColors(4, m, false), { bg: "#E6F1EF", ink: "#4F8F8A", perf: "#4F8F8A" });
-  assert.deepEqual(statusChip("active", m), ["#E3F3E9", "#3F9165"]);
-  assert.deepEqual(statusChip("scheduled", m), ["#F0EDF9", "#7D6BB5"]);
+  assert.deepEqual(statusChip("active", m), ["#E3F3E9", "#1D744A"]);
+  assert.deepEqual(statusChip("scheduled", m), ["#F0EDF9", "#715EA7"]);
   assert.deepEqual(statusChip("paused", m), ["#F6E9C9", "#B07D16"]);
-  assert.deepEqual(statusChip("expired", m), ["#F5F5F6", "#8C8378"]);
+  assert.deepEqual(statusChip("expired", m), ["#F5F5F6", "#71685E"]);
 });
 
 test("the strip's dark active fill reaches 4.5:1 under white; light keeps the drawn ink", async () => {

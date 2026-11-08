@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { supabase } from "../../../lib/supabase/client";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
+import { PWNED_ADVICE, usePwnedPassword } from "../../hooks/usePwnedPassword";
 import { useApp } from "../../context/AppContext";
 import { useTurnstile } from "../security/useTurnstile";
 import { useCooldown } from "../security/useCooldown";
@@ -55,6 +56,8 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
 
   const [current, setCurrent] = useState("");
   const [password, setPassword] = useState("");
+  // Round K (K-PW): the new password only, never the current one.
+  const breached = usePwnedPassword(password);
   const [confirm, setConfirm] = useState("");
   const [confirmBlurred, setConfirmBlurred] = useState(false);
   const [code, setCode] = useState("");
@@ -303,6 +306,9 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                       </div>
                     );
                   })}
+                </div>
+                <div aria-live="polite">
+                  {breached && <p className="mt-3 rounded-xl bg-status-caution-bg px-3 py-2 text-xs font-semibold leading-[17px] text-caution-text">{t(PWNED_ADVICE)}</p>}
                 </div>
               </div>
             )}

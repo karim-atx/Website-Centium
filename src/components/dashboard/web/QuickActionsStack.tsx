@@ -76,7 +76,7 @@ export const QuickActionsStack: React.FC<{
   return (
     <div className="flex flex-col" style={{ width: "100%", height: "100%", boxSizing: "border-box" }}>
       <style href="home-qa-web" precedence="default">{CSS}</style>
-      <p className="uppercase" style={{ margin: "0 0 8px", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".08em", color: "rgba(36,31,27,0.42)" }}>
+      <p className="uppercase" style={{ margin: "0 0 8px", fontSize: 12, lineHeight: "16px", fontWeight: 600, letterSpacing: ".08em", color: "rgba(36,31,27,0.63)" }}>
         {t("Quick actions")}
       </p>
       <div ref={boxRef} className="relative" style={{ flex: 1, minHeight: 0 }}>

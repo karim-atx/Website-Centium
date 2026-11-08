@@ -190,7 +190,7 @@ export default function ClientCalendarTab() {
               place; the view tabs reach the full hour timeline. */}
           {/* MO1.6 #21: 9 / 13.5 700 ls 1.8 caps at 42% (dark 42% too,
               V6-113; High contrast lifts it to the full ink). */}
-          <p className="mb-[9px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">{selectedDateLabel}</p>
+          <p className="mb-[9px] text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.63] [.high-contrast_&]:text-charcoal">{selectedDateLabel}</p>
           {!loaded ? (
             // OURS O-LD: two 57.7 r15 skeleton rows on first load only.
             <div className="flex flex-col gap-[7px]">
@@ -333,7 +333,7 @@ export default function ClientCalendarTab() {
               label (9/700, charcoal 42%, tracked, uppercase). */}
           {invitedEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">
+              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.63] [.high-contrast_&]:text-charcoal">
                 {t("Invitations")}
               </p>
               {invitedEvents.map(eventCard)}
@@ -342,7 +342,7 @@ export default function ClientCalendarTab() {
 
           {allDayEvents.length > 0 && (
             <div className="space-y-2 mb-4">
-              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.42] [.high-contrast_&]:text-charcoal">{t("All day")}</p>
+              <p className="text-[9px] leading-[13.5px] font-bold tracking-[1.8px] uppercase text-charcoal/[0.63] [.high-contrast_&]:text-charcoal">{t("All day")}</p>
               {allDayEvents.map(eventCard)}
             </div>
           )}

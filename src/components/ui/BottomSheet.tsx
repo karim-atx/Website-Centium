@@ -5,6 +5,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { t } from "../../i18n/core";
+import { trapTab } from "./focusTrap";
 import { useIsWeb } from "../web/useWebLayout";
 import { WEB_SHEET_CSS, webSheetPanelStyle } from "../web/webSheet";
 
@@ -186,6 +187,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
       if (panel && !panel.contains(document.activeElement)) panel.focus({ preventScroll: true });
     }, 0);
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Tab") {
+        // Round K · ET: Tab stays in the top sheet, unless something on top of it (a popup, a menu) holds focus.
+        const host = (document.activeElement as HTMLElement | null)?.closest('[aria-modal="true"], [role="menu"]');
+        if (openSheets[openSheets.length - 1] === sheetId && (!host || host === panel)) trapTab(panel, e);
+        return;
+      }
       if (e.key !== "Escape" || e.defaultPrevented) return;
       if (openSheets[openSheets.length - 1] !== sheetId) return;
       const active = document.activeElement;

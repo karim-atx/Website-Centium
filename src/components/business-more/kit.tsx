@@ -190,7 +190,7 @@ export const BizSection: React.FC<{ label?: React.ReactNode; right?: React.React
 export const BizNote: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className }) =>
   usePaneWeb() ? (
     // 13/20 #8C8378; 8 under a section's rows, at most 72ch on its own.
-    <p className={className} style={{ margin: "8px 0 0", maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>
+    <p className={className} style={{ margin: "8px 0 0", maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>
       {children}
     </p>
   ) : (
@@ -245,12 +245,12 @@ export interface BizRowProps {
 
 const VALUE_TONE = {
   primary: "text-primary-dark",
-  good: "text-[#3F9165] dark:text-[#7FC79C]",
+  good: "text-[#1D744A] dark:text-[#7FC79C]",
   high: "text-status-high",
   faint: "text-charcoal-faint",
 } as const;
 
-const PANE_VALUE_INK = { primary: "#8C8378", good: "#3F9165", high: "#C0392B", faint: "#A79E93" } as const;
+const PANE_VALUE_INK = { primary: "#71685E", good: "#1D744A", high: "#C0392B", faint: "#776E64" } as const;
 
 /**
  * ST Settings Web row: min 48 (56 with a line), padding 8 0, gap 14; the rule
@@ -305,7 +305,7 @@ const PaneRow: React.FC<BizRowProps> = ({
     fontWeight: 600,
     whiteSpace: "nowrap",
     background: primary ? "#9A8CD6" : "#FFFFFF",
-    color: primary ? "#FFFFFF" : "#5B5349",
+    color: primary ? "#241F1B" : "#5B5349",
     border: primary ? "none" : "1px solid rgba(36,31,27,0.12)",
   });
   const body = (
@@ -325,7 +325,7 @@ const PaneRow: React.FC<BizRowProps> = ({
           {title}
         </span>
         {desc && (
-          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", textWrap: "pretty" } as React.CSSProperties}>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>
             {desc}
           </span>
         )}
@@ -334,7 +334,7 @@ const PaneRow: React.FC<BizRowProps> = ({
       {badge !== undefined && badge !== null && (
         <span
           className="inline-flex items-center justify-center shrink-0 tabular-nums"
-          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
+          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#241F1B", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
         >
           {badge}
         </span>
@@ -366,7 +366,7 @@ const PaneRow: React.FC<BizRowProps> = ({
       )}
       {radio && <PaneRadio selected={radio.selected} />}
       {checked && <Check size={16} strokeWidth={2.6} aria-hidden className="shrink-0" style={{ color: "#7D67D9" }} />}
-      {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#8C8378" }} />)}
+      {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#71685E" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#71685E" }} />)}
     </>
   );
   if (toggle || valueAction || value2) {
@@ -575,9 +575,9 @@ export const BizHero: React.FC<{
     // ST Settings Web stat: r16 #F7F7FC, padding 16 20; label 13/20 #8C8378, value 22/28 700; actions 40 r12.
     <div style={{ borderRadius: 16, background: "#F7F7FC", padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{label}</p>
+        <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{label}</p>
         <p className="tabular-nums break-words" style={{ margin: 0, fontSize: 22, lineHeight: "28px", fontWeight: 700, color: "#241F1B" }}>{value}</p>
-        {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{sub}</p>}
+        {sub && <p style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{sub}</p>}
       </div>
       {actions && actions.length > 0 && (
         <div className="flex flex-wrap" style={{ gap: 8 }}>
@@ -588,7 +588,7 @@ export const BizHero: React.FC<{
               onClick={a.onClick}
               disabled={a.disabled}
               className="flex items-center disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2"
-              style={{ height: 40, padding: "0 16px", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: a.primary ? "#9A8CD6" : "#FFFFFF", color: a.primary ? "#FFFFFF" : "#241F1B", border: a.primary ? "none" : "1px solid rgba(36,31,27,0.12)" }}
+              style={{ height: 40, padding: "0 16px", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: a.primary ? "#9A8CD6" : "#FFFFFF", color: a.primary ? "#241F1B" : "#241F1B", border: a.primary ? "none" : "1px solid rgba(36,31,27,0.12)" }}
             >
               <a.icon size={18} strokeWidth={2} aria-hidden />
               {a.label}
@@ -937,7 +937,7 @@ export const BizConfirm: React.FC<{
 
 /** Rows skeleton: a 36 tile block and two text bars per row. */
 export const RowsSkeleton: React.FC<{ rows?: number; label?: string }> = ({ rows = 3, label = t("Loading") }) => (
-  <div aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
+  <div role="status" aria-busy="true" aria-label={label} className={LIST_BG} style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}>
     {Array.from({ length: rows }, (_, i) => (
       <div key={i} className="flex items-center" style={{ minHeight: 56.6, paddingBlock: "6.7px 9.3px", paddingInline: "14px 15px", gap: 11 }}>
         <span className="block shrink-0 bg-cream-soft dark:bg-white/[0.06] animate-skeleton-pulse" style={{ width: 36, height: 36, borderRadius: 11 }} />

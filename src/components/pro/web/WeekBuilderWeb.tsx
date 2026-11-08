@@ -77,14 +77,14 @@ export const PlanHeaderWeb: React.FC<{
         <ChevronLeft size={20} strokeWidth={2} aria-hidden style={{ color: "#241F1B" }} />
       </button>
       <div className="flex-1 min-w-0">
-        <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#8C8378" }}>
+        <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "#71685E" }}>
           {kicker}
         </p>
         <h1 className="truncate" title={title} style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>
           {title}
         </h1>
         {line && (
-          <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+          <p className="truncate" style={{ margin: 0, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
             {line}
           </p>
         )}
@@ -402,7 +402,7 @@ export const WeekBuilderWeb: React.FC<{
             >
               <span className={`flex min-w-0 justify-between ${L.tileRow ? "flex-row items-baseline" : "flex-col items-start"}`} style={{ gap: "2px 8px" }}>
                 <span style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: on ? "#5F5093" : "#5B5349" }}>{d.short}</span>
-                <span style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                <span style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
                   <b style={{ color: "#241F1B" }}>{fmt(m.kcal)}</b>
                   {targets ? ` / ${fmt(targets.kcal)}` : ""}
                 </span>
@@ -443,8 +443,8 @@ export const WeekBuilderWeb: React.FC<{
                   <div className="grid" style={{ gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "10px 12px", marginTop: 10 }}>
                     {rows.map(([l, v, tg, c, u]) => (
                       <div key={l} className="min-w-0">
-                        <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "#8C8378" }}>{l}</span>
-                        <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
+                        <span className="block" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "#71685E" }}>{l}</span>
+                        <span className="block whitespace-nowrap" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", fontVariantNumeric: "tabular-nums" }}>
                           <b style={{ color: "#241F1B" }}>{fmt(v)}</b>
                           {tg ? ` / ${fmt(tg)}${u}` : u}
                         </span>

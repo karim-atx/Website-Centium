@@ -119,7 +119,7 @@ export const MarkerChartWeb: React.FC<{
     const d0 = new Date(t0).toISOString().slice(0, 10);
     xs.push({ x: 5, l: monthYear(d0) }, { x: 95, l: monthYear(today) });
   }
-  const lbl: React.CSSProperties = { position: "absolute", fontSize: 12, lineHeight: "16px", fontWeight: 600, color: "#8C8378", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" };
+  const lbl: React.CSSProperties = { position: "absolute", fontSize: 12, lineHeight: "16px", fontWeight: 600, color: "#71685E", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" };
   const tip = hover !== null ? points[hover] : null;
   return (
     <div className="relative" style={{ height }} role="group" aria-label={label} data-web-marker-chart={compact ? "compact" : "big"}>
@@ -129,7 +129,7 @@ export const MarkerChartWeb: React.FC<{
           {ticks.map((v) => {
             const lim = limits.includes(v);
             return (
-              <span key={v} style={{ ...lbl, insetInlineEnd: 0, top: `${Y(v)}%`, transform: "translateY(-50%)", color: lim ? LIMIT : "#8C8378", fontWeight: lim ? 700 : 600 }}>
+              <span key={v} style={{ ...lbl, insetInlineEnd: 0, top: `${Y(v)}%`, transform: "translateY(-50%)", color: lim ? LIMIT : "#71685E", fontWeight: lim ? 700 : 600 }}>
                 {clean(v)}
               </span>
             );
@@ -221,7 +221,7 @@ export const MarkerChartWeb: React.FC<{
               }}
               data-chart="tip"
             >
-              <span className="block" style={{ fontSize: 12, lineHeight: "16px", fontWeight: 600, color: "#8C8378" }}>
+              <span className="block" style={{ fontSize: 12, lineHeight: "16px", fontWeight: 600, color: "#71685E" }}>
                 {dateLabel(tip.date)}
               </span>
               <span className="flex items-baseline whitespace-nowrap" style={{ gap: 6, marginTop: 2 }}>
@@ -235,7 +235,7 @@ export const MarkerChartWeb: React.FC<{
           )}
           {points.length === 0 && (
             <div className="absolute inset-0 grid place-items-center pointer-events-none">
-              <span className="whitespace-nowrap" style={{ padding: "6px 14px", borderRadius: 999, background: "#FFFFFF", boxShadow: "0 0 0 0.5px rgba(36,31,27,0.1)", fontSize: 15, lineHeight: "22px", fontWeight: 700, color: "#8C8378" }}>
+              <span className="whitespace-nowrap" style={{ padding: "6px 14px", borderRadius: 999, background: "#FFFFFF", boxShadow: "0 0 0 0.5px rgba(36,31,27,0.1)", fontSize: 15, lineHeight: "22px", fontWeight: 700, color: "#71685E" }}>
                 {emptyText}
               </span>
             </div>

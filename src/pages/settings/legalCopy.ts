@@ -20,7 +20,7 @@ export interface LegalSection {
 }
 
 /** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
-export const LEGAL_UPDATED = "October 31, 2026";
+export const LEGAL_UPDATED = "November 8, 2026";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -58,16 +58,19 @@ export function legalHref(doc: "privacy" | "terms", heading: string): string {
 export const PRIVACY_INTRO =
   "Centium brings your health information together in one place. Here's what we collect, why, and the control you keep over it.";
 
+// Round K (Karim, 2026-11-08): What we collect, How it's used and shared,
+// Third-party processors, Cookies and Retention follow the Privacy Policy
+// corrections (#113), so the summary never contradicts the full policy.
 export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "What we collect",
     body:
-      "Account details (name, email, account type) and billing details handled by our payment provider. We never store full card numbers. Health and activity data you log or sync with your permission. Device and diagnostic data. Messages and call details, without recorded audio or video by default. Files you upload, such as photos and certification documents.",
+      "Account details (name, email, account type) and billing details handled by Google Play or the App Store when you buy in the app. We never store full card numbers, and the website takes no payments. Health and activity data you log or sync with your permission. The days your account was active and, in the phone app, its version and an installation id. No analytics or crash reporting. Messages and call details, without recorded audio or video by default. Files you upload, such as photos and certification documents.",
   },
   {
     heading: "How it's used and shared",
     body:
-      "To run your account and the features you use. Health data is processed only with your explicit consent. Professionals and businesses see only what you switch on for them, and you can revoke it at any time. We don't sell your data or use health data for advertising. If your professional works for a business on Centium, its authorised staff may also see what you've shared. Reviews don't show your name unless you choose to.",
+      "To run your account and the features you use. Health data is processed only with your explicit consent. Professionals and businesses see only what you switch on for them, and you can revoke it at any time. In the Android app, Health Connect data you allow is used only in Centium, shared only with professionals you choose, and never sold. We don't sell your data or use health data for advertising. If your professional works for a business on Centium, its authorised staff may also see what you've shared. Reviews don't show your name unless you choose to.",
   },
   {
     heading: "Third-party and walk-in data",
@@ -77,7 +80,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "Third-party processors",
     body:
-      "Supabase (database and sign-in), LiveKit (calls), Resend (email), Cloudflare (content delivery) and Groq (voice food logging). Each works only on our instructions, under contract. Food search sends only your search words to USDA FoodData Central and Open Food Facts.",
+      "Supabase (database and sign-in), LiveKit (calls), Resend (email), Cloudflare (content delivery and the bot check on our forms) and Groq (voice food logging). Each works only on our instructions, under contract. Notifications go through Google's, Apple's or your browser's push service. Google or Apple sign-in shares your name and email (or, with Apple, a private relay address). In the Android app, ML Kit reads barcodes and lab reports on your phone. The map loads from OpenFreeMap, and course videos play from YouTube. Food search sends only your search words to USDA FoodData Central and Open Food Facts, and a barcode scan sends only the number to Open Food Facts, through our servers.",
   },
   {
     heading: "International data transfers",
@@ -91,7 +94,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "Cookies and similar technologies",
     body:
-      "Essential cookies and local storage keep you signed in and remember your preferences. No advertising cookies.",
+      "Essential cookies and local storage keep you signed in and remember your preferences. No analytics, diagnostic or advertising cookies.",
   },
   {
     heading: "Marketing communications",
@@ -104,7 +107,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
   {
     heading: "Retention, security and your rights",
     body:
-      "Data is encrypted in transit and at rest. When you delete your account, most data is removed within a set period; some is kept for safety or legal reasons. You can access, export, correct or delete your data, or withdraw consent, from Settings or at support@atraxia.org.",
+      "Data is encrypted in transit and at rest. When you delete your account, most data is removed within a set period, including a professional's clinical notes about you; some is kept for safety or legal reasons. Forum posts stay, shown as \"Deleted member\", and payment records are kept only as long as the law requires. Deleting your account doesn't cancel an App Store or Google Play subscription, so cancel it there. You can access, export, correct or delete your data, or withdraw consent, from Settings or at support@atraxia.org.",
   },
 ];
 

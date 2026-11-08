@@ -59,7 +59,7 @@ const SET_OPTIONS_COLORS = {
   pinned: ["rgb(var(--th-5f5093))", "rgb(var(--th-c8bfe9))"],
   // Release 3 (CU1 v5): the coach's target line (chF #8C8378 / #B8B3C7) and
   // the target RPE ring (tealDark #6F9993 / #4F8F8A, as the handover's tokens).
-  targetInk: ["#8C8378", "#B8B3C7"],
+  targetInk: ["#71685E", "#B8B3C7"],
   targetRing: ["#6F9993", "#4F8F8A"],
 } as const;
 const optionsColor = (key: keyof typeof SET_OPTIONS_COLORS, dark: boolean): string => SET_OPTIONS_COLORS[key][dark ? 1 : 0];

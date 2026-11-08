@@ -1,7 +1,7 @@
 // Round J · J-2e: Health Connect's screens (website PLAN.md §2.1; App-Centium
 // ROUND_J.md §2). Pure, so the states and their words are tested on their
 // own; the screens read platform/health.ts and show what this says.
-import type { HealthAvailability, HealthType } from "../../platform/contracts";
+import type { HealthAvailability, HealthBackgroundState, HealthType } from "../../platform/contracts";
 import { tk } from "../../i18n/core";
 
 /** Health Connect on Google Play, for "not installed" and "out of date". */
@@ -80,4 +80,31 @@ export function connectErrorKey(e: unknown, offline: boolean): string {
   if (code === "ATXZ0") return tk("Syncing from Health Connect is switched off right now. Try again later.");
   if (offline) return tk("You're offline. Connect again when you're back online.");
   return tk("Couldn't connect to Health Connect. Try again.");
+}
+
+/**
+ * "Sync in the background" (Round K, App-Centium ROUND_K.md §2.4, D-EL4): the
+ * switch as health.background() reports it, off by default. Not available on
+ * this phone: shown, disabled, with the reason.
+ */
+export type BackgroundSwitch = { available: boolean; on: boolean };
+
+/** The switch once setBackground() answered, and the line under it (null: none). */
+export function backgroundAfter(state: HealthBackgroundState): {
+  sw: BackgroundSwitch;
+  note: { key: string; danger: boolean; settings: boolean } | null;
+} {
+  switch (state) {
+    case "on":
+      return { sw: { available: true, on: true }, note: null };
+    case "off":
+      return { sw: { available: true, on: false }, note: null };
+    case "refused":
+      return {
+        sw: { available: true, on: false },
+        note: { key: tk("Background access wasn't allowed. You can allow it in Health Connect's settings."), danger: true, settings: true },
+      };
+    case "unavailable":
+      return { sw: { available: false, on: false }, note: null };
+  }
 }

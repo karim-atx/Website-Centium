@@ -10,8 +10,10 @@ import {
   initialsOf,
   nicknameNextChange,
   nicknameProblem,
+  shownAuthorLabel,
   type ForumCategory,
 } from "./rules.ts";
+import { addCatalogue, setActiveLanguage } from "../../i18n/core.ts";
 import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes.ts";
 import { detailDate } from "../../utils/date.ts";
 
@@ -71,6 +73,50 @@ test("initials", () => {
   assert.equal(initialsOf("Elie S."), "ES");
   assert.equal(initialsOf("Rami"), "R");
   assert.equal(initialsOf(""), "?");
+});
+
+test("K-DEL: label_key says Deleted member or Member, in the reader's language", () => {
+  assert.equal(shownAuthorLabel(null, "deleted_member"), "Deleted member");
+  assert.equal(shownAuthorLabel(null, "member"), "Member");
+  // An unknown key says Member.
+  assert.equal(shownAuthorLabel(null, "someday_new"), "Member");
+  assert.equal(shownAuthorLabel(null, "constructor"), "Member");
+  // A key wins even if a label came too.
+  assert.equal(shownAuthorLabel("Lina", "deleted_member"), "Deleted member");
+  addCatalogue("ar", { "Deleted member": "عضو محذوف", Member: "عضو" });
+  setActiveLanguage("ar");
+  try {
+    assert.equal(shownAuthorLabel(null, "deleted_member"), "عضو محذوف");
+    assert.equal(shownAuthorLabel(null, "member"), "عضو");
+    assert.equal(shownAuthorLabel(null, "someday_new"), "عضو");
+    assert.equal(shownAuthorLabel("Deleted account"), "عضو محذوف");
+    assert.equal(shownAuthorLabel("Member"), "عضو");
+    // A name is never translated.
+    assert.equal(shownAuthorLabel("member", null), "member");
+  } finally {
+    setActiveLanguage("en");
+  }
+});
+
+test("K-DEL: a nickname that spells a key stays as typed", () => {
+  assert.equal(shownAuthorLabel("deleted_member", null), "deleted_member");
+  assert.equal(shownAuthorLabel("member", null), "member");
+  assert.equal(shownAuthorLabel("Member", null), "Member");
+  assert.equal(shownAuthorLabel("runnerMaya", null), "runnerMaya");
+  // Even from an older server (no label_key): only the two exact English labels are read.
+  assert.equal(shownAuthorLabel("deleted_member"), "deleted_member");
+  assert.equal(shownAuthorLabel("member"), "member");
+});
+
+test("K-DEL: an older server's English, only when label_key is absent", () => {
+  assert.equal(shownAuthorLabel("Deleted account"), "Deleted member");
+  assert.equal(shownAuthorLabel("Member"), "Member");
+  assert.equal(shownAuthorLabel("runnerMaya"), "runnerMaya");
+  // Present but null: a name, shown as typed.
+  assert.equal(shownAuthorLabel("Deleted account", null), "Deleted account");
+  // Nothing at all: Member.
+  assert.equal(shownAuthorLabel(null), "Member");
+  assert.equal(shownAuthorLabel("", null), "Member");
 });
 
 test("forum age: day counts past a week (MO1.3)", () => {

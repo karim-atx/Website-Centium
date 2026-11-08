@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ClipboardList, History, MessageCircle, Tag, UserMinus, UserX } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useProSubtype } from "../../hooks/useProSubtype";
@@ -10,7 +10,7 @@ import { Toast } from "../../components/ui/Toast";
 import { CtaButton } from "../../components/ui/PinnedCta";
 import { EmptyState } from "../../components/pro/EmptyState";
 import { OfflineLine, ProCardSkeleton, ProError } from "../../components/pro/states";
-import { CLIENT_TABS, pickTab, proClientPath, PRO_ROUTES, type ProLane } from "../../components/pro/subtypeLanes";
+import { CLIENT_TABS, pickTab, proClientPath, proReadinessPath, proReadinessTab, PRO_ROUTES, type ProLane } from "../../components/pro/subtypeLanes";
 import { useClientPage } from "../../components/pro/client/useClientPage";
 import { ClientHeader, PendingPaymentBanners } from "../../components/pro/client/ClientHeader";
 import { ClientPageBodyWeb, ClientHeroWeb, ClientTabGridWeb, ClientTabsWeb, ClientTopBarWeb } from "../../components/pro/web/ClientPageWeb";
@@ -69,6 +69,7 @@ const STAGE_TONE: Record<ClientStage, Tone> = { onboarding: "onb", active: "act"
 
 export default function ClientPage() {
   const { id = "", tab } = useParams();
+  const [params] = useSearchParams();
   const navigate = useNavigate();
   const online = useOnline();
   const { lane } = useProSubtype();
@@ -98,6 +99,9 @@ export default function ClientPage() {
   if (!lane) return null;
   // W5: "Client insights" (NU14) for Full coaching and Nutrition, a sub-page of the client page.
   if (tab === "insights" && lane !== "clinical_overview") return <ClientInsightsRoute clientId={id} lane={lane} />;
+  // Round K · DW: ?readiness=open (the professional's push) is the client's
+  // "Before you start" outcome, on the lane's tab whatever tab the link named.
+  if (params.get("readiness") === "open" && tab !== proReadinessTab(lane)) return <Navigate to={proReadinessPath(id, lane)} replace />;
   const tabs = CLIENT_TABS[lane];
   const current = pickTab(tabs, tab);
   if (tab !== undefined && tab !== current) return <Navigate to={proClientPath(id, current)} replace />;
@@ -164,7 +168,7 @@ export default function ClientPage() {
       {(current === "progress" || current === "trends") && <ProgressTab data={data} lane={lane} onAsk={(c) => void ask(c)} />}
       {(current === "sessions" || current === "appointments") && <SessionsTab data={data} patient={patient} onSchedule={schedule} />}
       {current === "notes" && <NotesTab data={data} lane={lane} onHistory={() => setHistoryOpen(true)} />}
-      {current === "files" && <FilesTab data={data} />}
+      {current === "files" && <FilesTab data={data} onAsk={asked.includes("medical_history") ? undefined : () => void ask("medical_history")} />}
       {current === "care-plan" && <CarePlanTab data={data} onNotes={() => go("notes")} onCalendar={schedule} onAskDiet={() => void ask("allergies_dietary")} dietAsked={asked.includes("allergies_dietary")} />}
       {current === "health-records" && <HealthRecordsTab data={data} onAsk={(c) => void ask(c)} asked={asked} onNote={() => go("notes")} onCarePlan={() => go("care-plan")} />}
     </>

@@ -73,7 +73,7 @@ function BadgeCard({ badge, onOpen }: { badge: Badge; onOpen: () => void }) {
         </span>
         {!ok && (
           <span className="absolute grid place-items-center" style={{ insetInlineEnd: -3, bottom: -3, width: 18, height: 18, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.12)" }}>
-            <Lock size={10} color="#8C8378" aria-hidden />
+            <Lock size={10} color="#71685E" aria-hidden />
           </span>
         )}
       </span>
@@ -82,7 +82,7 @@ function BadgeCard({ badge, onOpen }: { badge: Badge; onOpen: () => void }) {
           {display.title}
           {!ok && <span className="sr-only">{t(", Locked")}</span>}
         </span>
-        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+        <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
           {sub}
         </span>
         {!ok && badge.next && badge.progress > 0 && (
@@ -167,7 +167,7 @@ export default function AchievementsWeb() {
               </p>
               <p style={{ margin: "2px 0 0", fontSize: 40, lineHeight: "48px", fontWeight: 800, letterSpacing: "-1.2px", color: "#241F1B", fontVariantNumeric: "tabular-nums" }}>
                 {fmt(pointsSummary.balance)}
-                <span style={{ fontSize: 15, fontWeight: 600, color: "#8C8378", marginInlineStart: 6, letterSpacing: 0 }}>{t("pts")}</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: "#71685E", marginInlineStart: 6, letterSpacing: 0 }}>{t("pts")}</span>
               </p>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -178,7 +178,7 @@ export default function AchievementsWeb() {
                     : t("Highest tier")}
                 </span>
                 {pointsSummary.nextTierMinPoints !== null && (
-                  <span className="whitespace-nowrap" style={{ color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>
+                  <span className="whitespace-nowrap" style={{ color: "#71685E", fontVariantNumeric: "tabular-nums" }}>
                     <bdi dir="ltr">
                       {fmt(pointsSummary.balance)} / {fmt(pointsSummary.nextTierMinPoints)}
                     </bdi>
@@ -207,8 +207,8 @@ export default function AchievementsWeb() {
                       >
                         <Icon size={16} strokeWidth={1.75} color={cur ? "#FFFFFF" : hex} aria-hidden />
                       </span>
-                      <span style={{ marginTop: 6, fontSize: 13, lineHeight: "20px", fontWeight: cur ? 800 : 400, color: cur ? tier.ink : "#8C8378" }}>{pt.name}</span>
-                      <span style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#8C8378", fontVariantNumeric: "tabular-nums" }}>{fmt(pt.minPoints)}</span>
+                      <span style={{ marginTop: 6, fontSize: 13, lineHeight: "20px", fontWeight: cur ? 800 : 400, color: cur ? tier.ink : "#71685E" }}>{pt.name}</span>
+                      <span style={{ marginTop: 2, fontSize: 13, lineHeight: "20px", color: "#71685E", fontVariantNumeric: "tabular-nums" }}>{fmt(pt.minPoints)}</span>
                     </div>
                   );
                 })}
@@ -219,11 +219,11 @@ export default function AchievementsWeb() {
                 <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#241F1B", fontVariantNumeric: "tabular-nums" }}>
                   {t("{a} of {b}", { a: counts.earned, b: counts.total })}
                 </p>
-                <p style={{ margin: 0, fontSize: 13, color: "#8C8378" }}>{t("earned")}</p>
+                <p style={{ margin: 0, fontSize: 13, color: "#71685E" }}>{t("earned")}</p>
               </div>
             )}
           </div>
-          <p style={{ margin: 0, paddingTop: 12, borderTop: `0.5px solid ${tier.border}`, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Rewards for your points are coming soon.")}</p>
+          <p style={{ margin: 0, paddingTop: 12, borderTop: `0.5px solid ${tier.border}`, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Rewards for your points are coming soon.")}</p>
         </div>
       )}
 
@@ -252,7 +252,7 @@ export default function AchievementsWeb() {
           !achievementsError ? (
             <div className="flex flex-col items-center text-center" style={{ padding: "40px 24px", borderRadius: 20, background: "#F5F5F6", gap: 6 }}>
               <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#241F1B" }}>{t("Nothing here yet")}</p>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t("Use the app and badges start appearing here.")}</p>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t("Use the app and badges start appearing here.")}</p>
             </div>
           ) : (
             <div />
@@ -279,7 +279,7 @@ export default function AchievementsWeb() {
                 <AchievementIcon achievementKey={a.key} emoji={a.icon} size={44} />
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span className="block" style={{ fontSize: 15, fontWeight: 700, color: "#241F1B" }}>{a.title}</span>
-                  <span className="block" style={{ fontSize: 13, color: "#8C8378" }}>{a.earnedAt ? formatEarnedAt(a.earnedAt) : a.description}</span>
+                  <span className="block" style={{ fontSize: 13, color: "#71685E" }}>{a.earnedAt ? formatEarnedAt(a.earnedAt) : a.description}</span>
                 </span>
                 <span className="whitespace-nowrap" style={{ fontSize: 13, fontWeight: 700, color: "#3C6B65", fontVariantNumeric: "tabular-nums" }}>
                   {a.points > 0 ? t("+{n} pts", { n: fmt(a.points) }) : t("No points, just bragging rights")}
@@ -289,7 +289,7 @@ export default function AchievementsWeb() {
           })}
           {recent.length === 0 && (
             <div className="grid place-items-center" style={{ flex: 1, padding: 24, background: "#FAFAFB" }}>
-              <p style={{ margin: 0, textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>
+              <p style={{ margin: 0, textAlign: "center", fontSize: 15, lineHeight: "24px", color: "#71685E" }}>
                 {t("Nothing unlocked yet. Log a meal or a workout to earn your first badge.")}
               </p>
             </div>

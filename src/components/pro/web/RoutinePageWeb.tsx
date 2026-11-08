@@ -32,7 +32,7 @@ import { routineLabel } from "./routinePageStyles";
 
 const INK = "#241F1B";
 const INK2 = "#5B5349";
-const FAINT = "#8C8378";
+const FAINT = "#71685E";
 const FIELD = "#F5F5F6";
 const LINE = "1px solid rgba(36,31,27,0.10)";
 
@@ -228,7 +228,7 @@ export const RoutineFieldsWeb: React.FC<{
           value={name}
           onChange={(e) => onName(e.target.value)}
           placeholder={t("Push Day")}
-          className="placeholder:text-[#8C8378] focus:outline-none focus:border-[#AEA1DC] focus:shadow-[0_0_0_3px_rgba(174,161,220,0.25)]"
+          className="placeholder:text-[#71685E] focus:outline-none focus:border-[#AEA1DC] focus:shadow-[0_0_0_3px_rgba(174,161,220,0.25)]"
           style={{ ...field, fontWeight: 600 }}
         />
       </label>
@@ -413,7 +413,7 @@ export const ExerciseSearchWeb: React.FC<{
           aria-activedescendant={
             results.length ? `routine-search-${active}` : undefined
           }
-          className="w-full placeholder:text-[#8C8378] focus:outline-none focus:bg-white focus:border-[#AEA1DC] focus:shadow-[0_0_0_3px_rgba(174,161,220,0.25)]"
+          className="w-full placeholder:text-[#71685E] focus:outline-none focus:bg-white focus:border-[#AEA1DC] focus:shadow-[0_0_0_3px_rgba(174,161,220,0.25)]"
           style={{
             height: 48,
             boxSizing: "border-box",

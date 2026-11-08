@@ -20,7 +20,7 @@ export type TypeStyle = { row: string; field: string; border: string; ink: strin
 export const TYPE_STYLE: Record<Exclude<HandoverSetType, "normal">, TypeStyle> = {
   warmup: { row: "#F0F5FA", field: "#E2EDF8", border: "#C5D6E6", ink: "#3F6E93", label: "#3F6E93", dot: "#6FA0CF", short: "Warm" },
   failed: { row: "#FBEDEB", field: "#F6E2DF", border: "#E8C2BC", ink: "#8E3325", label: "#B0402F", dot: "#C0392B", short: "Fail" },
-  skipped: { row: "transparent", field: "#F1F1F3", border: "#E1E1E2", ink: "#A39D95", label: "#8C8378", dot: "#A39D95", short: "Skip" },
+  skipped: { row: "transparent", field: "#F1F1F3", border: "#E1E1E2", ink: "#A39D95", label: "#71685E", dot: "#A39D95", short: "Skip" },
   pr: { row: "#F8F1E4", field: "#F5E6C6", border: "#E9D09E", ink: "#8A6318", label: "#8A6318", dot: "#C8912B", short: "PR" },
   drop: { row: "#FAF2F3", field: "#F5E7E9", border: "#ECD1D4", ink: "#8D565D", label: "#8D565D", dot: "#C97B84", short: "DS" },
 };

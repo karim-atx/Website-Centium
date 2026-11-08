@@ -140,7 +140,7 @@ export const DataSharingWeb: React.FC<{ professionalId: string; onRequestsChange
                   <span className="flex items-center" style={{ flex: 1, minWidth: 0, gap: 6, fontSize: 15, fontWeight: 500, color: "#241F1B" }}>
                     {name}
                     {savedKey === `${professionalId}:${category}` && (
-                      <span className="inline-flex items-center" style={{ gap: 2, fontSize: 13, fontWeight: 600, color: "#3F9165" }}>
+                      <span className="inline-flex items-center" style={{ gap: 2, fontSize: 13, fontWeight: 600, color: "#1D744A" }}>
                         <Check size={12} aria-hidden /> {t("Saved")}
                       </span>
                     )}
@@ -163,7 +163,7 @@ export const DataSharingWeb: React.FC<{ professionalId: string; onRequestsChange
                 {category === "allergies_dietary" && (
                   <div data-row="vaccinations" className="flex items-center" style={{ gap: 12, minHeight: 52, padding: "0 16px", borderTop: "0.5px solid rgba(36,31,27,0.06)" }}>
                     <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, color: "#241F1B" }}>{t("Vaccinations")}</span>
-                    <span style={{ fontSize: 13, color: "#8C8378" }}>{t("Not recorded in Centium yet")}</span>
+                    <span style={{ fontSize: 13, color: "#71685E" }}>{t("Not recorded in Centium yet")}</span>
                   </div>
                 )}
               </React.Fragment>
@@ -171,7 +171,7 @@ export const DataSharingWeb: React.FC<{ professionalId: string; onRequestsChange
           })}
         </div>
       ))}
-      <p className="flex items-start" style={{ margin: "4px 0 0", gap: 6, fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>
+      <p className="flex items-start" style={{ margin: "4px 0 0", gap: 6, fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
         <Info size={14} aria-hidden style={{ flex: "none", marginTop: 3 }} />
         <span>{t("These take effect straight away. Turning one on lets them see that data from that moment; turning it off stops them just as quickly.")}</span>
       </p>

@@ -5,6 +5,7 @@ import type { Catalogue } from "../core";
 // checks every t/tn/tk key in them has Arabic here or in another area file,
 // and that no English is left outside t() in their JSX.
 export const FILES: string[] = [
+  "hooks/usePwnedPassword.ts",
   "pages/onboarding/AccountTypeStep.tsx",
   "pages/onboarding/AuthStep.tsx",
   "pages/onboarding/Onboarding.tsx",
@@ -1174,6 +1175,9 @@ const auth: Catalogue = {
   "Update": "تحديث",
   "A new version of Centium is available.": "يتوفر إصدار جديد من Centium.",
   "Not now": "ليس الآن",
+  // Round K (K-PW): advice under a new password found in Pwned Passwords.
+  "This password has appeared in a known data breach. You can still use it, but a different one is safer.":
+    "ظهرت كلمة المرور هذه في تسريب بيانات معروف. يمكنك استخدامها، لكن اختيار كلمة مختلفة أكثر أمانًا.",
 };
 
 export default auth;

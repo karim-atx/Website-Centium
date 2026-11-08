@@ -544,7 +544,7 @@ const PassesWeb: React.FC<{
                 { l: t("Joined after"), v: "–" },
               ].map((b) => (
                 <div key={b.l} style={{ borderRadius: 16, background: LIST_BG, padding: 16, minHeight: 70, boxSizing: "border-box", minWidth: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                  <p style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: b.v === "–" ? "#A79E93" : INK }}>{b.v}</p>
+                  <p style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap", color: b.v === "–" ? "#776E64" : INK }}>{b.v}</p>
                   <p style={{ margin: "4px 0 0", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: MUTED, overflowWrap: "break-word" }}>{b.l}</p>
                 </div>
               ))}
@@ -707,7 +707,7 @@ const EndPopupWeb: React.FC<{
           maxLength={500}
           onChange={(e) => setReason(e.target.value)}
           placeholder={t("For your records")}
-          className="focus:outline-none focus:!border-[#AEA1DC] placeholder:text-[#8C8378] placeholder:font-medium"
+          className="focus:outline-none focus:!border-[#AEA1DC] placeholder:text-[#71685E] placeholder:font-medium"
           style={{ width: "100%", height: 44, boxSizing: "border-box", borderRadius: 14, background: "#F5F5F6", border: "1.5px solid rgba(36,31,27,0.11)", padding: "0 12px", fontSize: 15, fontWeight: 700, color: INK }}
         />
         {!online && (

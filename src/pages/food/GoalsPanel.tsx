@@ -58,7 +58,7 @@ const TITLE_LIGHT: React.CSSProperties = { margin: 0, fontSize: textPx(10.5), fo
 const GOALS_COLORS = {
   hairline: ["#E7E6E6", "rgba(238,239,242,0.08)"],
   title: ["rgb(var(--th-6d50d3))", "rgb(var(--th-b7abde))"],
-  gain: ["#3F9165", "#47956B"],
+  gain: ["#1D744A", "#47956B"],
   lose: ["#C0392B", "#CF695E"],
   fieldBorder: ["#E0DFE0", "rgba(238,239,242,0.10)"],
   stepperPill: ["rgb(var(--th-f5f4fe))", "rgb(var(--th-2b2c3a))"],

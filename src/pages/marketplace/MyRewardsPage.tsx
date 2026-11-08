@@ -185,7 +185,7 @@ const EmptyState: React.FC<{ tab: VoucherTab; web?: boolean; onBrowse: () => voi
           </svg>
         </span>
         <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{t(e.title)}</h2>
-        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#8C8378" }}>{t(e.body)}</p>
+        <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: "#71685E" }}>{t(e.body)}</p>
         <button type="button" onClick={onBrowse} className="market-focus hover:bg-[#F5F5F6]" style={{ marginTop: 6, height: 40, borderRadius: 12, border: "1px solid rgba(36,31,27,0.11)", background: "#FFFFFF", padding: "0 16px", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#5F5093", cursor: "pointer" }}>
           {t("Browse rewards")}
         </button>

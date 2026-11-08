@@ -196,7 +196,7 @@ export const TemplateEditor: React.FC<{
             type="button"
             onClick={(e) => setPickerAnchor(e.currentTarget)}
             className="hover:bg-[#F0EDF9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-            style={{ ...W.pick, color: names.length ? "#241F1B" : "#8C8378" }}
+            style={{ ...W.pick, color: names.length ? "#241F1B" : "#71685E" }}
             aria-haspopup="listbox"
           >
             <span className="truncate">{names.length ? names.join(isRtl() ? "، " : ", ") : t("Choose clients")}</span>
@@ -206,7 +206,7 @@ export const TemplateEditor: React.FC<{
       <div style={W.switchRow}>
         <span className="min-w-0">
           <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Save as template")}</span>
-          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#8C8378" }}>{t("Reuse it in other programmes")}</span>
+          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Reuse it in other programmes")}</span>
         </span>
         <Toggle checked onChange={() => undefined} disabled label={t("Save as template")} />
       </div>
@@ -236,7 +236,7 @@ export const TemplateEditor: React.FC<{
       )}
       <label className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
         <span style={routineLabel}>
-          {t("Note to client")} <span style={{ color: "#8C8378", fontWeight: 400 }}>{t("(read-only for them)")}</span>
+          {t("Note to client")} <span style={{ color: "#71685E", fontWeight: 400 }}>{t("(read-only for them)")}</span>
         </span>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} className={W.focus} style={W.note} />
       </label>

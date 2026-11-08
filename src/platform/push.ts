@@ -68,6 +68,15 @@ function storedToken(): string | null {
   }
 }
 
+/**
+ * This install's token, or null (a browser, or never registered). "Sign out
+ * of all devices" keeps this row while removing the account's others; the
+ * ordinary sign-out then removes it (unregisterNativePush).
+ */
+export function thisInstallPushToken(): string | null {
+  return storedToken();
+}
+
 function storeToken(token: string | null): void {
   try {
     if (token) localStorage.setItem(TOKEN_KEY, token);
