@@ -2,6 +2,7 @@ import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "reac
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, ChevronRight, ChevronUp, X, type LucideIcon } from "lucide-react";
 import { passwordChecks, passwordStrength } from "../../../utils/password";
+import { PWNED_ADVICE } from "../../../hooks/usePwnedPassword";
 import "./onboarding.css";
 import { MARK_LEAF_PATH } from "../../../components/icons/CentiumMark";
 import { OB, type Shape, Shapes } from "./visuals";
@@ -806,7 +807,8 @@ export const ObLeafRing: React.FC<{ size?: number }> = ({ size = 44 }) => (
 // 4px bar, two-column checks 11/14 with 14px discs. Unmet checks (not drawn):
 // a soft disc with a faint x. Rules and labels from utils/password, shared by
 // sign-up and the reset page.
-export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
+/** `breached` (Round K, K-PW): the password is in Pwned Passwords; a calm line of advice, never a block. */
+export const ObStrength: React.FC<{ password: string; breached?: boolean }> = ({ password, breached }) => {
   const { passed, label, color } = passwordStrength(password);
   return (
     <div className="ob-str" aria-live="polite">
@@ -828,6 +830,7 @@ export const ObStrength: React.FC<{ password: string }> = ({ password }) => {
           );
         })}
       </div>
+      {breached && <p className="ob-str-pwned">{t(PWNED_ADVICE)}</p>}
     </div>
   );
 };

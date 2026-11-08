@@ -1389,6 +1389,17 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   background: var(--ob-soft);
   color: var(--ob-faint);
 }
+/* Round K (K-PW): the breach advice under the checks; shown only when found. */
+.ob-str-pwned {
+  margin: 12px 0 0;
+  border-radius: 12px;
+  background: var(--ob-warn-bg);
+  color: var(--ob-warn);
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: 600;
+}
 
 /* ---- Remember me row (hasRemember) --------------------------------------------------------------- */
 .ob-remember {
