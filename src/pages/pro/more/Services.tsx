@@ -130,7 +130,7 @@ export default function Services() {
             type="button"
             onClick={() => setSheet({ plan: null })}
             className="flex items-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-            style={{ marginTop: 24, height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+            style={{ marginTop: 24, height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
           >
             <Plus size={18} strokeWidth={2} aria-hidden />
             {t("Add a service")}

@@ -199,7 +199,7 @@ export const FilterPanel: React.FC<{
           {web ? (
             <>
               <button type="button" onClick={onClear} className="tap flex-1" style={{ height: 40, borderRadius: 12, background: "#F0EDF9", color: "#5F5093", fontSize: 15, fontWeight: 600 }}>{t("Clear")}</button>
-              <button type="button" onClick={onClose} className="tap flex-1 whitespace-nowrap" style={{ height: 40, borderRadius: 12, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, fontWeight: 600 }}>{showLabel}</button>
+              <button type="button" onClick={onClose} className="tap flex-1 whitespace-nowrap" style={{ height: 40, borderRadius: 12, background: "#9A8CD6", color: "#241F1B", fontSize: 15, fontWeight: 600 }}>{showLabel}</button>
             </>
           ) : (
             <>

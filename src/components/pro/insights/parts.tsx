@@ -189,7 +189,7 @@ export const RangeTabs: React.FC<{ value: PageRange; onChange: (r: PageRange) =>
             aria-selected={on}
             onClick={() => onChange(k)}
             className="flex items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-            style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#FFFFFF" : "#5B5349" }}
+            style={{ borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "transparent", color: on ? "#241F1B" : "#5B5349" }}
           >
             {k === "today" ? t("Today") : k === "week" ? t("Week") : t("Month")}
           </button>

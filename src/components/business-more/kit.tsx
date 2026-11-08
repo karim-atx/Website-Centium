@@ -305,7 +305,7 @@ const PaneRow: React.FC<BizRowProps> = ({
     fontWeight: 600,
     whiteSpace: "nowrap",
     background: primary ? "#9A8CD6" : "#FFFFFF",
-    color: primary ? "#FFFFFF" : "#5B5349",
+    color: primary ? "#241F1B" : "#5B5349",
     border: primary ? "none" : "1px solid rgba(36,31,27,0.12)",
   });
   const body = (
@@ -334,7 +334,7 @@ const PaneRow: React.FC<BizRowProps> = ({
       {badge !== undefined && badge !== null && (
         <span
           className="inline-flex items-center justify-center shrink-0 tabular-nums"
-          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
+          style={{ minWidth: 20, height: 20, padding: "0 6px", boxSizing: "border-box", borderRadius: 999, background: "#9A8CD6", color: "#241F1B", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}
         >
           {badge}
         </span>
@@ -588,7 +588,7 @@ export const BizHero: React.FC<{
               onClick={a.onClick}
               disabled={a.disabled}
               className="flex items-center disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2"
-              style={{ height: 40, padding: "0 16px", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: a.primary ? "#9A8CD6" : "#FFFFFF", color: a.primary ? "#FFFFFF" : "#241F1B", border: a.primary ? "none" : "1px solid rgba(36,31,27,0.12)" }}
+              style={{ height: 40, padding: "0 16px", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: a.primary ? "#9A8CD6" : "#FFFFFF", color: a.primary ? "#241F1B" : "#241F1B", border: a.primary ? "none" : "1px solid rgba(36,31,27,0.12)" }}
             >
               <a.icon size={18} strokeWidth={2} aria-hidden />
               {a.label}

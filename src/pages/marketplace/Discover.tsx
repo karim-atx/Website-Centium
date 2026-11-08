@@ -485,11 +485,11 @@ function DayStrip({ days, chosen, withClasses, onPick }: { days: string[]; chose
               aria-label={has ? formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) : t("{date}, no classes", { date: formatShortDate(date, { weekday: "long", month: "long", day: "numeric" }) })}
               onClick={() => onPick(d)}
               className="market-focus flex flex-col items-center justify-center"
-              style={{ height: 56, borderRadius: 12, border: 0, background: on ? "#8F7FCB" : "#F5F5F6", color: on ? "#FFFFFF" : "#241F1B", font: "inherit", cursor: "pointer" }}
+              style={{ height: 56, borderRadius: 12, border: 0, background: on ? "#8F7FCB" : "#F5F5F6", color: "#241F1B", font: "inherit", cursor: "pointer" }}
             >
-              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 500, color: on ? "#FFFFFF" : "#5B5349" }}>{formatShortDate(date, { weekday: "short" })}</span>
+              <span style={{ fontSize: 13, lineHeight: "18px", fontWeight: 500, color: on ? "#241F1B" : "#5B5349" }}>{formatShortDate(date, { weekday: "short" })}</span>
               <span style={{ fontSize: 17, lineHeight: "22px", fontWeight: 700 }}>{date.getDate()}</span>
-              <span aria-hidden style={{ marginTop: 2, width: 4, height: 4, borderRadius: 999, background: has ? (on ? "#FFFFFF" : "#AEA1DC") : "transparent" }} />
+              <span aria-hidden style={{ marginTop: 2, width: 4, height: 4, borderRadius: 999, background: has ? (on ? "#241F1B" : "#AEA1DC") : "transparent" }} />
             </button>
           );
         })}

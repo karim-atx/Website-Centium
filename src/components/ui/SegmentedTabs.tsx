@@ -84,6 +84,9 @@ export const SegmentedTabs: React.FC<{
    * Light mode is unaffected.
    */
   activeFillDark?: string;
+  /** The active tab's DARK ink, paired with `activeFillDark` when white
+   *  does not reach 4.5:1 on it (Round K ET: #0D0B1A on the literal #79A8A1). */
+  activeInkDark?: string;
   /**
    * The idle tabs' DARK fill, when a frame draws other than the variant's
    * (MO1.2 #13 / MO1.3 #11: the category chips sit transparent on the rail
@@ -115,6 +118,7 @@ export const SegmentedTabs: React.FC<{
   darkTone = "default",
   variant = "default",
   activeFillDark,
+  activeInkDark,
   idleFillDark,
   iconGap,
   lineHeight,
@@ -152,7 +156,9 @@ export const SegmentedTabs: React.FC<{
   // contrast; dark the primary fill with #0D0B1A), or the teal secondary.
   const activeFill =
     dark && activeFillDark ? activeFillDark : teal ? "rgb(var(--c-fill-prep))" : "rgb(var(--c-seg-active))";
-  const activeInk = teal ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
+  // Round K ET (Karim 2026-11-08): the fills stay, the ink is the shared on-fill
+  // ink (#241F1B in Centium light). Teal in dark keeps white on #4F7F78 (4.53:1).
+  const activeInk = dark && activeInkDark ? activeInkDark : teal && dark ? "#FFFFFF" : "rgb(var(--c-on-primary-fill))";
   const idleFill = dark && idleFillDark
     ? idleFillDark
     : teal

@@ -287,6 +287,7 @@ function ClientAndBusinessMessages() {
             onChange={(k) => setFilter(k as Filter)}
             light={tealLight}
             activeFillDark={tealDark}
+            activeInkDark={tealDark === "#79A8A1" ? "#0D0B1A" : undefined}
           />
         )}
     </div>

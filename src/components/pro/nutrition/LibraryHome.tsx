@@ -270,7 +270,7 @@ export const LibraryHome: React.FC<{
                 type="button"
                 onClick={() => setCreating(true)}
                 className="flex items-center justify-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-                style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#FFFFFF", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+                style={{ marginTop: 28, width: "100%", maxWidth: 360, height: 44, borderRadius: 16, background: "#9A8CD6", color: "#241F1B", gap: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
               >
                 <Plus size={20} strokeWidth={2} aria-hidden />
                 {t("New meal plan")}

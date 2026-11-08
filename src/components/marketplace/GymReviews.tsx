@@ -209,7 +209,7 @@ export function GymReviews({
         onClick={() => setWriteOpen(true)}
         disabled={writeOff}
         className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-        style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#FFFFFF", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: writeOff ? 0.5 : 1, cursor: writeOff ? "default" : "pointer" }}
+        style={{ height: 40, padding: "0 16px", borderRadius: 12, border: 0, background: "#9A8CD6", color: "#241F1B", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, opacity: writeOff ? 0.5 : 1, cursor: writeOff ? "default" : "pointer" }}
       >
         <Pencil size={18} strokeWidth={1.75} aria-hidden />
         {writeLabel}

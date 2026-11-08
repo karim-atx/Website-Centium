@@ -71,7 +71,13 @@
      before v5.1 (decision 15). Dark mode keeps the lighter primary with
      near-black ink (6.6-8.3:1). */
   --c-primary-fill: 174 161 220;
-  --c-on-primary-fill: 255 255 255;
+  /* THE SHARED ON-FILL INK (Round K ET, Karim 2026-11-08): the lavender and
+     teal fills stay as drawn and their text and glyphs take #241F1B, which
+     reaches 4.91:1 or better on every one of them (#9284C4 lowest; 6.4:1 on
+     segmented #A79AD5, 6.9:1 on #AEA1DC), where white reached 1.9-3.3:1.
+     The other colour themes set their own (white on their AA fills), dark
+     keeps #0D0B1A and High contrast keeps white on #5B48B8. */
+  --c-on-primary-fill: 36 31 27;
   /* Filled controls the board draws in their own lavender rather than
      primary.fill, kept as drawn in light mode (decision 14); dark mode uses
      primary-fill for all four. Selected sheet chips and menu rows #A092E0,

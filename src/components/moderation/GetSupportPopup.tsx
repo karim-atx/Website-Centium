@@ -80,7 +80,7 @@ export const GetSupportPopup: React.FC<{
               </button>
             )}
           </div>
-          <button type="button" onClick={call.onClick} className="w-full flex items-center justify-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]" style={{ height: 44, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+          <button type="button" onClick={call.onClick} className="w-full flex items-center justify-center hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]" style={{ height: 44, borderRadius: 14, background: "#9A8CD6", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
             {call.label}
           </button>
           <div className="flex flex-col" style={{ gap: 8 }}>

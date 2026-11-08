@@ -28,7 +28,11 @@ export const MARKET_LIGHT = {
   accent: "#7159CA",
   pdark: "#715EA7",
   fill: "#AEA1DC",
-  onfill: "#FFFFFF",
+  // Ink on the lavender and teal fills: #241F1B (6.4:1 or better on every
+  // light fill; Round K ET, Karim 2026-11-08). onhigh: the ink on the red and
+  // green fills, which keep white.
+  onfill: "#241F1B",
+  onhigh: "#FFFFFF",
   segtrack: "#F3F3FD",
   segactive: "#A79AD5",
   segidle: "#F5F4FE",
@@ -83,6 +87,7 @@ export const MARKET_DARK: MarketPalette = {
   pdark: "#C3B3FB",
   fill: "#A991FE",
   onfill: "#0D0B1A",
+  onhigh: "#0D0B1A",
   segtrack: "rgb(36 39 48)",
   segactive: "#A991FE",
   segidle: "rgb(48 49 65)",
@@ -126,6 +131,9 @@ export const MARKET_DARK: MarketPalette = {
  */
 export const MARKET_HC_LIGHT: MarketPalette = {
   ...MARKET_LIGHT,
+  // High contrast keeps white on its #5B48B8 fills.
+  onfill: "#FFFFFF",
+  onhigh: "#FFFFFF",
   ink: "#111111",
   ink2: "#111111",
   faint: "#111111",

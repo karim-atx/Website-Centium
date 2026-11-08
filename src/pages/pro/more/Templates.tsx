@@ -330,7 +330,7 @@ export default function Templates() {
             <h1 style={{ margin: 0, fontSize: 28, lineHeight: "36px", fontWeight: 700, letterSpacing: "-0.03em", color: "#241F1B" }}>{t("Reuse what works")}</h1>
           </div>
           {canAdd && (
-            <button type="button" onClick={newTemplate} className="flex items-center shrink-0 hover:opacity-90" style={{ height: 40, padding: "0 18px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: "#9A8CD6", color: "#FFFFFF", whiteSpace: "nowrap" }}>
+            <button type="button" onClick={newTemplate} className="flex items-center shrink-0 hover:opacity-90" style={{ height: 40, padding: "0 18px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: "#9A8CD6", color: "#241F1B", whiteSpace: "nowrap" }}>
               <Plus size={18} strokeWidth={2} aria-hidden />
               {t("New template")}
             </button>

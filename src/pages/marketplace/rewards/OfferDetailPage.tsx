@@ -340,7 +340,7 @@ export default function OfferDetailPage({ offerId: drawnUnder }: { offerId?: str
                     aria-disabled={gate.locked || undefined}
                     aria-describedby={gate.line ? "offer-locked-line" : undefined}
                     className="market-focus"
-                    style={{ height: 44, borderRadius: 12, border: 0, background: "#AEA1DC", color: "#FFFFFF", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, opacity: gate.locked ? 0.4 : 1, cursor: gate.locked ? "default" : "pointer" }}
+                    style={{ height: 44, borderRadius: 12, border: 0, background: "#AEA1DC", color: "#241F1B", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 700, opacity: gate.locked ? 0.4 : 1, cursor: gate.locked ? "default" : "pointer" }}
                   >
                     {tn(o.pointsCost, "Redeem for {n} point", "Redeem for {n} points", { n: formatPoints(o.pointsCost) })}
                   </button>

@@ -431,7 +431,7 @@ export const ProTrendRing: React.FC<TrendRingProps> = (p) => {
                   fontWeight: 700,
                   whiteSpace: "nowrap",
                   background: on ? (dark ? INK.fill : "#A79AD5") : dark ? "#2B2C3A" : "#F5F4FE",
-                  color: on ? (dark ? INK.onFill : "#FFFFFF") : dark ? "#B7ABDE" : "#6D50D3",
+                  color: on ? (dark ? INK.onFill : "#241F1B") : dark ? "#B7ABDE" : "#6D50D3",
                 }}
               >
                 {r === "today" ? t("Today") : r === "week" ? t("Week") : t("Month")}

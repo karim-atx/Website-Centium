@@ -374,7 +374,7 @@ function InvoicePage() {
                 onClick={() => void save()}
                 disabled={saving}
                 className="flex items-center justify-center hover:bg-[#8E7FD0] disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-                style={{ height: 44, minWidth: 160, padding: "0 24px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
+                style={{ height: 44, minWidth: 160, padding: "0 24px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600 }}
               >
                 <Check size={18} aria-hidden />
                 {saving ? t("Saving…") : t("Save")}

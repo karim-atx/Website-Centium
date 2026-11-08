@@ -534,7 +534,7 @@ export default function Clients() {
             aria-selected={on}
             onClick={() => setStatus(key)}
             className="flex items-center justify-center whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#FFFFFF" : "#6D50D3" }}
+            style={{ flex: webRail ? "none" : "1 1 auto", height: 36, boxSizing: "border-box", padding: "0 16px", gap: 6, borderRadius: 10, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: on ? "#A79AD5" : "#F5F4FE", color: on ? "#241F1B" : "#6D50D3" }}
           >
             {t(STATUS_LABEL[key])}
             <span style={{ fontSize: 13, fontWeight: 800, opacity: 0.8, fontVariantNumeric: "tabular-nums" }}>{counts[key]}</span>

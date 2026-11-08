@@ -686,7 +686,7 @@ export default function ProfessionalDetail({ preview }: { preview?: Professional
                 <button type="button" onClick={pw.onHire} className="flex items-center hover:bg-[#E7E2F7]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#F0EDF9", color: "#5F5093", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
                   {t("Hire {name}", { name: first })}
                 </button>
-                <button type="button" onClick={pw.onBook} className="flex items-center hover:bg-[#8E7FD0]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
+                <button type="button" onClick={pw.onBook} className="flex items-center hover:bg-[#8E7FD0]" style={{ height: 44, padding: "0 20px", boxSizing: "border-box", borderRadius: 14, background: "#9A8CD6", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 600 }}>
                   {t("Book a session")}
                 </button>
               </div>

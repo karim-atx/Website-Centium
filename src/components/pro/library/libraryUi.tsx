@@ -152,7 +152,7 @@ export const Fab: React.FC<{ label: string; onClick: () => void; icon: LucideIco
       type="button"
       onClick={onClick}
       className="inline-flex items-center hover:opacity-90"
-      style={{ height: 44, padding: "0 20px", marginTop: 28, borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#FFFFFF" }}
+      style={{ height: 44, padding: "0 20px", marginTop: 28, borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#241F1B" }}
     >
       <Icon size={18} strokeWidth={2} aria-hidden />
       {label}

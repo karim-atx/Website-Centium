@@ -582,7 +582,7 @@ const WebBookingDetail: React.FC<{
               type="button"
               onClick={a.onClick}
               className="market-focus"
-              style={{ height: 40, padding: "0 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer", background: a.kind === "p" ? "#9A8CD6" : a.kind === "d" ? "#FFFFFF" : "#F5F5F6", color: a.kind === "p" ? "#FFFFFF" : a.kind === "d" ? "#C0392B" : "#241F1B", border: a.kind === "d" ? "1px solid #F3C9C4" : "none" }}
+              style={{ height: 40, padding: "0 16px", borderRadius: 12, display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", font: "inherit", fontSize: 15, lineHeight: "24px", fontWeight: 600, cursor: "pointer", background: a.kind === "p" ? "#9A8CD6" : a.kind === "d" ? "#FFFFFF" : "#F5F5F6", color: a.kind === "p" ? "#241F1B" : a.kind === "d" ? "#C0392B" : "#241F1B", border: a.kind === "d" ? "1px solid #F3C9C4" : "none" }}
             >
               {a.icon}
               {a.label}
@@ -747,7 +747,7 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
             <button type="button" onClick={onClose} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
               {t("Cancel")}
             </button>
-            <button type="button" onClick={() => setStep(2)} className="market-focus" style={btn(m.high, m.onfill)}>
+            <button type="button" onClick={() => setStep(2)} className="market-focus" style={btn(m.high, m.onhigh)}>
               {t("Continue")}
             </button>
           </div>
@@ -767,7 +767,7 @@ const EndMembershipDialog: React.FC<{ membership: GymMembership | null; onClose:
             <button type="button" onClick={() => setStep(1)} disabled={busy} className="market-focus" style={btn(m.cancelbg, m.cancelink)}>
               {t("Back")}
             </button>
-            <button type="button" onClick={() => void end()} disabled={busy} className="market-focus" style={{ ...btn(m.high, m.onfill), opacity: busy ? 0.6 : 1 }}>
+            <button type="button" onClick={() => void end()} disabled={busy} className="market-focus" style={{ ...btn(m.high, m.onhigh), opacity: busy ? 0.6 : 1 }}>
               {busy ? t("Ending…") : t("End membership")}
             </button>
           </div>

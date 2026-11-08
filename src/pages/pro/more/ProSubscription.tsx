@@ -110,7 +110,7 @@ function TierCard({ tier, rank, yearly, current, recommended }: { tier: Subscrip
       }}
       aria-label={current ? t("{plan}, your current plan", { plan: tier.name }) : recommended ? t("{plan}, recommended for you", { plan: tier.name }) : tier.name}
     >
-      {current ? badge(t("Current"), INK.pr, "#FFFFFF") : recommended ? badge(t("Recommended for you"), "#C8BFE9", "#241F1B") : null}
+      {current ? badge(t("Current"), INK.pr, INK.onFill) : recommended ? badge(t("Recommended for you"), "#C8BFE9", "#241F1B") : null}
       <div className="flex items-center" style={{ gap: 12, marginTop: 4 }}>
         <span className="flex items-center justify-center" style={{ width: 48, height: 48, borderRadius: 15, background: black ? "rgba(174,161,220,0.22)" : INK.prPale }}>
           <TierGlyph n={rank} color={gl} size={36} />
@@ -325,7 +325,7 @@ export default function ProSubscription() {
                     <span className="flex items-center flex-wrap" style={{ gap: 8 }}>
                       <span style={{ fontSize: 15, lineHeight: "24px", fontWeight: 700, color: "#241F1B" }}>{tier.name}</span>
                       {cur && (
-                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#9A8CD6", color: "#FFFFFF", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                        <span className="inline-flex items-center" style={{ height: 20, padding: "0 8px", borderRadius: 999, background: "#9A8CD6", color: "#241F1B", fontSize: 11, lineHeight: "16px", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
                           {t("Current")}
                         </span>
                       )}
@@ -361,7 +361,7 @@ export default function ProSubscription() {
                 type="button"
                 onClick={ask}
                 className="tap inline-flex items-center"
-                style={{ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#FFFFFF" }}
+                style={{ alignSelf: "flex-start", height: 44, padding: "0 20px", borderRadius: 14, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", background: "#9A8CD6", color: "#241F1B" }}
               >
                 <Mail size={18} strokeWidth={2} aria-hidden />
                 {t("Ask to upgrade to {plan}", { plan: target.name })}
@@ -496,7 +496,7 @@ export default function ProSubscription() {
             >
               {p === "monthly" ? t("Monthly") : t("Yearly")}
               {p === "yearly" && bestSave > 0 && (
-                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgba(255,255,255,0.22)" : "rgb(var(--c-teal))", color: "#FFFFFF" }}>
+                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgba(255,255,255,0.22)" : "rgb(var(--c-teal))", color: INK.onFill }}>
                   {`−${bestSave}%`}
                 </span>
               )}

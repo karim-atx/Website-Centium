@@ -188,60 +188,87 @@ colour was found on):
 - the gym's unavailable payment methods ("Soon") and the locked "Always on for safety"
   notification row (rows at 50%).
 
-**Flagged, not forced: white text on lavender and teal fills.** Reaching 4.5:1 means darkening
-the fill itself, which repaints the brand's filled controls: the biggest visible change in the
-set. The minimal fills, if wanted (High contrast already uses #5B48B8 for all of them):
+**White text on the lavender and teal fills: dark ink (Karim's decision, 2026-11-08).** The fills
+stay exactly as drawn; the text on them (and the glyphs, dots and progress marks that share its
+colour) takes #241F1B, which passes on every one of them:
 
-| Fill (white text on it) | Nodes (light, EN) | Ratio | Minimal fill for 4.55:1 | ΔL |
-| --- | --- | --- | --- | --- |
-| `--c-seg-active` #A79AD5 (segmented tabs, active) | 96 | 2.55 | #7A6DA5 | −0.149 |
-| `--c-primary-fill` #AEA1DC (primary buttons, onboarding) | 59 | 2.35 | #7A6DA5 | −0.172 |
-| `--c-fill-pinned` #9A8CD6 (pinned CTA) | 11 | 2.96 | #7A6BB2 | −0.109 |
-| Plan badge #C0B6E4 (Subscription, Premium passes) | 6 | 1.90 | #7A709A | −0.230 |
-| `--c-fill-cta` #A198DF (Food sheets) | 4 | 2.60 | #776DB1 | −0.142 |
-| Food quick-add meal tiles #BEB4E6 / #B1A5DF / #B1A5E0 / #9284C4 | 4 | 1.93 to 3.32 | #796F9E to #7B6CAB | −0.08 to −0.23 |
-| Ticket strip, active step #7D67D9 (pro profile About tab) | 3 | 4.36 | #7A64D5 | −0.012 (one line: `darkenForWhite` in light too) |
-| Meal prep teal #79A8A1 (Messages tab) | 1 | 2.65 | #507E78 | −0.138 |
-| Dark: plan badges #BCA9FE / #A991FE | 12 | 2.04 / 2.57 | near-black ink, as the other dark fills | — |
+| Fill | Nodes (light, EN) | White | #241F1B |
+| --- | --- | --- | --- |
+| `--c-seg-active` #A79AD5 (segmented tabs, active) | 96 | 2.55 | 6.39 |
+| `--c-primary-fill` #AEA1DC (primary buttons, onboarding, "Current" badge) | 59 | 2.35 | 6.94 |
+| `--c-fill-pinned` #9A8CD6 (pinned CTA, pro buttons) | 11 | 2.96 | 5.51 |
+| Plan badge #C0B6E4 (white 22% over the fill) / teal #A2C8C2 | 6 | 1.90 / 1.81 | 8.59 / 9.00 |
+| `--c-fill-cta` #A198DF (Food sheets, Professionals tabs) | 4 | 2.60 | 6.27 |
+| Food quick-add tiles #BEB4E6 / #B1A5DF / #B1A5E0 / #9284C4 | 4 | 1.93 to 3.32 | 8.44 / 7.24 / 7.25 / 4.91 |
+| Meal prep teal #79A8A1 (teal sub-tabs) | 1 | 2.65 | 6.16 |
+| Also: #A092E0 chips 5.97, #A299DE 6.33, #AB9ED7 6.69, Discover's selected day #8F7FCB 4.71, the #8E7FD0 hover 4.74 | | | |
+
+How:
+- **One shared variable:** `--c-on-primary-fill` (the ink every filled control already reads,
+  `text-on-primary-fill`, the onboarding `--ob-on-fill`, `INK.onFill`) is #241F1B in light. Each
+  other colour theme sets its own (white on its AA fills), dark keeps #0D0B1A, and High contrast
+  keeps white on its #5B48B8 fills (`v6Tokens.test.ts` checks both).
+- **The marketplace palette:** `onfill` #241F1B in light; a new `onhigh` keeps white on the red
+  and green fills (Cancel, End, the destructive confirm), and High contrast keeps `onfill` white.
+- **Where a control painted white itself:** `SegmentedTabs` (teal variant), the Food quick-add
+  tiles (label and icon), the plan badges, Professionals' tabs, the pro Home range tabs and pro
+  Messages tabs, the booking sheet's selected time, MembershipPass, the client share chips, and
+  21 buttons drawn in a literal lavender (a scripted swap of `color: "#FFFFFF"` only where the
+  same style object paints one of the lavender/teal fills; phone files only). Icons inside follow
+  through `currentColor`; the ones given their own white (the Food tiles, Discover's day dot) were
+  switched with them.
+- **Dark:** the same pattern failed in three places, now with #0D0B1A as the other dark fills: the
+  plan badges (#BCA9FE / #A991FE, 9.49 / 7.56:1) and the Messages teal tab, which keeps the literal
+  #79A8A1 in dark (new `activeInkDark`, 7.34:1).
+- **Not dark ink:** the professional profile's About tab #7D67D9, where #241F1B is only 3.74:1. It
+  keeps white, and its fill moves to #7964D2 (4.36 → 4.60:1, ΔL −0.013) through the strip's own
+  `darkenForWhite`, now applied in light too at 4.55:1.
+- **Left as it is:** High contrast's "−n%" plan badge (white 22% over #5B48B8 = #7F70C8): white
+  4.15:1, #241F1B 3.93:1. Neither passes; it's High contrast's own fill, so it isn't changed.
 
 Also flagged: in dark, today's letter on the Habits band (#9F91DB on #7768B1, 1.61:1) needs
 near-white to pass, which loses the "today" accent.
 
-**axe re-run** (same 233 routes, same accounts, same harness; builds of `73967052` and of this
-change):
+**axe re-run** (same 233 routes, same accounts, same harness). Columns: the PR head before the
+contrast work (`73967052`), the token pass (`521a6681`), and the dark-ink pass (this change):
 
-| Mode | Routes | color-contrast before | after | needs review before → after |
-| --- | --- | --- | --- | --- |
-| English, light | 233 | 2901 | 225 | 339 → 294 |
-| English, dark | 233 | 73 | 55 | 265 → 265 |
-| Arabic, light | 59 (every 4th; 22 in RTL, see below) | 495 | 28 | 39 → 28 |
-| Arabic, dark | 59 | 0 | 0 | 19 → 19 |
-| High contrast, light | 39 (every 6th) | 11 | 6 | 37 → 36 |
-| High contrast, dark | 39 | 8 | 7 | 36 → 36 |
+| Mode | Routes | `73967052` | `521a6681` | now | needs review (now) |
+| --- | --- | --- | --- | --- | --- |
+| English, light | 233 | 2901 | 225 | 41 | 289 |
+| English, dark | 233 | 73 | 55 | 42 | 265 |
+| Arabic, light | 59 (every 4th; 22 in RTL, see below) | 495 | 28 | 0 | 26 |
+| Arabic, dark | 59 | 0 | 0 | 0 | 19 |
+| High contrast, light | 39 (every 6th) | 11 | 6 | 5 | 36 |
+| High contrast, dark | 39 | 8 | 7 | 5 | 36 |
 
 Every other rule stays at 0 in every mode. (The 2907 above was measured on the first code
-commit's build; the PR head before this change measures 2901.)
+commit's build; the PR head before the contrast work measures 2901.)
 
-**What remains, light (225):** 184 white-on-fill (flagged above), 33 inactive (exempt), and 8 on
-the Water, Blood pressure and Weight heroes, where axe reads the hero art (wave, chart bars) as
-the background; on screen the ink sits on the pale metric tint (checked visually). **Dark (55):**
-31 inactive, 13 fills, 10 hero-art reads, 1 Habits today letter. **Arabic (28):** fills only.
-**High contrast (6 / 7):** inactive rows, hero-art reads and the plan badges.
+**What remains:**
+- **Light (41):** 33 inactive (exempt: the two-factor sections at 40%, the gym's "Soon" payment
+  rows and the locked notification row), and 8 on the Water, Blood pressure and Weight heroes,
+  where axe reads the hero art (wave, chart bars) as the background; on screen the ink sits on
+  the pale metric tint (checked visually).
+- **Dark (42):** 31 inactive, 10 hero-art reads, 1 Habits today letter (flagged above).
+- **Arabic:** none.
+- **High contrast (5 / 5):** light: 3 inactive rows, 1 hero-art read, the "−n%" badge above;
+  dark: 1 inactive row, 4 hero-art reads.
 
 **Arabic:** the language is set on the device. The signed-out route and the client stay in Arabic
 (22 routes in RTL); the professional and gym accounts settle back to their saved language
 (English). The colours don't depend on the language.
 
-**Visual check (430 × 932, the PR's previous build against this one, 12 main screens, light and
-dark):** every text box's position and size is identical on all 24 captures; only colours change
-(light: 918 to 14,868 changed pixels per screen; dark: none on 8 screens, a few hundred on Workout,
-Habits and Calendar, from the dark fixes and the caps-label alpha).
+**Visual check (430 × 932, light and dark).** Token pass against `73967052`, 12 main screens:
+every text box's position and size is identical on all 24 captures; only colours change. Dark-ink
+pass against `521a6681`, 12 affected screens (Food, Workout, Water, Messages, Professionals, a gym
+page, Subscription, pro Home, pro Messages, pro Subscription, the public profile, the gym
+marketplace): again identical boxes on all 24; the changed pixels are the labels and glyphs on the
+fills, and the About tab's fill.
 
 ## Left for later, with reasons
 
-- **White text on lavender and teal fills** (184 nodes in light): flagged with the minimal fills in
-  the contrast section above, not changed. Needs Karim's call, because it repaints the filled
-  controls.
+- **Dark: today's letter on the Habits band** (1.61:1) and High contrast's "−n%" plan badge
+  (4.15:1): see the contrast section.
 - **Pixel line-heights at 200% (needs the App's `nativeTextZoom()`, Website #100):** WebView
   textZoom scales font sizes but not px line-heights (App measurement), and most text uses px line
   heights (`linePx()`). Wrapped text at 200% will draw its lines too close or overlapping. The clean
@@ -262,4 +289,4 @@ Habits and Calendar, from the dark fixes and the caps-label alpha).
 All of the above is committed. Next steps, if continued:
 1. the three gym pages' Performance tab row at 200%;
 2. the line-height zoom variable, once Website #100 (`nativeTextZoom()`) is merged;
-3. the white-on-fill decision (contrast section), if Karim wants the fills darkened.
+3. the two contrast items under "Left for later", if Karim wants them changed.

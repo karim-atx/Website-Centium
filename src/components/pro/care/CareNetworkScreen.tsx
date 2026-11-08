@@ -360,7 +360,7 @@ export const CareNetworkScreen: React.FC = () => {
       disabled={!!busy}
       onClick={onClick}
       className="flex items-center justify-center hover:brightness-95 disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-      style={{ height: 40, boxSizing: "border-box", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: primary ? "#9A8CD6" : "#FFFFFF", color: primary ? "#FFFFFF" : "#5F5093", border: primary ? "none" : "1.5px solid #AEA1DC" }}
+      style={{ height: 40, boxSizing: "border-box", borderRadius: 12, gap: 8, fontSize: 15, lineHeight: "24px", fontWeight: 600, background: primary ? "#9A8CD6" : "#FFFFFF", color: primary ? "#241F1B" : "#5F5093", border: primary ? "none" : "1.5px solid #AEA1DC" }}
     >
       {icon}
       {loading ? t("Saving…") : label}
@@ -503,7 +503,7 @@ export const CareNetworkScreen: React.FC = () => {
           type="button"
           onClick={() => setRefer(true)}
           className="flex items-center shrink-0 hover:bg-[#8E7FD0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]"
-          style={{ height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}
+          style={{ height: 40, boxSizing: "border-box", padding: "0 18px", gap: 8, borderRadius: 14, background: "#9A8CD6", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 600, whiteSpace: "nowrap", boxShadow: "0 10px 24px rgba(95,80,147,0.28)" }}
         >
           <Send size={18} strokeWidth={2} aria-hidden />
           {t("Refer a client")}

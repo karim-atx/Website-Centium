@@ -143,7 +143,7 @@ const FilterSheetWeb: React.FC<FilterPopupProps> = ({ open, groups, selected, on
             {count}
           </p>
         )}
-        <button type="button" onClick={onClose} className="hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ height: 44, borderRadius: 12, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, lineHeight: "24px", fontWeight: 700 }}>
+        <button type="button" onClick={onClose} className="hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#7248F8]" style={{ height: 44, borderRadius: 12, background: "#AEA1DC", color: "#241F1B", fontSize: 15, lineHeight: "24px", fontWeight: 700 }}>
           {t("Done")}
         </button>
       </div>

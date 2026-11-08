@@ -378,7 +378,7 @@ export const TargetsReadOnly: React.FC<{ clientId: string; firstName?: string; s
               {GOALS.map(([k, Icon, label]) => {
                 const on = g.weightGoal === k;
                 return (
-                  <span key={k} role="radio" aria-checked={on} style={{ height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 15, fontWeight: 600, background: on ? "#AEA1DC" : INK.soft, color: on ? "#FFFFFF" : INK.chS, whiteSpace: "nowrap" }}>
+                  <span key={k} role="radio" aria-checked={on} style={{ height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, fontSize: 15, fontWeight: 600, background: on ? "#AEA1DC" : INK.soft, color: on ? "#241F1B" : INK.chS, whiteSpace: "nowrap" }}>
                     <Icon size={13} strokeWidth={2.2} aria-hidden />
                     {label}
                   </span>

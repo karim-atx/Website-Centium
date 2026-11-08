@@ -322,7 +322,7 @@ export default function Professionals() {
           }}
           light={{
             activeFill: hc ? "rgb(var(--c-seg-active))" : "rgb(var(--th-a198df))",
-            activeInk: "#FFFFFF",
+            activeInk: "rgb(var(--c-on-primary-fill))",
             idleFill: "transparent",
             idleInk: "rgb(var(--c-charcoal-soft))",
           }}
