@@ -228,15 +228,41 @@ export function forumAge(iso: string, now = Date.now()): string {
 }
 
 /**
- * Round K (K-DEL), Karim 2026-11-08: a deleted account's posts and comments are kept,
- * anonymised, and show "Deleted member". Erasure sets author_id to null
- * (20261014020000), and forum_label_for answers this fixed English label for a null
- * author (20261015000000). A nickname can't hold a space, so no nickname equals it.
- * This is where the forum turns it into the shown words, in the reader's language.
+ * Round K (K-DEL), Karim 2026-11-08: the ONE place a forum author's label becomes the
+ * shown words, in the reader's language. Used for forum_author_labels, my_forum_blocks
+ * and the forum inbox payloads (forum_reply, forum_comment_reply, forum_mention).
+ *
+ * Database 20261226590000 sends a key in its OWN column, label_key, with label null:
+ *   deleted_member  the author erased their account  -> "Deleted member"
+ *   member          there is no name to show         -> "Member"
+ * An unknown key says "Member". The key is never read from label: a nickname may be
+ * any [A-Za-z0-9_]{3,20}, so "deleted_member" and "member" are nicknames people can pick.
+ *
+ * Before that migration the server sent English in label and no label_key at all. Only
+ * when label_key is ABSENT (undefined), "Deleted account" (a null author; no nickname
+ * holds a space) and "Member" (no nickname or first name) are read as those two.
+ * The old "Member" was ambiguous: a nickname spelled Member gave the same label, so
+ * such a member reads «عضو» in Arabic on old data, as the migration's own conversion
+ * of stored copies does. When label_key is present (even null), label is shown as typed.
  */
-export const DELETED_AUTHOR_LABEL = "Deleted account";
-export function shownAuthorLabel(label: string): string {
-  return label === DELETED_AUTHOR_LABEL ? t("Deleted member") : label;
+const LABEL_KEYS: ReadonlyMap<string, string> = new Map([
+  ["deleted_member", tk("Deleted member")],
+  ["member", tk("Member")],
+]);
+const LEGACY_LABELS: ReadonlyMap<string, string> = new Map([
+  ["Deleted account", tk("Deleted member")],
+  ["Member", tk("Member")],
+]);
+export function shownAuthorLabel(label: string | null | undefined, labelKey?: string | null): string {
+  if (typeof labelKey === "string" && labelKey !== "") return t(LABEL_KEYS.get(labelKey) ?? "Member");
+  if (typeof label === "string" && label.trim() !== "") {
+    if (labelKey === undefined) {
+      const legacy = LEGACY_LABELS.get(label);
+      if (legacy) return t(legacy);
+    }
+    return label;
+  }
+  return t("Member");
 }
 
 /** The initial in an author circle. Never an avatar: a nickname post would otherwise show a face. */
