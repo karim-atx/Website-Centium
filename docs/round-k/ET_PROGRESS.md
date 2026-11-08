@@ -223,23 +223,36 @@ How:
 - **Not dark ink:** the professional profile's About tab #7D67D9, where #241F1B is only 3.74:1. It
   keeps white, and its fill moves to #7964D2 (4.36 → 4.60:1, ΔL −0.013) through the strip's own
   `darkenForWhite`, now applied in light too at 4.55:1.
-- **Left as it is:** High contrast's "−n%" plan badge (white 22% over #5B48B8 = #7F70C8): white
-  4.15:1, #241F1B 3.93:1. Neither passes; it's High contrast's own fill, so it isn't changed.
 
-Also flagged: in dark, today's letter on the Habits band (#9F91DB on #7768B1, 1.61:1) needs
-near-white to pass, which loses the "today" accent.
+**The last two (Karim's decision, 2026-11-08):**
+- **High contrast's "−n%" plan badge** (white 22% over #5B48B8 = #7F70C8; white 4.15:1, #241F1B
+  3.93:1). The badge is a white wash over High contrast's own #5B48B8 fill, so it stays in that
+  family: the wash thins from 22% to 17% under High contrast light (new `--on-fill-wash`), which
+  gives #7767C4 and white at 4.64:1 (ΔL −0.026, hue 289.7° → 289.1°). A literal #7969C1 would be
+  ΔL −0.022, but it would no longer follow the fill (or the other themes' High contrast fills).
+  Reusing #5B48B8 itself (no wash) would be ΔL −0.12, and the badge would vanish into the button.
+- **Dark: today's letter on the Habits band** (#9F91DB on the today column #7768B1, 1.61:1).
+  The options:
+  - lift the accent in OKLCH lightness until it passes: #F9F9FF at 4.55:1. It changes the colour
+    of one 10 px letter;
+  - an accent pill behind the letter with the on-fill ink (#0D0B1A on #A991FE, 7.56:1). It adds a
+    new filled shape to the band, stacked above the day tile that is already filled.
+
+  The lift is the smaller visible change, so that's what changed (`dark:text-[#F9F9FF]`). Today
+  stays distinct through the column's tint and the filled day tile under the letter.
 
 **axe re-run** (same 233 routes, same accounts, same harness). Columns: the PR head before the
-contrast work (`73967052`), the token pass (`521a6681`), and the dark-ink pass (this change):
+contrast work (`73967052`), the token pass (`521a6681`), the dark-ink pass (`fe9f0484`), and the
+last two items (now; re-run in the modes they touch, the other two carried over):
 
-| Mode | Routes | `73967052` | `521a6681` | now | needs review (now) |
-| --- | --- | --- | --- | --- | --- |
-| English, light | 233 | 2901 | 225 | 41 | 289 |
-| English, dark | 233 | 73 | 55 | 42 | 265 |
-| Arabic, light | 59 (every 4th; 22 in RTL, see below) | 495 | 28 | 0 | 26 |
-| Arabic, dark | 59 | 0 | 0 | 0 | 19 |
-| High contrast, light | 39 (every 6th) | 11 | 6 | 5 | 36 |
-| High contrast, dark | 39 | 8 | 7 | 5 | 36 |
+| Mode | Routes | `73967052` | `521a6681` | `fe9f0484` | now | needs review (now) |
+| --- | --- | --- | --- | --- | --- | --- |
+| English, light | 233 | 2901 | 225 | 41 | 41 | 289 |
+| English, dark | 233 | 73 | 55 | 42 | 41 | 265 |
+| Arabic, light | 59 (every 4th; 22 in RTL, see below) | 495 | 28 | 0 | 0 | 26 |
+| Arabic, dark | 59 | 0 | 0 | 0 | 0 | 19 |
+| High contrast, light | 39 (every 6th) | 11 | 6 | 5 | 4 | 36 |
+| High contrast, dark | 39 | 8 | 7 | 5 | 5 | 36 |
 
 Every other rule stays at 0 in every mode. (The 2907 above was measured on the first code
 commit's build; the PR head before the contrast work measures 2901.)
@@ -249,10 +262,12 @@ commit's build; the PR head before the contrast work measures 2901.)
   rows and the locked notification row), and 8 on the Water, Blood pressure and Weight heroes,
   where axe reads the hero art (wave, chart bars) as the background; on screen the ink sits on
   the pale metric tint (checked visually).
-- **Dark (42):** 31 inactive, 10 hero-art reads, 1 Habits today letter (flagged above).
+- **Dark (41):** 31 inactive, 10 hero-art reads.
 - **Arabic:** none.
-- **High contrast (5 / 5):** light: 3 inactive rows, 1 hero-art read, the "−n%" badge above;
-  dark: 1 inactive row, 4 hero-art reads.
+- **High contrast (4 / 5):** light: 3 inactive rows, 1 hero-art read; dark: 1 inactive row, 4
+  hero-art reads.
+
+Nothing is left that fails AA and isn't inactive or a hero-art read.
 
 **Arabic:** the language is set on the device. The signed-out route and the client stay in Arabic
 (22 routes in RTL); the professional and gym accounts settle back to their saved language
@@ -263,12 +278,12 @@ every text box's position and size is identical on all 24 captures; only colours
 pass against `521a6681`, 12 affected screens (Food, Workout, Water, Messages, Professionals, a gym
 page, Subscription, pro Home, pro Messages, pro Subscription, the public profile, the gym
 marketplace): again identical boxes on all 24; the changed pixels are the labels and glyphs on the
-fills, and the About tab's fill.
+fills, and the About tab's fill. The last two items against `fe9f0484` (Habits, Premium
+passes, Subscription; light, dark and High contrast): identical boxes; the only changes are the
+dark Habits today letter and the High contrast badge.
 
 ## Left for later, with reasons
 
-- **Dark: today's letter on the Habits band** (1.61:1) and High contrast's "−n%" plan badge
-  (4.15:1): see the contrast section.
 - **Pixel line-heights at 200% (needs the App's `nativeTextZoom()`, Website #100):** WebView
   textZoom scales font sizes but not px line-heights (App measurement), and most text uses px line
   heights (`linePx()`). Wrapped text at 200% will draw its lines too close or overlapping. The clean
@@ -288,5 +303,4 @@ fills, and the About tab's fill.
 
 All of the above is committed. Next steps, if continued:
 1. the three gym pages' Performance tab row at 200%;
-2. the line-height zoom variable, once Website #100 (`nativeTextZoom()`) is merged;
-3. the two contrast items under "Left for later", if Karim wants them changed.
+2. the line-height zoom variable, once Website #100 (`nativeTextZoom()`) is merged.

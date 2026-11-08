@@ -496,7 +496,7 @@ export default function ProSubscription() {
             >
               {p === "monthly" ? t("Monthly") : t("Yearly")}
               {p === "yearly" && bestSave > 0 && (
-                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgba(255,255,255,0.22)" : "rgb(var(--c-teal))", color: INK.onFill }}>
+                <span style={{ fontSize: textPx(10), fontWeight: 700, borderRadius: 9999, padding: "2px 6px", background: on ? "rgb(255 255 255 / var(--on-fill-wash))" : "rgb(var(--c-teal))", color: INK.onFill }}>
                   {`−${bestSave}%`}
                 </span>
               )}

@@ -464,12 +464,14 @@ export default function HabitsTab() {
                     {/* #10: 10/12 600 #8C8378 / #B8B3C7; today #7D67D9 (K8). On the
                         60% band (#CEC7EA) light mode needs darker inks for 4.5:1
                         (Round K ET): charcoal-soft (4.67:1), today #593FAD (4.57:1); dark
-                        weekdays text.primary (4.6:1 on #7163A8). */}
+                        weekdays text.primary (4.71:1 on #7163A8); dark today #F9F9FF (4.55:1 on
+                        the today column #7768B1), the accent lifted in lightness;
+                        today stays marked by the column tint and the filled day tile. */}
                     <span
                       className={clsx(
                         "text-[10px] leading-[12px] font-semibold",
                         isToday
-                          ? "text-primary-accent [html[data-accent=centium]:not(.dark):not(.high-contrast)_&]:text-[#593FAD]"
+                          ? "text-primary-accent dark:text-[#F9F9FF] [html[data-accent=centium]:not(.dark):not(.high-contrast)_&]:text-[#593FAD]"
                           : "text-charcoal-soft dark:text-charcoal"
                       )}
                     >

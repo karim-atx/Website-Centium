@@ -78,6 +78,10 @@
      The other colour themes set their own (white on their AA fills), dark
      keeps #0D0B1A and High contrast keeps white on #5B48B8. */
   --c-on-primary-fill: 36 31 27;
+  /* The white wash a small badge puts over a filled control (the plan
+     radio's "-n%"). High contrast light thins it so white keeps 4.55:1 on
+     #5B48B8 (0.22 gave #7F70C8 at 4.15:1; 0.17 gives #7767C4 at 4.64:1). */
+  --on-fill-wash: 0.22;
   /* Filled controls the board draws in their own lavender rather than
      primary.fill, kept as drawn in light mode (decision 14); dark mode uses
      primary-fill for all four. Selected sheet chips and menu rows #A092E0,
@@ -968,7 +972,7 @@ html.high-contrast {
    High contrast light darkens it to #8C6A21 (4.53:1). Used through
    --gold-pill-ink. */
 :root { --gold-pill-ink: #9A7424; }
-html.high-contrast:not(.dark) { --gold-pill-ink: #8C6A21; }
+html.high-contrast:not(.dark) { --gold-pill-ink: #8C6A21; --on-fill-wash: 0.17; }
 html.high-contrast.dark {
   --c-charcoal: 245 243 250;
   --c-charcoal-soft: 245 243 250;
