@@ -20,12 +20,15 @@ export function PassDevicesSheet({
   membershipId,
   thisDeviceId,
   onRemovedThis,
+  reread = 0,
 }: {
   open: boolean;
   onClose: () => void;
   membershipId: string;
   thisDeviceId: string | null;
   onRemovedThis: () => void;
+  /** Round K · BJ: bumped after a pass is added to Google Wallet, so the list is read again. */
+  reread?: number;
 }) {
   const online = useOnline();
   const [devices, setDevices] = useState<PassDevice[] | null>(null);
@@ -45,7 +48,7 @@ export function PassDevicesSheet({
     return () => {
       cancelled = true;
     };
-  }, [open, membershipId, tick]);
+  }, [open, membershipId, tick, reread]);
 
   const remove = async (d: PassDevice) => {
     if (busy) return;

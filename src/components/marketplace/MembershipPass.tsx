@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bluetooth, DoorOpen, KeyRound, Nfc, QrCode, User } from "lucide-react";
 import { initials } from "../professionals/typeColour";
 import { dayMonthYear, membershipTag } from "../../services/venues/venueLogic";
@@ -14,7 +14,11 @@ import { PassDevicesSheet } from "./PassDevicesSheet";
 import { EntrySharingStatus } from "./EntrySharingStatus";
 import { PASS_CODE_PERIOD_SECONDS } from "../../services/venues/passCode";
 import { entrySystemDisplay } from "../../services/venues/entrySystem";
-import { t, tk } from "../../i18n/core";
+import { getLanguage, t, tk, tx } from "../../i18n/core";
+import { platform } from "../../platform";
+import { onAppConfig, nativeFeatureOn } from "../../platform/appConfig";
+import { wallet, type WalletAvailability } from "../../platform/wallet";
+import { WALLET_ART, WALLET_BUTTON_HEIGHT, walletArtWidth, walletButton, walletOutcome, type WalletNote } from "../../platform/walletButtonModel";
 
 // The adaptive membership pass (MO1.4.2.2.2 #2, with MO1.4.2.2.4 Tap and
 // MO1.4.2.2.5 Bluetooth), shown on the confirmed screen and in the member's
@@ -28,7 +32,15 @@ import { t, tk } from "../../i18n/core";
 // (the gym's access-control SDK) are native-only: their panels are drawn as
 // the frames do, inert, with one line saying where they work. The Wallet
 // button (BR-05, Apple on iPhone, Google on Android, never both) is native too:
-// drawn, disabled.
+// drawn, disabled, in a browser and on iPhone.
+//
+// Round K · BJ (Karim 2026-11-08): in the Android app the placeholder gives
+// way to Google's official "Add to Google Wallet" button (the black
+// wallet-button SVG, en or ar, unchanged), shown only when wallet.available()
+// says Google, the wallet_passes switch is on and the pass is valid; hidden
+// otherwise (walletButtonModel). 48 tall, the artwork's own ratio. "added"
+// says so under the pass and re-reads "Your devices" (Google Wallet joins the
+// list), "cancelled" says nothing, "failed" is the one error line.
 //
 // The frame's pass number under the QR ("FLX 0417 2026") has no field in the
 // database (the pass_token is the code itself), so it isn't drawn.
@@ -118,6 +130,39 @@ export function MembershipPass({
   // AB5: the offline copy of the pass draws with the stored secret only (never issues).
   const live = usePassCode({ userId: authUserId ?? null, membershipId: membership.id, online: online && !membership.cachedAt });
   const [devicesOpen, setDevicesOpen] = useState(false);
+  // BJ: Google Wallet, asked once per pass and again when the app's config changes.
+  const [walletAvail, setWalletAvail] = useState<WalletAvailability | null>(null);
+  const [switchOn, setSwitchOn] = useState(() => nativeFeatureOn("wallet_passes"));
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [walletNote, setWalletNote] = useState<WalletNote>(null);
+  const [devicesRead, setDevicesRead] = useState(0);
+  useEffect(() => {
+    if (platform() !== "android") return;
+    let gone = false;
+    const ask = () =>
+      void wallet.available().then((a) => {
+        if (!gone) setWalletAvail(a);
+      });
+    ask();
+    const off = onAppConfig(() => {
+      setSwitchOn(nativeFeatureOn("wallet_passes"));
+      ask();
+    });
+    return () => {
+      gone = true;
+      off();
+    };
+  }, [membership.id]);
+  const addToWallet = async () => {
+    if (walletBusy) return;
+    setWalletBusy(true);
+    setWalletNote(null);
+    const result = await wallet.add(membership.id);
+    setWalletBusy(false);
+    const out = walletOutcome(result);
+    setWalletNote(out.note);
+    if (out.reloadDevices) setDevicesRead((n) => n + 1);
+  };
   const rotate = async () => {
     setRotating(true);
     const r = await rotatePassToken(membership.id);
@@ -135,6 +180,15 @@ export function MembershipPass({
   const liveOn = codeOn && !!live.value;
   const qrValue = liveOn ? live.value : qrOn ? token : null;
   const noCentium = methods.length === 0;
+  const walletShows = walletButton({
+    platform: platform(),
+    availability: walletAvail,
+    switchOn,
+    passState: membership.passState,
+    centiumEntry: !noCentium,
+    passCodeOn: codeOn,
+  });
+  const lang = getLanguage();
 
   return (
     <div className="flex flex-col items-center">
@@ -266,7 +320,7 @@ export function MembershipPass({
           )}
         </div>
       )}
-      <PassDevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} membershipId={membership.id} thisDeviceId={live.deviceId} onRemovedThis={live.renew} />      {rotateNote && (
+      <PassDevicesSheet open={devicesOpen} onClose={() => setDevicesOpen(false)} membershipId={membership.id} thisDeviceId={live.deviceId} onRemovedThis={live.renew} reread={devicesRead} />      {rotateNote && (
         <p role={rotateNote.error ? "alert" : "status"} className={`mt-1 mb-0 text-center text-[12px] font-semibold ${rotateNote.error ? "text-status-high" : "text-charcoal-faint"}`}>
           {rotateNote.text}
         </p>
@@ -293,9 +347,9 @@ export function MembershipPass({
         </p>
       )}
 
-      {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. Wallet
-          passes are native (signed pass files), so it is drawn disabled. */}
-      {!noCentium && (
+      {/* BR-05: one Wallet button, Apple on iPhone, Google elsewhere. In a
+          browser and on iPhone it is drawn disabled, as before. */}
+      {walletShows === "placeholder" && (
         <button
           type="button"
           disabled
@@ -305,6 +359,25 @@ export function MembershipPass({
         >
           {isIOS() ? t("Add to Apple Wallet") : t("Add to Google Wallet")}
         </button>
+      )}
+      {/* BJ: Google's own button, live, in the Android app only. */}
+      {walletShows === "google" && (
+        <button
+          type="button"
+          onClick={() => void addToWallet()}
+          disabled={walletBusy}
+          aria-busy={walletBusy || undefined}
+          aria-label={tx("Add to Google Wallet", "Google's button")}
+          className="tap mt-2.5 p-0 border-0 bg-transparent rounded-full"
+          style={{ height: WALLET_BUTTON_HEIGHT }}
+        >
+          <img src={WALLET_ART[lang].src} alt="" width={walletArtWidth(lang)} height={WALLET_BUTTON_HEIGHT} className="block max-w-none" style={{ height: WALLET_BUTTON_HEIGHT, width: "auto" }} draggable={false} />
+        </button>
+      )}
+      {walletShows === "google" && walletNote && (
+        <p role={walletNote.error ? "alert" : "status"} className={`mt-1 mb-0 text-center text-[12px] font-semibold ${walletNote.error ? "text-status-high" : "text-charcoal-faint"}`}>
+          {walletNote.error ? t("Couldn't add your pass to Google Wallet. Try again later.") : t("Your pass is in Google Wallet.")}
+        </p>
       )}
     </div>
   );

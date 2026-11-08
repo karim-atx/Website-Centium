@@ -356,6 +356,11 @@ const market: Catalogue = {
   "Available in the Centium phone app": "متاح في تطبيق Centium على الهاتف",
   "Add to Apple Wallet": "إضافة إلى Apple Wallet",
   "Add to Google Wallet": "إضافة إلى Google Wallet",
+  // Round K · BJ: the live Google Wallet button on Android.
+  // Its name, as Google's own Arabic artwork reads (the placeholder above keeps its words).
+  "Add to Google Wallet|Google's button": "الإضافة إلى محفظة Google",
+  "Couldn't add your pass to Google Wallet. Try again later.": "تعذّرت إضافة بطاقتك إلى Google Wallet. حاول مرة أخرى لاحقًا.",
+  "Your pass is in Google Wallet.": "أصبحت بطاقتك في Google Wallet.",
   "Membership pass QR code": "رمز QR لبطاقة العضوية",
   "Couldn't draw your pass. Close it and try again.": "تعذّر رسم بطاقتك. أغلقها وحاول مرة أخرى.",
   Invited: "مدعو",
