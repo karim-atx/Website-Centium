@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
-import { describeForumError, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
+import { describeForumError, shownAuthorLabel, type ForumAction, type ForumCategory, type ReportReasonKey } from "./rules";
 import { contactRefusal } from "../moderation/text";
 import { t, tk } from "../../i18n/core";
 
@@ -78,7 +78,10 @@ export interface ForumReply {
 
 /** The label a post shows when the resolver gave no row (a deleted or unknown author). */
 export const UNKNOWN_AUTHOR: Author = {
-  label: "Member",
+  // "Member" in the reader's language, read when shown (K-DEL).
+  get label() {
+    return t("Member");
+  },
   isProfessional: false,
   isVerified: false,
   isMine: false,
@@ -252,16 +255,19 @@ export async function fetchAuthors(threadIds: string[], replyIds: string[]): Pro
   const out = new Map<string, Author>();
   if (threadIds.length === 0 && replyIds.length === 0) return out;
   const { data } = await supabase.rpc("forum_author_labels", { p_thread_ids: threadIds, p_reply_ids: replyIds });
-  for (const r of (data ?? []) as {
+  // label_key (Database 20261226590000) is newer than database.types.ts; absent from an older server.
+  for (const r of (data ?? []) as unknown as {
     post_id: string;
-    label: string;
+    label: string | null;
+    label_key?: string | null;
     is_professional: boolean;
     is_verified: boolean;
     is_mine: boolean;
     professional_id: string | null;
   }[]) {
     out.set(r.post_id, {
-      label: r.label,
+      // "Deleted member" / "Member" from label_key, in the reader's language (K-DEL).
+      label: shownAuthorLabel(r.label, r.label_key),
       isProfessional: r.is_professional,
       isVerified: r.is_verified,
       isMine: r.is_mine,
@@ -434,9 +440,10 @@ export async function fetchMyForumBlocks(): Promise<Result<ForumBlock[]>> {
   if (error) return fail(error, "read");
   return {
     ok: true,
-    value: ((data ?? []) as { block_ref: string; label: string; blocked_at: string }[]).map((b) => ({
+    // label_key (Database 20261226590000) is newer than database.types.ts; absent from an older server.
+    value: ((data ?? []) as unknown as { block_ref: string; label: string | null; label_key?: string | null; blocked_at: string }[]).map((b) => ({
       ref: b.block_ref,
-      label: b.label,
+      label: shownAuthorLabel(b.label, b.label_key),
       blockedAt: b.blocked_at,
     })),
   };

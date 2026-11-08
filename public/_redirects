@@ -22,11 +22,15 @@
 /legal/privacy/       /legal/privacy  301
 /legal/terms/         /legal/terms    301
 /legal/community-guidelines/ /legal/community-guidelines 301
+/delete-account/     /delete-account 301
 /contact              /             200
 /legal                /             200
 /legal/privacy        /             200
 /legal/terms          /             200
 /legal/community-guidelines /       200
+# Round K (K-DEL): Google Play's account-deletion page (its URL is in Play's
+# Data safety form, so it never moves).
+/delete-account       /             200
 
 # The Refund and Cancellation Policy is Legal section 04 (landing update,
 # C14): its old address, with or without the trailing slash, answers 301 to

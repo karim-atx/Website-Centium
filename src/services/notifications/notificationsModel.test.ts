@@ -584,6 +584,23 @@ test("Round G1: the pass notices are asked for only with the Premium switch on",
   assert.equal(clientKinds(false), clientKinds(false), "the same array each time, so effects don't re-run");
 });
 
+test("Round K (K-DEL): forum notices say the label_key in the reader's words, and an older payload's English", () => {
+  const thread = "6f1c2a4e-1b2c-4d3e-8f90-0123456789ab";
+  const fill = (kind: string, payload: Record<string, unknown>) => ({ ...CLIENT_COPY[kind], ...CLIENT_FILLS[kind]!(payload) });
+  const base = { thread_id: thread, title: "Morning runs" };
+  // Database 20261226590000: label null, the key beside it.
+  assert.equal(fill("forum_reply", { ...base, label: null, label_key: "deleted_member" }).title, "Deleted member commented on “Morning runs”");
+  assert.equal(fill("forum_comment_reply", { ...base, label: null, label_key: "member" }).title, "Member replied to your comment on “Morning runs”");
+  assert.equal(fill("forum_mention", { ...base, label: null, label_key: "something_new" }).title, "Member mentioned you in “Morning runs”");
+  // A nickname that spells a key, or an old English label, stays as typed once label_key is present.
+  assert.equal(fill("forum_reply", { ...base, label: "deleted_member", label_key: null }).title, "deleted_member commented on “Morning runs”");
+  assert.equal(fill("forum_reply", { ...base, label: "Member", label_key: null }).title, "Member commented on “Morning runs”");
+  // An older payload (no label_key at all): the English it carried.
+  assert.equal(fill("forum_reply", { ...base, label: "Deleted account" }).title, "Deleted member commented on “Morning runs”");
+  // Neither: the line without a name, as before.
+  assert.equal(fill("forum_reply", { ...base, label: null, label_key: null }).title, "New comment on “Morning runs”");
+});
+
 test("Round I · FD: the forum notices name the comment's label, the post and its count, and open the post", () => {
   const thread = "6f1c2a4e-1b2c-4d3e-8f90-0123456789ab";
   const fill = (kind: string, payload: Record<string, unknown>) => {
