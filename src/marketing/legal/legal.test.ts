@@ -22,9 +22,12 @@ describe("legal text, word for word", () => {
     // Cancellation Policy." (the policy's own page), version 2026-10-31.
     // Round F (Karim, A11 and A12): the language line, Groq among the
     // processors and the food search sources (the lawyer confirms them).
+    // Round K (Karim, 2026-11-08): the privacy policy corrections for store
+    // readiness (design-handover/round-k/PRIVACY_DRAFT.md), version 2026-11-08;
+    // the lawyer reviews them before launch.
     const all = JSON.stringify([T.TERMS_GROUPS, T.LIABILITY_TEXT, T.PRIVACY_GROUPS, T.HEALTH_ITEMS, T.INTRO, T.ASK, T.GOVERNING, T.LANGUAGE]);
-    assert.equal(createHash("sha256").update(all).digest("hex"), "40f264801e0a8cac10e8df99f281176a1adfa7db9ddbe5e168fde05993f91c53");
-    assert.equal(all.length, 12482 + 42 + 371);
+    assert.equal(createHash("sha256").update(all).digest("hex"), "e66875e6433bf6ac5848bb7c61d64631d6f4f75fde27649f183373c2ae4ee9f1");
+    assert.equal(all.length, 12482 + 42 + 371 + 3093);
   });
 
   it("has 11 terms groups plus Liability, 10 privacy groups and 7 health points", () => {
@@ -69,8 +72,8 @@ describe("the Last updated date", () => {
   it("is LEGAL_VERSION written month first, the app's LEGAL_UPDATED", () => {
     const src = readFileSync(new URL("../../services/legal/acceptances.ts", import.meta.url), "utf8");
     const version = /export const LEGAL_VERSION = "(\d{4}-\d{2}-\d{2})"/.exec(src)?.[1];
-    assert.equal(version, "2026-10-31");
-    assert.equal(legalDateFor(version as string), "October 31, 2026");
+    assert.equal(version, "2026-11-08");
+    assert.equal(legalDateFor(version as string), "November 8, 2026");
     assert.equal(legalDateFor(version as string), LEGAL_UPDATED);
     assert.equal(legalDateFor("2027-01-31"), "January 31, 2027");
   });

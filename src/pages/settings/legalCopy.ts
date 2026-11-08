@@ -20,7 +20,7 @@ export interface LegalSection {
 }
 
 /** The website's "Last updated" date (the legal page writes LEGAL_VERSION month first: src/marketing/legal/anchors.ts legalDateFor). */
-export const LEGAL_UPDATED = "October 31, 2026";
+export const LEGAL_UPDATED = "November 8, 2026";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
