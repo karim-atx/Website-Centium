@@ -19,6 +19,7 @@ import {
   KeyRound,
   LifeBuoy,
   Lock,
+  LogOut,
   MapPin,
   Mic,
   Music2,
@@ -44,6 +45,7 @@ import { serviceAreaLine } from "../pro/profile/profileModel";
 import { PRO_ROUTES } from "../pro/subtypeLanes";
 import { ReferralPopup } from "../profile/ReferralPopup";
 import { ReferralLeafIcon } from "../icons/MoreLeafIcons";
+import { useSignOutAllDevices } from "../profile/SignOutAllDevices";
 import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { tk, tn } from "../../i18n/core";
 import { Column, Pane, PlanCard, SecondaryGroups, type SecondaryGroup, type SecondaryItem } from "./WebSecondaryLayout";
@@ -256,7 +258,7 @@ function useCallsSetting(on: boolean): { on: boolean | null; error: string | nul
   return { on: calls, error, toggle };
 }
 
-function useSettingsGroups(): SecondaryGroup[] {
+function useSettingsGroups(onSignOutAll: () => void): SecondaryGroup[] {
   const { user, t, theme, language } = useApp();
   const legal = t("Last updated {date}", { date: legalDate(LEGAL_UPDATED) });
   const pro = user.accountType === "professional";
@@ -268,7 +270,14 @@ function useSettingsGroups(): SecondaryGroup[] {
     { label: tk("Appearance"), items: [{ key: "appearance", label: tk("Appearance"), desc: `${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`, icon: Sun, to: sec("appearance") }] },
     { label: tk("Permissions"), items: [{ key: "permissions", label: tk("Permissions"), icon: Mic, to: sec("permissions") }] },
     ...(customer ? [{ label: tk("Connected devices"), items: [{ key: "devices", label: tk("Connected devices"), icon: HeartPulse, to: sec("devices") }] }] : []),
-    { label: tk("Security"), items: [{ key: "twofactor", label: tk("Two-factor authentication"), icon: ShieldCheck, to: "/app/settings/two-factor" }] },
+    {
+      label: tk("Security"),
+      items: [
+        { key: "twofactor", label: tk("Two-factor authentication"), icon: ShieldCheck, to: "/app/settings/two-factor" },
+        // Round K: Sign out ends this device only; this ends every session (its confirm opens over the page).
+        { key: "signout-all", label: tk("Sign out of all devices"), icon: LogOut, onClick: onSignOutAll },
+      ],
+    },
     // WP-MO.10 (WP-MO Pane List, page "settings"): the Practice rows themselves, each page opening in the pane; Calls with hired clients switches in place.
     ...(pro
       ? [
@@ -346,7 +355,8 @@ export const AppSettingsLayout: React.FC<{ secW: number; banners: React.ReactNod
   const { t, user } = useApp();
   const { pathname, search } = useLocation();
   const navigate = useNavigate();
-  const groups = useSettingsGroups();
+  const { requestSignOutAll, signOutAllDialog } = useSignOutAllDevices();
+  const groups = useSettingsGroups(requestSignOutAll);
   // The client's first item is Help (WC-SE default); the professional's is Appearance (WP-SE).
   const atIndex = (pathname === "/app/settings" || pathname === "/app/settings/") && !new URLSearchParams(search).get("section");
   if (atIndex && user.accountType === "customer") return <Navigate to="/app/settings/help" replace />;
@@ -359,6 +369,7 @@ export const AppSettingsLayout: React.FC<{ secW: number; banners: React.ReactNod
       <Pane banners={banners} scrollKey={pathname + search} span>
         {children}
       </Pane>
+      {signOutAllDialog}
     </>
   );
 };

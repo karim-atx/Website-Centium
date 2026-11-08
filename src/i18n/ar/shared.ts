@@ -10,6 +10,8 @@ export const FILES: string[] = [
   "components/profile/RateAppPopup.tsx",
   "components/profile/StorageUsageRow.tsx",
   "components/profile/ChangePasswordSheet.tsx",
+  // Round K: Settings › Security › Sign out of all devices.
+  "components/profile/SignOutAllDevices.tsx",
   "components/profile/ColorThemePicker.tsx",
   "components/profile/CycleTrackingRow.tsx",
   "components/profile/DobInline.tsx",
@@ -606,6 +608,13 @@ const shared: Catalogue = {
     "سيُسجَّل الخروج من كل هاتف ومتصفح آخر مسجّل الدخول إلى هذا الحساب. ويبقى هذا الجهاز مسجّل الدخول.",
   "Sign out others": "تسجيل خروج الآخرين",
   "Signed out everywhere else.": "تم تسجيل الخروج من الأجهزة الأخرى.",
+
+  // == Settings › Security › Sign out of all devices (Round K; members, professionals and businesses) ==
+  "Sign out of all devices": "تسجيل الخروج من جميع الأجهزة",
+  "Sign out of all devices?": "تسجيل الخروج من جميع الأجهزة؟",
+  "You'll be signed out here and on every other phone, tablet and browser.":
+    "سيُسجَّل خروجك هنا ومن كل هاتف وجهاز لوحي ومتصفح آخر.",
+  "Couldn't sign out of all devices. Try again.": "تعذّر تسجيل الخروج من جميع الأجهزة. حاول مرة أخرى.",
 
   // == Business More › Deactivate or delete ==
   "Your business is active again.": "عاد نشاطك التجاري إلى العمل.",
