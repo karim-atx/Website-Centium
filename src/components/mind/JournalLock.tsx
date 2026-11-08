@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, KeyRound, Lock } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
+import { CodeBoxes } from "../ui/CodeBoxes";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { useCooldown } from "../security/useCooldown";
+import { formatCountdown } from "../../services/auth/cooldown";
+import { sendFolderUnlockCode } from "../../services/journal";
+import type { UnlockMethod } from "../../services/journal/lockLogic";
 import { t, tk } from "../../i18n/core";
 
 // MO1.1.2.2 · Journal · Locked folder, and the password prompt that stands in
@@ -100,15 +105,41 @@ export function JournalPasswordPopup({
   folderName,
   onClose,
   onSubmit,
+  method = "password",
+  email = "",
+  notice,
 }: {
   purpose: PasswordPurpose;
   folderName: string;
   onClose: () => void;
-  /** Resolves to null when the password was accepted, or the sentence to show. */
+  /** Resolves to null when the password (or code) was accepted, or the sentence to show. */
+  onSubmit: (secret: string) => Promise<string | null>;
+  /** Round K (DB-Z8): an account without a password opens the lock with an emailed code. */
+  method?: UnlockMethod;
+  /** Where the code goes. */
+  email?: string;
+  /** A line shown on open, e.g. why the prompt switched to the password. */
+  notice?: string;
+}) {
+  if (method === "code") return <JournalCodePopup purpose={purpose} folderName={folderName} email={email} onClose={onClose} onSubmit={onSubmit} />;
+  return <PasswordPopup purpose={purpose} folderName={folderName} onClose={onClose} onSubmit={onSubmit} notice={notice} />;
+}
+
+function PasswordPopup({
+  purpose,
+  folderName,
+  onClose,
+  onSubmit,
+  notice,
+}: {
+  purpose: PasswordPurpose;
+  folderName: string;
+  onClose: () => void;
   onSubmit: (password: string) => Promise<string | null>;
+  notice?: string;
 }) {
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(notice ?? null);
   const [busy, setBusy] = useState(false);
   const visibility = usePasswordVisibility();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -181,6 +212,129 @@ export function JournalPasswordPopup({
       {error && (
         <p role="alert" className="mt-1.5 text-[11.5px] leading-4 font-medium text-status-high">
           {t(error)}
+        </p>
+      )}
+    </CentredPopup>
+  );
+}
+
+const CODE_COPY: Record<PasswordPurpose, { body: (name: string) => string; cta: string }> = {
+  unlock: { body: (n) => t("{folder} stays open for five minutes.", { folder: n }), cta: tk("Unlock") },
+  write: { body: (n) => t("{folder} is locked. Unlock it for five minutes to save here.", { folder: n }), cta: tk("Unlock") },
+  delete: { body: (n) => t("{folder} is locked. Unlock it to delete the folder.", { folder: n }), cta: tk("Unlock") },
+  remove: { body: (n) => t("Enter the code we email you and {folder} stops locking.", { folder: n }), cta: tk("Remove lock") },
+};
+
+/**
+ * Round K (DB-Z8, D-BK4): the same prompt for an account WITHOUT a password
+ * (Google- or Apple-only). "Email me a code" sends the approved
+ * reauthentication email ("{code} is your Centium verification code"); the
+ * six boxes take it, and the server opens the same five-minute window, or
+ * removes the lock. A code works for 10 minutes and once; a wrong or used one
+ * is the server's own sentence ("That code is not correct."), shown under
+ * the boxes, which clear for the next try. A refused send (the email limit)
+ * starts the shared countdown before "Send a new code" works again.
+ */
+function JournalCodePopup({
+  purpose,
+  folderName,
+  email,
+  onClose,
+  onSubmit,
+}: {
+  purpose: PasswordPurpose;
+  folderName: string;
+  email: string;
+  onClose: () => void;
+  onSubmit: (code: string) => Promise<string | null>;
+}) {
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const cooldown = useCooldown();
+
+  const send = async (again: boolean) => {
+    if (busy || cooldown.active) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const res = await sendFolderUnlockCode();
+    setBusy(false);
+    if (!res.ok) {
+      if (res.rateLimited) cooldown.start();
+      setError(res.message);
+      return;
+    }
+    setSent(true);
+    setCode("");
+    if (again) setNotice(t("We sent a new code to {email}.", { email: shownEmail }));
+  };
+
+  const submit = async (value = code) => {
+    if (busy || value.length !== 6) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const failed = await onSubmit(value);
+    setBusy(false);
+    if (failed) {
+      setError(failed);
+      setCode("");
+    }
+  };
+
+  const copy = CODE_COPY[purpose];
+  // The address reads left to right inside Arabic text (an isolate keeps it whole).
+  const shownEmail = `⁦${email}⁩`;
+  const waiting = cooldown.active ? t("Too many attempts. Try again in {time}.", { time: formatCountdown(cooldown.left) }) : null;
+  return (
+    <CentredPopup
+      open
+      onClose={busy ? () => {} : onClose}
+      icon={<Lock size={22} strokeWidth={1.75} />}
+      title={purpose === "remove" ? t("Remove the lock?") : t("Confirm it's you")}
+      body={copy.body(folderName)}
+      cta={
+        sent
+          ? { label: t(copy.cta), onClick: () => void submit(), loading: busy, disabled: code.length !== 6 }
+          : { label: t("Email me a code"), onClick: () => void send(false), loading: busy, disabled: cooldown.active }
+      }
+    >
+      {!sent ? (
+        <p className="text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("We'll email a 6-digit code to {email}.", { email: shownEmail })}</p>
+      ) : (
+        <>
+          <p className="mb-3 text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("Enter the 6-digit code we emailed to {email}.", { email: shownEmail })}</p>
+          <CodeBoxes
+            value={code}
+            onChange={(v) => {
+              setCode(v);
+              if (error) setError(null);
+            }}
+            onComplete={(v) => void submit(v)}
+            error={!!error}
+            disabled={busy}
+            autoFocus
+            label={t("Six-digit code from your email")}
+          />
+          <button
+            type="button"
+            onClick={() => void send(true)}
+            disabled={busy || cooldown.active}
+            className="tap mt-3 w-full text-center text-xs font-semibold text-charcoal-soft disabled:opacity-40"
+          >
+            {t("Send a new code")}
+          </button>
+        </>
+      )}
+      <div aria-live="polite">
+        {notice && !error && !waiting && <p className="mt-1.5 text-center text-[11.5px] leading-4 font-medium text-charcoal-soft">{notice}</p>}
+      </div>
+      {(error || waiting) && (
+        <p role="alert" className="mt-1.5 text-[11.5px] leading-4 font-medium text-status-high">
+          {waiting ?? t(error ?? "")}
         </p>
       )}
     </CentredPopup>

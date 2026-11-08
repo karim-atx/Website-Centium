@@ -2,7 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { premiumRefusalMessage } from "../premium/asks";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { hasEmailPassword } from "../auth/passwordChangeLogic";
-import { describeLockError } from "./lockLogic";
+import { describeLockError, isMissingFunction, unlockMethodFor, type UnlockMethod } from "./lockLogic";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
 
@@ -340,13 +340,113 @@ export function disableJournalFolderLockRemote(folderId: string, password: strin
 }
 
 /**
- * WHETHER THIS ACCOUNT CAN OPEN A LOCK AT ALL. A Google-only account has no
- * password, so it could lock a folder and never open it again (ATX77). Until
- * design picks a fix, the API doc's mitigation: hide Lock for it. Errs
- * towards hiding: a Google account that later set a password also reads
- * false here (see hasEmailPassword).
+ * Round K (DB-Z8): an account with no password opens a lock with the code
+ * that supabase.auth.reauthenticate() emails. Same answer as the password
+ * calls: a wrong or used code is success = false, "That code is not
+ * correct."; ATXB2 means the account has a password after all.
  */
-export async function accountCanUseFolderLock(): Promise<boolean> {
+async function codeCall(
+  fn: "unlock_journal_folder_with_code" | "disable_journal_folder_lock_with_code",
+  folderId: string,
+  code: string
+): Promise<LockOutcome> {
+  const { data, error } = await rpc<UnlockRow | UnlockRow[]>(fn, { p_folder_id: folderId, p_code: code });
+  if (error) {
+    console.error(`[journal] ${fn} failed:`, error.code);
+    return { ok: false, code: error.code, message: describeLockError(error.code, error.message) };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { ok: false, message: describeLockError(undefined, undefined) };
+  if (!row.success) return { ok: false, message: row.message };
+  return { ok: true, unlockedUntil: row.unlocked_until };
+}
+
+/** The emailed-code unlock: the same five-minute window as the password. */
+export function unlockJournalFolderWithCodeRemote(folderId: string, code: string): Promise<LockOutcome> {
+  return codeCall("unlock_journal_folder_with_code", folderId, code);
+}
+
+/** Removes the lock with the emailed code. */
+export function disableJournalFolderLockWithCodeRemote(folderId: string, code: string): Promise<LockOutcome> {
+  return codeCall("disable_journal_folder_lock_with_code", folderId, code);
+}
+
+/** How this account opens a locked folder, and the address a code goes to. */
+export interface FolderLockAuth {
+  method: UnlockMethod;
+  email: string;
+}
+
+/**
+ * WHETHER THIS ACCOUNT CAN USE THE LOCK, AND HOW IT OPENS ONE. An account
+ * with a password unlocks with it. Since Round K (DB-Z8, D-BK5) an account
+ * without one (Google- or Apple-only) unlocks with an emailed code, so Lock
+ * is offered to it too, but only once the Database has the code calls:
+ * my_device_keys ships with them, and "function not found" means it hasn't,
+ * so Lock stays hidden rather than lock a folder nothing can open. A Google
+ * account that later set a password reads as code-only here (see
+ * hasEmailPassword); the server answers ATXB2 and the prompt switches to the
+ * password.
+ */
+export async function folderLockAuth(): Promise<FolderLockAuth | null> {
   const { data } = await supabase.auth.getUser();
-  return !!data.user && hasEmailPassword(data.user);
+  const user = data.user;
+  if (!user) return null;
+  const password = hasEmailPassword(user);
+  const codeReady = password ? false : await codeUnlockAvailable();
+  const method = unlockMethodFor(password, codeReady);
+  return method ? { method, email: user.email ?? "" } : null;
+}
+
+async function codeUnlockAvailable(): Promise<boolean> {
+  const { error } = await rpc<unknown>("my_device_keys", {});
+  return !error || !isMissingFunction(error.code);
+}
+
+/** Emails the code for an account without a password (the approved reauthentication email). */
+export async function sendFolderUnlockCode(): Promise<{ ok: true } | { ok: false; message: string; rateLimited: boolean }> {
+  const { error } = await supabase.auth.reauthenticate();
+  if (!error) return { ok: true };
+  const rateLimited = error.status === 429 || error.code === "over_email_send_rate_limit";
+  return {
+    ok: false,
+    rateLimited,
+    message: rateLimited ? t("Too many codes sent. Wait a minute and try again.") : t("Couldn't send the code. Check your connection and try again."),
+  };
+}
+
+/** A phone that can open locked folders with a fingerprint or face (DB-Z8). */
+export interface DeviceKey {
+  deviceId: string;
+  label: string;
+  registeredAt: string;
+  lastUsedAt: string | null;
+}
+
+interface DeviceKeyRow {
+  device_id: string;
+  label: string;
+  registered_at: string;
+  last_used_at: string | null;
+}
+
+/** This account's phones, newest first; [] before DB-Z8 ships, null when they couldn't be read. */
+export async function fetchDeviceKeys(): Promise<DeviceKey[] | null> {
+  const { data, error } = await rpc<DeviceKeyRow[]>("my_device_keys", {});
+  if (error) {
+    if (isMissingFunction(error.code)) return [];
+    console.error("[journal] my_device_keys failed:", error.code);
+    return null;
+  }
+  return (data ?? []).map((r) => ({ deviceId: r.device_id, label: r.label, registeredAt: r.registered_at, lastUsedAt: r.last_used_at }));
+}
+
+/** Settings' Remove: the phone stops unlocking. No re-authentication (DB-Z8). */
+export async function revokeDeviceKey(deviceId: string): Promise<boolean> {
+  const { data, error } = await rpc<boolean>("revoke_device_key", { p_device_id: deviceId });
+  if (error) {
+    console.error("[journal] revoke_device_key failed:", error.code);
+    return false;
+  }
+  return data !== false;
 }

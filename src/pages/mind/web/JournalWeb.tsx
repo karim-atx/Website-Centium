@@ -10,7 +10,7 @@ import { Toast } from "../../../components/ui/Toast";
 import { MusicSection } from "../../../components/music/MusicSection";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../../components/mind/JournalLock";
 import { entryMenuTarget } from "../../../components/mind/entryMenu";
-import { JOURNAL_LIMITS, accountCanUseFolderLock } from "../../../services/journal";
+import { JOURNAL_LIMITS, folderLockAuth, type FolderLockAuth } from "../../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../../services/journal/lockLogic";
 import { shiftDate } from "../../../utils/date";
 import type { JournalEntry, JournalFolder } from "../../../types";
@@ -118,7 +118,12 @@ export default function JournalWeb() {
   const [moving, setMoving] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [entryMenu, setEntryMenu] = useState<{ entry: JournalEntry; anchor: HTMLElement } | null>(null);
-  const [canLock, setCanLock] = useState(false);
+  // Round K: how this account opens a lock (its password, or an emailed code
+  // when it has none); null hides Lock.
+  const [lockAuth, setLockAuth] = useState<FolderLockAuth | null>(null);
+  const canLock = !!lockAuth;
+  // Set when the server says the account has a password after all (ATXB2).
+  const [lockNotice, setLockNotice] = useState<string | undefined>(undefined);
   const [asking, setAsking] = useState<{ purpose: PasswordPurpose; folder: JournalFolder; then?: () => void } | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
   // Where focus goes back when a confirmation closes: the ⋮ (or the folder options) that led to it.
@@ -128,8 +133,8 @@ export default function JournalWeb() {
 
   useEffect(() => {
     let live = true;
-    void accountCanUseFolderLock().then((can) => {
-      if (live) setCanLock(can);
+    void folderLockAuth().then((auth) => {
+      if (live) setLockAuth(auth);
     });
     return () => {
       live = false;
@@ -187,9 +192,15 @@ export default function JournalWeb() {
     setLockError(null);
     setAsking({ purpose, folder, then });
   };
-  const onPassword = async (password: string) => {
+  const onPassword = async (secret: string) => {
     if (!asking) return null;
-    const result = asking.purpose === "remove" ? await disableJournalFolderLock(asking.folder.id, password) : await unlockJournalFolder(asking.folder.id, password);
+    const via = lockAuth?.method ?? "password";
+    const result = asking.purpose === "remove" ? await disableJournalFolderLock(asking.folder.id, secret, via) : await unlockJournalFolder(asking.folder.id, secret, via);
+    if (!result.ok && result.code === "ATXB2" && lockAuth) {
+      setLockNotice(result.message);
+      setLockAuth({ ...lockAuth, method: "password" });
+      return null;
+    }
     if (!result.ok) return result.message;
     const then = asking.then;
     setAsking(null);
@@ -614,7 +625,21 @@ export default function JournalWeb() {
           setOpen(null);
         }}
       />
-      {asking && <JournalPasswordPopup purpose={asking.purpose} folderName={asking.folder.name} onClose={() => setAsking(null)} onSubmit={onPassword} />}
+      {asking && (
+        <JournalPasswordPopup
+          key={lockAuth?.method ?? "password"}
+          purpose={asking.purpose}
+          folderName={asking.folder.name}
+          onClose={() => {
+            setAsking(null);
+            setLockNotice(undefined);
+          }}
+          onSubmit={onPassword}
+          method={lockAuth?.method}
+          email={lockAuth?.email}
+          notice={lockNotice}
+        />
+      )}
     </MindSectionWeb>
   );
 }

@@ -11,6 +11,7 @@ import { legalCopyFor, PRIVACY_SECTIONS } from "./legalCopy";
 import { t } from "../../i18n/core";
 import { SubHeader } from "../../components/business-more/kit";
 import { BusinessLegalSections } from "../../components/business-more/BusinessLegal";
+import { UnlockPhones } from "../../components/settings/UnlockPhones";
 
 // MO1.8.7 Privacy, as a page (was a sheet); handover-complete pass: the
 // frame's text (the "Last updated" line, the intro and the ten headed
@@ -107,6 +108,9 @@ export default function PrivacyPage() {
         />
       </SettingsSection>
       {receiptsError && <p className="text-[11.5px] text-status-high mt-2">{receiptsError}</p>}
+
+      {/* Round K (DB-Z8): phones that open locked journal folders; hidden while there are none. */}
+      {authUserId && <UnlockPhones />}
 
       {/* MO1.8.7: the date line, 8 to the intro, 24 to the first section;
           32 under the controls (the Settings section gap). */}

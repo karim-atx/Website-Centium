@@ -159,9 +159,11 @@ import {
   lockJournalFolderRemote,
   unlockJournalFolderRemote,
   disableJournalFolderLockRemote,
+  unlockJournalFolderWithCodeRemote,
+  disableJournalFolderLockWithCodeRemote,
   type LockOutcome,
 } from "../services/journal";
-import { isFolderOpen, liveWindows, msUntilNextExpiry, type UnlockWindows } from "../services/journal/lockLogic";
+import { isFolderOpen, liveWindows, msUntilNextExpiry, type UnlockMethod, type UnlockWindows } from "../services/journal/lockLogic";
 import {
   getAchievements,
   getPointsSummary,
@@ -970,10 +972,11 @@ interface AppState {
   journalUnlockedUntil: UnlockWindows;
   /** MO1.1.2.1 Lock: no password. Resolves to null, or the error sentence. */
   lockJournalFolder: (id: string) => Promise<string | null>;
-  /** MO1.1.2.2 unlock: re-enter the account password, five-minute window. */
-  unlockJournalFolder: (id: string, password: string) => Promise<LockOutcome>;
-  /** Removes the lock for good, behind the same password check. */
-  disableJournalFolderLock: (id: string, password: string) => Promise<LockOutcome>;
+  /** MO1.1.2.2 unlock: re-enter the account password (or, Round K, the
+   *  emailed code for an account without one), five-minute window. */
+  unlockJournalFolder: (id: string, secret: string, via?: UnlockMethod) => Promise<LockOutcome>;
+  /** Removes the lock for good, behind the same password or code check. */
+  disableJournalFolderLock: (id: string, secret: string, via?: UnlockMethod) => Promise<LockOutcome>;
 
   bloodMarkers: BloodMarker[];
   /** Panels carrying an uploaded report, newest first. Empty when none do. */
@@ -6220,8 +6223,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   };
 
-  const unlockJournalFolder = async (id: string, password: string): Promise<LockOutcome> => {
-    const result = await unlockJournalFolderRemote(id, password);
+  const unlockJournalFolder = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
+    const result = via === "code" ? await unlockJournalFolderWithCodeRemote(id, secret) : await unlockJournalFolderRemote(id, secret);
     if (!result.ok || !result.unlockedUntil) return result;
     // Re-unlocking replaces the window rather than extending it.
     const windows = { ...liveWindows(journalUnlockedUntil, Date.now()), [id]: result.unlockedUntil };
@@ -6230,8 +6233,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return result;
   };
 
-  const disableJournalFolderLock = async (id: string, password: string): Promise<LockOutcome> => {
-    const result = await disableJournalFolderLockRemote(id, password);
+  const disableJournalFolderLock = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
+    const result = via === "code" ? await disableJournalFolderLockWithCodeRemote(id, secret) : await disableJournalFolderLockRemote(id, secret);
     if (!result.ok) return result;
     const windows = { ...journalUnlockedUntil };
     delete windows[id];
