@@ -55,9 +55,14 @@ export function clearanceDateOk(date: string, today: string): boolean {
 /** The words for a key, or "" when the server has none (a missing key never shows the key itself). */
 export const word = (texts: Readonly<Record<string, string>>, key: string): string => texts[key] ?? "";
 
-/** The member's heading: the outcome's title, or "Cleared by a doctor" once cleared. */
-export function memberHeadingKey(outcome: ReadinessOutcome, label: ReadinessLabel): string {
-  return label === "cleared_by_doctor" ? "pro.label.cleared_by_doctor" : `outcome.${outcome}.title`;
+/**
+ * The member's heading: outcome.<label>.title, with the label from
+ * my_readiness() (Database #84, 2026-11-08). Before a clearance the label is
+ * the outcome; once cleared it's outcome.cleared_by_doctor.title, "Cleared by
+ * your doctor". The professional reads pro.label.<label> instead.
+ */
+export function memberHeadingKey(label: ReadinessLabel): string {
+  return `outcome.${label}.title`;
 }
 
 export const isOutcome = (v: unknown): v is ReadinessOutcome => v === "cleared" || v === "start_light" || v === "see_doctor";

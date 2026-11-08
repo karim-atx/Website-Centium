@@ -18,7 +18,8 @@ export const FILES: string[] = [
 
 // note (whole file): the form's name is «قبل أن تبدأ», in «…» as the Database's
 // push does («عبّأ Maya نموذج «قبل أن تبدأ».»); "fill in" is «تعبئة»; a doctor's
-// clearance is «إذن الطبيب».
+// clearance takes the server's verb «سمح» (the member's «سمح لك طبيبك», the
+// professional's «سمح له الطبيب», both served by the Database, Karim 2026-11-08).
 const readiness: Catalogue = {
   // == The member ==
   "About a minute": "دقيقة تقريبًا",
@@ -26,8 +27,10 @@ const readiness: Catalogue = {
   "Fill it in again": "تعبئته من جديد",
   "Date (optional)": "التاريخ (اختياري)",
   "The date can't be in the future.": "لا يمكن أن يكون التاريخ في المستقبل.",
-  "Cleared on {date}": "أذن الطبيب بذلك في {date}",
-  "Cleared by your doctor": "أذن لك طبيبك",
+  "Cleared on {date}": "سمح الطبيب بذلك في {date}",
+  // DW's Start (the intro, the Workout card and the Home request card): «ابدأ»,
+  // not the app-wide Start «البداية» (Karim 2026-11-08).
+  "Start|readiness": "ابدأ",
   "{name} asked you to fill in Before you start": "طلب منك {name} تعبئة «قبل أن تبدأ»",
   "Something in your answers wasn't accepted. Check them and try again.": "لم تُقبل إحدى إجاباتك. راجعها وحاول مرة أخرى.",
   "Couldn't send it. Try again.": "تعذّر الإرسال. حاول مرة أخرى.",

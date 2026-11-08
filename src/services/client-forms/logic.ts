@@ -16,7 +16,7 @@
 
 import { clock12 } from "../../utils/time12";
 import { DAY_LONG, mondayIndex } from "../../utils/week";
-import { getLanguage, t, tn } from "../../i18n/core";
+import { getLanguage, t, tn, tx } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 
 export type QuestionType = "number" | "scale" | "choice" | "multi" | "text" | "long_text" | "photo" | "date";
@@ -837,7 +837,8 @@ export function readinessReminder(r: { requestId: string; professionalId: string
     tone: "gold",
     title: t("{name} asked you to fill in Before you start", { name: proName }),
     detail: t("About a minute"),
-    action: t("Start"),
+    // «ابدأ», DW's own Start (Karim 2026-11-08), not the app-wide «البداية».
+    action: tx("Start", "readiness"),
   };
 }
 

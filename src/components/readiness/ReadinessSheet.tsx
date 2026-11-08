@@ -6,7 +6,7 @@ import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
 import { localIsoDay } from "../../services/care-plan/logic";
 import { appLocale } from "../../i18n/format";
-import { t } from "../../i18n/core";
+import { t, tx } from "../../i18n/core";
 import { fetchReadinessForm, recordClearance, removeClearance, submitReadiness, type MyReadiness, type ReadinessForm, type ReadinessResult } from "../../services/readiness";
 import { callNumbers, canSend, CLEARANCE_NOTE_MAX, clearanceDateOk, CONDITIONS, EMPTY_ANSWERS, INTENSITIES, memberHeadingKey, NONE, NOTE_MAX, toggleKey, WARNING_SIGNS, word, type ReadinessAnswers } from "../../services/readiness/model";
 
@@ -23,8 +23,11 @@ import { callNumbers, canSend, CLEARANCE_NOTE_MAX, clearanceDateOk, CONDITIONS, 
  * - outcome: the outcome's title and its line (line_key); the urgent line
  *   with urgent_numbers under it (Lebanon: 140 and 112 to call); "My doctor
  *   has cleared me" (an optional date, not in the future, and a note up to
- *   500) when the outcome advises a doctor; once cleared, "Cleared by a
- *   doctor" with Remove; "Fill it in again"; the footer citation.
+ *   500) when the outcome advises a doctor; once cleared, the server's
+ *   outcome.cleared_by_doctor.title ("Cleared by your doctor") with Remove;
+ *   "Fill it in again"; the footer citation.
+ * - the intro's Start is tx("Start", "readiness"), its own Arabic (Karim
+ *   2026-11-08), not the app-wide Start.
  *
  * `latest` opens on the latest form's outcome; without it the sheet starts
  * at the intro.
@@ -197,12 +200,12 @@ export const ReadinessSheet: React.FC<{ open: boolean; latest: MyReadiness | nul
         <div className="flex items-center" style={{ gap: 8, marginBottom: 6 }}>
           <ShieldCheck size={18} strokeWidth={2} aria-hidden style={{ color: INK.good, flexShrink: 0 }} />
           <h3 className="m-0" style={{ fontSize: textPx(17), lineHeight: 1.35, fontWeight: 800, color: INK.ch }}>
-            {w(memberHeadingKey(result.outcome, "cleared_by_doctor"))}
+            {w(memberHeadingKey("cleared_by_doctor"))}
           </h3>
         </div>
       ) : (
         <h3 className="m-0" style={{ fontSize: textPx(17), lineHeight: 1.35, fontWeight: 800, color: INK.ch, marginBottom: 6 }}>
-          {w(memberHeadingKey(result.outcome, result.label))}
+          {w(memberHeadingKey(result.label))}
         </h3>
       )}
       <p style={{ fontSize: textPx(13.5), lineHeight: 1.55, color: INK.ch }}>{w(result.lineKey)}</p>
@@ -232,7 +235,7 @@ export const ReadinessSheet: React.FC<{ open: boolean; latest: MyReadiness | nul
       {clearance.clearedAt ? (
         <div data-readiness-cleared style={{ marginTop: 16, borderRadius: 12, background: INK.soft, padding: "10px 12px" }}>
           <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.ch, fontWeight: 600 }}>
-            {clearance.clearedOn ? t("Cleared on {date}", { date: dayText(clearance.clearedOn) }) : t("Cleared by your doctor")}
+            {clearance.clearedOn ? t("Cleared on {date}", { date: dayText(clearance.clearedOn) }) : w(memberHeadingKey("cleared_by_doctor"))}
           </p>
           {clearance.note && <p style={{ fontSize: textPx(12.5), lineHeight: 1.5, color: INK.chS, marginTop: 2, overflowWrap: "anywhere" }}>{clearance.note}</p>}
           <button type="button" disabled={busy} onClick={() => void dropClearance()} className="tap text-primary-dark" style={{ minHeight: 44, fontSize: textPx(12.5), fontWeight: 700 }}>
@@ -321,7 +324,7 @@ export const ReadinessSheet: React.FC<{ open: boolean; latest: MyReadiness | nul
         {step === "intro" && (
           <CtaButton
             className="w-full"
-            label={t("Start")}
+            label={tx("Start", "readiness")}
             onClick={() => {
               setStep("questions");
               toTop();

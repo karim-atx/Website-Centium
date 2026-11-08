@@ -64,6 +64,15 @@ export const proClientPath = (clientId: string, tab?: string): string =>
   `${PRO_ROUTES.clients}/${encodeURIComponent(clientId)}${tab ? `/${tab}` : ""}`;
 
 /**
+ * Round K · DW (Karim 2026-11-08): a client's "Before you start" outcome, the
+ * block on Files (Health records for patients), scrolled to. The hub row
+ * pro.readiness.completed opens it; /app/pro/clients/{id}?readiness=open
+ * (the push, any tab or none) lands on the lane's tab the same way.
+ */
+export const proReadinessTab = (lane: ProLane | null | undefined): string => (lane === "clinical_overview" ? "health-records" : "files");
+export const proReadinessPath = (clientId: string, lane: ProLane | null | undefined): string => `${proClientPath(clientId, proReadinessTab(lane))}?readiness=open`;
+
+/**
  * Navbar slot 4 by lane (HANDOVER d "Navbar per subtype", decision 4: Library
  * everywhere for Full coaching). Library and Meal plans reuse the client
  * Workout and Food glyphs; Insights the client Health heart (NV1).

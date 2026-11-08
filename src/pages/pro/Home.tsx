@@ -8,7 +8,7 @@ import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfession
 import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
 import { textPx } from "../../theme/textSize";
 import { INK } from "../../components/pro/proInk";
-import { PRO_ROUTES, proClientPath } from "../../components/pro/subtypeLanes";
+import { PRO_ROUTES, proClientPath, proReadinessPath } from "../../components/pro/subtypeLanes";
 import { ProCardSkeleton, ProError, OfflineLine } from "../../components/pro/states";
 import { ProTrendRing, type RingAction } from "../../components/pro/home/ProTrendRing";
 import { LANE_ACTION_ICONS } from "../../components/pro/home/ringActions";
@@ -410,10 +410,10 @@ export default function Home() {
         return;
       }
       case "readiness_request":
-        // Round K · DW: "Before you start" sits on Files (Health records for patients).
+        // Round K · DW: that client's outcome, the block on Files (Health records for patients), scrolled to.
         if (n.clientId) {
           setHubOpen(false);
-          navigate(proClientPath(n.clientId, lane === "clinical_overview" ? "health-records" : "files"));
+          navigate(proReadinessPath(n.clientId, lane));
           return;
         }
         break;

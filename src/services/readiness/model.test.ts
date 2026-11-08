@@ -44,9 +44,9 @@ test("the clearance date is optional and never after today", () => {
   assert.equal(clearanceDateOk("8/11/2026", "2026-11-08"), false);
 });
 
-test("the member's heading: the outcome's title, or Cleared by a doctor", () => {
-  assert.equal(memberHeadingKey("see_doctor", "see_doctor"), "outcome.see_doctor.title");
-  assert.equal(memberHeadingKey("start_light", "cleared_by_doctor"), "pro.label.cleared_by_doctor");
+test("the member's heading: the label's outcome title, Cleared by your doctor once cleared", () => {
+  assert.equal(memberHeadingKey("see_doctor"), "outcome.see_doctor.title");
+  assert.equal(memberHeadingKey("cleared_by_doctor"), "outcome.cleared_by_doctor.title");
 });
 
 test("answers back into the form's own words, in order, the note last", () => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ClipboardCheck, Lock, Send, ShieldCheck } from "lucide-react";
 import { INK } from "../pro/proInk";
 import { textPx } from "../../theme/textSize";
@@ -6,6 +6,7 @@ import { CtaButton } from "../ui/PinnedCta";
 import { Card, SectionHead } from "../pro/client/kit";
 import { fmtDay } from "../pro/client/clientFormat";
 import { t } from "../../i18n/core";
+import { useLinkOnce } from "../../hooks/useLinkOnce";
 import { fetchClientReadiness, fetchReadinessForm, requestReadiness, withdrawReadiness, type ClientReadiness } from "../../services/readiness";
 import { answerLines, word, type ReadinessLabel } from "../../services/readiness/model";
 
@@ -24,6 +25,10 @@ const LABEL_INK: Record<ReadinessLabel, string> = { cleared: INK.good, cleared_b
  * Every form word is the server's in the professional's language. Nothing
  * renders until the reads succeed (the Database's calls not live yet,
  * offline), so the tab is as before.
+ *
+ * ?readiness=open (proReadinessPath: the hub row pro.readiness.completed and
+ * the push) scrolls this block into view once it has loaded, then the
+ * parameter is taken off the address.
  */
 export const ReadinessProBlock: React.FC<{ clientId: string; firstName: string; onAsk?: () => void }> = ({ clientId, firstName, onAsk }) => {
   const [state, setState] = useState<{ texts: Record<string, string>; r: ClientReadiness } | null>(null);
@@ -42,6 +47,9 @@ export const ReadinessProBlock: React.FC<{ clientId: string; firstName: string; 
       live = false;
     };
   }, [clientId, nonce]);
+
+  const anchor = useRef<HTMLDivElement | null>(null);
+  useLinkOnce("readiness", "open", () => anchor.current?.scrollIntoView({ block: "start" }), !!state && !!word(state.texts, "intro.title"));
 
   if (!state || !word(state.texts, "intro.title")) return null;
   const { texts, r } = state;
@@ -63,7 +71,7 @@ export const ReadinessProBlock: React.FC<{ clientId: string; firstName: string; 
     <>
       <SectionHead label={w("intro.title")} />
       <Card>
-        <div data-readiness-pro>
+        <div ref={anchor} data-readiness-pro style={{ scrollMarginTop: 120 }}>
           {!r.shared ? (
             <div className="flex items-start" style={{ gap: 8 }}>
               <Lock size={14} strokeWidth={2} aria-hidden style={{ color: INK.chF, flexShrink: 0, marginTop: 2 }} />
