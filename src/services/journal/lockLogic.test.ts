@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { describeLockError, isFolderOpen, liveWindows, msUntilNextExpiry } from "./lockLogic";
+import { describeLockError, isFolderOpen, isMissingFunction, liveWindows, msUntilNextExpiry, unlockMethodFor } from "./lockLogic";
 
 const NOW = Date.parse("2026-10-07T12:00:00Z");
 
@@ -41,4 +41,25 @@ test("errors: rate limit is said by its delay, the rest are sentences", () => {
   assert.match(describeLockError("ATX78", "raw"), /no longer exists/);
   assert.match(describeLockError("ATX01", "raw"), /Sign in again/);
   assert.match(describeLockError("PGRST000", "raw"), /connection/);
+});
+
+test("Round K: a password account unlocks with it; one without uses the emailed code once the Database has it", () => {
+  assert.equal(unlockMethodFor(true, false), "password");
+  assert.equal(unlockMethodFor(true, true), "password");
+  assert.equal(unlockMethodFor(false, true), "code");
+  // Before DB-Z8 is live, Lock isn't offered: nothing could open the folder.
+  assert.equal(unlockMethodFor(false, false), null);
+});
+
+test("Round K: a missing function is PostgREST's PGRST202 or Postgres's 42883, nothing else", () => {
+  assert.equal(isMissingFunction("PGRST202"), true);
+  assert.equal(isMissingFunction("42883"), true);
+  assert.equal(isMissingFunction("42501"), false);
+  assert.equal(isMissingFunction(undefined), false);
+});
+
+test("Round K: the device-key and code errors have their own sentences", () => {
+  assert.match(describeLockError("ATXB0", undefined), /switched off/);
+  assert.match(describeLockError("ATXB1", undefined), /sign in again/);
+  assert.equal(describeLockError("ATXB2", undefined), "This account has a password. Use it to unlock.");
 });

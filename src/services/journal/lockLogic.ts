@@ -63,7 +63,33 @@ export function describeLockError(code: string | undefined, message: string | un
       return t("This account signs in without a password, so there's no password to unlock this folder with.");
     case "ATX78":
       return t("This folder no longer exists.");
+    // Round K (DB-Z8).
+    case "ATXB0":
+      return t("Fingerprint and face unlock is switched off right now. Use your password or the emailed code.");
+    case "ATXB1":
+      return t("For your security, sign in again, or confirm with your password or an emailed code.");
+    case "ATXB2":
+      return t("This account has a password. Use it to unlock.");
     default:
       return t("Couldn't reach Centium. Check your connection and try again.");
   }
+}
+
+/** How an account opens a locked folder: its password, or a code emailed to it (DB-Z8). */
+export type UnlockMethod = "password" | "code";
+
+/**
+ * Round K (D-BK5): an account with a password uses it; one without (Google-
+ * or Apple-only) uses the emailed code, but only once the Database has the
+ * code calls. Without either, Lock isn't offered (null), because a folder it
+ * locked could never be opened again.
+ */
+export function unlockMethodFor(hasPassword: boolean, codeUnlockReady: boolean): UnlockMethod | null {
+  if (hasPassword) return "password";
+  return codeUnlockReady ? "code" : null;
+}
+
+/** PostgREST's "function not found": a call the Database hasn't shipped yet. */
+export function isMissingFunction(code: string | undefined): boolean {
+  return code === "PGRST202" || code === "42883";
 }
