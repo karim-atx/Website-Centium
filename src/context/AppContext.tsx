@@ -137,7 +137,9 @@ import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
 import {
   TAB_USER_ID,
+  accountSessionEnded,
   clearAccountStorage,
+  clearEndedAccounts,
   endAccountStorage,
   legacyMoves,
   lockTab,
@@ -1412,6 +1414,13 @@ function migrateLegacyStorage(): void {
 }
 if (typeof window !== "undefined") migrateLegacyStorage();
 
+// A session that ended while the browser was closed ("Remember me" off, or a
+// refresh token expired or revoked) leaves its account's data with no session
+// behind it; it goes here, before any state reads it (tabIdentity.ts,
+// clearEndedAccounts). Not while a cookie this tab cannot read is stored: it
+// may be that account's, unverified.
+if (typeof window !== "undefined" && (TAB_USER_ID !== null || !hasStoredSessionToken())) clearEndedAccounts(TAB_USER_ID);
+
 // A tab that loaded signed out re-binds to the account that signs in by
 // reloading. Guarded, so a session the cookie parser cannot read never loops.
 const REBIND_MARK = "centium-tab-rebind";
@@ -1639,11 +1648,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     let cancelled = false;
+    // Whether this page has held a session for its account (below).
+    let hadSession = false;
 
     // Restore an existing session on load, so an already-signed-in user is
     // never shown the auth screen again.
     void getCurrentSession().then((existing) => {
       if (cancelled) return;
+      if (TAB_USER_ID !== null && existing?.user?.id === TAB_USER_ID) hadSession = true;
       // Loaded signed out but a session exists (the cookie arrived after the
       // tab's identity was read): re-bind by reloading, once.
       if (TAB_USER_ID === null && existing?.user && reloadToRebind()) return;
@@ -1680,6 +1692,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             window.location.reload();
             return;
           }
+          // NOT A SIGN-OUT: a session is still stored and only its refresh
+          // failed, on the network (offline). auth-js removes the stored
+          // session when the server refuses a refresh, never otherwise; and
+          // another account's would have arrived as a session, not as null.
+          // The data stays (#120 lets a cached, onboarded account in offline),
+          // and the next refresh that reaches the server brings it back.
+          if (!next && !accountSessionEnded(TAB_USER_ID, hasStoredSessionToken() ? TAB_USER_ID : null, null)) return;
+          // The session this page LOADED with was refused (expired or revoked
+          // while the browser was closed): no other tab ended it, so no lock
+          // notice. The reload starts the page signed out, and its first lines
+          // clear this account's data (clearEndedAccounts, above), keeping the
+          // device's own preferences as a fresh page would have them.
+          if (!next && !hadSession) {
+            window.location.reload();
+            return;
+          }
           // Round K (the App session's finding): a session ended elsewhere —
           // "Sign out of all devices" on another device, or a refresh token
           // revoked — clears the phone's widgets and shortcuts too while the
@@ -1695,6 +1723,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return;
         }
       }
+      if (nextId !== null) hadSession = true;
       setSession(next);
       setAuthReady(true);
       if (next?.user) {
@@ -1797,6 +1826,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // security case this guard was built for is a session that genuinely
     // ended, and sign-out removes the cookie.
     if (hasStoredSessionToken()) return;
+    // A tab bound to an account is answered where its auth event arrives (the
+    // reload when its session was refused on load, the lock when it ended
+    // later); wiping here first would take the device's preferences with it.
+    if (TAB_USER_ID !== null) return;
 
     let cacheBelongsToAnAccount = false;
     try {
