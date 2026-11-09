@@ -10,6 +10,7 @@ import { LEAF_TEAL, MARK_LEAF_PATH } from "../paths";
 import { SCREENS, screenBackground } from "../assets/dashboard";
 import type { IntroVals } from "./introVals";
 import { DownloadButton } from "../../download/DownloadButton";
+import { ctaGrid } from "../../download/ctaGrid";
 import { isRtl, t, tk } from "../../../i18n/core";
 
 // The two intro lines are split into words for their reveals (never into
@@ -416,13 +417,18 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <p style={{ margin: r.subMt + " auto 0", maxWidth: "560px", fontSize: r.subSize, lineHeight: 1.5, color: "#5B5349" }}>
               {t("More clarity. More control. More you.")}
             </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: r.ctaMt, flexWrap: "wrap" }}>
+            {/* Task O: Get Started and the download button(s) share one width, the
+                widest label's, at least ctaW (ctaGrid); one full-width column below
+                640px. The download button takes the slot and styles of the
+                "Request a Demo" button it replaced (decision 1), with 20px each
+                side and one line for the longer labels. */}
+            <div style={{ ...ctaGrid(!r.sm, r.ctaW), margin: r.sm ? `${r.ctaMt} auto 0` : `${r.ctaMt} 0 0` }}>
               <Link
                 to="/app"
                 className="cl-lift"
                 style={{
-                  width: r.ctaW,
-                  padding: "15px 0",
+                  padding: "15px 20px",
+                  whiteSpace: "nowrap",
                   borderRadius: "999px",
                   background: "#775FD7",
                   color: "#fff",
@@ -433,12 +439,8 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               >
                 {t("Get Started")}
               </Link>
-              {/* Task O: the download button, in the slot and with the styles of the
-                  "Request a Demo" button it replaced (decision 1). Its width is a
-                  minimum (DownloadButton), so it keeps 20px each side and one line
-                  for the labels wider than the old slot. */}
               <DownloadButton
-                width={r.ctaW}
+                stack={!r.sm}
                 btnStyle={{
                   padding: "15px 20px",
                   whiteSpace: "nowrap",

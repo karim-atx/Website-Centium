@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { BROWSER_OPTION, DOWNLOAD_LINKS, detectPlatform, downloadOptions, platformList, type LinkedPlatform, type NavLike, type Platform } from "./platforms";
+import { BROWSER_OPTION, COMING_SOON, DOWNLOAD_LINKS, detectPlatform, downloadOptions, platformList, type LinkedPlatform, type NavLike, type Platform } from "./platforms";
 
 // Task O: the download button's detection and fallbacks, with real user-agent
 // strings (each browser's own UA, platform and maxTouchPoints).
@@ -96,9 +96,38 @@ describe("downloadOptions", () => {
 });
 
 describe("platformList (Other platforms)", () => {
-  it("lists every platform, then the browser, with the same links and fallbacks", () => {
-    const rows = (links: Record<LinkedPlatform, string | null>) => platformList(links).map((e) => [e.name, e.option.href]);
-    assert.deepEqual(rows(NONE), [["Windows", "/app"], ["Mac", "/app"], ["iPhone and iPad", "/app"], ["Android", "/app"], [null, "/app"]]);
-    assert.deepEqual(rows(ALL), [["Windows", ALL.windows], ["Mac", ALL.mac], ["iPhone and iPad", ALL.ios], ["Android", ALL.android], [null, "/app"]]);
+  const rows = (links: Record<LinkedPlatform, string | null>) => platformList(links).map((e) => [e.name, e.option ? [e.option.label, e.option.href] : COMING_SOON]);
+
+  it("all links null: the four platforms say Coming soon (no link), then one Browser row to /app", () => {
+    assert.deepEqual(rows(NONE), [
+      ["Windows", "Coming soon"],
+      ["Mac", "Coming soon"],
+      ["iPhone and iPad", "Coming soon"],
+      ["Android", "Coming soon"],
+      ["Browser", ["Open Centium in your browser", "/app"]],
+    ]);
+  });
+
+  it("all links set: each platform's own action and link, then the Browser row", () => {
+    assert.deepEqual(rows(ALL), [
+      ["Windows", ["Download for Windows", ALL.windows]],
+      ["Mac", ["Download for Mac", ALL.mac]],
+      ["iPhone and iPad", ["Download on the App Store", ALL.ios]],
+      ["Android", ["Get it on Google Play", ALL.android]],
+      ["Browser", ["Open Centium in your browser", "/app"]],
+    ]);
+  });
+
+  it("each link set alone switches only its own row", () => {
+    (["windows", "mac", "ios", "android"] as LinkedPlatform[]).forEach((p, i) => {
+      rows(only(p)).forEach((row, j) => assert.equal(row[1] === COMING_SOON, j !== i && j < 4, `${p} row ${j}`));
+    });
+  });
+
+  it("has no ChromeOS or Linux row (they use Browser)", () => {
+    assert.deepEqual(
+      platformList(NONE).map((e) => e.name),
+      ["Windows", "Mac", "iPhone and iPad", "Android", "Browser"],
+    );
   });
 });

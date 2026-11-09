@@ -90,18 +90,25 @@ export function downloadOptions(platform: Platform, links: Record<LinkedPlatform
 }
 
 export interface PlatformEntry {
-  /** English key for the platform's name; null for the browser option. */
-  name: string | null;
-  option: DownloadOption;
+  /** English key for the row's name. */
+  name: string;
+  /** The row's link, or null while the platform has none ("Coming soon", plain text). */
+  option: DownloadOption | null;
 }
 
-/** The "Other platforms" list: every platform with the same links and fallbacks, then the browser. */
+/** "Coming soon" in the list, for a platform with no link yet (existing key, Arabic «قريبًا»). */
+export const COMING_SOON = tk("Coming soon");
+
+/** The "Other platforms" list (Karim, 2026-11-09): the four platforms, each
+ *  with its link or "Coming soon", then one Browser row to /app. ChromeOS
+ *  and Linux have no rows of their own: they use the Browser row. */
 export function platformList(links: Record<LinkedPlatform, string | null>): PlatformEntry[] {
+  const row = (p: LinkedPlatform, name: string): PlatformEntry => ({ name, option: links[p] ? optionFor(p, links) : null });
   return [
-    { name: tk("Windows"), option: optionFor("windows", links) },
-    { name: tk("Mac"), option: optionFor("mac", links) },
-    { name: tk("iPhone and iPad"), option: optionFor("ios", links) },
-    { name: tk("Android"), option: optionFor("android", links) },
-    { name: null, option: BROWSER_OPTION },
+    row("windows", tk("Windows")),
+    row("mac", tk("Mac")),
+    row("ios", tk("iPhone and iPad")),
+    row("android", tk("Android")),
+    { name: tk("Browser"), option: BROWSER_OPTION },
   ];
 }

@@ -829,16 +829,17 @@ const landing: Catalogue = {
   "Ready to bring it all together?": "مستعد لجمع كل شيء معًا؟",
 
   // == Landing › Download button (Task O): the hero and the closing CTA ==
-  // Store and system names stay Latin, as elsewhere on the page.
-  "Download for Windows": "نزّل لنظام Windows",
-  "Download for Mac": "نزّل لجهاز Mac",
-  "Download on the App Store": "حمّل من App Store",
+  // Store and system names stay Latin, as elsewhere on the page. The list's
+  // "Coming soon" (auth.ts) and "Browser" (shared.ts) are existing keys.
+  "Download for Windows": "تنزيل لنظام Windows",
+  "Download for Mac": "تنزيل لجهاز Mac",
+  "Download on the App Store": "التنزيل من App Store",
   "Get it on Google Play": "احصل عليه من Google Play",
   "Open Centium in your browser": "افتح Centium في متصفحك",
   "Other platforms": "منصات أخرى",
   Windows: "Windows",
   Mac: "Mac",
-  "iPhone and iPad": "iPhone وiPad",
+  "iPhone and iPad": "iPhone و iPad",
   Android: "Android",
 
   // == Landing › Page titles (useSEO) ==
