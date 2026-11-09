@@ -1,26 +1,18 @@
 // Centium landing v29: the closing call to action (CA1 v12, 02_pages/18-CA1),
 // the prototype markup with its exact inline styles. Get Started opens the
-// web app (/app), Request a Demo goes to /contact through the page fade; the
-// two store badges say "Coming soon", as on the current site.
+// web app (/app); beside it, Task O's download button (download/
+// DownloadButton.tsx) takes the slot and styles of the former "Request a
+// Demo" button, with "Other platforms" under it. The "Coming soon" store
+// chips are gone (Task O decision 1); the official store badges come once
+// the apps are live (decision 7).
 
 import React from "react";
 import { Link } from "react-router-dom";
 import type { SectionVals } from "./sectionVals";
-import { usePageLink } from "../navigation";
+import { DownloadButton } from "../../download/DownloadButton";
 import { t } from "../../../i18n/core";
 
-const BADGE: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: "12px",
-  border: "1px solid rgba(34,30,26,.1)",
-  background: "#FFFFFF",
-  fontSize: "12.5px",
-  fontWeight: "700",
-  whiteSpace: "nowrap",
-};
-
 export const ClosingCta: React.FC<{ r: SectionVals }> = ({ r }) => {
-  const pageLink = usePageLink();
   const btn: React.CSSProperties = {
     width: r.ctaW,
     minHeight: "52px",
@@ -42,18 +34,7 @@ export const ClosingCta: React.FC<{ r: SectionVals }> = ({ r }) => {
           <Link to="/app" className="cl-lift" style={{ ...btn, background: "#775FD7", color: "#fff" }}>
             {t("Get Started")}
           </Link>
-          <a
-            href="/contact"
-            onClick={pageLink("/contact")}
-            className="cl-lift"
-            style={{ ...btn, background: "#FFFFFF", border: "1px solid rgba(125,103,217,.22)", color: "#221E1A" }}
-          >
-            {t("Request a Demo")}
-          </a>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px", flexWrap: "wrap" }}>
-          <span style={BADGE}>{t("App Store · Coming soon")}</span>
-          <span style={BADGE}>{t("Google Play · Coming soon")}</span>
+          <DownloadButton width={r.ctaW} btnStyle={{ ...btn, width: undefined, background: "#FFFFFF", border: "1px solid rgba(125,103,217,.22)", color: "#221E1A" }} />
         </div>
       </div>
     </section>
