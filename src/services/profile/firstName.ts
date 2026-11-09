@@ -11,12 +11,16 @@ import { describeFirstNameError } from "./firstNameErrors";
 // grant is revoked once this is live everywhere.
 
 /** Sets the signed-in member's first name. The shared rule first, then the server's. */
-export async function setMyFirstName(raw: string): Promise<{ ok: true; name: string } | { ok: false; message: string }> {
+// `code` is the server's refusal code, for a caller that acts on it rather than
+// showing the sentence (onboarding's finish: 42501 there is a session problem).
+export async function setMyFirstName(
+  raw: string
+): Promise<{ ok: true; name: string } | { ok: false; message: string; code?: string }> {
   const checked = checkFirstName(raw);
   if (!checked.ok) return { ok: false, message: t(checked.message) };
   try {
     const { data, error } = await rpc("set_my_first_name", { p_first_name: checked.name });
-    if (error) return { ok: false, message: describeFirstNameError(error) };
+    if (error) return { ok: false, message: describeFirstNameError(error), code: error.code };
     return { ok: true, name: typeof data === "string" && data.trim() ? data : checked.name };
   } catch (e) {
     return { ok: false, message: describeFirstNameError(e as { code?: string; message?: string }) };

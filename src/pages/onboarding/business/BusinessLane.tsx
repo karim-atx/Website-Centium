@@ -24,8 +24,10 @@ import {
   saveStoreSettings,
   saveVenues,
   submitForReview,
+  SESSION_REFUSED,
 } from "../../../services/business-onboarding";
 import { t } from "../../../i18n/core";
+import { useFinishRefusal } from "../useFinishRefusal";
 
 // The business lanes (Classes, Gym, Store) inside the onboarding flow: the
 // type step ("bizType"), then the six numbered steps (bizBusiness … bizReview).
@@ -74,6 +76,7 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
   const onlineHook = useOnline();
   const online = flow ? flow.online : onlineHook;
   const [save, setSave] = useState<{ busy: boolean; error: string | null; offline: boolean }>({ busy: false, error: null, offline: false });
+  const finishRefusal = useFinishRefusal();
   // Round G1 fixes, G fixes 2 and 3 (Karim): the plan step, in front of the
   // venue step and every step after it while the business must choose a level
   // (only with business_plans_on; otherwise today's steps). "Choose this
@@ -192,6 +195,12 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
   const submit = useCallback(async () => {
     if (!uid || save.busy) return;
     setSave({ busy: true, error: null, offline: false });
+    // Not signed in as this account (Karim, 2026-11-09): the account-load
+    // screen rather than a refused write saying to try again (useFinishRefusal).
+    if (!(await finishRefusal.sessionReady())) {
+      setSave({ busy: false, error: null, offline: false });
+      return;
+    }
     const r = await flush(null);
     if (!r.ok) {
       setSave({ busy: false, error: t(r.message), offline: !!r.offline });
@@ -207,6 +216,11 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
       d = { ...d, ...b.patch };
     }
     const sent = await submitForReview(uid, d.businessId!, d);
+    if (!sent.ok && sent.code === SESSION_REFUSED) {
+      setSave({ busy: false, error: null, offline: false });
+      await finishRefusal.takeOver("session");
+      return;
+    }
     if (!sent.ok) {
       setSave({ busy: false, error: t(sent.message), offline: !!sent.offline });
       return;
@@ -222,7 +236,7 @@ export const BusinessLane: React.FC<BusinessLaneProps> = ({
     }
     const done = await onSubmitted();
     setSave({ busy: false, error: done.ok ? null : done.message != null ? t(done.message) : t("Couldn't finish setting up your account. Try again."), offline: false });
-  }, [flush, onSubmitted, save.busy, setBiz, uid, writeStep]);
+  }, [finishRefusal, flush, onSubmitted, save.busy, setBiz, uid, writeStep]);
 
   if (stepKey === "bizType" || !biz.lane) {
     return <BusinessTypeStep biz={biz} setBiz={setBiz} onNext={onNext} onBack={onBack} />;

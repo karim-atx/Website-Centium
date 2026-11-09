@@ -17,6 +17,7 @@ import type {
 import { WelcomeStep } from "./WelcomeStep";
 import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
+import { useFinishRefusal } from "./useFinishRefusal";
 import { BIZ_FLOW_STEPS, dateOfBirthComplete, dateOfBirthStep, laneOf, resumeIndex, stepsFor, type StepKey } from "./onboardingSteps";
 import { BusinessLane, type BizLaneFlowKey } from "./business/BusinessLane";
 import { emptyBusinessDraft, mirrorFields, type BusinessLaneDraft } from "./business/draft";
@@ -251,6 +252,7 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     authUserId,
   } = useApp();
   const navigate = useNavigate();
+  const finishRefusal = useFinishRefusal();
   const online = useOnline();
   const reduced = useReducedMotion();
   const [toast, showToast] = useObToast();
@@ -449,6 +451,13 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     setFinishing(true);
     setFinishError(null);
 
+    // Not signed in as this account (Karim, 2026-11-09): the account-load
+    // screen, not a line saying to try again (useFinishRefusal).
+    if (!(await finishRefusal.sessionReady())) {
+      setFinishing(false);
+      return { ok: false };
+    }
+
     const accountType: AccountType = draft.accountType || "customer";
     const isClient = accountType === "customer";
     const flags = { rs: draft.recoverySensitive, cy: draft.cycleTracking };
@@ -461,6 +470,10 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
       const docs: LegalDocument[] = ["health_disclaimer"];
       if (draft.legalAcceptedAt) docs.unshift("terms", "privacy");
       const legal = await recordLegalAcceptances(authUserId, docs, draft.legalVersion ?? LEGAL_VERSION);
+      if (!legal.ok && legal.session) {
+        setFinishing(false);
+        return (await finishRefusal.takeOver("session")) ?? { ok: false };
+      }
       if (!legal.ok) {
         setFinishing(false);
         setFinishError(legal.offline ? t(OFFLINE_MESSAGE) : t("Couldn't finish setting up your account. Try again."));
@@ -496,6 +509,18 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     // THE SERVER FIRST, then the device (task T): nothing local changes until
     // the server has said yes.
     const saved = await updateProfileFromOnboarding(authUserId, resolved);
+    if (!saved.ok && saved.refusal) {
+      // Not this account's session, or ATXG1 for an account already set up:
+      // the account-load screen, or into the app (useFinishRefusal).
+      const taken = await finishRefusal.takeOver(saved.refusal);
+      setFinishing(false);
+      if (taken?.message) setFinishError(taken.message);
+      if (taken?.ok && accountType !== "business") {
+        clearPersistedDraft();
+        void deleteDrafts(authUserId);
+      }
+      if (taken) return taken;
+    }
     if (!saved.ok) {
       setFinishing(false);
       setFinishError(saved.message ? t(saved.message) : t("Couldn't finish setting up your account. Try again."));

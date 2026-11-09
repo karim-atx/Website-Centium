@@ -62,6 +62,9 @@ export const FILES: string[] = [
   "pages/auth/ResetPassword.tsx",
   "components/auth/MfaChallenge.tsx",
   "components/auth/TabIdentityNotice.tsx",
+  "components/auth/AccountLoadError.tsx",
+  "pages/onboarding/useFinishRefusal.ts",
+  "services/profile/finishErrors.ts",
 ];
 
 const auth: Catalogue = {
@@ -1180,6 +1183,12 @@ const auth: Catalogue = {
     "ظهرت كلمة المرور هذه في تسريب بيانات معروف. يمكنك استخدامها، لكن اختيار كلمة مختلفة أكثر أمانًا.",
   // == The desktop app: Google sign-in in the default browser (AuthStep) ==
   "Finish in your browser · Open again": "أكمل في متصفحك · افتحه مجددًا",
+  // == Account load (Karim, 2026-11-09): a profile that can't be read, never onboarding ==
+  "Couldn't load your account": "تعذّر تحميل حسابك",
+  "We couldn't confirm you're signed in. Try again, or sign out and sign in again.":
+    "تعذّر التأكد من تسجيل دخولك. حاول مجددًا، أو سجّل الخروج ثم سجّل الدخول من جديد.",
+  "Trying again…": "جارٍ إعادة المحاولة…",
+  "Your account type is set when you sign up.": "يُحدَّد نوع حسابك عند التسجيل.",
 };
 
 export default auth;

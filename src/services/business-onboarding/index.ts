@@ -50,6 +50,9 @@ const db = typed as unknown as SupabaseClient;
 
 export type Res<T> = { ok: true; value: T } | { ok: false; message: string; offline?: boolean; code?: string };
 
+/** Res.code for a write that was not signed in as this account (finishErrors' "session"). */
+export const SESSION_REFUSED = "session";
+
 const SAVE_FAIL: string = tk("Couldn't save this step. Check your connection and try again.");
 
 function fail<T>(error: unknown, fallback = SAVE_FAIL): Res<T> {
@@ -621,6 +624,9 @@ export async function submitForReview(uid: string, businessId: string, d: Busine
   // disclaimer shown above Submit for review (B5 legal_acceptances, the
   // shell's service and LEGAL_VERSION; the same three the professional lane records).
   const legal = await recordLegalAcceptances(uid, ["terms", "privacy", "health_disclaimer"]);
+  // Not signed in as this account (Karim, 2026-11-09): the lane shows the
+  // account-load problem for SESSION_REFUSED rather than this message.
+  if (!legal.ok && legal.session) return { ok: false, code: SESSION_REFUSED, message: tk("Couldn't submit. Check your connection and try again.") };
   if (!legal.ok) return legal.offline ? { ok: false, offline: true, message: OFFLINE_MESSAGE } : { ok: false, message: tk("Couldn't submit. Check your connection and try again.") };
   const drafts = await savePolicyDrafts(businessId, d);
   if (!drafts.ok) return drafts;

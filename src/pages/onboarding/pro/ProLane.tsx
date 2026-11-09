@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../../services/profile";
 import { recordLegalAcceptances } from "../../../services/legal/acceptances";
+import { useFinishRefusal } from "../useFinishRefusal";
 import { setMapArea, UNDER_18_LISTING } from "../../../services/professional-profile";
 import { countryNear } from "../../../services/geo/country";
 import { fetchMyCv } from "../../../services/professional-cv";
@@ -86,6 +87,7 @@ export function ProLane<D extends DraftLike>({
 }) {
   const { authUserId, completeOnboarding, user } = useApp();
   const navigate = useNavigate();
+  const finishRefusal = useFinishRefusal();
   const kind = proKindOf(draft.professionalSubtype);
   const pro = restoreProDraft(kind, draft.pro);
   const [returnToReview, setReturnToReview] = useState(false);
@@ -115,9 +117,16 @@ export function ProLane<D extends DraftLike>({
   const submit = async (): Promise<{ ok: true } | { ok: false; message: string }> => {
     if (!authUserId) return { ok: false, message: t("You're signed out. Go back and sign in again to finish.") };
     const fail = t("Couldn't finish setting up your account. Try again.");
+    // Not signed in as this account (Karim, 2026-11-09): the account-load
+    // screen takes over (useFinishRefusal), so there is no line to show here.
+    if (!(await finishRefusal.sessionReady())) return { ok: false, message: "" };
     // Terms and Privacy from the Review checkbox; the health disclaimer is
     // shown above the Review step's submit button (ProReviewStep).
     const legal = await recordLegalAcceptances(authUserId, ["terms", "privacy", "health_disclaimer"]);
+    if (!legal.ok && legal.session) {
+      await finishRefusal.takeOver("session");
+      return { ok: false, message: "" };
+    }
     if (!legal.ok) return { ok: false, message: legal.offline ? t(OFFLINE_MESSAGE) : fail };
 
     const other = kind === "other";
@@ -166,6 +175,15 @@ export function ProLane<D extends DraftLike>({
       tracking: ["nutrition", "workouts"] as TrackPreference[],
     };
     const saved = await updateProfileFromOnboarding(authUserId, resolved);
+    if (!saved.ok && saved.refusal) {
+      // Not this account's session, or ATXG1 for an account already set up.
+      const taken = await finishRefusal.takeOver(saved.refusal);
+      if (taken?.ok) {
+        onFinished();
+        return { ok: true };
+      }
+      if (taken) return { ok: false, message: taken.message ?? "" };
+    }
     if (!saved.ok) return { ok: false, message: saved.message ? t(saved.message) : fail };
     completeOnboarding({ ...resolved, certificationUrl: draft.certificationFile ?? undefined });
 
