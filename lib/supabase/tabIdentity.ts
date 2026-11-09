@@ -330,6 +330,89 @@ export function endAccountStorage(userId: string | null): void {
   w.addEventListener?.("pagehide", () => clearAccountStorage(userId), { once: true });
 }
 
+// --- the end of an account on this device: a session gone by the next load --
+//
+// THE RULE (2026-11-10): an expired, non-remembered session clears its saved
+// account data on the next load. Sign-out is not the only way a session ends:
+// with "Remember me" off the cookie dies with the browser, and a refresh token
+// can expire or be revoked while the browser is closed. Neither runs any code,
+// so the next page load is the first moment anything can clear. Measured on
+// main: after a browser restart the page loaded signed out, the cache guard
+// looked only at the `anon` namespace, and all 45 `centium-state:u:<id>:*`
+// keys and presentationOwner stayed until the next sign-out.
+//
+// NOT CLEARED: a session this account still holds — verified, or stored and
+// not yet verifiable (offline: auth-js keeps the cookie on a network failure
+// and removes it only when the server refuses the refresh). A sibling TAB
+// signed in as the account is the same test, because every tab shares the
+// one session cookie (see the top of this file): a tab is signed in as
+// exactly the account the cookie names, and a tab locked out of it is not.
+
+/** Whether an account's saved data has outlived every session it had here. */
+export function accountSessionEnded(owner: string, cookieUserId: string | null, sessionUserId: string | null): boolean {
+  return owner !== sessionUserId && owner !== cookieUserId;
+}
+
+/** The accounts with data on this device: each `centium-state:u:<id>:` namespace, and presentationOwner's. */
+export function storedAccountIds(entries: Iterable<[string, string | null]>): string[] {
+  const ids = new Set<string>();
+  for (const [key, value] of entries) {
+    const m = new RegExp(`^${STORAGE_PREFIX}:u:([^:]+):`).exec(key);
+    if (m) ids.add(m[1]);
+    if (key === `${STORAGE_PREFIX}:presentationOwner`) {
+      try {
+        const owner = JSON.parse(value ?? "null") as unknown;
+        if (typeof owner === "string" && owner) ids.add(owner);
+      } catch {
+        /* unreadable: names no one */
+      }
+    }
+  }
+  return [...ids];
+}
+
+/**
+ * An ended account's keys (accountStorageKeys), less what is not its own on a
+ * page that carries on: the device's preferences, the signed-out namespace and
+ * draft, and another signed-in account's namespace. The account keys with no
+ * id go only when no one is signed in; otherwise they may be that account's.
+ */
+export function endedAccountKeys(entries: Iterable<[string, string | null]>, userId: string, anotherSignedIn: boolean): string[] {
+  const list = [...entries];
+  const values = new Map(list);
+  return accountStorageKeys(list, userId).filter((key) => {
+    if (key.includes(userId) || (values.get(key) ?? "").includes(userId)) return true;
+    if (key.startsWith(STORAGE_PREFIX) || key.startsWith("centium-onboarding:")) return false;
+    return !anotherSignedIn;
+  });
+}
+
+/**
+ * On load, before any state is read: clears every stored account but the one
+ * the session cookie names (`signedInUserId`, this tab's TAB_USER_ID).
+ */
+export function clearEndedAccounts(signedInUserId: string | null): void {
+  const g = globalThis as { localStorage?: Storage; sessionStorage?: Storage };
+  const entriesOf = (storage: Storage): [string, string | null][] => {
+    const out: [string, string | null][] = [];
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key !== null) out.push([key, storage.getItem(key)]);
+    }
+    return out;
+  };
+  try {
+    if (!g.localStorage) return;
+    const ended = storedAccountIds(entriesOf(g.localStorage)).filter((id) => accountSessionEnded(id, signedInUserId, null));
+    for (const storage of [g.localStorage, g.sessionStorage]) {
+      if (!storage) continue;
+      for (const id of ended) for (const key of endedAccountKeys(entriesOf(storage), id, signedInUserId !== null)) storage.removeItem(key);
+    }
+  } catch {
+    // Storage refused outright (private mode): nothing could have been kept.
+  }
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
