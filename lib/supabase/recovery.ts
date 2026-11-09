@@ -42,6 +42,8 @@
 // devtools still holds a usable token; layer 2 bounds that window rather than
 // closing it. Properly revoking it needs a backend this app does not have.
 
+import { readCookieHeader } from "./cookieJar";
+
 const FLAG_KEY = "centium-state:recoveryPending";
 
 /**
@@ -107,7 +109,7 @@ export function isRecoveryExchangeInFlight(): boolean {
   try {
     if (!new URLSearchParams(window.location.search).has("code")) return false;
 
-    return document.cookie
+    return readCookieHeader()
       .split(";")
       .filter((c) => c.trim().split("=")[0].endsWith("-code-verifier"))
       .some((c) => {

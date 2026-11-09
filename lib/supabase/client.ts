@@ -13,6 +13,7 @@ import { suspensionAwareFetch } from './suspension'
 import { offlineFastFetch } from './offlineFast'
 import { identityGuardFetch } from './tabIdentity'
 import { describeSessionToNative, tellNativeSessionPersists } from './nativeSession'
+import { readCookieHeader, writeCookie } from './cookieJar'
 import type { Database } from './database.types'
 
 // Single browser client for the whole app. createBrowserClient memoises
@@ -50,7 +51,8 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
   global: { fetch: identityGuardFetch(suspensionAwareFetch(offlineFastFetch())) },
   cookies: {
     getAll() {
-      return parseCookieHeader(document.cookie)
+      // document.cookie, or the iPhone app's own jar (./cookieJar).
+      return parseCookieHeader(readCookieHeader())
     },
     setAll(cookiesToSet) {
       const remember = getRememberMe()
@@ -105,7 +107,7 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
         // acts on it only while it outlives the app, which is this same answer.
         if (!isRemoval && !isVerifier) tellNativeSessionPersists(remember && !recovering)
 
-        document.cookie = serializeCookieHeader(name, value, finalOptions)
+        writeCookie(serializeCookieHeader(name, value, finalOptions))
       }
     },
   },

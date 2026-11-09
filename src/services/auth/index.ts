@@ -11,6 +11,7 @@ import { getLanguage, tk } from "../../i18n/core";
 import { isNative } from "../../platform";
 import { desktop, DESKTOP_AUTH_RETURN, type CentiumDesktop } from "../../platform/desktop";
 import { CentiumNative } from "../../platform/native";
+import { readCookieHeader } from "../../../lib/supabase/cookieJar";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
@@ -412,7 +413,7 @@ export async function getCurrentSession(): Promise<Session | null> {
  */
 export function hasStoredSessionToken(): boolean {
   if (typeof document === "undefined") return false;
-  return document.cookie
+  return readCookieHeader()
     .split("; ")
     .some((entry) => {
       const separator = entry.indexOf("=");
