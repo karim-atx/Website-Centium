@@ -135,7 +135,16 @@ import type { UnlockPurpose } from "../platform/biometricsModel";
 import { startHealthSync, stopHealthSync } from "../platform/health";
 import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
-import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
+import {
+  TAB_USER_ID,
+  clearAccountStorage,
+  endAccountStorage,
+  legacyMoves,
+  lockTab,
+  markSessionArrived,
+  storageKeyFor,
+  writeAccountValue,
+} from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { removeOtherDevicesPush, unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
@@ -1437,7 +1446,10 @@ function accountLabel(session: Session): string {
 }
 
 // Set while this tab is signing itself out, so its own SIGNED_OUT is not
-// mistaken for another tab's.
+// mistaken for another tab's. (The persisted cache has its own stop, set in the
+// same breath: endAccountStorage, lib/supabase/tabIdentity.ts. Not this flag,
+// because a session ended ELSEWHERE closes the cache too, and that tab must
+// still hear the auth events that update its lock notice.)
 let signingOutHere = false;
 
 // Iteration 6 "Team" §8: the five streak-board plant species — tulip is
@@ -1477,7 +1489,8 @@ function loadPersisted<T>(key: string, fallback: T): T {
  */
 function writePersisted<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(persistKey(key), JSON.stringify(value));
+    // Refused once sign-out has begun, like every persisted write.
+    writeAccountValue(localStorage, key, TAB_USER_ID, JSON.stringify(value));
   } catch {
     // A browser blocking site data is not a reason to fail the import; the
     // rows are already on the server by the time this runs.
@@ -1548,8 +1561,13 @@ function usePersistentState<T>(key: string, initial: T) {
     return loaded;
   });
   useEffect(() => {
+    // NOT ONCE SIGN-OUT HAS BEGUN. endSession resets the profile in state
+    // (setUser(defaultUser)) and then awaits the network; this effect saw the
+    // new value and wrote it straight back as `centium-state:u:<id>:user`,
+    // after the cache had been cleared, so every sign-out left the account's
+    // id on the device. writeAccountValue refuses it (tabIdentity.ts).
     try {
-      localStorage.setItem(persistKey(key), JSON.stringify(state));
+      writeAccountValue(localStorage, key, TAB_USER_ID, JSON.stringify(state));
     } catch (e) {
       // AN UNCAUGHT THROW HERE WOULD TAKE THE APP DOWN, not just lose a
       // write: this runs inside a React effect, on every persisted key in the
@@ -1655,6 +1673,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Suspended mid-session: auth-js dropped the session in THIS tab.
           // Not another tab's doing; reload to the auth screen, which explains.
           if (!next && accountSuspendedPending()) {
+            // The session is over on this device, so its data goes with it,
+            // as on any sign-out. (The suspension flag is not account data and
+            // stays, to explain the sign-out after the reload.)
+            endAccountStorage(TAB_USER_ID);
             window.location.reload();
             return;
           }
@@ -1663,6 +1685,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // revoked — clears the phone's widgets and shortcuts too while the
           // app is open. Nothing in a browser (nativeSignedOut is isNative-guarded).
           if (!next) void nativeSignedOut();
+          // Signed out there, so signed out here: the device keeps none of
+          // the account's data, whichever tab or device ended the session,
+          // and nothing still in flight in this locked tab may write it back.
+          // (Another ACCOUNT signing in elsewhere is not this account signing
+          // out; its cache is left to the tab bound to it, as before.)
+          if (!next) endAccountStorage(TAB_USER_ID);
           lockTab(next ? { kind: "switched", label: accountLabel(next) } : { kind: "signedOut" });
           return;
         }
@@ -6681,14 +6709,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // it must not be left behind by a network failure on the way to
     // Supabase — clearing it synchronously guarantees that even if the
     // remote call below hangs or throws.
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith(STORAGE_KEY))
-      .forEach((k) => localStorage.removeItem(k));
-    // The onboarding draft too: it belongs to this account (pages/onboarding/
-    // draftOwner), and the next person on this device must not resume it.
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith("centium-onboarding:"))
-      .forEach((k) => localStorage.removeItem(k));
+    //
+    // Everything under `centium-state`; the onboarding draft (it belongs to
+    // this account, pages/onboarding/draftOwner, and the next person on this
+    // device must not resume it); every other key that carries the account's
+    // id. AND FROM HERE ON NO PERSISTED WRITE LANDS: the awaits below give
+    // React time to re-render, and it used to write the reset profile straight
+    // back (lib/supabase/tabIdentity.ts, endAccountStorage).
+    const owner = authUserId ?? TAB_USER_ID;
+    endAccountStorage(owner);
 
     // The administrator escape hatch goes with it, and the boundary is the
     // sign-out rather than the tab. Keyed by account id, it was never
@@ -6735,6 +6764,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await nativeSignedOut();
 
     await signOutRemote(scope);
+    // Cleared again, last: a writer outside the persisted cache (a loader
+    // that finished during the awaits) may have written since. pagehide
+    // clears it once more as this page goes.
+    clearAccountStorage(owner);
     // A fresh page, bound to "signed out": no in-memory state of this account
     // survives into the next sign-in on this tab.
     window.location.reload();

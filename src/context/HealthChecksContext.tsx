@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { HealthChecksCtx as Ctx, type CheckIn, type HealthChecksValue } from "./healthChecksStore";
 import { useApp } from "./AppContext";
-import { STORAGE_PREFIX, TAB_USER_ID, storageKeyFor, storageNamespace } from "../../lib/supabase/tabIdentity";
+import { STORAGE_PREFIX, TAB_USER_ID, storageKeyFor, storageNamespace, writeAccountValue } from "../../lib/supabase/tabIdentity";
 import { REVIEWED, type Phase } from "../services/health-checks/guidance";
 import { todayLocal } from "../utils/date";
 import { readSetting, turnOff as deleteSetting, turnOn as insertSetting, type TurnOnResult } from "../services/health-checks/setting";
@@ -49,7 +49,8 @@ function readLocal<T>(key: string, fallback: T): T {
 
 function writeLocal(key: string, value: unknown) {
   try {
-    localStorage.setItem(storageKeyFor(key, TAB_USER_ID), JSON.stringify(value));
+    // Refused once sign-out has begun (tabIdentity.ts, endAccountStorage).
+    writeAccountValue(localStorage, key, TAB_USER_ID, JSON.stringify(value));
   } catch {
     /* storage full or blocked: the value lives for this page only */
   }

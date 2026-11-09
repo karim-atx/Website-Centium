@@ -12,6 +12,10 @@ import {
   currentTabLock,
   onTabLock,
   TAB_IDENTITY_REFUSAL,
+  accountStorageKeys,
+  endAccountStorage,
+  isAccountStorageClosed,
+  writeAccountValue,
 } from "../../../lib/supabase/tabIdentity";
 
 const A = "11111111-1111-4111-8111-111111111111";
@@ -93,6 +97,108 @@ test("legacy cache moves to the account that wrote it, never to the next sign-in
     ["centium-state:workoutLog", "centium-state:anon:workoutLog"],
   ]);
   assert.deepEqual(legacyMoves(["centium-state:workoutLog"], "{broken"), [["centium-state:workoutLog", "centium-state:anon:workoutLog"]]);
+});
+
+test("sign-out: the account's keys go, the device's stay", () => {
+  const entries: [string, string | null][] = [
+    // The persisted cache, whole, as sign-out has always cleared it.
+    [`centium-state:u:${A}:user`, "{}"],
+    ["centium-state:anon:user", "{}"],
+    ["centium-state:theme", '"dark"'],
+    // The onboarding draft, and a business's applicants seen.
+    ["centium-onboarding:state", '{"owner":null}'],
+    ["hiring-hired-seen:abc", "1"],
+    // The account id in the name, or in the value.
+    [`centium-business-nav-kind:${A}`, "gym"],
+    [`centium:health-log-queue:${A}`, "[]"],
+    ["centium.recoveryPending", A],
+    ["centium-admin-consumer", A],
+    // Account data with no id, by name.
+    ["centium.pushToken", "tok"],
+    ["centium.venueConsole.selected", "gym-1"],
+    // Another account's key is not this sign-out's business (it went at that account's).
+    [`centium-business-nav-kind:${B}`, "store"],
+    // The device's own.
+    ["centium-cookie-consent", "declined"],
+    ["centium.weightUnit", "kg"],
+    ["centium-map:area", "beirut"],
+    ["centium.pushAsk", "{}"],
+    ["centium-pass-device-tag", "x1"],
+    ["centium-account-suspended", "1"],
+    ["centium-landing:returning", "1"],
+  ];
+  assert.deepEqual(accountStorageKeys(entries, A), [
+    `centium-state:u:${A}:user`,
+    "centium-state:anon:user",
+    "centium-state:theme",
+    "centium-onboarding:state",
+    "hiring-hired-seen:abc",
+    `centium-business-nav-kind:${A}`,
+    `centium:health-log-queue:${A}`,
+    "centium.recoveryPending",
+    "centium-admin-consumer",
+    "centium.pushToken",
+    "centium.venueConsole.selected",
+  ]);
+  // No account known: the prefixes and the named keys still go.
+  assert.deepEqual(accountStorageKeys([[`centium-business-nav-kind:${A}`, "gym"], ["centium.pushToken", "t"]], null), ["centium.pushToken"]);
+});
+
+// After the identity tests that write nothing: closing is module state and
+// never reopens within a page (the page reloads).
+test("sign-out: no persisted write lands once it has begun, and the storage is cleared", () => {
+  const store = new Map<string, string>();
+  const fake = {
+    get length() {
+      return store.size;
+    },
+    key: (i: number) => [...store.keys()][i] ?? null,
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => void store.set(k, v),
+    removeItem: (k: string) => void store.delete(k),
+    clear: () => store.clear(),
+  } as Storage;
+  const session = new Map<string, string>([["centium-mfa-recovery-pass", A], ["centium-account-suspended", "1"]]);
+  const fakeSession = {
+    get length() {
+      return session.size;
+    },
+    key: (i: number) => [...session.keys()][i] ?? null,
+    getItem: (k: string) => session.get(k) ?? null,
+    setItem: (k: string, v: string) => void session.set(k, v),
+    removeItem: (k: string) => void session.delete(k),
+    clear: () => session.clear(),
+  } as Storage;
+  const heard: Record<string, () => void> = {};
+  const g = globalThis as Record<string, unknown>;
+  const saved = { localStorage: g.localStorage, sessionStorage: g.sessionStorage, addEventListener: g.addEventListener };
+  for (const [k, v] of Object.entries({ localStorage: fake, sessionStorage: fakeSession, addEventListener: (type: string, fn: () => void) => void (heard[type] = fn) })) {
+    Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
+  }
+  try {
+    // Signed in: the persisted cache writes as it always has.
+    assert.equal(isAccountStorageClosed(), false);
+    assert.equal(writeAccountValue(fake, "user", A, '{"firstName":"Maya"}'), true);
+    assert.equal(writeAccountValue(fake, "theme", A, '"dark"'), true);
+    store.set(`centium-business-nav-kind:${A}`, "gym");
+    store.set("centium-cookie-consent", "declined");
+
+    endAccountStorage(A);
+    assert.equal(isAccountStorageClosed(), true);
+    assert.deepEqual([...store.keys()], ["centium-cookie-consent"], "cleared at once");
+    assert.deepEqual([...session.keys()], ["centium-account-suspended"], "session storage too, the suspension flag kept");
+
+    // The bug: the reset profile written back during the sign-out's awaits.
+    assert.equal(writeAccountValue(fake, "user", A, '{"firstName":"Abdallah"}'), false);
+    assert.equal(store.has(`centium-state:u:${A}:user`), false, "no write while signing out");
+
+    // A writer outside the persisted cache, still in flight: gone as the page goes.
+    store.set(`centium-business-nav-kind:${A}`, "gym");
+    heard.pagehide();
+    assert.deepEqual([...store.keys()], ["centium-cookie-consent"]);
+  } finally {
+    for (const [k, v] of Object.entries(saved)) Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
+  }
 });
 
 // Last: the lock is module state and cannot be undone within a tab.

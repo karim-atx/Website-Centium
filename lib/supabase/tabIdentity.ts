@@ -203,6 +203,133 @@ export function storageKeyFor(key: string, userId: string | null): string {
   return DEVICE_KEYS.has(key) ? `${STORAGE_PREFIX}:${key}` : `${STORAGE_PREFIX}:${storageNamespace(userId)}:${key}`;
 }
 
+// --- the end of an account on this device: sign-out ------------------------
+//
+// THE RULE: sign-out leaves no account data on the device. Clearing the cache
+// once, first, was not enough, and it was measured rather than assumed: every
+// way out of an account (Sign out, Sign out of all devices, deleting the
+// account, "Couldn't load your account", the outbox's warning) left
+// `centium-state:u:<id>:user` behind. endSession cleared the cache and THEN
+// reset the profile in React state; usePersistentState's effect saw the new
+// value and wrote it straight back under the account's namespace while the
+// sign-out was still awaiting the network. Keys outside the `centium-state`
+// prefix that carry the account id (a business's
+// `centium-business-nav-kind:<id>`) were never cleared at all.
+//
+// So: from sign-out's first line the account's storage is CLOSED, and every
+// persisted write is refused; what is already there is removed then, again
+// right before the reload, and once more as the page goes (anything still in
+// flight when the reload was asked for, a fetch completing or a timer, runs
+// until the new page arrives, and pagehide is the last moment this page has).
+
+let accountStorageClosed = false;
+
+/** Whether sign-out has begun in this page. Never reopens: the page reloads. */
+export function isAccountStorageClosed(): boolean {
+  return accountStorageClosed;
+}
+
+/**
+ * Writes one persisted value under the account's namespace (storageKeyFor),
+ * unless sign-out has begun. Returns whether it wrote. What the storage throws
+ * (QuotaExceededError, a refused private window) is the caller's, as before.
+ */
+export function writeAccountValue(storage: Pick<Storage, "setItem">, key: string, userId: string | null, json: string): boolean {
+  if (accountStorageClosed) return false;
+  storage.setItem(storageKeyFor(key, userId), json);
+  return true;
+}
+
+/**
+ * Prefixes whose every key is account data. `centium-state` is the app's whole
+ * persisted cache, the device's own preferences included, exactly as sign-out
+ * has always cleared it; `centium-onboarding:` is the onboarding draft, which
+ * belongs to the account that wrote it (pages/onboarding/draftOwner);
+ * `hiring-hired-seen:` is keyed by a business's application ids.
+ */
+const ACCOUNT_PREFIXES = [STORAGE_PREFIX, "centium-onboarding:", "hiring-hired-seen:"];
+
+/**
+ * Account data with NEITHER a prefix above NOR the account id in it, by name.
+ * A new key is better given the account id (or the `centium-state` namespace)
+ * than added here; this list is what predates that.
+ */
+export const ACCOUNT_KEYS_WITHOUT_ID: ReadonlySet<string> = new Set([
+  // The phone's push token, registered to this account (platform/push.ts).
+  "centium.pushToken",
+  // The ended session's id (platform/installReport.ts).
+  "centium.installReportedSession",
+  // Which of this account's venues the console shows (hooks/useMyVenues.ts).
+  "centium.venueConsole.selected",
+  // This account's coach updates closed, and its reminders acknowledged.
+  "centium.coachUpdateSeen",
+  "centium:pro-reminders:ack",
+  // The playlists this account's screens looked up (services/music/lookup.ts).
+  "centium.playlistMeta.v1",
+  // Session storage: the reviews this business messaged, the listing cards counted.
+  "centium.reputation.messaged",
+  "centium.listingEvents",
+]);
+
+/**
+ * Which of these stored entries are account data, to go at sign-out: the
+ * prefixes above, the named keys, and anything whose name or value carries the
+ * account id (the outbox, a cart, a dismissed prompt, the administrator's
+ * escape hatch, the recovery flag, a draft's owner).
+ *
+ * KEPT, because they belong to the device and not to anyone on it: the cookie
+ * choice, units, the map area, view toggles, the update notice, the push-ask
+ * state ("this phone's permission, not the account"), the pass device tag
+ * (services/venues/passDevice: "not account data, so it outlives sign-out"),
+ * the landing page's own keys, and the tab's sign-in and suspension marks.
+ */
+export function accountStorageKeys(entries: Iterable<[string, string | null]>, userId: string | null): string[] {
+  const out: string[] = [];
+  for (const [key, value] of entries) {
+    if (
+      ACCOUNT_PREFIXES.some((p) => key.startsWith(p)) ||
+      ACCOUNT_KEYS_WITHOUT_ID.has(key) ||
+      (userId !== null && (key.includes(userId) || (value ?? "").includes(userId)))
+    ) {
+      out.push(key);
+    }
+  }
+  return out;
+}
+
+function clearAccountKeys(storage: Storage | undefined, userId: string | null): void {
+  if (!storage) return;
+  try {
+    const entries: [string, string | null][] = [];
+    for (let i = 0; i < storage.length; i++) {
+      const key = storage.key(i);
+      if (key !== null) entries.push([key, storage.getItem(key)]);
+    }
+    for (const key of accountStorageKeys(entries, userId)) storage.removeItem(key);
+  } catch {
+    // Storage refused outright (private mode): nothing could have been kept.
+  }
+}
+
+/** Removes this account's data from local and session storage, now. */
+export function clearAccountStorage(userId: string | null): void {
+  const g = globalThis as { localStorage?: Storage; sessionStorage?: Storage };
+  clearAccountKeys(g.localStorage, userId);
+  clearAccountKeys(g.sessionStorage, userId);
+}
+
+/**
+ * The account is leaving this page: no persisted write from here on, and its
+ * data removed now and again as the page goes. Every way a session ends calls
+ * it (AppContext: endSession, a session ended elsewhere, a suspension).
+ */
+export function endAccountStorage(userId: string | null): void {
+  accountStorageClosed = true;
+  clearAccountStorage(userId);
+  const w = globalThis as { addEventListener?: (type: string, fn: () => void, opts?: { once?: boolean }) => void };
+  w.addEventListener?.("pagehide", () => clearAccountStorage(userId), { once: true });
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
