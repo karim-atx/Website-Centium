@@ -14,6 +14,8 @@
 // before it leaves the browser. When another tab changes the account, this tab
 // locks and says so; the only way on is a full reload, which re-binds it.
 
+import { readCookieHeader } from "./cookieJar";
+
 /** Any Supabase data surface: tables and RPCs, storage, edge functions. Auth is not data. */
 export function isDataRequest(url: string): boolean {
   return /\/(rest|storage|functions)\/v1\//.test(url);
@@ -91,8 +93,9 @@ export function shouldRefuse(tabUserId: string | null, url: string, authorizatio
 // --- the tab's own identity --------------------------------------------------
 
 /** The user this tab loaded with. Fixed for the life of the tab; a reload re-binds it. */
-// Read through globalThis so the module also loads outside a browser (tests).
-const pageCookie = (globalThis as { document?: { cookie: string } }).document?.cookie;
+// Through ./cookieJar (the iPhone app keeps its own); undefined outside a
+// browser, so the module also loads in tests.
+const pageCookie = (globalThis as { document?: unknown }).document === undefined ? undefined : readCookieHeader();
 export const TAB_USER_ID: string | null = pageCookie !== undefined ? sessionUserIdFromCookies(pageCookie) : null;
 
 export type TabLock =
