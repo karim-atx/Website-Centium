@@ -433,6 +433,8 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   outline: none;
   padding: 0;
   font: inherit;
+  /* The box's size, but at least 16px on a phone (--field-min, index.css). */
+  font-size: max(var(--field-min, 0px), 100%);
   color: inherit;
   height: 100%;
 }

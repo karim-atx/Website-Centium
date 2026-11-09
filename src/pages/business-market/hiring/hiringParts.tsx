@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, ChevronRight, EllipsisVertical } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
-import { linePx, textPx } from "../../../theme/textSize";
+import { linePx, textPx, FIELD_FONT_INHERIT } from "../../../theme/textSize";
 import { marketPalette, STATUS_STEPS, type MarketPalette } from "../../../theme/marketTokens";
 import { hexAlpha, liftInk, luminance } from "../../../components/market/marketColor";
 import { ConfirmationStrip, type StripTone } from "../../../components/market/ConfirmationStrip";
@@ -468,7 +468,7 @@ export function FieldInput({
         maxLength={maxLength}
         aria-describedby={describedBy}
         autoComplete="off"
-        style={{ flex: 1, minWidth: 0, width: "100%", border: 0, outline: "none", background: "transparent", color: m.ink, font: "inherit", padding: 0 }}
+        style={{ flex: 1, minWidth: 0, width: "100%", border: 0, outline: "none", background: "transparent", color: m.ink, font: "inherit", fontSize: FIELD_FONT_INHERIT, padding: 0 }}
       />
       {suffix}
     </div>

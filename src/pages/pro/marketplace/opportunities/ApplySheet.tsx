@@ -13,6 +13,7 @@ import { payMoney, payText } from "../../../../services/hiring/fee";
 import { MasterSheet, PrimaryButton, SaveError, SoonNote, fieldStyle, lh, px, useMarketColors } from "../../../business-market/listingParts";
 import { applyTitle, attachableCredentials, availabilityLabel, openingSub, parseRate, proposalHint, scheduleLine, unitWord } from "./opportunitiesModel";
 import { t, tk, tx } from "../../../../i18n/core";
+import { FIELD_FONT_INHERIT } from "../../../../theme/textSize";
 
 // Market + Share 3.0 · W4 · P-MA.5.2 Apply (MasterBottomSheet; Professional
 // Marketplace Screens `sheet` for apSheet / apSheetRate, lines 551–577 and
@@ -192,7 +193,7 @@ function ApplyForm({ opening: o, onClose, onSent, onAlreadyApplied }: { opening:
                 onChange={(e) => setRate(e.target.value)}
                 aria-describedby={ids.rateHint}
                 aria-invalid={rateInvalid || undefined}
-                style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent", font: "inherit", color: "inherit", padding: 0 }}
+                style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent", font: "inherit", fontSize: FIELD_FONT_INHERIT, color: "inherit", padding: 0 }}
               />
               <span style={{ color: m.faint, whiteSpace: "nowrap" }}>{unitWord(o.payUnit)}</span>
             </div>

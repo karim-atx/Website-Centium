@@ -10,6 +10,7 @@ import { usePageMotion } from "../landing/pageMotion";
 import { useViewportWidth } from "../landing/viewport";
 import { LG, SM } from "../landing/engine/env";
 import { t, tk } from "../../i18n/core";
+import { fieldPx } from "../../theme/textSize";
 
 // Centium landing v29: the Contact page (CT1 v17, handover
 // 02_pages/19-CT1), the prototype markup with its exact inline styles. ONLY
@@ -227,7 +228,8 @@ export const Contact: React.FC = () => {
     borderRadius: "14px",
     border: "1.5px solid " + (invalid[f] ? ERROR_RED : "#9A907A"),
     background: invalid[f] ? "#FFFBFA" : unavailable ? "#F6F5F2" : "#FFFFFF",
-    fontSize: "14.5px",
+    // At least 16px at phone width, so iOS doesn't zoom in on focus.
+    fontSize: fieldPx(14.5),
     color: "#221E1A",
     outline: "none",
     transition: "border-color .2s",
