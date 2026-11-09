@@ -32,6 +32,7 @@ import type { JournalEntry, JournalFolder } from "../../types";
 import { JOURNAL_LIMITS, folderLockAuth, type FolderLockAuth } from "../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLogic";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../components/mind/JournalLock";
+import { useJournalDeviceUnlock } from "../../components/mind/useJournalDeviceUnlock";
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
 import { appLocale } from "../../i18n/format";
@@ -274,6 +275,14 @@ export default function JournalTab() {
 
   // S9: Recently = the last 30 days across the open folders (a shut folder's
   // entries are never in journalEntries: the server hides them).
+  // Round K: this phone's fingerprint or face, first in the prompt (the app only).
+  const deviceUnlock = useJournalDeviceUnlock(asking, () => {
+    const then = asking?.then;
+    setAsking(null);
+    setLockNotice(undefined);
+    then?.();
+  });
+
   const since = shiftDate(today, -30);
   const entries = journalEntries
     .filter((e) => (recent ? e.date >= since : e.folderId === selected))
@@ -968,6 +977,7 @@ export default function JournalTab() {
           method={lockAuth?.method}
           email={lockAuth?.email}
           notice={lockNotice}
+          device={deviceUnlock}
         />
       )}
 

@@ -129,6 +129,9 @@ import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutOtherDev
 import { SIGN_OUT_SCOPE, signOutEveryDevice } from "../services/auth/signOutScope";
 import { reportInstallOnce } from "../platform/installReport";
 import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
+import { revokeThisPhoneOnSignOut, unlockFolderWithDevice } from "../services/journal/deviceUnlock";
+import type { DeviceOutcome } from "../services/journal/deviceUnlockModel";
+import type { UnlockPurpose } from "../platform/biometricsModel";
 import { startHealthSync, stopHealthSync } from "../platform/health";
 import { syncShortcuts } from "../platform/shortcuts";
 import { startNativePush } from "../platform/push";
@@ -978,6 +981,8 @@ interface AppState {
   unlockJournalFolder: (id: string, secret: string, via?: UnlockMethod) => Promise<LockOutcome>;
   /** Removes the lock for good, behind the same password or code check. */
   disableJournalFolderLock: (id: string, secret: string, via?: UnlockMethod) => Promise<LockOutcome>;
+  /** Round K (DB-Z8): the same, with this phone's fingerprint or face ("remove" removes the lock). */
+  unlockJournalFolderWithDevice: (id: string, purpose: UnlockPurpose, folderName: string) => Promise<DeviceOutcome>;
 
   bloodMarkers: BloodMarker[];
   /** Panels carrying an uploaded report, newest first. Empty when none do. */
@@ -6236,25 +6241,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return null;
   };
 
-  const unlockJournalFolder = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
-    const result = via === "code" ? await unlockJournalFolderWithCodeRemote(id, secret) : await unlockJournalFolderRemote(id, secret);
-    if (!result.ok || !result.unlockedUntil) return result;
-    // Re-unlocking replaces the window rather than extending it.
-    const windows = { ...liveWindows(journalUnlockedUntil, Date.now()), [id]: result.unlockedUntil };
+  // Re-unlocking replaces the window rather than extending it.
+  const openJournalWindow = async (id: string, until: string) => {
+    const windows = { ...liveWindows(journalUnlockedUntil, Date.now()), [id]: until };
     setJournalUnlockedUntil(windows);
     await refetchJournalEntries(windows, journalFolders);
-    return result;
   };
 
-  const disableJournalFolderLock = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
-    const result = via === "code" ? await disableJournalFolderLockWithCodeRemote(id, secret) : await disableJournalFolderLockRemote(id, secret);
-    if (!result.ok) return result;
+  const journalLockRemoved = async (id: string) => {
     const windows = { ...journalUnlockedUntil };
     delete windows[id];
     const folders = journalFolders.map((f) => (f.id === id ? { ...f, locked: false } : f));
     setJournalUnlockedUntil(windows);
     setJournalFolders(folders);
     await refetchJournalEntries(windows, folders);
+  };
+
+  const unlockJournalFolder = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
+    const result = via === "code" ? await unlockJournalFolderWithCodeRemote(id, secret) : await unlockJournalFolderRemote(id, secret);
+    if (!result.ok || !result.unlockedUntil) return result;
+    await openJournalWindow(id, result.unlockedUntil);
+    return result;
+  };
+
+  const disableJournalFolderLock = async (id: string, secret: string, via: UnlockMethod = "password"): Promise<LockOutcome> => {
+    const result = via === "code" ? await disableJournalFolderLockWithCodeRemote(id, secret) : await disableJournalFolderLockRemote(id, secret);
+    if (!result.ok) return result;
+    await journalLockRemoved(id);
+    return result;
+  };
+
+  const unlockJournalFolderWithDevice = async (id: string, purpose: UnlockPurpose, folderName: string): Promise<DeviceOutcome> => {
+    const result = await unlockFolderWithDevice(id, purpose, folderName);
+    if (!result.ok) return result;
+    if (purpose === "remove") await journalLockRemoved(id);
+    else if (result.unlockedUntil) await openJournalWindow(id, result.unlockedUntil);
     return result;
   };
 
@@ -6582,6 +6603,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (removal.status === "error") {
       console.error("[auth] Could not remove this device's push subscription:", removal.message);
     }
+    // Round K (DB-Z8): this phone's fingerprint key comes off the server while
+    // the session still allows it; the phone deletes the key itself in
+    // nativeSignedOut() below. Best effort, capped at two seconds.
+    await revokeThisPhoneOnSignOut();
     // The phone app's side (ROUND_J.md §1.4): widgets, shortcuts, a running
     // session. Best effort and capped at two seconds, like the line above.
     await nativeSignedOut();
@@ -6823,6 +6848,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lockJournalFolder,
       unlockJournalFolder,
       disableJournalFolderLock,
+      unlockJournalFolderWithDevice,
       bloodMarkers,
       labReports,
       recordBiomarkers,
