@@ -817,6 +817,16 @@ const settings: Catalogue = {
   "You've changed your name five times in 30 days. Try again later.": "غيّرت اسمك خمس مرات خلال 30 يومًا. حاول مجددًا لاحقًا.",
   "Couldn't save your name. Try again.": "تعذّر حفظ اسمك. حاول مرة أخرى.",
   "Couldn't change your email. Try again.": "تعذّر تغيير بريدك الإلكتروني. حاول مرة أخرى.",
+  // == The desktop app (NotificationsPage) ==
+  "Off in Windows settings": "متوقفة في إعدادات Windows",
+  "On this computer": "على هذا الحاسوب",
+  "Start Centium when I sign in": "تشغيل Centium عند تسجيل دخولي",
+  "Centium starts in the tray when you sign in to your computer, so notifications arrive without opening it.":
+    "يبدأ Centium في علبة النظام عند تسجيل دخولك إلى حاسوبك، فتصلك الإشعارات دون أن تفتحه.",
+  "Couldn't read this setting.": "تعذّرت قراءة هذا الإعداد.",
+  "Couldn't change this setting.": "تعذّر تغيير هذا الإعداد.",
+  "Windows kept this off. Turn Centium on in Task Manager → Startup apps.":
+    "أبقى Windows هذا الإعداد متوقفًا. شغّل Centium من إدارة المهام ← تطبيقات بدء التشغيل.",
 };
 
 export default settings;

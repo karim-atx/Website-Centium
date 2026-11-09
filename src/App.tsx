@@ -12,6 +12,8 @@ import { PushBanner } from "./components/native/PushBanner";
 import { WidgetSnapshotSync } from "./components/native/WidgetSnapshotSync";
 import { PhoneCalendarSync } from "./components/native/PhoneCalendarSync";
 import { isNative } from "./platform";
+import { isDesktop } from "./platform/desktop";
+import { DesktopOpenPath } from "./components/desktop/DesktopOpenPath";
 import { hasReturnedAuthError } from "./services/auth";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -656,6 +658,8 @@ export default function App() {
           <AppRoutes />
           {/* The phone app: a widget, shortcut or notification opens a page. */}
           {isNative() && <NativeOpenPath />}
+          {/* The desktop app: a click on a Windows notification opens its page. */}
+          {isDesktop() && <DesktopOpenPath />}
           {/* A push that arrives while the app is open (calls and messages excepted). */}
           {isNative() && <PushBanner />}
         </BrowserRouter>

@@ -9,6 +9,7 @@ import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
 import { SIGN_OUT_SCOPE, signOutWithScope, type SignOutError } from "./signOutScope";
 import { getLanguage, tk } from "../../i18n/core";
 import { isNative } from "../../platform";
+import { desktop, DESKTOP_AUTH_RETURN, type CentiumDesktop } from "../../platform/desktop";
 import { CentiumNative } from "../../platform/native";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
@@ -241,6 +242,8 @@ export async function signInWithEmail(email: string, password: string, captchaTo
 
 export type OAuthResult =
   | { status: "redirecting" }
+  /** The desktop app: Google is open in the default browser; the window stays. */
+  | { status: "in_browser" }
   | { status: "signed_in" }
   | { status: "cancelled" }
   | { status: "error"; message: string };
@@ -275,6 +278,8 @@ export type OAuthResult =
  */
 export async function signInWithGoogle(): Promise<OAuthResult> {
   if (isNative()) return signInWithGoogleNative();
+  const app = desktop();
+  if (app) return signInWithGoogleDesktop(app);
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
@@ -285,6 +290,35 @@ export async function signInWithGoogle(): Promise<OAuthResult> {
 
   if (error) return { status: "error", message: describeAuthError(error) };
   return { status: "redirecting" };
+}
+
+/**
+ * IN THE DESKTOP APP Google refuses its sign-in page inside the app's window
+ * (an embedded browser, which Google blocks), so the sign-in happens in the
+ * person's default browser instead. supabase-js builds the address without
+ * leaving (skipBrowserRedirect) and keeps the PKCE verifier in this window's
+ * cookies; the shell opens the address; Google returns to
+ * centium://auth/callback, and the shell loads /app/onboarding?code=… in this
+ * window, where the client exchanges the code as on any web return
+ * (Desktop-Centium src-tauri/src/deeplink.rs). The same chooser as on the web.
+ */
+async function signInWithGoogleDesktop(app: CentiumDesktop): Promise<OAuthResult> {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: DESKTOP_AUTH_RETURN,
+      skipBrowserRedirect: true,
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error) return { status: "error", message: describeAuthError(error) };
+  if (!data?.url) return { status: "error", message: tk("Couldn't open Google sign-in. Try again.") };
+  try {
+    await app.openExternal(data.url);
+  } catch {
+    return { status: "error", message: tk("Couldn't open Google sign-in. Try again.") };
+  }
+  return { status: "in_browser" };
 }
 
 /** A random nonce and its SHA-256, both hex: Google gets the hash, Supabase the raw value. */

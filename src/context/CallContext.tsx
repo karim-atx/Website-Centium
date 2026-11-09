@@ -9,7 +9,8 @@ import {
   type CallKind,
   type CallRow,
 } from "../services/calling";
-import { tk } from "../i18n/core";
+import { t, tk } from "../i18n/core";
+import { desktop } from "../platform/desktop";
 
 /**
  * The one place that knows whether a call is happening.
@@ -169,6 +170,19 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ) {
         setEndedReason(null);
         setCallState({ row, credentials: null, role }, "incoming");
+        // The desktop app in the tray or behind other windows: the ring is on
+        // a page nobody can see, so Windows says so. No caller name, as on a
+        // lock screen; a click brings the window forward to the ringing call.
+        const app = desktop();
+        if (app && (document.visibilityState !== "visible" || !document.hasFocus())) {
+          void app
+            .notify({
+              title: row.kind === "video" ? t("Incoming video call") : t("Incoming voice call"),
+              body: t("Open Centium to answer."),
+              tag: `call-${row.id}`,
+            })
+            .catch(() => {});
+        }
       }
     },
     [authUserId, setCallState]

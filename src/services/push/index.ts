@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { encodeKey } from "./encode";
 import { isNative } from "../../platform";
+import { desktop, isDesktop } from "../../platform/desktop";
 import {
   nativePush,
   nativePushPermission,
@@ -109,6 +110,9 @@ export function pushSupported(): boolean {
   // The phone app receives push through FCM / APNs instead (App-Centium
   // ROUND_J.md §3), and registers no service worker (main.tsx).
   if (isNative()) return nativePushSupported();
+  // The desktop app shows Windows notifications itself
+  // (hooks/useDesktopNotifications); the embedded browser has no Push API.
+  if (isDesktop()) return true;
   return (
     typeof navigator !== "undefined" &&
     typeof window !== "undefined" &&
@@ -118,12 +122,35 @@ export function pushSupported(): boolean {
   );
 }
 
+// THE DESKTOP APP'S PERMISSION IS WINDOWS' SWITCH FOR CENTIUM (Settings →
+// System → Notifications), which the app can read but not ask for: Windows
+// has no prompt, and notifications start on. So "granted" or "denied", never
+// "default", and enabling is reading. Cached for the synchronous reader,
+// refreshed by every async read.
+let desktopPermission: NotificationPermission = "granted";
+
+async function readDesktopPermission(): Promise<NotificationPermission> {
+  try {
+    desktopPermission = (await desktop()?.notificationsEnabled()) ? "granted" : "denied";
+  } catch {
+    // The bridge failed: keep the last answer rather than invent one.
+  }
+  return desktopPermission;
+}
+
+async function desktopResult(): Promise<{ status: "ok"; endpoint: string; created: boolean } | { status: "denied"; message: string }> {
+  return (await readDesktopPermission()) === "granted"
+    ? { status: "ok", endpoint: "desktop", created: false }
+    : { status: "denied", message: "Notifications are off for Centium in Windows settings." };
+}
+
 /**
  * This device's notification permission, read synchronously: the browser's
  * Notification.permission, or in the app the last answer from the phone
  * (platform/push.ts). Only meaningful where pushSupported() is true.
  */
 export function pushPermissionNow(): NotificationPermission {
+  if (isDesktop()) return desktopPermission;
   if (isNative()) {
     const p = nativePushPermission();
     return p === "prompt" ? "default" : p;
@@ -137,6 +164,7 @@ export function pushPermissionNow(): NotificationPermission {
  * the person came back to from the phone's settings) reads it fresh.
  */
 export async function readPushPermission(): Promise<NotificationPermission> {
+  if (isDesktop()) return readDesktopPermission();
   if (isNative()) {
     try {
       const p = await nativePush.permission();
@@ -154,6 +182,15 @@ export async function readPushPermission(): Promise<NotificationPermission> {
  * such page to open, so this does nothing there.
  */
 export async function openPushSettings(): Promise<void> {
+  const app = desktop();
+  if (app) {
+    try {
+      await app.openNotificationSettings();
+    } catch (e) {
+      console.error("[push] Couldn't open Windows' notification settings:", e);
+    }
+    return;
+  }
   if (!isNative()) return;
   try {
     await nativePush.openSettings();
@@ -203,6 +240,7 @@ export async function enablePush(ownerId: string | null): Promise<EnableResult> 
     return { status: "unsupported", message: "This browser can't receive notifications." };
   }
   if (isNative()) return enableNativePush(ownerId);
+  if (isDesktop()) return desktopResult();
 
   let permission: NotificationPermission;
   try {
@@ -265,6 +303,7 @@ export async function subscribeToPush(ownerId: string): Promise<SubscribeResult>
   if (!pushSupported()) {
     return { status: "unsupported", message: "This browser can't receive notifications." };
   }
+  if (isDesktop()) return desktopResult();
   if (Notification.permission !== "granted") {
     return { status: "denied", message: "Notifications are blocked for Centium." };
   }
@@ -415,6 +454,9 @@ async function recordSubscription(
  * after signOut() the row is unreachable and would be left behind forever.
  */
 export async function unsubscribeFromPush(): Promise<UnsubscribeResult> {
+  // The desktop app holds no subscription: the account's switch is what
+  // stops its notifications (useDesktopNotifications reads only delivered rows).
+  if (isDesktop()) return { status: "ok", removed: false };
   if (isNative()) {
     // The app's row in push_devices, by this install's token (DB-Z3).
     const r = await unregisterNativePush();
@@ -473,7 +515,7 @@ export async function removeOtherDevicesPush(): Promise<void> {
 
   // This browser's endpoint, read, never subscribed for (as unsubscribeFromPush).
   let ownEndpoint: string | null = null;
-  if (!isNative() && pushSupported()) {
+  if (!isNative() && !isDesktop() && pushSupported()) {
     try {
       const registration = await navigator.serviceWorker.getRegistration();
       ownEndpoint = (await registration?.pushManager.getSubscription())?.endpoint ?? null;
@@ -515,6 +557,7 @@ type UnregisterRpc = { rpc: (fn: string, args: object) => PromiseLike<{ error: {
 export async function isThisDeviceRegistered(): Promise<boolean | null> {
   if (!pushSupported()) return null;
   if (isNative()) return nativePushRegistered();
+  if (isDesktop()) return (await readDesktopPermission()) === "granted";
   try {
     const registration = await navigator.serviceWorker.getRegistration();
     if (!registration) return false;

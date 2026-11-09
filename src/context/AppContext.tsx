@@ -139,6 +139,7 @@ import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } 
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { removeOtherDevicesPush, unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
+import { useDesktopNotifications } from "../hooks/useDesktopNotifications";
 import {
   createHabit,
   deleteHabitRemote,
@@ -1693,6 +1694,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // wraps the router and never unmounts, so "once per sign-in" means exactly
   // that. See src/hooks/usePushSubscriptionSync.ts.
   usePushSubscriptionSync(authUserId);
+  // The desktop app's Windows notifications (nothing anywhere else). Here for
+  // the same reason: it must outlive trips to marketing routes.
+  useDesktopNotifications(authUserId);
 
   // A session ending must clear the local cache, however it ended.
   //
