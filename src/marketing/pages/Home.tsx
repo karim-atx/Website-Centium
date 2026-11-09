@@ -12,7 +12,7 @@ import { addLoadingTask, landingState } from "../landing/state";
 import { LG, dirSign, lowQuality, reducedMotion } from "../landing/engine/env";
 import { scrollToInline } from "../../utils/inlineScroll";
 import type { EngineSection } from "../landing/engine/scrollEngine";
-import { ANCHOR_OFFSET, anchorTarget, useMarketingNav } from "../landing/navigation";
+import { ANCHOR_OFFSET, anchorTarget } from "../landing/navigation";
 import { SectionHostContext, type SectionHost } from "../landing/sectionHost";
 import type { LandingMotion } from "../landing/motion";
 import { audienceOf, landOnAudience, type AUDIENCE_CLICK } from "../landing/audience";
@@ -39,7 +39,6 @@ export const Home: React.FC = () => {
   const [entry] = useState(() => loaderEntryFor(location.key, location.pathname, location.hash));
   const [view, setView] = useState(subscribeViewport);
   const motion = useRef<LandingMotion | null>(null);
-  const go = useMarketingNav();
   const r = introVals(view.vw);
   const rs = sectionVals(view.vw, view.vh);
 
@@ -256,12 +255,6 @@ export const Home: React.FC = () => {
     }
   };
 
-  const onContact = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    go("/contact");
-  };
-
   const twY = entry.mode === "rm" ? "0%" : entry.kind === "lo1" ? "10%" : entry.kind === "lo2" ? "130%" : "0%";
   return (
     <SectionHostContext.Provider value={host}>
@@ -277,7 +270,6 @@ export const Home: React.FC = () => {
         dotOp={entry.kind === "lo1" ? "0" : "1"}
         readyOp={entry.kind ? "0" : "1"}
         onPillar={onPillar}
-        onContact={onContact}
         onSkip={onSkip}
       />
       <Suspense fallback={null}>

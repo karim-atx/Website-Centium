@@ -14,6 +14,8 @@ export const FILES: string[] = [
   "marketing/components/Footer.tsx",
   "marketing/components/LanguageSwitch.tsx",
   "marketing/components/Nav.tsx",
+  "marketing/download/DownloadButton.tsx",
+  "marketing/download/platforms.ts",
   "marketing/landing/loading/Loaders.tsx",
   "marketing/landing/loading/LoadingHost.tsx",
   "marketing/landing/loading/pickLoader.ts",
@@ -96,7 +98,6 @@ const landing: Catalogue = {
   "Your health,": "صحتك،",
   "all in one place": "كلها في مكان واحد",
   "More clarity. More control. More you.": "وضوح أكثر. تحكّم أكثر. أنت أكثر.",
-  "Request a Demo": "طلب عرض توضيحي",
   SCROLL: "مرّر",
   "Skip intro": "تخطي المقدمة",
   // The five scattered app fragments of the intro (mock screens of other apps).
@@ -826,8 +827,20 @@ const landing: Catalogue = {
 
   // == Landing › Closing call to action ==
   "Ready to bring it all together?": "مستعد لجمع كل شيء معًا؟",
-  "App Store · Coming soon": "App Store · قريبًا",
-  "Google Play · Coming soon": "Google Play · قريبًا",
+
+  // == Landing › Download button (Task O): the hero and the closing CTA ==
+  // Store and system names stay Latin, as elsewhere on the page. The list's
+  // "Coming soon" (auth.ts) and "Browser" (shared.ts) are existing keys.
+  "Download for Windows": "تنزيل لنظام Windows",
+  "Download for Mac": "تنزيل لجهاز Mac",
+  "Download on the App Store": "التنزيل من App Store",
+  "Get it on Google Play": "احصل عليه من Google Play",
+  "Open Centium in your browser": "افتح Centium في متصفحك",
+  "Other platforms": "منصات أخرى",
+  Windows: "Windows",
+  Mac: "Mac",
+  "iPhone and iPad": "iPhone و iPad",
+  Android: "Android",
 
   // == Landing › Page titles (useSEO) ==
   "Your health, all in one place": "صحتك، كلها في مكان واحد",

@@ -9,6 +9,8 @@ import { Link } from "react-router-dom";
 import { LEAF_TEAL, MARK_LEAF_PATH } from "../paths";
 import { SCREENS, screenBackground } from "../assets/dashboard";
 import type { IntroVals } from "./introVals";
+import { DownloadButton } from "../../download/DownloadButton";
+import { ctaGrid } from "../../download/ctaGrid";
 import { isRtl, t, tk } from "../../../i18n/core";
 
 // The two intro lines are split into words for their reveals (never into
@@ -33,7 +35,6 @@ interface IntroProps {
    *  first pass would set the same; this keeps them hidden until it arrives). */
   readyOp: string;
   onPillar: (e: React.MouseEvent<HTMLAnchorElement>) => void;
-  onContact: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   onSkip: () => void;
 }
 
@@ -63,7 +64,7 @@ const appIcon = (style: React.CSSProperties) => (
   <span style={{ width: "18px", height: "18px", flexShrink: 0, borderRadius: "5px", display: "flex", alignItems: "center", justifyContent: "center", ...style }} />
 );
 
-export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, onContact, onSkip }) => {
+export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, onSkip }) => {
   // HE1 v3 (C3): lavender #775FD7 at rest, teal #3D6E69 on hover and focus
   // (.cl-pil in landing.css), nothing kept highlighted; each word goes to its
   // own pillar (data-pil, Home.tsx onPillar). Arabic: no tracking, so no
@@ -416,13 +417,18 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <p style={{ margin: r.subMt + " auto 0", maxWidth: "560px", fontSize: r.subSize, lineHeight: 1.5, color: "#5B5349" }}>
               {t("More clarity. More control. More you.")}
             </p>
-            <div style={{ display: "flex", justifyContent: "center", gap: "12px", marginTop: r.ctaMt, flexWrap: "wrap" }}>
+            {/* Task O: Get Started and the download button(s) share one width, the
+                widest label's, at least ctaW (ctaGrid); one full-width column below
+                640px. The download button takes the slot and styles of the
+                "Request a Demo" button it replaced (decision 1), with 20px each
+                side and one line for the longer labels. */}
+            <div style={{ ...ctaGrid(!r.sm, r.ctaW), margin: r.sm ? `${r.ctaMt} auto 0` : `${r.ctaMt} 0 0` }}>
               <Link
                 to="/app"
                 className="cl-lift"
                 style={{
-                  width: r.ctaW,
-                  padding: "15px 0",
+                  padding: "15px 20px",
+                  whiteSpace: "nowrap",
                   borderRadius: "999px",
                   background: "#775FD7",
                   color: "#fff",
@@ -433,13 +439,11 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
               >
                 {t("Get Started")}
               </Link>
-              <a
-                href="/contact"
-                onClick={onContact}
-                className="cl-lift"
-                style={{
-                  width: r.ctaW,
-                  padding: "15px 0",
+              <DownloadButton
+                stack={!r.sm}
+                btnStyle={{
+                  padding: "15px 20px",
+                  whiteSpace: "nowrap",
                   borderRadius: "999px",
                   background: "#FFFFFF",
                   border: "1px solid rgba(125,103,217,.22)",
@@ -448,9 +452,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                   fontSize: "15px",
                   transition: "transform .25s cubic-bezier(.22,1,.36,1)",
                 }}
-              >
-                {t("Request a Demo")}
-              </a>
+              />
             </div>
           </div>
 
