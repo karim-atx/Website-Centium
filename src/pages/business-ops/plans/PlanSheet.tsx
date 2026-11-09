@@ -7,7 +7,7 @@ import { sheetChipStyle } from "../../../components/ui/sheetChip";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
-import { linePx, textPx } from "../../../theme/textSize";
+import { linePx, textPx, FIELD_FONT_INHERIT } from "../../../theme/textSize";
 import { classTypesProblem, paymentLabel, type MembershipBilling, type MembershipPlanRow, type PlanDraft, type PlanKind, type PlanPayment } from "../../../services/membership-plans";
 import { MasterSheet, PrimaryButton, SaveError, SheetSwitch, fieldStyle } from "../../business-market/listingParts";
 import {
@@ -628,7 +628,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
             aria-describedby={[errors.price ? ids.priceErr : null, editing ? ids.priceNote : null].filter(Boolean).join(" ") || undefined}
             readOnly={saving}
             className="plan-inner"
-            style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: "none", padding: 0, font: "inherit", color: m.ink }}
+            style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: "none", padding: 0, font: "inherit", fontSize: FIELD_FONT_INHERIT, color: m.ink }}
           />
         </div>
         {errors.price ? <BoxError id={ids.priceErr}>{errors.price}</BoxError> : null}
@@ -675,7 +675,7 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
                   maxLength={120}
                   readOnly={saving}
                   className="plan-inner"
-                  style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: "none", padding: 0, font: "inherit", color: m.ink }}
+                  style={{ flex: 1, minWidth: 0, background: "transparent", border: 0, outline: "none", padding: 0, font: "inherit", fontSize: FIELD_FONT_INHERIT, color: m.ink }}
                 />
                 <button
                   type="button"

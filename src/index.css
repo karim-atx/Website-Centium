@@ -928,6 +928,26 @@ html.larger-text {
   --text-boost: 2px;
 }
 
+/* iPhone: Safari and the app's WebView zoom the page in when a form field
+   under 16px is focused, and the page stays zoomed. At phone width every
+   field's text is at least 16px: px/rem sizes in stylesheets and textPx()
+   read --field-min (scripts/postcss/larger-text.js), and a field that takes
+   its parent's size gets max(16px, 100%). Fields already at 16px or more keep
+   their size, Larger text still adds its 2px, and nothing else changes (the
+   variable is set on the fields only). Tablet and desktop widths are
+   untouched; user zoom stays on (index.html's viewport). */
+@layer base {
+  @media (max-width: 767px) {
+    input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"], [type="file"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"])),
+    textarea,
+    select,
+    [contenteditable]:where(:not([contenteditable="false"])) {
+      --field-min: 16px;
+      font-size: max(16px, 100%);
+    }
+  }
+}
+
 /* V8 (QA 8.0): "the button should have larger text and icons as well" —
    icons are lucide-react SVGs sized in raw px, which the text boost doesn't
    reach, so scale them visually in step (D17 keeps this). transform leaves

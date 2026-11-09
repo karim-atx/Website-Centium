@@ -5,6 +5,13 @@
 // (max 34 pt)"). px or rem line heights grow by the same 2px so lines keep
 // their spacing; unitless line heights scale on their own. --text-boost is set
 // on html.larger-text (index.css). Inline sizes use src/theme/textSize.ts.
+//
+// Form fields on phones: the whole size is wrapped in
+// max(var(--field-min, 0px), …). --field-min is 16px only on form fields
+// below 768px (index.css), so a field's text is never under 16px there and
+// iOS doesn't zoom the page when one is focused. Everywhere else it is unset,
+// the max() picks the size itself, and nothing changes. Larger fields keep
+// their own size.
 const SIZE = /^-?[\d.]+(px|rem)$/;
 
 export default function largerText() {
@@ -14,7 +21,7 @@ export default function largerText() {
       if (decl.value.includes("--text-boost")) return;
       const v = decl.value.trim();
       if (decl.prop === "font-size" && SIZE.test(v)) {
-        decl.value = `min(calc(${v} + var(--text-boost, 0px)), max(${v}, 34px))`;
+        decl.value = `max(var(--field-min, 0px), min(calc(${v} + var(--text-boost, 0px)), max(${v}, 34px)))`;
       } else if (decl.prop === "line-height" && SIZE.test(v)) {
         decl.value = `calc(${v} + var(--text-boost, 0px))`;
       }

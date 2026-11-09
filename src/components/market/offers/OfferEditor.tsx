@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useOnline } from "../../../hooks/useOnline";
-import { textPx, linePx } from "../../../theme/textSize";
+import { textPx, linePx, FIELD_FONT_INHERIT } from "../../../theme/textSize";
 import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../pro/proInk";
 import { OfferCard } from "../OfferCard";
@@ -387,7 +387,7 @@ const DateBox: React.FC<{ id: string; value: string; min?: string; onChange: (v:
           }}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errId : undefined}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer", font: "inherit" }}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, border: 0, padding: 0, margin: 0, cursor: "pointer", font: "inherit", fontSize: FIELD_FONT_INHERIT }}
         />
       </div>
       <FieldError id={errId} text={error} />

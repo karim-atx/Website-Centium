@@ -14,6 +14,7 @@ import { useBackCloses } from "../../hooks/useBackCloses";
 import { PlaylistField } from "../music/PlaylistField";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
+import { fieldPx } from "../../theme/textSize";
 
 // MO1.6.4 New event (and MO1.6.4.1, its date popup), in the lavender-header
 // sheet. Field order as the frame draws it: Title, Location, Date with All
@@ -429,7 +430,7 @@ export const EventComposeSheet: React.FC<{
             value={draft.playlistUrl}
             onChange={(v) => setDraft((d) => ({ ...d, playlistUrl: v }))}
             labelStyle={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}
-            inputStyle={{ minHeight: 40, borderRadius: 12, fontSize: 14, fontWeight: 400 }}
+            inputStyle={{ minHeight: 40, borderRadius: 12, fontSize: fieldPx(14), fontWeight: 400 }}
           />
         )}
 
