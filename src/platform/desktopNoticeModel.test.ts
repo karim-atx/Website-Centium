@@ -11,17 +11,20 @@ const delivered = {
 };
 
 describe("desktopNoticeFor", () => {
-  it("shows a delivered message, collapsed per chat, opening Messages", () => {
-    assert.deepEqual(desktopNoticeFor("message_push_sends", { ...delivered, chat_group: "abc" }), {
+  it("shows a delivered message as its own notification, opening Messages", () => {
+    assert.deepEqual(desktopNoticeFor("message_push_sends", delivered), {
       title: "New message from Sam",
       body: "Open Centium to read it.",
       path: "/app/messages?push=m1",
-      tag: "chat-abc",
+      tag: "push-m1",
     });
   });
 
-  it("tags a message without a chat by its own id", () => {
-    assert.equal(desktopNoticeFor("message_push_sends", delivered)?.tag, "push-m1");
+  it("never groups by chat: two messages in one chat are two notifications", () => {
+    // Realtime doesn't send the generated chat_group column; a row that had it is still per message.
+    const inChat = { ...delivered, chat_group: "abc" };
+    assert.equal(desktopNoticeFor("message_push_sends", { ...inChat, id: "m1" })?.tag, "push-m1");
+    assert.equal(desktopNoticeFor("message_push_sends", { ...inChat, id: "m2" })?.tag, "push-m2");
   });
 
   it("shows a delivered reminder without a path", () => {

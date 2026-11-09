@@ -20,8 +20,6 @@ export interface DeliveredRow {
   body: string;
   delivered_at: string | null;
   summarised_into: string | null;
-  /** message_push_sends only: a one-way hash naming the chat. */
-  chat_group?: string | null;
 }
 
 /** The notification for a row, or null when the row isn't one to show (yet). */
@@ -39,9 +37,12 @@ export function desktopNoticeFor(
       body,
       // Where the phone app's message push lands (send-message-push).
       path: `/app/messages?push=${encodeURIComponent(row.id)}`,
-      // One notification per chat, the newest replacing the last, as the
-      // service worker collapses them on the web (services/push/collapse).
-      tag: row.chat_group ? `chat-${row.chat_group}` : `push-${row.id}`,
+      // ONE WINDOWS NOTIFICATION PER MESSAGE. Realtime doesn't deliver
+      // message_push_sends.chat_group (a generated column), so the desktop app
+      // can't collapse a chat's messages into one notification the way the
+      // web's service worker does (services/push/collapse); each row keeps its
+      // own tag. Quiet hours and digests still apply (above).
+      tag: `push-${row.id}`,
     };
   }
   return {

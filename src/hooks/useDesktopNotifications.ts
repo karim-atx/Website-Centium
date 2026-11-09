@@ -23,6 +23,11 @@ import { desktopNoticeFor, type DeliveredRow, type NoticeTable } from "../platfo
  * ONCE PER ROW: an id already shown this session is not shown again, whatever
  * else updates on it later.
  *
+ * ONE NOTIFICATION PER MESSAGE, NOT PER CHAT: Realtime doesn't deliver
+ * message_push_sends.chat_group (a generated column), so messages aren't
+ * grouped by chat here as the web's service worker does; each delivered
+ * row is its own Windows notification (platform/desktopNoticeModel).
+ *
  * KEPT AWAKE WHILE HIDDEN: in the tray the page is hidden, and Chromium
  * freezes hidden pages after a while, which would let the Realtime socket
  * lapse. A held Web Lock keeps the page out of freezing.
