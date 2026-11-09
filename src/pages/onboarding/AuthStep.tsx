@@ -32,6 +32,8 @@ import { ObField, ObStrength, ObTerms } from "./shell/ObBlocks";
 import { useOnline } from "./shell/flow";
 import { useIsWeb } from "../../components/web/useWebLayout";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
+import { platform } from "../../platform";
+import { googleSignInOfferedOn } from "../../platform/googleSignInModel";
 
 interface Props {
   draft: OnboardingDraft;
@@ -668,7 +670,12 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       <ObFooter
         error={footerError(error)}
         primary={{ label: busy ? (signIn ? t("Signing in…") : t("Signing up…")) : signIn ? t("Sign in") : t("Sign up"), type: "submit", form: "ob-auth", disabled: submitDisabled }}
-        secondary={{ label: googleInBrowser ? t("Finish in your browser · Open again") : t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }}
+        // Email only on the iPhone until iPhone Round 1 (platform/googleSignInModel).
+        secondary={
+          googleSignInOfferedOn(platform())
+            ? { label: googleInBrowser ? t("Finish in your browser · Open again") : t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }
+            : undefined
+        }
         link={{
           node: signIn ? (
             <>{rich(t("Don't have an account? {signUp}"), { signUp: <b>{t("Sign up")}</b> })}</>
