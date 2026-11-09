@@ -1178,6 +1178,8 @@ const auth: Catalogue = {
   // Round K (K-PW): advice under a new password found in Pwned Passwords.
   "This password has appeared in a known data breach. You can still use it, but a different one is safer.":
     "ظهرت كلمة المرور هذه في تسريب بيانات معروف. يمكنك استخدامها، لكن اختيار كلمة مختلفة أكثر أمانًا.",
+  // == The desktop app: Google sign-in in the default browser (AuthStep) ==
+  "Finish in your browser · Open again": "أكمل في متصفحك · افتحه مجددًا",
 };
 
 export default auth;

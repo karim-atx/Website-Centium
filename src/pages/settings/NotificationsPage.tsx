@@ -23,6 +23,7 @@ import {
   Lock,
   MessageCircle,
   MessagesSquare,
+  Monitor,
   Moon,
   NotebookPen,
   Store,
@@ -64,6 +65,7 @@ import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 import { fetchGoneQuietDays } from "../../services/pro/practice";
 import { isNative } from "../../platform";
+import { desktop } from "../../platform/desktop";
 import { t, tk, tn } from "../../i18n/core";
 
 // MO1.8.3 Notifications, as a page (was a sheet); handover-complete pass:
@@ -400,6 +402,8 @@ export default function NotificationsPage() {
   // featureAvailable("push") in pushSupported()). The status then reads the
   // phone's own answer, and the lock-screen switch shows.
   const nativeApp = pushAvailable && isNative();
+  // The desktop app: Windows notifications, switched in Windows' settings.
+  const desktopApp = pushAvailable && desktop() !== null;
   const [registered, setRegistered] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [pushNote, setPushNote] = useState<string | null>(null);
@@ -473,6 +477,10 @@ export default function NotificationsPage() {
     ? t(pushUnavailableReason())
     : deviceOn
     ? t("On")
+    : desktopApp
+    ? permission === "denied"
+      ? t("Off in Windows settings")
+      : t("Off")
     : nativeApp
     ? // Round J · J-2b (PLAN.md §2.2): the phone's answer, in its words.
       permission === "denied"
@@ -483,8 +491,8 @@ export default function NotificationsPage() {
     : permission === "denied"
     ? t("Blocked in browser settings")
     : t("Off");
-  // "· Open settings" after "Off in your phone's settings".
-  const offInPhone = nativeApp && !!prefs?.allow && !busy && !pushNote && !deviceOn && permission === "denied";
+  // "· Open settings" after "Off in your phone's settings" (or Windows').
+  const offInPhone = (nativeApp || desktopApp) && !!prefs?.allow && !busy && !pushNote && !deviceOn && permission === "denied";
 
   // --- Round J · J-2b: Hide details on lock screen (the app only) ------------
   // ON means notification_lock_screen_details = false. Read once the account's
@@ -505,6 +513,36 @@ export default function NotificationsPage() {
       cancelled = true;
     };
   }, [nativeApp, prefsLoaded]);
+  // --- The desktop app: Start Centium when I sign in -------------------------
+  // Off by default. Windows' own state, read each time: it can also be
+  // switched off in Task Manager, and then only there can it be switched on.
+  const [autostart, setAutostartState] = useState<boolean | null>(null);
+  const [autostartNote, setAutostartNote] = useState<string | null>(null);
+  useEffect(() => {
+    const app = desktop();
+    if (!app) return;
+    let cancelled = false;
+    void app.getAutostart().then(
+      (on) => !cancelled && setAutostartState(on),
+      () => !cancelled && setAutostartNote("Couldn't read this setting.")
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const changeAutostart = async (on: boolean) => {
+    const app = desktop();
+    if (!app || autostart === null) return;
+    setAutostartNote(null);
+    try {
+      const now = await app.setAutostart(on);
+      setAutostartState(now);
+      if (now !== on) setAutostartNote("Windows kept this off. Turn Centium on in Task Manager → Startup apps.");
+    } catch {
+      setAutostartNote("Couldn't change this setting.");
+    }
+  };
+
   const setHideOnLock = async (hide: boolean) => {
     if (!authUserId || lockDetails === null) return;
     const before = lockDetails;
@@ -668,6 +706,22 @@ export default function NotificationsPage() {
             }}
           />
           {lockNote && <ErrorLine>{t(lockNote)}</ErrorLine>}
+        </SettingsSection>
+      )}
+
+      {desktopApp && (
+        <SettingsSection label={t("On this computer")}>
+          <SettingsRow
+            icon={Monitor}
+            title={t("Start Centium when I sign in")}
+            srDescription={t("Centium starts in the tray when you sign in to your computer, so notifications arrive without opening it.")}
+            toggle={{
+              checked: autostart === true,
+              disabled: autostart === null,
+              onChange: (v) => void changeAutostart(v),
+            }}
+          />
+          {autostartNote && <ErrorLine>{t(autostartNote)}</ErrorLine>}
         </SettingsSection>
       )}
 

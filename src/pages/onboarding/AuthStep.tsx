@@ -122,6 +122,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
   const [termsError, setTermsError] = useState<string | null>(null);
   const singleFlight = useSingleFlight();
   const [busy, setBusy] = useState(false);
+  // The desktop app: Google sign-in is open in the default browser.
+  const [googleInBrowser, setGoogleInBrowser] = useState(false);
 
   const email = draft.email;
   const setEmail = (v: string) => setDraft((d) => ({ ...d, email: v }));
@@ -189,6 +191,12 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
     }
     // The phone app's chooser was closed: back to the form, nothing to say.
     if (result.status === "cancelled") setBusy(false);
+    // The desktop app: the form stays usable while the browser is open; the
+    // return (centium://) reloads this page signed in. The button reopens it.
+    if (result.status === "in_browser") {
+      setBusy(false);
+      setGoogleInBrowser(true);
+    }
     // On success the browser is already leaving (web), or the session has
     // arrived and the effect above moves on (the phone app); `busy` stays set.
   };
@@ -660,7 +668,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       <ObFooter
         error={footerError(error)}
         primary={{ label: busy ? (signIn ? t("Signing in…") : t("Signing up…")) : signIn ? t("Sign in") : t("Sign up"), type: "submit", form: "ob-auth", disabled: submitDisabled }}
-        secondary={{ label: t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }}
+        secondary={{ label: googleInBrowser ? t("Finish in your browser · Open again") : t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }}
         link={{
           node: signIn ? (
             <>{rich(t("Don't have an account? {signUp}"), { signUp: <b>{t("Sign up")}</b> })}</>
