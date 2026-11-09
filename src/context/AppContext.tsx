@@ -219,7 +219,13 @@ import { isMfaChallengePending } from "../services/mfa";
 
 const MFA_RECOVERY_PASS_KEY = "centium-mfa-recovery-pass";
 import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
-import { ensureProfileRow, fetchProfile, updatePlantSpecies } from "../services/profile";
+import { ensureProfileRow, fetchProfile, updatePlantSpecies, type FetchProfileResult } from "../services/profile";
+import {
+  profileCacheSaysOnboarded,
+  profileGate,
+  type ProfileLoadErrorReason,
+  type ProfileReadOutcome,
+} from "../services/profile/profileGate";
 import { migrateLocalSocialHandles } from "../services/profile/socialHandles";
 import {
   AUTO_STREAK_CATEGORIES,
@@ -455,11 +461,26 @@ interface AppState {
   // False until the initial getSession() settles, so the auth screen isn't
   // flashed at a user who is already signed in.
   authReady: boolean;
-  // False until the server profile has been read for the current session.
-  // Route guards must wait for this: `user.onboarded` is seeded from
-  // localStorage, and acting on it early sends an onboarded user through
-  // onboarding again.
+  // False until the server profile read has been DECIDED for the current
+  // session: loaded, confirmed missing, or failed. Route guards must wait for
+  // this: `user.onboarded` is seeded from localStorage, and acting on it early
+  // sends an onboarded user through onboarding again. A failed read is decided
+  // too, and accountLoadProblem below says what it keeps out.
   profileReady: boolean;
+  // Karim, 2026-11-09: why this account's profile could not be loaded, when
+  // that keeps the account out of both the app and onboarding (the guards show
+  // "Couldn't load your account" instead). Null when the read was fine, and
+  // also for an offline read whose own cache says onboarded (profileGate's
+  // OFFLINE_CACHE_LETS_IN): that member gets in on cached data, as before.
+  accountLoadProblem: ProfileLoadErrorReason | null;
+  // Reads the profile again (the error screen's Try again, and onboarding's
+  // finish after ATXG1). Resolves with what the read came to, already applied.
+  retryProfile: () => Promise<FetchProfileResult>;
+  // True while retryProfile's read is out (the Try again button's busy state).
+  profileRetrying: boolean;
+  // Onboarding's finish found its writes were not signed in as this account:
+  // the same screen as a profile read that could not be made as this account.
+  reportAccountLoadProblem: (reason: ProfileLoadErrorReason) => void;
   // Whether this account is an administrator, or null while the answer is
   // still outstanding. Administrators have no place in the consumer app —
   // the route guards stop them at a notice rather than walking them into
@@ -2041,8 +2062,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // GATED ON profileReady, NOT JUST ON A SESSION. The RPC raises 'profile not
   // found' rather than creating a row, so firing it in the window between a
   // session appearing and ensureProfileRow finishing would throw on a first
-  // sign-up. profileReady already means "this user's profile has been read",
-  // which is the same condition every other loader here waits for.
+  // sign-up. profileReady already means "this user's profile read has been
+  // decided" (loaded, confirmed missing, or failed: Karim, 2026-11-09), which
+  // is the same condition every other loader here waits for.
   //
   // Its own listeners rather than the day-rollover ones above: that effect is
   // deliberately auth-agnostic with an empty dependency array, and giving it a
@@ -2085,6 +2107,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (authUserId) void updatePlantSpecies(authUserId, next);
   };
 
+  // What the last profile read for an account came to (services/profile
+  // fetchProfile, Karim 2026-11-09), with whether that account's own cache
+  // said onboarded when the read was made: the offline exception in
+  // profileGate needs to know the cache was trustworthy, not just present.
+  const [profileLoad, setProfileLoad] = useState<{
+    userId: string;
+    outcome: ProfileReadOutcome;
+    cachedOnboarded: boolean;
+  } | null>(null);
+  const profileLoadRef = useRef(profileLoad);
+  profileLoadRef.current = profileLoad;
+
+  // One read's answer, applied: by the hydration below and by retryProfile.
+  const applyProfileResult = useCallback(
+    (uid: string, result: FetchProfileResult) => {
+      // `user` lives under this tab's account namespace (persistKey), and
+      // names the account it was hydrated for: both must be this one.
+      const cached = loadPersisted<Partial<UserProfile> | null>("user", null);
+      setProfileLoad({
+        userId: uid,
+        outcome: result.status === "error" ? { status: "error", reason: result.reason } : { status: result.status },
+        cachedOnboarded: profileCacheSaysOnboarded(uid, TAB_USER_ID, cached),
+      });
+      if (result.status === "missing") {
+        // Confirmed as this account: no row, so not onboarded, whatever an
+        // earlier cache said. Only `onboarded`: the rest stays for the flow.
+        setUser((prev) => (prev.onboarded ? { ...prev, onboarded: false } : prev));
+        return;
+      }
+      if (result.status !== "ok") return;
+      setUser((prev) => ({ ...prev, ...result.profile }));
+      // The stored flower wins. None stored yet: this device's own choice,
+      // if it ever made one, goes up once (the column being null is what
+      // makes it once: after this it is set).
+      if (result.plantSpecies) setPlantChoice(result.plantSpecies);
+      else {
+        const local = loadPersisted<PlantSpecies | null>("plantSpecies", null);
+        if (local) void updatePlantSpecies(uid, local);
+      }
+      // Deliberately NOT cleared on sign-in. Reviving an account because
+      // someone happened to log in would undo a deliberate request without
+      // them asking; cancelling is an explicit action.
+      setDeletionRequestedAt(result.deletionRequestedAt);
+    },
+    [setUser, setPlantChoice]
+  );
+
   useEffect(() => {
     if (!authReady) return;
     if (!authUserId) {
@@ -2102,31 +2171,78 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (done && !cancelled) setUser((prev) => ({ ...prev, instagramHandle: undefined, xHandle: undefined }));
       });
     }
-    void fetchProfile(authUserId).then((result) => {
+    const uid = authUserId;
+    void fetchProfile(uid).then((result) => {
       if (cancelled) return;
-      if (result) {
-        setUser((prev) => ({ ...prev, ...result.profile }));
-        // The stored flower wins. None stored yet: this device's own choice,
-        // if it ever made one, goes up once (the column being null is what
-        // makes it once: after this it is set).
-        if (result.plantSpecies) setPlantChoice(result.plantSpecies);
-        else {
-          const local = loadPersisted<PlantSpecies | null>("plantSpecies", null);
-          if (local) void updatePlantSpecies(authUserId, local);
-        }
-        // Deliberately NOT cleared on sign-in. Reviving an account because
-        // someone happened to log in would undo a deliberate request without
-        // them asking; cancelling is an explicit action.
-        setDeletionRequestedAt(result.deletionRequestedAt);
-      }
+      applyProfileResult(uid, result);
       // Marked hydrated even on failure — a read error must not lock the user
-      // out of the app behind a permanent loading state.
-      setHydratedFor(authUserId);
+      // out of the app behind a permanent loading state. It does not let them
+      // into onboarding either (Karim, 2026-11-09): profileLoad holds the
+      // failure, and the guards show "Couldn't load your account" with Try
+      // again in place of the endless "Loading…" this line always prevented.
+      setHydratedFor(uid);
     });
     return () => {
       cancelled = true;
     };
-  }, [authUserId, authReady, setUser, setPlantChoice]);
+  }, [authUserId, authReady, setUser, applyProfileResult]);
+
+  // Try again. The read runs while the error screen stays up with its button
+  // busy (profileReady stays true: the answer so far is still the decided
+  // one), and its answer replaces the failure.
+  //
+  // A RECOVERY RE-RUNS THE LOADERS. Every loader in this file waits on
+  // profileReady, and they all ran once the failed read was decided, under
+  // the same missing session that failed it. So a read that recovers takes
+  // profileReady down for one committed render (hydratedFor back to
+  // undefined; the effect below restores it), and every one of them runs
+  // again as it would on a fresh sign-in. Guards show "Loading…" for that
+  // render, between the error screen and the app.
+  const authUserIdRef = useRef(authUserId);
+  authUserIdRef.current = authUserId;
+  const rehydrateFor = useRef<string | null>(null);
+  const [profileRetrying, setProfileRetrying] = useState(false);
+
+  const retryProfile = useCallback(async (): Promise<FetchProfileResult> => {
+    const uid = authUserIdRef.current;
+    if (!uid) return { status: "error", reason: "session" };
+    setProfileRetrying(true);
+    const result = await fetchProfile(uid);
+    setProfileRetrying(false);
+    if (authUserIdRef.current !== uid) return result;
+    const wasError = profileLoadRef.current?.userId === uid && profileLoadRef.current.outcome.status === "error";
+    applyProfileResult(uid, result);
+    if (wasError && result.status !== "error") {
+      rehydrateFor.current = uid;
+      setHydratedFor(undefined);
+    }
+    return result;
+  }, [applyProfileResult]);
+
+  useEffect(() => {
+    if (hydratedFor !== undefined || !rehydrateFor.current) return;
+    if (rehydrateFor.current === authUserId) setHydratedFor(authUserId);
+    rehydrateFor.current = null;
+  }, [hydratedFor, authUserId]);
+
+  // Onboarding's finish, when its writes were refused as not this account's:
+  // the same screen, the same Try again (useFinishRefusal).
+  const reportAccountLoadProblem = useCallback((reason: ProfileLoadErrorReason) => {
+    const uid = authUserIdRef.current;
+    if (!uid) return;
+    setProfileLoad({ userId: uid, outcome: { status: "error", reason }, cachedOnboarded: false });
+  }, []);
+
+  // Where this account goes (services/profile/profileGate). Only a decision
+  // for THIS account counts, for the reason hydratedFor is keyed.
+  const accountLoadProblem: ProfileLoadErrorReason | null =
+    profileReady &&
+    authUserId &&
+    profileLoad?.userId === authUserId &&
+    profileLoad.outcome.status === "error" &&
+    profileGate({ outcome: profileLoad.outcome, onboarded: user.onboarded, cachedOnboarded: profileLoad.cachedOnboarded }) === "error"
+      ? profileLoad.outcome.reason
+      : null;
 
   // --- rescuing profile pictures that never reached the server -------------
   //
@@ -2148,11 +2264,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // AFTER profileReady, WHICH IS WHAT MAKES IT SAFE. fetchProfile overwrites
   // the local value whenever the server holds one, so a `data:` URL surviving
   // hydration is proof the column is empty — there is no round trip needed to
-  // ask, and no chance of overwriting a picture set on another device.
+  // ask, and no chance of overwriting a picture set on another device. Only
+  // after a read that came back with the row, though: profileReady also means
+  // a read that failed (Karim, 2026-11-09), and a failed read proves nothing.
   const avatarMigrationAttempted = useRef<string | null>(null);
+  const profileRowRead = profileLoad?.userId === authUserId && profileLoad?.outcome.status === "ok";
 
   useEffect(() => {
-    if (!profileReady || !authUserId) return;
+    if (!profileReady || !authUserId || !profileRowRead) return;
     if (avatarMigrationAttempted.current === authUserId) return;
     const local = user.avatarUrl;
     if (!isLocalOnlyAvatar(local)) return;
@@ -2171,7 +2290,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, user.avatarUrl, setUser]);
+  }, [authUserId, profileReady, profileRowRead, user.avatarUrl, setUser]);
 
   // Stage A1: light / dark / auto, synced with device_presentation_settings
   // (usePresentationSync below). 'auto' only ever comes from the row and
@@ -6687,6 +6806,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       labsError,
       authReady,
       profileReady,
+      accountLoadProblem,
+      retryProfile,
+      profileRetrying,
+      reportAccountLoadProblem,
       isAdmin,
       adminReady,
       continueAsConsumer,
@@ -6964,6 +7087,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deletionRequestedAt,
       authReady,
       profileReady,
+      accountLoadProblem,
+      retryProfile,
+      profileRetrying,
+      reportAccountLoadProblem,
       isAdmin,
       adminReady,
       continueAsConsumer,

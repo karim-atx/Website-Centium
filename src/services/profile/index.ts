@@ -6,6 +6,13 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { describeDobError } from "./dobErrors";
 import { describeNameError } from "./nameRules";
 import { setMyFirstName } from "./firstName";
+import { finishRefusal, type FinishRefusal } from "./finishErrors";
+import {
+  classifyProfileRead,
+  sessionVerdict,
+  type ClientSession,
+  type ProfileLoadErrorReason,
+} from "./profileGate";
 import type {
   AccountType,
   ActivityLevel,
@@ -94,6 +101,52 @@ export interface FetchedProfile {
 }
 
 /**
+ * What a profile read came to (Karim, 2026-11-09). Three answers, because the
+ * old two (a profile, or null) were the bug: null meant both "the read failed"
+ * and "there is no row", and the hydration could only treat them alike.
+ *
+ *   ok       the row, read as this account.
+ *   missing  the read succeeded AS THIS ACCOUNT and there is no row: a new
+ *            account. The only answer that may lead to onboarding.
+ *   error    offline (the connection), session (the read did not go out as
+ *            this account: a refused JWT, anon, or the client's session gone
+ *            or someone else's) or failed (anything else).
+ *
+ * The decisions on top of it are pure, in ./profileGate.
+ */
+export type FetchProfileResult =
+  | ({ status: "ok" } & FetchedProfile)
+  | { status: "missing" }
+  | { status: "error"; reason: ProfileLoadErrorReason };
+
+/**
+ * The Supabase client's own session, read the way its REST calls read it.
+ *
+ * getSession(), NOT getUser(), and deliberately. The question is "did that
+ * read go out as this account", and the access token PostgREST receives comes
+ * from exactly this storage (the cookie, through @supabase/ssr), so this is
+ * the faithful answer and costs no request. getUser() would also ask the auth
+ * server whether the token is still accepted, but a token it would refuse is
+ * one PostgREST refuses too, and that comes back as a 401/PGRST301 error the
+ * read already classifies as "session".
+ */
+export async function readClientSession(): Promise<ClientSession> {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return { kind: "unreadable", offline: isOffline(error) };
+    const id = data.session?.user?.id;
+    return id ? { kind: "user", userId: id } : { kind: "none" };
+  } catch (e) {
+    return { kind: "unreadable", offline: isOffline(e) };
+  }
+}
+
+/** The client session against `userId`: see sessionVerdict in ./profileGate. */
+export async function clientSessionVerdict(userId: string): Promise<"match" | "offline" | "mismatch"> {
+  return sessionVerdict(userId, await readClientSession());
+}
+
+/**
  * Reads the signed-in user's profile row.
  *
  * This is the source of truth for `onboarded`. It used to be read from
@@ -101,13 +154,19 @@ export interface FetchedProfile {
  * out (which resets local state to the seeded demo profile) and back in as
  * a genuinely onboarded user sent them through onboarding again.
  *
+ * "NO ROW" IS CHECKED BEFORE IT IS BELIEVED. A read that goes out without
+ * this account's JWT does not fail on every table: where it has a grant, RLS
+ * simply shows it nothing, and an empty answer looks exactly like a new
+ * account. So an empty answer asks the client for its own session, and only
+ * one that belongs to `userId` makes it "missing".
+ *
  * Returns only the columns `profiles` actually owns. Fields the table has no
  * concept of — linkedProfessional*, businessId, certificationUrl and the
  * rest — are left to the caller to preserve, so hydrating never blanks them.
  */
-export async function fetchProfile(userId: string): Promise<FetchedProfile | null> {
+export async function fetchProfile(userId: string): Promise<FetchProfileResult> {
   try {
-    const { data, error } = await supabase
+    const { data, error, status } = await supabase
       .from("profiles")
       .select(
         "id, first_name, email, phone, date_of_birth, sex, height_cm, weight_kg, goals, tracking_preferences, activity_level, account_type, customer_subtype, professional_subtype, avatar_url, onboarded, deletion_requested_at, plant_species"
@@ -116,8 +175,19 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
       .maybeSingle();
 
     if (error || !data) {
-      if (error) console.error("[profile] Could not read profile:", error.message);
-      return null;
+      if (error) console.error("[profile] Could not read profile:", error.code, error.message);
+      const outcome = classifyProfileRead({
+        userId,
+        error: error ? { code: error.code, message: error.message, status } : null,
+        hasRow: false,
+        session: error ? undefined : await readClientSession(),
+        offline: isOffline,
+      });
+      if (outcome.status === "error" && !error) {
+        console.error("[profile] No profile row, and the client is not signed in as this account:", outcome.reason);
+      }
+      // "ok" needs a row, which this branch does not have.
+      return outcome.status === "ok" ? { status: "error", reason: "failed" } : outcome;
     }
 
     const profile: Partial<UserProfile> = {
@@ -153,6 +223,7 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
     if (age !== undefined) profile.age = age;
 
     return {
+      status: "ok",
       onboarded: data.onboarded,
       profile,
       deletionRequestedAt: data.deletion_requested_at,
@@ -160,7 +231,7 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
     };
   } catch (e) {
     console.error("[profile] Could not read profile:", e);
-    return null;
+    return { status: "error", reason: isOffline(e) ? "offline" : "failed" };
   }
 }
 
@@ -363,14 +434,21 @@ export async function fetchNeedsDateOfBirth(): Promise<boolean | null> {
 export async function updateProfileFromOnboarding(
   userId: string,
   data: OnboardingProfileData
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<{ ok: boolean; message?: string; refusal?: FinishRefusal }> {
   // Round J · FI: the name first, through set_my_first_name (its checks; the
   // first one set isn't counted as a change), so a refused name never leaves
   // the row marked onboarded without one. The email isn't sent any more:
   // profiles.email follows the sign-in email on the server (Database
   // 20261226520000), and members' UPDATE(email) is revoked after this ships.
+  //
+  // `refusal` (Karim, 2026-11-09): a write that was not signed in as this
+  // account, or ATXG1 for an account that is already set up, is not a "try
+  // again"; the screen acts on it (onboarding's useFinishRefusal).
   const named = await setMyFirstName(data.firstName);
-  if (!named.ok) return { ok: false, message: named.message };
+  if (!named.ok) {
+    const refusal = finishRefusal({ code: named.code });
+    return { ok: false, message: named.message, ...(refusal ? { refusal } : {}) };
+  }
 
   const patch: TablesUpdate<"profiles"> = {
     date_of_birth: data.dateOfBirth || null,
@@ -386,11 +464,13 @@ export async function updateProfileFromOnboarding(
     onboarded: true,
   };
 
-  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+  const { error, status } = await supabase.from("profiles").update(patch).eq("id", userId);
 
   if (error) {
     console.error("[profile] Could not save onboarding profile:", error.code, error.message);
     if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    const refusal = finishRefusal({ code: error.code, message: error.message, status });
+    if (refusal) return { ok: false, refusal };
     return {
       ok: false,
       message: describeDobError(error.code) ?? describeNameError(error) ?? "Couldn't finish setting up your account. Try again.",

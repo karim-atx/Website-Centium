@@ -5,6 +5,7 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { HealthChecksProvider } from "./context/HealthChecksContext";
 import { Button } from "./components/ui/Button";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
+import { AccountLoadError } from "./components/auth/AccountLoadError";
 import { NativeAppGate } from "./components/native/NativeAppGate";
 import { NativeOpenPath } from "./components/native/NativeOpenPath";
 import { PushAskCard } from "./components/native/PushAskCard";
@@ -197,14 +198,17 @@ const RequireOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ childr
     adminConsumerOptIn,
     mfaReady,
     mfaPending,
+    accountLoadProblem,
   } = useApp();
 
   // Wait for the server profile before deciding. `user.onboarded` starts from
   // localStorage, which is per-browser and not keyed by account — redirecting
   // on it directly is what sent genuinely-onboarded users back through
   // onboarding after a sign-out or on a second account in the same browser.
-  // Once profileReady is true, `user.onboarded` has been overwritten by
-  // profiles.onboarded, so it is the server's answer rather than the cache's.
+  // Once profileReady is true the read has been decided: either
+  // `user.onboarded` has been overwritten by profiles.onboarded, so it is the
+  // server's answer rather than the cache's, or the read failed and
+  // accountLoadProblem says so (checked below, before `user.onboarded`).
   if (!authReady || !profileReady) return <RouteLoading />;
 
   // THE SESSION CHECK, AND IT HAS TO COME BEFORE `user.onboarded`.
@@ -247,6 +251,14 @@ const RequireOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ childr
   if (!adminReady) return <RouteLoading />;
   if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;
 
+  // A PROFILE THAT COULDN'T BE READ NEVER MEANS ONBOARDING (Karim,
+  // 2026-11-09). A failed read left `user.onboarded` at its cached or default
+  // false, and the line below sent an onboarded member into the flow. Only a
+  // read confirmed as this account decides that; anything else is this
+  // screen, with Try again. (An offline read with this account's own
+  // onboarded cache is not a problem here: see profileGate.)
+  if (accountLoadProblem) return <AccountLoadError reason={accountLoadProblem} />;
+
   if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
   return <>{children}</>;
 };
@@ -279,6 +291,7 @@ const RedirectIfOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ chi
     adminConsumerOptIn,
     mfaReady,
     mfaPending,
+    accountLoadProblem,
   } = useApp();
 
   // Decided once PER ACCOUNT, then held.
@@ -298,6 +311,11 @@ const RedirectIfOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ chi
   // never looked again — sending returning users through the whole flow, the
   // exact bug this guard exists to prevent.
   const decidedFor = useRef<{ userId: string; onboarded: boolean } | null>(null);
+  // Dropped while the account can't be loaded (below), from an effect so the
+  // render itself only reads the latch.
+  useEffect(() => {
+    if (accountLoadProblem) decidedFor.current = null;
+  }, [accountLoadProblem]);
 
   if (!authReady || !profileReady) return <RouteLoading />;
 
@@ -322,9 +340,19 @@ const RedirectIfOnboardedGuard: React.FC<{ children: React.ReactNode }> = ({ chi
   if (!adminReady) return <RouteLoading />;
   if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;
 
+  // A profile that couldn't be read is not "not onboarded" (Karim,
+  // 2026-11-09), so it is never latched as that: the screen instead, and the
+  // latch is dropped (the effect above), so whatever Try again reads is
+  // decided afresh. This also covers onboarding's own finish finding its
+  // writes were not signed in as this account (reportAccountLoadProblem): the
+  // flow gives way to the same screen, and comes back once the account reads
+  // properly.
+  if (accountLoadProblem) return <AccountLoadError reason={accountLoadProblem} />;
+
   // A different account (or the first one) resets the answer. profileReady
-  // guarantees `user` has been hydrated for THIS authUserId, so `onboarded`
-  // is the server's value rather than the previous account's leftovers.
+  // and no accountLoadProblem guarantee `user` has been hydrated for THIS
+  // authUserId, so `onboarded` is the server's value rather than the previous
+  // account's leftovers (or, offline, this account's own cached value).
   if (decidedFor.current?.userId !== authUserId) {
     decidedFor.current = { userId: authUserId, onboarded: user.onboarded };
   }
