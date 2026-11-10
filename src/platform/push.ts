@@ -61,9 +61,11 @@ function toPermission(s: PermissionStatus): PushPermission {
   return "prompt";
 }
 
+/** As the server keeps it: a phone that stored an uppercase iOS token before the fix reads lowercase too (./pushTokenModel). */
 function storedToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY);
+    return raw ? serverPushToken(platform(), raw) : null;
   } catch {
     return null;
   }
@@ -216,8 +218,7 @@ export async function nativePushRegistered(): Promise<boolean | null> {
   const { data, error } = await (supabase as unknown as From)
     .from("push_devices")
     .select("id")
-    // A token stored before the fix may be uppercase (./pushTokenModel).
-    .eq("token", serverPushToken(platform(), token))
+    .eq("token", token)
     .limit(1);
   if (error) return null;
   return (data?.length ?? 0) > 0;
