@@ -326,6 +326,27 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   opacity: 0.4;
   cursor: default;
 }
+/* Sign in with Apple (Apple's Human Interface Guidelines: black on a light
+   page, white on a dark one; the same height and corner as the other
+   buttons). App-Centium IPHONE_ROUND_1.md §2. */
+.ob .ob-btn-apple {
+  background: #000;
+  color: #fff;
+  gap: 6px;
+}
+.dark .ob .ob-btn-apple {
+  background: #fff;
+  color: #000;
+}
+.ob .ob-btn-apple:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ob-apple-logo {
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1;
+}
 .ob-or {
   display: flex;
   align-items: center;

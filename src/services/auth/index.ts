@@ -12,6 +12,7 @@ import { isNative } from "../../platform";
 import { desktop, DESKTOP_AUTH_RETURN, type CentiumDesktop } from "../../platform/desktop";
 import { CentiumNative } from "../../platform/native";
 import { readCookieHeader } from "../../../lib/supabase/cookieJar";
+import { platform } from "../../platform";
 import { storedSessionFromCookies } from "../../../lib/supabase/tabIdentity";
 import { refreshFailure, type RefreshFailure } from "../../../lib/supabase/sessionReach";
 
@@ -322,6 +323,52 @@ async function signInWithGoogleDesktop(app: CentiumDesktop): Promise<OAuthResult
     return { status: "error", message: tk("Couldn't open Google sign-in. Try again.") };
   }
   return { status: "in_browser" };
+}
+
+/**
+ * SIGN IN WITH APPLE (App-Centium IPHONE_ROUND_1.md §2, D-R1-1). App Store
+ * guideline 4.8: an app offering Google sign-in offers Apple too.
+ *
+ * - On the iPhone, Apple's own sheet (CentiumNative.appleSignIn) gives an ID
+ *   token for Supabase, with the nonce check on, as for Google. Then the
+ *   one-time authorization code goes straight to apple-sign-in-link (DB-Z2),
+ *   which keeps Apple's refresh token so it can be revoked when the account
+ *   is deleted, as Apple requires. The code lasts 5 minutes; a failure there is
+ *   logged and never fails the sign-in.
+ * - On the website, Supabase's Apple redirect (the Services ID
+ *   org.atraxia.centium.web), so an account made with Apple on the iPhone,
+ *   often with Hide My Email and no password, can also sign in on the web.
+ * - Not in the Android app yet (appleSignInOfferedOn).
+ *
+ * `givenName` is Apple's first name, given on the first sign-in only, for the
+ * onboarding name (D-R1-2).
+ */
+export type AppleSignInResult = OAuthResult & { givenName?: string };
+
+export async function signInWithApple(): Promise<AppleSignInResult> {
+  if (isNative()) {
+    if (platform() !== "ios") return { status: "error", message: tk("Sign in with Apple isn't available in this version of the app.") };
+    const nonce = await makeNonce();
+    let apple: Awaited<ReturnType<typeof CentiumNative.appleSignIn>>;
+    try {
+      apple = await CentiumNative.appleSignIn({ nonce: nonce.hashed });
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      if (code === "cancelled") return { status: "cancelled" };
+      console.error("[auth] Sign in with Apple:", code, (e as Error).message);
+      return { status: "error", message: tk("Sign in with Apple didn't work. Try again, or use your email.") };
+    }
+    const { error } = await supabase.auth.signInWithIdToken({ provider: "apple", token: apple.idToken, nonce: nonce.raw });
+    if (error) return { status: "error", message: describeAuthError(error) };
+    const { error: linkError } = await supabase.functions.invoke("apple-sign-in-link", {
+      body: { authorization_code: apple.authorizationCode },
+    });
+    if (linkError) console.error("[auth] apple-sign-in-link:", linkError.message);
+    return { status: "signed_in", ...(apple.givenName ? { givenName: apple.givenName } : {}) };
+  }
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: authRedirectUrl() } });
+  if (error) return { status: "error", message: describeAuthError(error) };
+  return { status: "redirecting" };
 }
 
 /** A random nonce and its SHA-256, both hex: Google gets the hash, Supabase the raw value. */

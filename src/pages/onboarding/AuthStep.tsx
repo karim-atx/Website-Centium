@@ -8,6 +8,7 @@ import {
   consumeAccountSuspended,
   sendPasswordReset,
   signInWithEmail,
+  signInWithApple,
   signInWithGoogle,
   signUpWithEmail,
   isDisposableEmail,
@@ -34,6 +35,8 @@ import { useIsWeb } from "../../components/web/useWebLayout";
 import { LEGAL_VERSION } from "../../services/legal/acceptances";
 import { platform } from "../../platform";
 import { googleSignInOfferedOn } from "../../platform/googleSignInModel";
+import { appleSignInOfferedOn } from "../../platform/appleSignInModel";
+import { desktop } from "../../platform/desktop";
 
 interface Props {
   draft: OnboardingDraft;
@@ -201,6 +204,30 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
     }
     // On success the browser is already leaving (web), or the session has
     // arrived and the effect above moves on (the phone app); `busy` stays set.
+  };
+
+  // Sign in with Apple (App-Centium IPHONE_ROUND_1.md §2): Apple's sheet on the
+  // iPhone, Apple's redirect on the web. Apple gives the first name once, on
+  // the first sign-in: it fills the onboarding name if that is still empty
+  // (D-R1-2), and the member can change it there.
+  const handleApple = async () => {
+    if (mode === "signUp" && !termsOn) {
+      setTermsError(tk("Accept the Terms of Service and Privacy Policy to sign up."));
+      return;
+    }
+    if (!online) return setError(OFFLINE);
+    setError(null);
+    setBusy(true);
+    const result = await signInWithApple();
+    if (result.status === "error") {
+      setError(result.message);
+      setBusy(false);
+    }
+    if (result.status === "cancelled") setBusy(false);
+    const givenName = result.givenName?.trim();
+    if (givenName) setDraft((d) => (d.firstName ? d : { ...d, firstName: givenName }));
+    // On success the browser is leaving (web), or the session has arrived and
+    // the effect above moves on (the iPhone app); `busy` stays set.
   };
 
   const handleSignIn = async () => {
@@ -670,7 +697,12 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
       <ObFooter
         error={footerError(error)}
         primary={{ label: busy ? (signIn ? t("Signing in…") : t("Signing up…")) : signIn ? t("Sign in") : t("Sign up"), type: "submit", form: "ob-auth", disabled: submitDisabled }}
-        // Email only on the iPhone until iPhone Round 1 (platform/googleSignInModel).
+        // Apple above Google where it is offered (platform/appleSignInModel).
+        apple={
+          appleSignInOfferedOn(platform(), desktop() !== null)
+            ? { label: t("Continue with Apple"), ariaLabel: t("Continue with Apple"), disabled: busy, onClick: () => void handleApple() }
+            : undefined
+        }
         secondary={
           googleSignInOfferedOn(platform())
             ? { label: googleInBrowser ? t("Finish in your browser · Open again") : t("Continue with Google"), or: true, disabled: busy, onClick: () => void handleGoogle() }

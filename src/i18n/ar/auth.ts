@@ -146,6 +146,7 @@ const auth: Catalogue = {
   "Signing in…": "جارٍ تسجيل الدخول…",
   "Signing up…": "جارٍ إنشاء الحساب…",
   "Continue with Google": "المتابعة باستخدام Google",
+  "Continue with Apple": "المتابعة باستخدام Apple",
   "Don't have an account? {signUp}": "ليس لديك حساب؟ {signUp}",
   "Already have an account? {signIn}": "لديك حساب بالفعل؟ {signIn}",
   "You're offline. Connect and try again.": "أنت غير متصل. اتصل بالإنترنت وحاول مجددًا.",

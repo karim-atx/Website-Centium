@@ -200,22 +200,27 @@ export interface ObAction {
   style?: React.CSSProperties;
 }
 
+/** Whether this device draws Apple's logo glyph (U+F8FF): iPhone, iPad, Mac. */
+const APPLE_DEVICE = typeof navigator !== "undefined" && /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+
 /**
  * The pinned footer: error slot (12/600 attention, or inkSoft for an
- * informing offline line), primary 52 r16, optional OR + secondary (outline),
- * optional text link (`link`: node; "intro" 14/600 mt 16, "lane" 14/700 mt 14).
+ * informing offline line), primary 52 r16, optional OR + Sign in with Apple
+ * (`apple`, Apple's black or white) + secondary (outline), optional text link (`link`: node; "intro" 14/600 mt 16, "lane" 14/700 mt 14).
  */
 export const ObFooter: React.FC<{
   error?: React.ReactNode;
   errorTone?: "error" | "info";
   primary?: ObAction;
   secondary?: ObAction & { or?: boolean };
+  /** Sign in with Apple, above the secondary (App-Centium IPHONE_ROUND_1.md §2). */
+  apple?: ObAction;
   link?: { node: React.ReactNode; onClick: () => void; variant?: "intro" | "lane"; disabled?: boolean };
   /** Above the primary (after the error slot): e.g. the health disclaimer. */
   children?: React.ReactNode;
   /** After the link: a second text link. */
   after?: React.ReactNode;
-}> = ({ error, errorTone = "error", primary, secondary, link, children, after }) => (
+}> = ({ error, errorTone = "error", primary, secondary, apple, link, children, after }) => (
   <div className="ob-foot">
     {error && (
       <p className="ob-foot-err" data-tone={errorTone} role={errorTone === "error" ? "alert" : "status"}>
@@ -236,24 +241,41 @@ export const ObFooter: React.FC<{
         {primary.label}
       </button>
     )}
-    {secondary && (
+    {(secondary || apple) && (
       <>
-        {secondary.or && (
+        {(secondary?.or ?? true) && (secondary || apple) && (
           <div className="ob-or" aria-hidden>
             <span />
             <span className="ob-or-t">{t("OR")}</span>
             <span />
           </div>
         )}
-        <button
-          type={secondary.type ?? "button"}
-          className="ob-btn ob-btn-secondary tap"
-          style={secondary.or ? undefined : { marginTop: 12 }}
-          onClick={secondary.onClick}
-          disabled={secondary.disabled}
-        >
-          {secondary.label}
-        </button>
+        {apple && (
+          <button
+            type="button"
+            className="ob-btn ob-btn-apple tap"
+            onClick={apple.onClick}
+            disabled={apple.disabled}
+            aria-label={apple.ariaLabel}
+          >
+            {/* Apple's logo: the system glyph, which only Apple devices draw (elsewhere
+                it is an empty box), until Apple's own artwork from its Design
+                Resources replaces it before App Review (IPHONE_ROUND_1.md §2). */}
+            {APPLE_DEVICE && <span className="ob-apple-logo" aria-hidden>{""}</span>}
+            {apple.label}
+          </button>
+        )}
+        {secondary && (
+          <button
+            type={secondary.type ?? "button"}
+            className="ob-btn ob-btn-secondary tap"
+            style={secondary.or || apple ? (apple ? { marginTop: 10 } : undefined) : { marginTop: 12 }}
+            onClick={secondary.onClick}
+            disabled={secondary.disabled}
+          >
+            {secondary.label}
+          </button>
+        )}
       </>
     )}
     {link && (
