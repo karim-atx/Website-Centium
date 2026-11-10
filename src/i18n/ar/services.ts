@@ -389,6 +389,8 @@ const services: Catalogue = {
   "Google sign-in isn't available in this version of the app.": "تسجيل الدخول باستخدام Google غير متاح في هذا الإصدار من التطبيق.",
   "Add a Google account to this phone first, then try again.": "أضف حساب Google إلى هذا الهاتف أولاً، ثم حاول مرة أخرى.",
   "Google sign-in didn't work. Try again, or use your email.": "لم ينجح تسجيل الدخول باستخدام Google. حاول مرة أخرى، أو استخدم بريدك الإلكتروني.",
+  "Sign in with Apple isn't available in this version of the app.": "تسجيل الدخول باستخدام Apple غير متاح في هذا الإصدار من التطبيق.",
+  "Sign in with Apple didn't work. Try again, or use your email.": "لم ينجح تسجيل الدخول باستخدام Apple. حاول مرة أخرى، أو استخدم بريدك الإلكتروني.",
   // == The desktop app (services/auth, services/push, context/CallContext) ==
   "Couldn't open Google sign-in. Try again.": "تعذّر فتح تسجيل الدخول باستخدام Google. حاول مرة أخرى.",
   "Notifications are off for Centium in Windows settings.": "الإشعارات متوقفة لـ Centium في إعدادات Windows.",

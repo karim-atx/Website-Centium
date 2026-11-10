@@ -43,6 +43,14 @@ export interface CentiumNativePlugin {
   googleSignIn(options: { serverClientId: string; nonce: string }): Promise<{ idToken: string }>;
 
   /**
+   * Sign in with Apple, on the iPhone only (App-Centium IPHONE_ROUND_1.md §2).
+   * `nonce` is the SHA-256 hex of the raw nonce, as for Google. Apple gives the
+   * name on the first sign-in only. Rejects with code "cancelled" when the
+   * person closes Apple's sheet.
+   */
+  appleSignIn(options: { nonce: string }): Promise<{ idToken: string; authorizationCode: string; givenName?: string; familyName?: string }>;
+
+  /**
    * Whether this build has a Round J feature (false until its native half
    * exists on this platform). `reason` explains a false that the person can
    * fix, e.g. Health Connect needing an install or update.

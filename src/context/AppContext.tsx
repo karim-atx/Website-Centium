@@ -128,6 +128,8 @@ import type { Session } from "@supabase/supabase-js";
 import { hasStoredSessionToken, onAuthChange, readSession, retrySessionRefresh, signOutOtherDevices, signOutRemote, storedSession } from "../services/auth";
 import { SIGN_OUT_SCOPE, signOutEveryDevice } from "../services/auth/signOutScope";
 import { reportInstallOnce } from "../platform/installReport";
+import { sendPendingAppleLink } from "../services/auth/applePending";
+import { getSupabaseConfig } from "../../lib/supabase/config";
 import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
 import { revokeThisPhoneOnSignOut, unlockFolderWithDevice } from "../services/journal/deviceUnlock";
 import type { DeviceOutcome } from "../services/journal/deviceUnlockModel";
@@ -1819,6 +1821,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // gets no profiles row (see ensureProfileRow), so seeding streaks for
         // one would fail that foreign key on every single auth event. The
         // reported flag is what says which case this is.
+        // A Sign in with Apple's one-time code the reload overtook (services/auth/applePending).
+        sendPendingAppleLink(next.access_token, next.user, getSupabaseConfig());
         void ensureProfileRow(next.user.id).then(({ profileEnsured }) => {
           if (!profileEnsured) return;
           // The phone app's install, once per session (report_app_install

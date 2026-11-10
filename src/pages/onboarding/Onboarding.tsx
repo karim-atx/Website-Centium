@@ -22,6 +22,7 @@ import { BIZ_FLOW_STEPS, dateOfBirthComplete, dateOfBirthStep, laneOf, resumeInd
 import { BusinessLane, type BizLaneFlowKey } from "./business/BusinessLane";
 import { emptyBusinessDraft, mirrorFields, type BusinessLaneDraft } from "./business/draft";
 import { legacyStoredDraft, parseStoredDraft, resolveDraft, type StoredDraft, type Viewer } from "./draftOwner";
+import { clearAppleGivenName, peekAppleGivenName } from "../../services/auth/applePending";
 import { hasReturnedAuthError } from "../../services/auth";
 import { AboutStep } from "./client/AboutStep";
 import { GentleStep } from "./client/GentleStep";
@@ -236,9 +237,18 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
     return !viewer.userId && (v === "signin" || v === "forgot") ? v : null;
   });
   const [initial] = useState(() => {
-    const s0 = initialStateFor(viewer);
+    let s0 = initialStateFor(viewer);
+    // Sign in with Apple's first name, kept across the sign-in's reload
+    // (services/auth/applePending), for the account it came with only: it fills
+    // an empty name (D-R1-2). Read here, cleared once mounted, so a second
+    // initialiser run still sees it.
+    const appleName = peekAppleGivenName(liveSession?.user);
+    if (appleName && !s0.draft.firstName) s0 = { ...s0, draft: { ...s0.draft, firstName: appleName } };
     return authLink ? { ...s0, step: stepsFor(s0.draft.accountType, false).indexOf("auth") } : s0;
   });
+  useEffect(() => {
+    if (viewer.userId) clearAppleGivenName();
+  }, [viewer.userId]);
   const [draft, setDraft] = useState<OnboardingDraft>(initial.draft);
   const [step, setStep] = useState(initial.step);
   const owner = initial.owner;

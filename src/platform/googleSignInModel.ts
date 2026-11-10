@@ -1,15 +1,13 @@
 // Where "Continue with Google" is offered.
 //
-// NOT ON THE iPHONE YET. In the phone app Google's sign-in page can't run in
-// the WebView, so the app asks the phone's own Google sign-in for an ID token
-// (services/auth signInWithGoogleNative). That native half exists on Android
-// only; on iOS the call fails. The App Store also asks for Sign in with Apple
-// wherever another account sign-in is offered, so the two arrive together in
-// iPhone Round 1 (Karim, 2026-11-09). Until then the iPhone shows email only.
-//
-// The web, the Android app and the desktop app keep the button.
+// EVERYWHERE, the iPhone included since iPhone Round 1 PR 2 (App-Centium
+// IPHONE_ROUND_1.md §3, D-R1-3). The iPhone app signs in with Google's own
+// iOS sign-in (GoogleSignIn-iOS), and it came back in the same release as
+// Sign in with Apple, which the App Store asks for wherever another account
+// sign-in is offered (guideline 4.8). Website #118 had hidden it on the
+// iPhone until then.
 import type { Platform } from "./index";
 
-export function googleSignInOfferedOn(platform: Platform): boolean {
-  return platform !== "ios";
+export function googleSignInOfferedOn(_platform: Platform): boolean {
+  return true;
 }
