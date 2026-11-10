@@ -13,6 +13,8 @@ import { desktop, DESKTOP_AUTH_RETURN, type CentiumDesktop } from "../../platfor
 import { CentiumNative } from "../../platform/native";
 import { readCookieHeader } from "../../../lib/supabase/cookieJar";
 import { platform } from "../../platform";
+import { getSupabaseConfig } from "../../../lib/supabase/config";
+import { rememberAppleSignIn, sendPendingAppleLink } from "./applePending";
 import { storedSessionFromCookies } from "../../../lib/supabase/tabIdentity";
 import { refreshFailure, type RefreshFailure } from "../../../lib/supabase/sessionReach";
 
@@ -358,12 +360,11 @@ export async function signInWithApple(): Promise<AppleSignInResult> {
       console.error("[auth] Sign in with Apple:", code, (e as Error).message);
       return { status: "error", message: tk("Sign in with Apple didn't work. Try again, or use your email.") };
     }
-    const { error } = await supabase.auth.signInWithIdToken({ provider: "apple", token: apple.idToken, nonce: nonce.raw });
+    // Before the sign-in: its SIGNED_IN can reload the page at once (./applePending).
+    rememberAppleSignIn(apple.authorizationCode, apple.givenName);
+    const { data, error } = await supabase.auth.signInWithIdToken({ provider: "apple", token: apple.idToken, nonce: nonce.raw });
     if (error) return { status: "error", message: describeAuthError(error) };
-    const { error: linkError } = await supabase.functions.invoke("apple-sign-in-link", {
-      body: { authorization_code: apple.authorizationCode },
-    });
-    if (linkError) console.error("[auth] apple-sign-in-link:", linkError.message);
+    sendPendingAppleLink(data.session?.access_token, getSupabaseConfig());
     return { status: "signed_in", ...(apple.givenName ? { givenName: apple.givenName } : {}) };
   }
   const { error } = await supabase.auth.signInWithOAuth({ provider: "apple", options: { redirectTo: authRedirectUrl() } });
