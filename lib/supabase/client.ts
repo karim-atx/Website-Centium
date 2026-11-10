@@ -11,7 +11,8 @@ import {
 } from './recovery'
 import { suspensionAwareFetch } from './suspension'
 import { offlineFastFetch } from './offlineFast'
-import { identityGuardFetch } from './tabIdentity'
+import { currentTabLock, identityGuardFetch } from './tabIdentity'
+import { unverifiedSessionFetch } from './sessionReach'
 import { describeSessionToNative, tellNativeSessionPersists } from './nativeSession'
 import { readCookieHeader, writeCookie } from './cookieJar'
 import type { Database } from './database.types'
@@ -45,10 +46,19 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
   // bare SIGNED_OUT with no error, so this wrapper is the last point at which
   // the reason still exists. It inspects nothing but failed /auth/v1/ calls.
   // See ./suspension.
-  // The identity guard is outermost: a request from a tab bound to another
+  // The identity guard comes next: a request from a tab bound to another
   // account never reaches the suspension handling, or the network.
   // Innermost: offline, a read fails at once instead of after 7 s of retries (./offlineFast).
-  global: { fetch: identityGuardFetch(suspensionAwareFetch(offlineFastFetch())) },
+  // Outermost: while the stored session can't be renewed for want of a
+  // network, a data request fails as offline rather than going out as anon
+  // and being refused by the identity guard; a locked tab keeps the guard's
+  // own answer (./sessionReach).
+  global: {
+    fetch: unverifiedSessionFetch(
+      identityGuardFetch(suspensionAwareFetch(offlineFastFetch())),
+      () => currentTabLock() !== null,
+    ),
+  },
   cookies: {
     getAll() {
       // document.cookie, or the iPhone app's own jar (./cookieJar).

@@ -1,4 +1,5 @@
 import { OFFLINE_MESSAGE } from "../network-error";
+import { sessionUnreachable } from "../../../lib/supabase/sessionReach";
 import type { LogFoodEntryParams } from "../food";
 import type { WorkoutSession } from "../../types";
 import type { SessionSwap } from "../workout/coachLogic";
@@ -122,12 +123,17 @@ export function clearQueue(userId: string): void {
 /** True when a failed write was the connection, not the database. */
 export function isOfflineFailure(result: { ok: boolean; message?: string }): boolean {
   if (result.ok) return false;
-  if (typeof navigator !== "undefined" && navigator.onLine === false) return true;
+  if (browserOffline()) return true;
   return result.message === OFFLINE_MESSAGE;
 }
 
+/**
+ * The browser says it's offline, or the stored session's refresh failed on
+ * the network (lib/supabase/sessionReach): either way nothing can be saved as
+ * this account until the connection is back, so the entry is queued.
+ */
 export function browserOffline(): boolean {
-  return typeof navigator !== "undefined" && navigator.onLine === false;
+  return (typeof navigator !== "undefined" && navigator.onLine === false) || sessionUnreachable();
 }
 
 let flushing: Promise<void> | null = null;

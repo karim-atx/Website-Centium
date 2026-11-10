@@ -52,6 +52,18 @@ export function jwtSubject(authorization: string | null | undefined): string | n
  * `base64-` (base64url JSON). Older sessions are plain JSON.
  */
 export function sessionUserIdFromCookies(cookieHeader: string): string | null {
+  const session = storedSessionFromCookies(cookieHeader);
+  if (!session) return null;
+  if (typeof session.user?.id === "string" && session.user.id) return session.user.id;
+  return typeof session.access_token === "string" ? jwtSubject(`Bearer ${session.access_token}`) : null;
+}
+
+/**
+ * The stored session itself, as auth-js saved it (unverified: its tokens may
+ * have expired), or null when there is none or it can't be read. The same
+ * cookie the tab's identity is read from; see sessionUserIdFromCookies.
+ */
+export function storedSessionFromCookies(cookieHeader: string): { user?: { id?: unknown }; access_token?: unknown } | null {
   const chunks = new Map<string, string>();
   for (const entry of cookieHeader.split(/;\s*/)) {
     const eq = entry.indexOf("=");
@@ -69,9 +81,8 @@ export function sessionUserIdFromCookies(cookieHeader: string): string | null {
   try {
     let value = decodeURIComponent(raw);
     if (value.startsWith("base64-")) value = base64UrlDecode(value.slice("base64-".length));
-    const session = JSON.parse(value) as { user?: { id?: unknown }; access_token?: unknown };
-    if (typeof session.user?.id === "string" && session.user.id) return session.user.id;
-    return typeof session.access_token === "string" ? jwtSubject(`Bearer ${session.access_token}`) : null;
+    const session = JSON.parse(value) as unknown;
+    return typeof session === "object" && session !== null ? (session as { user?: { id?: unknown }; access_token?: unknown }) : null;
   } catch {
     return null;
   }

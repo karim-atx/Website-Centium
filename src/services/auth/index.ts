@@ -12,6 +12,8 @@ import { isNative } from "../../platform";
 import { desktop, DESKTOP_AUTH_RETURN, type CentiumDesktop } from "../../platform/desktop";
 import { CentiumNative } from "../../platform/native";
 import { readCookieHeader } from "../../../lib/supabase/cookieJar";
+import { storedSessionFromCookies } from "../../../lib/supabase/tabIdentity";
+import { refreshFailure, type RefreshFailure } from "../../../lib/supabase/sessionReach";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
@@ -379,19 +381,54 @@ export async function sendPasswordReset(
   return { ok: true };
 }
 
-export async function getCurrentSession(): Promise<Session | null> {
+/**
+ * The current session, and HOW reading it failed (lib/supabase/sessionReach):
+ * a refresh that never reached the sign-in server and one the server refused
+ * both answer a null session, and only the second is a sign-out.
+ */
+export async function readSession(): Promise<{ session: Session | null; failure: RefreshFailure }> {
   const { data, error } = await supabase.auth.getSession();
   if (error) {
     console.error("[auth] getSession failed:", error.message);
-    return null;
+    return { session: null, failure: refreshFailure(error, typeof navigator === "undefined" || navigator.onLine !== false) };
   }
-  return data.session;
+  return { session: data.session, failure: null };
+}
+
+/**
+ * Asks the sign-in server again for a stored session it couldn't be reached
+ * to renew (AppContext retries on `online`, on the tab becoming visible, and
+ * on a timer). A session that comes back also arrives as TOKEN_REFRESHED; one
+ * the server refuses is removed by auth-js, which emits SIGNED_OUT.
+ *
+ * auth-js caches a failed refresh for 60 s against its refresh token
+ * (REFRESH_FAILURE_COOLDOWN_MS, to stop a refresh storm during an outage), so
+ * within that window getSession() would answer the cached failure without
+ * trying. This retry is one request series per trigger, never a loop, so it
+ * clears that cache first. The field is protected in auth-js's types (read in
+ * 2.115.0's GoTrueClient): lastRefreshFailure.
+ */
+export async function retrySessionRefresh(): Promise<{ session: Session | null; failure: RefreshFailure }> {
+  (supabase.auth as unknown as { lastRefreshFailure: unknown }).lastRefreshFailure = null;
+  return readSession();
+}
+
+/**
+ * The stored session as saved, unverified (its access token may have
+ * expired), for SHOWING the account while its refresh can't reach the server.
+ * Never a source of tokens: every request asks the auth client, which has no
+ * session to give until the refresh succeeds (lib/supabase/sessionReach).
+ */
+export function storedSession(): Session | null {
+  if (typeof document === "undefined") return null;
+  const session = storedSessionFromCookies(readCookieHeader());
+  return session && typeof session.user?.id === "string" ? (session as unknown as Session) : null;
 }
 
 /**
  * Whether a session token is STORED, regardless of whether it can be verified.
  *
- * NOT THE SAME QUESTION AS getCurrentSession(), and conflating the two wiped
+ * NOT THE SAME QUESTION AS readSession(), and conflating the two wiped
  * real users' local data. Offline with an expired access token, getSession()
  * tries to refresh, the request fails, and it returns null with "Failed to
  * fetch" — indistinguishable from a signed-out visitor to any caller reading
