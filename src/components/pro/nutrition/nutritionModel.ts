@@ -201,7 +201,28 @@ export interface ConflictRow {
   severity: "mild" | "moderate" | "severe" | null;
   restriction: string | null;
   detail: string | null;
+  /**
+   * FQ (20261227020000): an "Other" allergy's label, the client's own words,
+   * on an allergy_check row with allergen null. Absent on today's database.
+   */
+  customAllergy?: string | null;
 }
+
+/** The client's own label on a conflict row, trimmed, or null (a standard row, or today's database). */
+export const customLabel = (r: Pick<ConflictRow, "customAllergy">): string | null => {
+  const l = typeof r.customAllergy === "string" ? r.customAllergy.trim() : "";
+  return l ? l : null;
+};
+
+/** FQ (decision 25): the client's own words keep their direction inside a line (first-strong isolate). */
+export const isolateLabel = (text: string): string => `⁨${text}⁩`;
+
+/**
+ * FQ (decision 23): a client's "Other" allergy as a professional sees it,
+ * marked as their own wording by quotation marks (“kiwi”, «كيوي» in Arabic),
+ * the way the app already quotes what a member wrote.
+ */
+export const ownWords = (label: string): string => t("“{label}”", { label: isolateLabel(label) });
 
 /** The strongest conflict decides the row's flag: confirmed allergy, then the rest in order. */
 export function worstConflict(rows: ConflictRow[]): ConflictRow | null {
@@ -245,7 +266,8 @@ export function clientConflictLine(
     if (allergiesUnknown(it.rows)) unknown = true;
     for (const r of it.rows) {
       if (r.kind === "allergies_unknown") continue;
-      const key = `${it.name}|${r.kind}|${r.allergen ?? r.restriction}`;
+      const custom = customLabel(r);
+      const key = `${it.name}|${r.kind}|${r.allergen ?? r.restriction ?? (custom ? `custom:${custom.toLowerCase()}` : null)}`;
       if (seen.has(key)) continue;
       seen.add(key);
       if (r.kind === "allergy_confirmed" && r.allergen) {
@@ -254,6 +276,10 @@ export function clientConflictLine(
       } else if (r.kind === "allergy_check" && r.allergen) {
         amber = true;
         parts.push(t("{food} (check for {allergen})", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
+      } else if (r.kind === "allergy_check" && custom) {
+        // FQ: an "Other" allergy (allergen null): its label as written, never translated or lower-cased.
+        amber = true;
+        parts.push(t("{food} (check for {allergen})", { food: it.name, allergen: isolateLabel(custom) }));
       } else if (r.kind === "restriction" && r.restriction) {
         amber = true;
         parts.push(`${it.name} (${label.restriction(r.restriction)})`);

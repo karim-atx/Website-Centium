@@ -232,6 +232,8 @@ const premium3: Catalogue = {
   "A change is shown only when both reports use the same unit.": "يظهر التغيير فقط حين يستخدم التقريران الوحدة نفسها.",
   // note: health wording
   "See how this marker has changed over time. Your latest reading stays here, and adding results is free.": "اطّلع على تغيّر هذا المؤشر مع الوقت. تبقى أحدث قراءة لك هنا، وإضافة النتائج مجانية.",
+  // FQ: the doctor summary's "Other" allergies, quoted as the member's own words
+  "“{label}”": "«{label}»",
 };
 
 export default premium3;

@@ -587,6 +587,11 @@ const community: Catalogue = {
   "That person isn't on your team any more. Pick another.": "لم يعد هذا الشخص في فريقك. اختر شخصًا آخر.",
   // Round K (K-DEL): the author of a deleted account's post or comment (services/forum/rules.ts).
   "Deleted member": "عضو محذوف",
+  // == FQ: forms, "Save as an Other allergy" ==
+  "Save as an Other allergy": "حفظها كحساسية أخرى", // note: health wording
+  "Allergy, in your words": "الحساسية، بكلماتك", // note: health wording
+  "Choose a listed allergen instead": "اختر مسبّب حساسية من القائمة بدلًا من ذلك", // note: health wording
+  "“{label}”": "«{label}»",
 };
 
 export default community;

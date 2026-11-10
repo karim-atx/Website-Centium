@@ -37,6 +37,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t, tk } from "../../i18n/core";
 import { fromMyFormQuestion, parseShowIfRule, safetyLineOf, type Answers, type ClientQuestion, type ConnectReferral, type FormKind, type MyFormQuestionRow, type PendingReferral, type QuestionType, type TodaySession } from "./logic";
 import { asProposalField, type ProfileProposal, type ProposalStatus } from "./proposals";
+import { otherProblemText } from "../nutrition/otherAllergies";
 import type { AccessCategory } from "../consent";
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -255,14 +256,18 @@ export async function fetchProfileProposals(responseId: string | null): Promise<
   return { ok: true, data: out };
 }
 
-export type ProposalResult = { ok: true } | { ok: false; message: string; gone?: boolean };
+/** `code` is the database's, for a caller that reads one refusal its own way (FQ: 22023 on an Other allergy). */
+export type ProposalResult = { ok: true } | { ok: false; message: string; gone?: boolean; code?: string };
 
 function proposalFail(error: { code?: string; message: string }, fallback: string): ProposalResult {
   if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
   if (error.code === "ATXL2") return { ok: false, message: t("Weight isn't added while recovery-sensitive mode is on."), gone: true };
   if (error.code === "ATX10") return { ok: false, message: t("You already decided this one."), gone: true };
   if (error.code === "ATX08") return { ok: false, message: t("This isn't available any more."), gone: true };
-  if (error.code === "22023") return { ok: false, message: t("Check the details and try again.") };
+  // FQ (20261227020000): an "Other" allergy's label breaks one of its rules (ATXK5 can't come
+  // from this call: the same label again only takes the new severity).
+  if (error.code === "ATXK3" || error.code === "ATXK4" || error.code === "ATXK6") return { ok: false, message: otherProblemText(error.code), code: error.code };
+  if (error.code === "22023") return { ok: false, message: t("Check the details and try again."), code: "22023" };
   return { ok: false, message: fallback };
 }
 

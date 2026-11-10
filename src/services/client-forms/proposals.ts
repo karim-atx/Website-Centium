@@ -11,6 +11,7 @@
 // medications {name}, injuries {description}, weight {kg}.
 
 import { ALLERGENS, SEVERITIES, allergenLabel, severityLabel, type Allergen, type AllergySeverity } from "../nutrition/clientNutritionModel";
+import { OTHER_LABEL_MAX, cleanLabel, isolate, labelProblem, otherProblemKey } from "../nutrition/otherAllergies";
 import { dietLabel, dietaryRestrictionOptions, type DietaryRestriction } from "../../utils/dietaryRestrictions";
 import type { MedicationRoute } from "../../types";
 import { t, tk } from "../../i18n/core";
@@ -63,7 +64,22 @@ export const MEDICATION_ROUTES: { value: MedicationRoute; label: string }[] = [
 export type DietKind = "restriction" | "preference";
 
 export type ProposalDraft =
-  | { field: "allergies"; text: string; allergen: Allergen | null; severity: AllergySeverity; note: string }
+  | {
+      field: "allergies";
+      text: string;
+      allergen: Allergen | null;
+      severity: AllergySeverity;
+      note: string;
+      /**
+       * FQ (decision 22): the suggestion named no standard allergen, so it can
+       * be saved as an "Other" allergy in the member's words (`label`).
+       * `asOther` is the path chosen; off, the card is today's "choose the
+       * allergen".
+       */
+      otherOffered: boolean;
+      asOther: boolean;
+      label: string;
+    }
   | { field: "dietary_restrictions"; text: string; restriction: DietaryRestriction | null; kind: DietKind }
   | { field: "medications"; name: string; dose: string; route: MedicationRoute; notes: string }
   | { field: "injuries"; description: string; bodyArea: string; since: string }
@@ -74,12 +90,32 @@ const isAllergen = (v: unknown): v is Allergen => ALLERGENS.some((a) => a.value 
 const isDiet = (v: unknown): v is DietaryRestriction => dietaryRestrictionOptions.some((d) => d.value === v);
 const isSeverity = (v: unknown): v is AllergySeverity => SEVERITIES.some((s) => s.value === v);
 
-/** The draft a card starts from: the Database's suggestion, with the app's defaults for what it leaves out. */
-export function draftFrom(p: Pick<ProfileProposal, "field" | "suggested">): ProposalDraft {
+/**
+ * The draft a card starts from: the Database's suggestion, with the app's
+ * defaults for what it leaves out. An allergy with no standard allergen
+ * (the key missing or null) starts as an "Other" allergy: the label is the
+ * answer's text, trimmed to 60, at Severe (the suggestion's severity is the
+ * Database's placeholder, not the member's). `otherAvailable` false (the
+ * Database refused a label with 22023: not live yet) keeps today's card.
+ */
+export function draftFrom(p: Pick<ProfileProposal, "field" | "suggested">, otherAvailable = true): ProposalDraft {
   const s = p.suggested;
   switch (p.field) {
-    case "allergies":
-      return { field: "allergies", text: str(s.text), allergen: isAllergen(s.allergen) ? s.allergen : null, severity: isSeverity(s.severity) ? s.severity : "moderate", note: str(s.note) };
+    case "allergies": {
+      const allergen = isAllergen(s.allergen) ? s.allergen : null;
+      const otherOffered = !allergen && otherAvailable;
+      const label = [...cleanLabel(str(s.text))].slice(0, OTHER_LABEL_MAX).join("").trim();
+      return {
+        field: "allergies",
+        text: str(s.text),
+        allergen,
+        severity: otherOffered ? "severe" : isSeverity(s.severity) ? s.severity : "moderate",
+        note: str(s.note),
+        otherOffered,
+        asOther: otherOffered,
+        label,
+      };
+    }
     case "dietary_restrictions":
       return { field: "dietary_restrictions", text: str(s.text), restriction: isDiet(s.restriction) ? s.restriction : null, kind: s.kind === "preference" ? "preference" : "restriction" };
     case "medications":
@@ -106,6 +142,13 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function shapeValue(d: ProposalDraft, today: string): ShapedValue {
   switch (d.field) {
     case "allergies": {
+      if (d.asOther) {
+        // FQ: {label, severity, note}; severity always sent (the Database's default is moderate).
+        const problem = labelProblem(d.label, []);
+        if (problem) return { ok: false, problem: otherProblemKey(problem) };
+        if (d.note.trim().length > 200) return { ok: false, problem: tk("Keep the note under 200 characters.") };
+        return { ok: true, value: { label: cleanLabel(d.label), severity: d.severity, note: d.note.trim() } };
+      }
       if (!d.allergen) return { ok: false, problem: tk("Choose the allergen.") };
       if (d.note.trim().length > 200) return { ok: false, problem: tk("Keep the note under 200 characters.") };
       return { ok: true, value: { allergen: d.allergen, severity: d.severity, note: d.note.trim() } };
@@ -141,6 +184,7 @@ export function shapeValue(d: ProposalDraft, today: string): ShapedValue {
 export function proposalTitle(d: ProposalDraft): string {
   switch (d.field) {
     case "allergies":
+      if (d.asOther) return cleanLabel(d.label) || d.text.trim() || t("An allergy");
       return d.allergen ? t("{allergen} allergy", { allergen: t(allergenLabel(d.allergen)) }) : d.text.trim() || t("An allergy");
     case "dietary_restrictions":
       return (d.restriction ? dietLabel(d.restriction) : "") || d.text.trim() || t("A diet");
@@ -184,7 +228,13 @@ export function confirmedAnswerRow(a: Pick<ConfirmedAnswer, "field" | "value">):
   const v = a.value;
   switch (a.field) {
     case "allergies": {
-      const name = isAllergen(v.allergen) ? t("{allergen} allergy", { allergen: t(allergenLabel(v.allergen)) }) : str(v.note).trim() || t("An allergy");
+      // FQ: an "Other" allergy confirmed as {label, severity, note}: the member's words, quoted.
+      const label = str(v.label).trim();
+      const name = isAllergen(v.allergen)
+        ? t("{allergen} allergy", { allergen: t(allergenLabel(v.allergen)) })
+        : label
+          ? t("{allergen} allergy", { allergen: t("“{label}”", { label: isolate(label) }) })
+          : str(v.note).trim() || t("An allergy");
       return { title: isSeverity(v.severity) ? t("{allergy}, {severity}", { allergy: name, severity: t(severityLabel(v.severity)).toLowerCase() }) : name, where: t("Dietary needs card") };
     }
     case "dietary_restrictions": {
@@ -210,3 +260,12 @@ export function confirmedAnswerRow(a: Pick<ConfirmedAnswer, "field" | "value">):
     }
   }
 }
+
+// FQ: once the Database refuses a label (22023: "Other" allergies aren't live
+// yet), later cards open on today's "choose the allergen" too, for the rest of
+// the visit.
+let otherRefused = false;
+export const otherAllergyRefused = (): boolean => otherRefused;
+export const markOtherAllergyRefused = (): void => {
+  otherRefused = true;
+};

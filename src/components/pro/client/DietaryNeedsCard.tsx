@@ -8,6 +8,7 @@ import { INK } from "../proInk";
 import { fmtDay, ALLERGEN_LABEL } from "./clientFormat";
 import { fetchDietaryNeeds, type DietaryNeeds } from "../../../services/pro/clientPage";
 import { dietLabel } from "../../../utils/dietaryRestrictions";
+import { ownWords } from "../nutrition/nutritionModel";
 import type { UseClientAccess } from "../../../hooks/useClientAccess";
 import { t, tk } from "../../../i18n/core";
 
@@ -83,8 +84,10 @@ export const DietaryNeedsCard: React.FC<{
   const restrictions = (d?.restrictions ?? []).filter((r) => r.kind !== "preference");
   const prefs = (d?.restrictions ?? []).filter((r) => r.kind === "preference");
   const allergies = d?.allergies ?? [];
-  const updated = [...allergies.map((a) => a.updatedAt), ...(d?.restrictions ?? []).map((r) => r.createdAt)].sort().pop() ?? null;
-  const none = !!d && !allergies.length && !restrictions.length && !prefs.length;
+  // FQ: the client's "Other" allergies, quoted as their own words (empty before the Database has them).
+  const others = d?.otherAllergies ?? [];
+  const updated = [...allergies.map((a) => a.updatedAt), ...others.map((o) => o.updatedAt), ...(d?.restrictions ?? []).map((r) => r.createdAt)].sort().pop() ?? null;
+  const none = !!d && !allergies.length && !others.length && !restrictions.length && !prefs.length;
   const teal = dark ? "#B2D4CF" : "rgb(var(--c-teal-dark-ink))";
 
   return (
@@ -122,6 +125,12 @@ export const DietaryNeedsCard: React.FC<{
                 {t("Allergy: {name}", { name: t(ALLERGEN_LABEL[a.allergen] ?? a.allergen) })}
               </span>
             ))}
+            {others.map((o) => (
+              <span key={`o:${o.id}`} title={t("In {name}'s own words", { name: firstName })} className="inline-flex items-center" style={{ gap: 4, borderRadius: 8, padding: "4px 8px", fontSize: textPx(11.5), fontWeight: 800, background: INK.hiBg, color: INK.hi, maxWidth: "100%", overflowWrap: "anywhere" }}>
+                <AlertTriangle size={12} strokeWidth={2.4} aria-hidden className="shrink-0" />
+                {t("Allergy: {name}", { name: ownWords(o.label) })}
+              </span>
+            ))}
             {restrictions.map((r) => (
               <span key={r.restriction} className="inline-flex items-center whitespace-nowrap" style={{ gap: 4, borderRadius: 8, padding: "4px 8px", fontSize: textPx(11.5), fontWeight: 700, background: INK.goldPale, color: INK.goldInk }}>
                 <AlertCircle size={12} strokeWidth={2.2} aria-hidden />
@@ -134,12 +143,20 @@ export const DietaryNeedsCard: React.FC<{
               </span>
             ))}
           </div>
-          {!compact && allergies.length > 0 && (
+          {!compact && allergies.length + others.length > 0 && (
             <div className="flex flex-col" style={{ marginTop: 10, borderTop: `1px solid ${INK.b06}`, paddingTop: 8, gap: 4 }}>
               {allergies.map((a) => (
                 <p key={a.allergen} style={{ fontSize: textPx(12), color: INK.ch }}>
                   <b style={{ color: INK.hi }}>{t(ALLERGEN_LABEL[a.allergen] ?? a.allergen)}</b>
                   {` · ${t(SEVERITY[a.severity] ?? a.severity)}${a.note ? `${t(", ")}${a.note}` : ""}`}
+                </p>
+              ))}
+              {others.map((o) => (
+                <p key={`o:${o.id}`} style={{ fontSize: textPx(12), color: INK.ch, overflowWrap: "anywhere" }}>
+                  <b style={{ color: INK.hi }}>{ownWords(o.label)}</b>
+                  {` · ${t(SEVERITY[o.severity] ?? o.severity)} · `}
+                  <span style={{ color: INK.chF }}>{t("own words")}</span>
+                  {o.note ? <>{t(", ")}<bdi>{o.note}</bdi></> : null}
                 </p>
               ))}
             </div>

@@ -608,6 +608,9 @@ const proclients: Catalogue = {
   "workouts|unit": "تمارين",
   "Due|status": "مستحقة",
   "Range {range}": "النطاق {range}", // note: health wording (web marker row: the reference range, then the date)
+  // == FQ: DietaryNeedsCard, a client's "Other" allergies ==
+  "In {name}'s own words": "بكلمات {name}", // note: health (an allergy the client wrote themselves)
+  "own words": "بكلمات العميل", // note: health (marks an allergy the client wrote themselves)
 };
 
 export default proclients;

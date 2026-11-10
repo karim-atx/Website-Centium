@@ -4,7 +4,7 @@
 
 import { ALLERGEN_LABEL } from "../client/clientFormat";
 import { dietLabel } from "../../../utils/dietaryRestrictions";
-import type { ConflictRow } from "./nutritionModel";
+import { customLabel, isolateLabel, type ConflictRow } from "./nutritionModel";
 import { t, tk } from "../../../i18n/core";
 
 /** The board's macro colours (gen r13 dayTotal13, r14): protein, carbs, fat. */
@@ -21,6 +21,9 @@ export const severityLabel = (s: string): string => (SEVERITY_LABEL[s] ? t(SEVER
 /** NU11 / NU12 titles (FINAL_PLAN 3 templates: "{food_name} contains {allergen}", "… may contain … Check this.", "{food_name} isn't {restriction}"). */
 export function conflictTitle(name: string, row: ConflictRow): string {
   if (row.kind === "allergy_confirmed") return t("{food} contains {allergen}", { food: name, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  // FQ: an "Other" allergy (allergen null) is named by the client's own label, as written.
+  const custom = row.kind === "allergy_check" && !row.allergen ? customLabel(row) : null;
+  if (custom) return t("{food} may contain {allergen}. Check this.", { food: name, allergen: isolateLabel(custom) });
   if (row.kind === "allergy_check") return t("{food} may contain {allergen}. Check this.", { food: name, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
   return t("{food} isn't {restriction}", { food: name, restriction: restrictionLabel(row.restriction ?? "").toLowerCase() });
 }
@@ -31,6 +34,12 @@ export function conflictBody(first: string, row: ConflictRow): string {
     return row.severity
       ? t("{name} is allergic to {allergen} ({severity}). Foods with an allergen are blocked by default.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase(), severity: severityLabel(row.severity) })
       : t("{name} is allergic to {allergen}. Foods with an allergen are blocked by default.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  // FQ: an "Other" allergy carries the client's own severity (never confirmed: a name match only).
+  const custom = row.kind === "allergy_check" && !row.allergen ? customLabel(row) : null;
+  if (custom)
+    return row.severity && SEVERITY_LABEL[row.severity]
+      ? t("{name} added {allergy} as an allergy in their own words ({severity}). Only the name matches, so check the ingredients with {name}.", { name: first, allergy: isolateLabel(custom), severity: severityLabel(row.severity) })
+      : t("{name} added {allergy} as an allergy in their own words. Only the name matches, so check the ingredients with {name}.", { name: first, allergy: isolateLabel(custom) });
   if (row.kind === "allergy_check") return t("The name suggests it. Check the ingredients with {name}.", { name: first });
   return t("{name} follows {restriction}. You can still add it if you've agreed this with {name}.", { name: first, restriction: restrictionLabel(row.restriction ?? "") });
 }

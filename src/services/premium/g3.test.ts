@@ -442,3 +442,12 @@ test("the content readers keep each answer under the account and the app languag
   // a key is never a prefix of another account's or language's
   assert.equal(contentCacheKey("u1", "en", "mine").startsWith(`${contentCacheKey("u1", "ar", "")}`), false);
 });
+
+test("FQ: the doctor summary prints the member's own Other allergies, quoted, after the standard ones", () => {
+  const s = parseDoctorSummary({ ...SUMMARY, other_allergies: [{ label: "Kiwi", severity: "severe", note: null }, { label: "", severity: "mild" }] })!;
+  assert.deepEqual(s.otherAllergies, [{ label: "Kiwi", severity: "severe", note: null }]);
+  const allergies = summarySections(s).find((x) => x.key === "allergies")!;
+  assert.deepEqual(allergies.lines, ["Penicillin · severe", "“⁨Kiwi⁩” · severe"]);
+  // A summary from today's database has no other_allergies: nothing extra.
+  assert.deepEqual(parseDoctorSummary(SUMMARY)!.otherAllergies, []);
+});

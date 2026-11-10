@@ -276,7 +276,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
     </>
   );
 
-  const allergy = allergyLine(myAllergies.allergies, myAllergies.sharedWith);
+  const allergy = allergyLine(myAllergies.allergies, myAllergies.sharedWith, myAllergies.others ?? []);
 
   return (
     <div className="grid items-start animate-fade-slide-up" style={{ gridTemplateColumns: "repeat(12, minmax(0, 1fr))", gap: 24, alignContent: "start" }}>
@@ -521,7 +521,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
             {t("Dietary restriction")}
             <ChevronDown size={16} aria-hidden style={{ transform: restrictionOpen ? "rotate(180deg)" : "none" }} />
           </PlanChip>
-          <PlanChip on={myAllergies.allergies.length > 0 || allergiesOpen} haspopup="dialog" onClick={() => setAllergiesOpen(true)}>
+          <PlanChip on={myAllergies.allergies.length + (myAllergies.others?.length ?? 0) > 0 || allergiesOpen} haspopup="dialog" onClick={() => setAllergiesOpen(true)}>
             {t("Allergies")}
             <ChevronDown size={16} aria-hidden />
           </PlanChip>
@@ -579,6 +579,7 @@ export default function GoalsPanelWeb({ clientTargets, onAllergiesSaved }: { cli
           onClose={() => setAllergiesOpen(false)}
           userId={authUserId}
           initial={myAllergies.allergies}
+          initialOthers={myAllergies.others}
           onSaved={() => {
             myAllergies.reload();
             onAllergiesSaved?.();
