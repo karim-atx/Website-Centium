@@ -831,16 +831,16 @@ const landing: Catalogue = {
   // == Landing › Download button (Task O, FM): the hero and the closing CTA ==
   // System names stay Latin, as elsewhere on the page. The list's "Coming
   // soon" (auth.ts) is an existing key. The help line is Karim's approved
-  // text (FM, with the Desktop session). The SmartScreen button names («مزيد
-  // من المعلومات», «التشغيل على أي حال»), "Unknown publisher", Edge/Chrome's
-  // "Keep" and "Smart App Control" follow Microsoft's Arabic wording and
-  // still need checking on an Arabic Windows.
+  // text (FM, with the Desktop session). The SmartScreen button names («المزيد
+  // من المعلومات», «تشغيل على أي حال») are Microsoft's Arabic wording (Karim,
+  // 2026-11-10). They, "Unknown publisher", Edge/Chrome's "Keep" and "Smart
+  // App Control" are UNCONFIRMED: nobody has checked them on an Arabic Windows.
   "Download the app": "تنزيل التطبيق",
   "Other download ({arch})": "تنزيل آخر ({arch})",
   "Windows 10 and 11 · free · about 2 MB.": "Windows 10 و11 · مجاني · نحو 2 ميغابايت.",
   "Windows 10 and 11 · free · about 2 MB · version {v}.": "Windows 10 و11 · مجاني · نحو 2 ميغابايت · الإصدار {v}.",
   'Windows may say it "protected your PC" because Centium isn\'t signed yet. Choose More info → Run anyway.':
-    "قد يقول Windows إنه «حمى جهازك» لأن Centium غير موقَّع بعد. اختر مزيد من المعلومات ← التشغيل على أي حال.",
+    "قد يقول Windows إنه «حمى جهازك» لأن Centium غير موقَّع بعد. اختر المزيد من المعلومات ← تشغيل على أي حال.",
   "Why?": "لماذا؟",
   "Install help": "مساعدة التثبيت",
   "Why Windows warns": "لماذا يحذّر Windows",
@@ -848,7 +848,7 @@ const landing: Catalogue = {
     "تطبيق Centium لنظام Windows غير موقَّع بشهادة توقيع التعليمات البرمجية بعد، لذلك لا يعرف Windows ناشره ويعامله كتطبيق جديد.",
   'Edge or Chrome may say the file "isn\'t commonly downloaded". Choose Keep.': "قد يقول Edge أو Chrome إن الملف «لا يتم تنزيله بشكل شائع». اختر «الاحتفاظ».",
   'When you open it, Windows may say "Windows protected your PC", with the publisher shown as "Unknown publisher". Choose More info, then Run anyway.':
-    "عند فتحه، قد يعرض Windows الرسالة «حمى Windows جهازك»، ويظهر الناشر على أنه «ناشر غير معروف». اختر «مزيد من المعلومات»، ثم «التشغيل على أي حال».",
+    "عند فتحه، قد يعرض Windows الرسالة «حمى Windows جهازك»، ويظهر الناشر على أنه «ناشر غير معروف». اختر «المزيد من المعلومات»، ثم «تشغيل على أي حال».",
   "On a new Windows 11 PC with Smart App Control on, Windows blocks apps that aren't signed, with no way to run them anyway. There, use Get Started to open Centium in your browser.":
     "على جهاز Windows 11 جديد يكون فيه «التحكم الذكي في التطبيقات» قيد التشغيل، يمنع Windows التطبيقات غير الموقَّعة من دون أي طريقة لتشغيلها. في هذه الحالة، استخدم «ابدأ الآن» لفتح Centium في متصفحك.",
   "After that, Centium updates itself, without the warning.": "بعد ذلك، يحدّث Centium نفسه تلقائيًا، من دون هذا التحذير.",
