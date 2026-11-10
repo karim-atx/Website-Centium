@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { onSessionReach, sessionUnreachable } from "../../lib/supabase/sessionReach";
 
 /**
  * Whether the browser currently believes it has a network connection.
@@ -28,13 +29,20 @@ import { useSyncExternalStore } from "react";
 function subscribe(onChange: () => void): () => void {
   window.addEventListener("online", onChange);
   window.addEventListener("offline", onChange);
+  const stopReach = onSessionReach(onChange);
   return () => {
     window.removeEventListener("online", onChange);
     window.removeEventListener("offline", onChange);
+    stopReach();
   };
 }
 
-const getSnapshot = (): boolean => navigator.onLine;
+// ALSO OFFLINE: a stored session whose refresh failed on the network
+// (lib/supabase/sessionReach, Karim 2026-11-10). That failure is the
+// trustworthy direction too — a request genuinely didn't get through — and
+// while it lasts every data request fails as offline, so the offline bar and
+// every screen that reads this say so, as they would with the cable out.
+const getSnapshot = (): boolean => navigator.onLine && !sessionUnreachable();
 
 // Assume online when there is no navigator to ask. Anything rendered without a
 // browser is not going to be shown an offline banner, and defaulting the other

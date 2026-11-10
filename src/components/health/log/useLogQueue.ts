@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useApp } from "../../../context/AppContext";
 import { logBloodPressure } from "../../../services/blood-pressure";
-import { flushLogQueue, queuedLogs, type QueuedLog } from "../../../services/health-log/offlineQueue";
+import { browserOffline, flushLogQueue, queuedLogs, type QueuedLog } from "../../../services/health-log/offlineQueue";
+import { onSessionReach } from "../../../../lib/supabase/sessionReach";
 import { isUuid } from "../../../services/health-log/requestId";
 import { sendMessage } from "../../../services/messaging";
 
@@ -68,8 +69,18 @@ export function useLogQueueFlush() {
         (item, message) => window.dispatchEvent(new CustomEvent(OUTBOX_DROPPED_EVENT, { detail: { kind: item.kind, message } }))
       );
     };
-    if (navigator.onLine) flush();
-    window.addEventListener("online", flush);
-    return () => window.removeEventListener("online", flush);
+    // Also when a stored session the sign-in server couldn't be reached to
+    // renew is signed in again, which can happen with no `online` event at
+    // all (lib/supabase/sessionReach); while it can't, a send would only fail.
+    const flushIfOnline = () => {
+      if (!browserOffline()) flush();
+    };
+    flushIfOnline();
+    window.addEventListener("online", flushIfOnline);
+    const stopReach = onSessionReach(flushIfOnline);
+    return () => {
+      window.removeEventListener("online", flushIfOnline);
+      stopReach();
+    };
   }, [authUserId]);
 }

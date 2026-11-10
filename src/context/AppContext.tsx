@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type {
   UserProfile,
   FoodLogEntry,
@@ -125,7 +125,7 @@ import { ensureArabicFont } from "../i18n/fonts";
 import { readAccountLanguage, settleLanguage, writeAccountLanguage } from "../services/preferences/language";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
-import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutOtherDevices, signOutRemote } from "../services/auth";
+import { hasStoredSessionToken, onAuthChange, readSession, retrySessionRefresh, signOutOtherDevices, signOutRemote, storedSession } from "../services/auth";
 import { SIGN_OUT_SCOPE, signOutEveryDevice } from "../services/auth/signOutScope";
 import { reportInstallOnce } from "../platform/installReport";
 import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
@@ -148,6 +148,13 @@ import {
   writeAccountValue,
 } from "../../lib/supabase/tabIdentity";
 import { accountSuspendedPending } from "../../lib/supabase/suspension";
+import {
+  onSessionReach,
+  retryDelayMs,
+  sessionStanding,
+  sessionUnreachable,
+  setSessionUnreachable,
+} from "../../lib/supabase/sessionReach";
 import { removeOtherDevicesPush, unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
 import { useDesktopNotifications } from "../hooks/useDesktopNotifications";
@@ -1645,20 +1652,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- Supabase session ----------------------------------------------------
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  // True while `session` is the STORED session, shown because its refresh
+  // failed on the network (lib/supabase/sessionReach); false once verified.
+  const sessionUnverified = useSyncExternalStore(onSessionReach, sessionUnreachable);
 
   useEffect(() => {
     let cancelled = false;
     // Whether this page has held a session for its account (below).
     let hadSession = false;
 
+    // A STORED SESSION THE SIGN-IN SERVER CAN'T BE REACHED TO RENEW (Karim,
+    // 2026-11-10; lib/supabase/sessionReach). The member stays in the app as
+    // that account, offline, and the refresh is asked again: at once when the
+    // browser comes back online or the tab becomes visible, and on a backoff
+    // timer (5 s, 10 s, 20 s, then every 30 s) for a connection that returns
+    // with neither. A refresh that works arrives as TOKEN_REFRESHED (below)
+    // and the page carries on signed in, with no reload; one the server
+    // refuses makes auth-js remove the session and emit SIGNED_OUT, which
+    // takes #123's path below: the data cleared and a signed-out reload.
+    let retryTimer: number | undefined;
+    let retryAttempt = 0;
+    let retrying = false;
+    const retryReach = () => {
+      window.clearTimeout(retryTimer);
+      if (cancelled || retrying || !sessionUnreachable()) return;
+      retrying = true;
+      void retrySessionRefresh().then(({ session: back, failure }) => {
+        retrying = false;
+        if (cancelled || !sessionUnreachable()) return;
+        // "signedIn" and "ended" are answered by the auth event that came with
+        // them; only a network failure again waits for the next try.
+        if (sessionStanding({ sessionUserId: back?.user?.id ?? null, stored: hasStoredSessionToken(), failure }) === "unreachable") {
+          scheduleRetry();
+        }
+      });
+    };
+    const scheduleRetry = () => {
+      window.clearTimeout(retryTimer);
+      retryTimer = window.setTimeout(() => {
+        // Offline as far as the browser knows: the `online` event retries.
+        if (navigator.onLine === false) scheduleRetry();
+        else retryReach();
+      }, retryDelayMs(retryAttempt++));
+    };
+    const retryWhenVisible = () => {
+      if (document.visibilityState === "visible") retryReach();
+    };
+    window.addEventListener("online", retryReach);
+    document.addEventListener("visibilitychange", retryWhenVisible);
+
     // Restore an existing session on load, so an already-signed-in user is
     // never shown the auth screen again.
-    void getCurrentSession().then((existing) => {
+    void readSession().then(({ session: existing, failure }) => {
       if (cancelled) return;
       if (TAB_USER_ID !== null && existing?.user?.id === TAB_USER_ID) hadSession = true;
       // Loaded signed out but a session exists (the cookie arrived after the
       // tab's identity was read): re-bind by reloading, once.
       if (TAB_USER_ID === null && existing?.user && reloadToRebind()) return;
+      // Null because the refresh never reached the server, with this tab's
+      // session still stored: shown as signed in, offline (above). Not
+      // `hadSession`: nothing has verified it, so a refusal later is still
+      // the refusal of the session this page loaded with.
+      const stored = TAB_USER_ID !== null ? storedSession() : null;
+      const standing = sessionStanding({
+        sessionUserId: existing?.user?.id ?? null,
+        stored: stored?.user?.id === TAB_USER_ID,
+        failure,
+      });
+      if (standing === "unreachable" && stored) {
+        setSessionUnreachable(true);
+        setSession(stored);
+        setAuthReady(true);
+        scheduleRetry();
+        return;
+      }
       setSession(existing);
       setAuthReady(true);
     });
@@ -1694,16 +1761,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
           // NOT A SIGN-OUT: a session is still stored and only its refresh
           // failed, on the network (offline). auth-js removes the stored
-          // session when the server refuses a refresh, never otherwise; and
-          // another account's would have arrived as a session, not as null.
-          // The data stays (#120 lets a cached, onboarded account in offline),
-          // and the next refresh that reaches the server brings it back.
+          // session when the server refuses a refresh, never otherwise (in
+          // 2.115.0 a network failure emits nothing but this null
+          // INITIAL_SESSION); and another account's would have arrived as a
+          // session, not as null. The data stays, and the page stays signed
+          // in as this account, offline: the load's readSession above shows
+          // the stored session and retries until the server answers
+          // (lib/supabase/sessionReach). A refresh that reaches it brings the
+          // session back as TOKEN_REFRESHED.
           if (!next && !accountSessionEnded(TAB_USER_ID, hasStoredSessionToken() ? TAB_USER_ID : null, null)) return;
           // The session this page LOADED with was refused (expired or revoked
-          // while the browser was closed): no other tab ended it, so no lock
-          // notice. The reload starts the page signed out, and its first lines
-          // clear this account's data (clearEndedAccounts, above), keeping the
-          // device's own preferences as a fresh page would have them.
+          // while the browser was closed, or refused on a retry once the
+          // sign-in server could be reached again): no other tab ended it, so
+          // no lock notice. The reload starts the page signed out, and its
+          // first lines clear this account's data (clearEndedAccounts,
+          // above), keeping the device's own preferences as a fresh page
+          // would have them.
           if (!next && !hadSession) {
             window.location.reload();
             return;
@@ -1724,6 +1797,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
       if (nextId !== null) hadSession = true;
+      // Verified at last (a retry above, or auth-js's own ticker): the offline
+      // state the stored session was shown in ends here, with no reload.
+      if (nextId !== null && sessionUnreachable()) {
+        window.clearTimeout(retryTimer);
+        setSessionUnreachable(false);
+      }
       setSession(next);
       setAuthReady(true);
       if (next?.user) {
@@ -1756,6 +1835,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
       unsubscribe();
+      window.clearTimeout(retryTimer);
+      window.removeEventListener("online", retryReach);
+      document.removeEventListener("visibilitychange", retryWhenVisible);
     };
   }, []);
 
@@ -1964,7 +2046,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, authReady]);
+    // Asked again once an unverified session is verified: while it wasn't,
+    // the check failed as offline (lib/supabase/sessionReach).
+  }, [authUserId, authReady, sessionUnverified]);
 
   const adminReady = authReady && adminFor?.userId === authUserId;
   const isAdmin = adminReady ? (adminFor?.isAdmin ?? false) : null;
@@ -2002,10 +2086,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // that job: a resolve that lands after the account changed writes the OLD
   // user id, which makes mfaReady false rather than answering the new
   // account's question with the previous one's answer.
+  // Re-asked once an unverified session is verified (as adminFor is): a check
+  // that failed for want of a session answered "not pending".
   useEffect(() => {
     if (!authReady) return;
     void resolveMfa(authUserId);
-  }, [authUserId, authReady, resolveMfa]);
+  }, [authUserId, authReady, resolveMfa, sessionUnverified]);
 
   // A recovery code spent at the challenge (stage 1). It cannot make the
   // session aal2, only GoTrue can, so the pass is remembered for this tab's
@@ -2285,6 +2371,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (rehydrateFor.current === authUserId) setHydratedFor(authUserId);
     rehydrateFor.current = null;
   }, [hydratedFor, authUserId]);
+
+  // A stored session signed in again after its refresh couldn't reach the
+  // server (lib/supabase/sessionReach). Everything read while it couldn't
+  // failed as offline, the profile read included, so this is that read
+  // recovering: retryProfile re-runs every loader, with no reload.
+  const wasUnverified = useRef(false);
+  useEffect(() => {
+    if (sessionUnverified) {
+      wasUnverified.current = true;
+      return;
+    }
+    if (!wasUnverified.current) return;
+    wasUnverified.current = false;
+    void retryProfile();
+  }, [sessionUnverified, retryProfile]);
 
   // Onboarding's finish, when its writes were refused as not this account's:
   // the same screen, the same Try again (useFinishRefusal).
