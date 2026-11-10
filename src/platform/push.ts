@@ -27,6 +27,7 @@ import { featureAvailable } from "./features";
 import { isNative, platform } from "./index";
 import { CentiumNative } from "./native";
 import type { ReceivedPush } from "./pushBannerModel";
+import { serverPushToken } from "./pushTokenModel";
 
 // Not in the generated types yet (Database DB-Z3 is newer than database.types.ts).
 type Rpc = { rpc: (fn: string, args: object) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }> };
@@ -110,7 +111,9 @@ async function record(token: string): Promise<boolean> {
 
 function listen(): Promise<void> {
   listening ??= (async () => {
-    await PushNotifications.addListener("registration", ({ value }) => {
+    await PushNotifications.addListener("registration", ({ value: raw }) => {
+      // As the server keeps it: lowercase on iOS (./pushTokenModel).
+      const value = serverPushToken(platform(), raw);
       void record(value).then((ok) => {
         waiting?.(ok ? value : null);
         waiting = null;
@@ -213,7 +216,8 @@ export async function nativePushRegistered(): Promise<boolean | null> {
   const { data, error } = await (supabase as unknown as From)
     .from("push_devices")
     .select("id")
-    .eq("token", token)
+    // A token stored before the fix may be uppercase (./pushTokenModel).
+    .eq("token", serverPushToken(platform(), token))
     .limit(1);
   if (error) return null;
   return (data?.length ?? 0) > 0;
