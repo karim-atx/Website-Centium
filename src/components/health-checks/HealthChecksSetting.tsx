@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import clsx from "clsx";
 import { ChevronRight } from "lucide-react";
 import { HealthScanIcon } from "../profile/HealthScanIcon";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
+import { SELECTABLE_INNER, SelectableBox } from "../ui/SelectableBox";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useHealthChecks } from "../../context/healthChecksStore";
@@ -24,6 +26,7 @@ export function HealthChecksSetting() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const descId = useId();
 
   useEffect(() => {
     refresh();
@@ -54,57 +57,68 @@ export function HealthChecksSetting() {
     // MO1.5 / MO1.5.1.1: drawn like the Recovery card above it (radius 18,
     // padding 16 16 18), the icon in a tile, title 14/600. The glyph is the handover asset
     // MO1-5-4_01_advanced-health-monitoring (HealthScanIcon; was Stethoscope).
-    <Card padded={false} className="mb-6 animate-fade-slide-up !rounded-[18px] pt-4 px-4 pb-[18px]">
-      {/* MO1.5 anatomy row 9 (2x frame): 36 #F0EDF9 tile (new, decision
-          22), the description under the title's x, 10 below the tile, 12/400
-          on an 18 line. */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-3 min-w-0">
-          <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
-            <HealthScanIcon className="text-primary-dark" />
+    //
+    // FP: the card is the switch (a full-card switch behind it), so a tap
+    // anywhere on it does what the switch does. The padding moved from the
+    // card to the switch box inside it, so the whole card answers. The
+    // confirmation and the note keep their own taps and never toggle.
+    <Card padded={false} className="mb-6 animate-fade-slide-up !rounded-[18px]">
+      <SelectableBox
+        inner
+        kind="switch"
+        selected={on || confirming}
+        onToggle={() => {
+          setNote(null);
+          if (!(on || confirming)) setConfirming(true);
+          else if (confirming) setConfirming(false);
+          else void turnOff();
+        }}
+        disabled={checks.on === null || busy}
+        label={COPY.switchLabel}
+        describedBy={descId}
+        className="rounded-[17px] pt-4 px-4 pb-[18px]"
+      >
+        {/* MO1.5 anatomy row 9 (2x frame): 36 #F0EDF9 tile (new, decision
+            22), the description under the title's x, 10 below the tile, 12/400
+            on an 18 line. */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-3 min-w-0">
+            <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+              <HealthScanIcon className="text-primary-dark" />
+            </span>
+            <span aria-hidden className="text-sm font-semibold text-charcoal">{COPY.switchLabel}</span>
           </span>
-          <span className="text-sm font-semibold text-charcoal">{COPY.switchLabel}</span>
-        </span>
-        <Toggle
-          checked={on || confirming}
-          disabled={checks.on === null || busy}
-          onChange={(v) => {
-            setNote(null);
-            if (v) setConfirming(true);
-            else if (confirming) setConfirming(false);
-            else void turnOff();
-          }}
-          label={COPY.switchLabel}
-        />
-      </div>
-      <p className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">{COPY.switchDescription}</p>
-      {confirming && (
-        <div className="mt-3 rounded-xl bg-primary-pale px-3.5 py-3">
-          <p className="text-xs text-charcoal leading-relaxed">{COPY.turningOn}</p>
-          <div className="mt-3 flex gap-2">
-            <Button size="sm" disabled={busy} onClick={confirmOn}>
-              {t("Turn on")}
-            </Button>
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
-              {t("Cancel")}
-            </Button>
-          </div>
+          <Toggle decorative checked={on || confirming} disabled={checks.on === null || busy} />
         </div>
-      )}
-      {note && (
-        <p role="status" className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed">
-          {note}
-        </p>
-      )}
-      {on && (
-        <button
-          onClick={() => navigate("/app/health/checks")}
-          className="tap mt-3 flex items-center gap-1 text-xs font-semibold text-primary-dark"
-        >
-          {COPY.planTitle}
-          <ChevronRight size={14} />
-        </button>
-      )}
+        <p id={descId} aria-hidden className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">{COPY.switchDescription}</p>
+        {confirming && (
+          <div className={clsx(SELECTABLE_INNER, "mt-3 rounded-xl bg-primary-pale px-3.5 py-3")}>
+            <p className="text-xs text-charcoal leading-relaxed">{COPY.turningOn}</p>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" disabled={busy} onClick={confirmOn}>
+                {t("Turn on")}
+              </Button>
+              <Button size="sm" variant="ghost" disabled={busy} onClick={() => setConfirming(false)}>
+                {t("Cancel")}
+              </Button>
+            </div>
+          </div>
+        )}
+        {note && (
+          <p role="status" className={clsx(SELECTABLE_INNER, "text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed")}>
+            {note}
+          </p>
+        )}
+        {on && (
+          <button
+            onClick={() => navigate("/app/health/checks")}
+            className="tap mt-3 flex items-center gap-1 text-xs font-semibold text-primary-dark"
+          >
+            {COPY.planTitle}
+            <ChevronRight size={14} />
+          </button>
+        )}
+      </SelectableBox>
     </Card>
   );
 }

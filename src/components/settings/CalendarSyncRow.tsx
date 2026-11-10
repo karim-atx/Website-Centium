@@ -103,7 +103,8 @@ export function CalendarSyncRow() {
           )}
         </span>
       }
-      toggle={{ checked: on, disabled: busy || state === null, onChange: (v) => void toggle(v) }}
+      // FP: "Open settings" in the subtitle keeps its own tap.
+      toggle={{ checked: on, disabled: busy || state === null, onChange: (v) => void toggle(v), inner: true }}
     />
   );
 }

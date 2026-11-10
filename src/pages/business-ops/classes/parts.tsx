@@ -1,4 +1,5 @@
 import React from "react";
+import clsx from "clsx";
 import { ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../../theme/textSize";
 import { useIsDark } from "../../../hooks/useIsDark";
@@ -80,7 +81,20 @@ export const Chip: React.FC<{ label: string; bg: string; ink: string; icon?: Rea
  * 999, on --fill / off --swoff, a 22 white knob 2 from the edge with
  * 0 1px 3px rgba(0,0,0,0.18). A 44 hit box.
  */
-export const BoardSwitch: React.FC<{ m: MarketPalette; checked: boolean; onChange?: (on: boolean) => void; label: string; disabled?: boolean }> = ({ m, checked, onChange, label, disabled }) => (
+export const BoardSwitch: React.FC<{
+  m: MarketPalette;
+  checked: boolean;
+  onChange?: (on: boolean) => void;
+  label?: string;
+  disabled?: boolean;
+  /** FP: only the drawing (aria-hidden), for a row that is itself the switch (SelectableBox kind="switch"). */
+  decorative?: boolean;
+}> = ({ m, checked, onChange, label, disabled, decorative }) =>
+  decorative ? (
+    <span aria-hidden className={clsx("hit shrink-0", disabled && "opacity-40")} style={{ position: "relative", width: 42, height: 26, borderRadius: 999, background: checked ? m.fill : m.swoff }}>
+      <span style={{ position: "absolute", top: 2, left: checked ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }} />
+    </span>
+  ) : (
   <button
     type="button"
     role="switch"

@@ -62,14 +62,29 @@ export const PaneHeader: React.FC<{ title: string; sub?: string; back?: React.Re
 );
 
 /** The pane switch: 44 × 26, padding 2, knob 22; on #9A8CD6, off #E4E2EA. */
-export const PaneSwitch: React.FC<{ checked: boolean; onChange: (next: boolean) => void; disabled?: boolean; label?: string }> = ({ checked, onChange, disabled, label }) => (
+export const PaneSwitch: React.FC<
+  { checked: boolean; disabled?: boolean; label?: string } & (
+    | { onChange: (next: boolean) => void; decorative?: false }
+    /** FP: only the drawing (aria-hidden), for a row that is itself the switch (SelectableBox kind="switch"). */
+    | { decorative: true; onChange?: never }
+  )
+> = ({ checked, onChange, disabled, label, decorative }) =>
+  decorative ? (
+    <span
+      aria-hidden
+      className="shrink-0 flex"
+      style={{ width: 44, height: 26, borderRadius: 999, boxSizing: "border-box", padding: 2, justifyContent: checked ? "flex-end" : "flex-start", background: checked ? "#9A8CD6" : "#E4E2EA", transition: "background-color .15s" }}
+    >
+      <span style={{ width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)" }} />
+    </span>
+  ) : (
   <button
     type="button"
     role="switch"
     aria-checked={checked}
     aria-label={label}
     disabled={disabled}
-    onClick={() => onChange(!checked)}
+    onClick={() => onChange?.(!checked)}
     className="shrink-0 flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC] focus-visible:outline-offset-2 disabled:cursor-not-allowed"
     style={{ width: 44, height: 26, borderRadius: 999, boxSizing: "border-box", padding: 2, justifyContent: checked ? "flex-end" : "flex-start", background: checked ? "#9A8CD6" : "#E4E2EA", transition: "background-color .15s" }}
   >

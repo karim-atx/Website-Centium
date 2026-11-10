@@ -3,6 +3,7 @@ import { Bell, Calendar as CalendarIcon, ChevronDown, Clock, Link as LinkIcon, R
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
+import { SelectableBox } from "../ui/SelectableBox";
 import { PopupMenu } from "../ui/PopupMenu";
 import { WheelPicker } from "../ui/WheelPicker";
 import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
@@ -240,17 +241,20 @@ export const EventComposeSheet: React.FC<{
               <CalendarIcon size={16} strokeWidth={1.75} className="text-charcoal-faint shrink-0" />
             </button>
           </div>
-          <div className="h-10 rounded-xl bg-cream-soft flex items-center justify-between px-3">
+          {/* FP: the whole box is the switch. */}
+          <SelectableBox
+            kind="switch"
+            selected={draft.allDay}
+            onToggle={() => {
+              setWheel(null);
+              setDraft((d) => ({ ...d, allDay: !draft.allDay }));
+            }}
+            label={t("All day")}
+            className="h-10 rounded-xl bg-cream-soft flex items-center justify-between px-3"
+          >
             <span className="text-sm font-semibold text-charcoal">{t("All day")}</span>
-            <Toggle
-              checked={draft.allDay}
-              onChange={(v) => {
-                setWheel(null);
-                setDraft((d) => ({ ...d, allDay: v }));
-              }}
-              label={t("All day")}
-            />
-          </div>
+            <Toggle decorative checked={draft.allDay} />
+          </SelectableBox>
         </div>
 
         {!draft.allDay && (

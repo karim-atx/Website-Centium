@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import { Check, Equal, Lock, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useClientAccess } from "../../../hooks/useClientAccess";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import GoalsPanel, { type GoalsPanelPro } from "../../../pages/food/GoalsPanel";
 import { buildMetricReadings } from "../../../services/health-metrics/series";
 import { INK } from "../proInk";
@@ -117,6 +118,7 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
   const [draft, setDraft] = useState<Draft | null>(null);
   const [goalTouched, setGoalTouched] = useState(false);
   const [lock, setLock] = useState(true);
+  const lockSubId = useId();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [asked, setAsked] = useState<Set<AccessCategory>>(new Set());
@@ -252,13 +254,22 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
           </div>
           <div className="min-w-0 flex flex-col" style={{ gap: 12 }}>
             <GoalsPanel pro={{ ...pro, webPart: "macros" }} />
-            <div className="flex items-center justify-between" style={{ ...card, gap: 12 }}>
+            {/* FP: the card is the switch, so a tap anywhere on it toggles. */}
+            <SelectableBox
+              kind="switch"
+              selected={lock}
+              onToggle={() => setLock(!lock)}
+              label={t("Lock these targets")}
+              describedBy={lockSubId}
+              className="flex items-center justify-between"
+              style={{ ...card, gap: 12 }}
+            >
               <span className="min-w-0">
                 <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Lock these targets")}</span>
-                <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
+                <span id={lockSubId} className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
               </span>
-              <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
-            </div>
+              <Toggle decorative checked={lock} />
+            </SelectableBox>
             {lane === "nutrition" && (
               <div style={card}>
                 <div className="flex items-center justify-between" style={{ gap: 8 }}>
@@ -297,13 +308,22 @@ export const TargetsEditor: React.FC<{ lane: ProLane; clientId: string; onBack: 
       )}
       <DietaryNeedsCard clientId={clientId} firstName={first || t("Your client")} access={access} onAsk={() => ask("allergies_dietary")} asked={asked.has("allergies_dietary")} />
       <GoalsPanel pro={pro} />
-      <div className="flex items-center justify-between" style={{ gap: 12, marginTop: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "11px 14px 12px" }}>
+      {/* FP: the card is the switch, so a tap anywhere on it toggles. */}
+      <SelectableBox
+        kind="switch"
+        selected={lock}
+        onToggle={() => setLock(!lock)}
+        label={t("Lock these targets")}
+        describedBy={lockSubId}
+        className="flex items-center justify-between"
+        style={{ gap: 12, marginTop: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "11px 14px 12px" }}
+      >
         <span className="min-w-0">
           <span className="block" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch }}>{t("Lock these targets")}</span>
-          <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
+          <span id={lockSubId} className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("Only you can change them while {name}'s plan is locked.", { name: first })}</span>
         </span>
-        <Toggle checked={lock} onChange={setLock} label={t("Lock these targets")} />
-      </div>
+        <Toggle decorative checked={lock} />
+      </SelectableBox>
       {lane === "nutrition" && (
         <div style={{ marginTop: 10, background: INK.card, border: `1px solid ${INK.bCard}`, borderRadius: 16, padding: "11px 14px 12px" }}>
           <div className="flex items-center justify-between" style={{ gap: 8 }}>

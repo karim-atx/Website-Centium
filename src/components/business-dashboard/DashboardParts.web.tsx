@@ -49,6 +49,7 @@ import { appLocale } from "../../i18n/format";
 import { isRtl, t, tk, tn, tx } from "../../i18n/core";
 import { WebMenu } from "../../pages/business-ops/frontdesk/FrontDeskParts.web";
 import { WEB_CONTENT_MAX } from "../web/useWebLayout";
+import { SelectableBox } from "../ui/SelectableBox";
 
 // Website viewport v1 · WB-HO · GY Dashboard (WB-HO Dashboard Web v4, the
 // "web" token set W): the dashboard's header actions, the anchored "Needs your
@@ -405,26 +406,28 @@ export function WebListingPopup({ c, open, onClose, active, onToggle }: { c: Das
           </button>
         </div>
         <div style={{ background: c.card, borderRadius: "22px 22px 0 0", padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 56, borderRadius: 16, background: c.listBg, padding: "0 14px" }}>
+          {/* FP: the row is the switch, so a tap anywhere on it toggles. */}
+          <SelectableBox
+            kind="switch"
+            selected={active}
+            onToggle={() => {
+              setError(null);
+              void onToggle(!active).then((m) => m && setError(m));
+            }}
+            label={t("Listing active")}
+            style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 56, borderRadius: 16, background: c.listBg, padding: "0 14px" }}
+          >
             <span style={{ width: 40, height: 40, borderRadius: 12, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", color: "rgb(var(--th-7d67d9))" }}>
               {active ? <Eye size={20} aria-hidden /> : <EyeOff size={20} aria-hidden />}
             </span>
             <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: "24px", fontWeight: 600, color: c.ink }}>{t("Active on Explore")}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={active}
-              aria-label={t("Listing active")}
-              onClick={() => {
-                setError(null);
-                void onToggle(!active).then((m) => m && setError(m));
-              }}
-              className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
-              style={{ width: 48, height: 28, boxSizing: "border-box", borderRadius: 999, padding: 3, display: "flex", justifyContent: active ? "flex-end" : "flex-start", background: active ? "#9A8CD6" : "#E4E2EA", flex: "none", border: 0, cursor: "pointer" }}
+            <span
+              aria-hidden
+              style={{ width: 48, height: 28, boxSizing: "border-box", borderRadius: 999, padding: 3, display: "flex", justifyContent: active ? "flex-end" : "flex-start", background: active ? "#9A8CD6" : "#E4E2EA", flex: "none" }}
             >
               <span style={{ width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(36,31,27,0.2)" }} />
-            </button>
-          </div>
+            </span>
+          </SelectableBox>
           {error && <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 700, color: c.high }}>{error}</p>}
         </div>
       </aside>

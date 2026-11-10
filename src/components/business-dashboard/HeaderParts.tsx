@@ -7,6 +7,7 @@ import type { SetupStep } from "./dashboardModel";
 import type { AttentionIcon, AttentionItem } from "./attention";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
+import { SelectableBox } from "../ui/SelectableBox";
 import { PopupMenu } from "../ui/PopupMenu";
 import { linePx, textPx } from "../../theme/textSize";
 import type { MyVenue } from "../../services/venues/consoleLogic";
@@ -470,20 +471,23 @@ export function ListingSheet({
   }
   return (
     <BottomSheet open={open} onClose={onClose} title={t("Your listing")} tone="business">
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, marginBottom: 16 }}>
+      {/* FP: the row is the switch, so a tap anywhere on it toggles. */}
+      <SelectableBox
+        kind="switch"
+        selected={active}
+        onToggle={() => {
+          setError(null);
+          void onToggle(!active).then((m) => m && setError(m));
+        }}
+        label={t("Listing active")}
+        style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 52, marginBottom: 16 }}
+      >
         <span style={{ width: 36, height: 36, borderRadius: 11, background: c.pale, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgb(var(--th-7d67d9))" }}>
           {active ? <Eye size={18} aria-hidden /> : <EyeOff size={18} aria-hidden />}
         </span>
         <span style={{ flex: 1, minWidth: 0, fontSize: textPx(14), fontWeight: 600, color: c.ink }}>{t("Active on Explore")}</span>
-        <Toggle
-          checked={active}
-          onChange={(v) => {
-            setError(null);
-            void onToggle(v).then((m) => m && setError(m));
-          }}
-          label={t("Listing active")}
-        />
-      </div>
+        <Toggle decorative checked={active} />
+      </SelectableBox>
       {error && <p style={{ fontSize: textPx(11.5), fontWeight: 700, color: c.high, margin: "0 0 8px" }}>{error}</p>}
     </BottomSheet>
   );

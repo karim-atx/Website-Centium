@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, X, type LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { ConfirmCard } from "../ui/ConfirmCard";
 import { Toggle } from "../ui/Toggle";
+import { SelectableBox } from "../ui/SelectableBox";
 import { useBack } from "../../hooks/useBack";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { useOnline } from "../../hooks/useOnline";
@@ -222,6 +223,11 @@ export interface BizRowProps {
   trailing?: React.ReactNode;
   /** The chevron-down after a value (role menus). */
   drop?: boolean;
+  /**
+   * A switch at the end. On a row with no action of its own (no onClick,
+   * value action or value2), the row is the switch (FP): a tap anywhere on it
+   * toggles, and the drawn switch is decorative.
+   */
   toggle?: { checked: boolean; onChange: (next: boolean) => void; disabled?: boolean; label?: string };
   radio?: { selected: boolean };
   /** Selected check (16 / 2.6 primary-dark). */
@@ -234,6 +240,8 @@ export interface BizRowProps {
   /** Force the trailing chevron on or off. Default: on for plain button rows. */
   chevron?: boolean;
   ariaLabel?: string;
+  /** Screen-reader-only text after the title, read as a switch row's description (SettingsRow's srDescription). */
+  srDescription?: string;
   /** Under the text (e.g. the setup checklist bar). */
   extra?: React.ReactNode;
   id?: string;
@@ -279,12 +287,16 @@ const PaneRow: React.FC<BizRowProps> = ({
   disabled,
   chevron,
   ariaLabel,
+  srDescription,
   extra,
   id,
   className,
   rowRef,
   initials,
 }) => {
+  const descId = useId();
+  // FP: a switch row with no action of its own is the switch.
+  const switchRow = !!toggle && !onClick && !valueAction && !value2;
   // The pane keeps the chevron after a value ("Change ›", a role ›).
   const showChevron = chevron ?? (!!onClick && !toggle && !radio && !value2 && !checked);
   const rowCls = clsx(
@@ -325,10 +337,11 @@ const PaneRow: React.FC<BizRowProps> = ({
           {title}
         </span>
         {desc && (
-          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>
+          <span id={`${descId}-d`} className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E", textWrap: "pretty" } as React.CSSProperties}>
             {desc}
           </span>
         )}
+        {srDescription && <span id={`${descId}-sr`} className="sr-only">{srDescription}</span>}
         {extra}
       </span>
       {badge !== undefined && badge !== null && (
@@ -361,7 +374,11 @@ const PaneRow: React.FC<BizRowProps> = ({
       )}
       {toggle && (
         <span className="relative z-[1] shrink-0 flex">
-          <PaneSwitch checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={toggle.label ?? (typeof title === "string" ? title : undefined)} />
+          {switchRow ? (
+            <PaneSwitch decorative checked={toggle.checked} disabled={toggle.disabled} />
+          ) : (
+            <PaneSwitch checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={toggle.label ?? (typeof title === "string" ? title : undefined)} />
+          )}
         </span>
       )}
       {radio && <PaneRadio selected={radio.selected} />}
@@ -369,6 +386,23 @@ const PaneRow: React.FC<BizRowProps> = ({
       {(showChevron || drop) && (drop ? <ChevronDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#71685E" }} /> : <ChevronRight size={16} strokeWidth={1.75} aria-hidden className="shrink-0" style={{ color: "#71685E" }} />)}
     </>
   );
+  if (switchRow && toggle) {
+    return (
+      <SelectableBox
+        kind="switch"
+        id={id}
+        selected={toggle.checked}
+        onToggle={() => toggle.onChange(!toggle.checked)}
+        disabled={toggle.disabled || disabled}
+        label={toggle.label ?? (typeof title === "string" ? title : ariaLabel)}
+        describedBy={switchRowDescribedBy(descId, desc, srDescription)}
+        className={rowCls}
+        style={style}
+      >
+        {body}
+      </SelectableBox>
+    );
+  }
   if (toggle || valueAction || value2) {
     return (
       <div id={id} ref={rowRef as React.Ref<HTMLDivElement>} role={toggle ? "group" : undefined} aria-label={ariaLabel} className={rowCls} style={style}>
@@ -402,6 +436,10 @@ const PaneRow: React.FC<BizRowProps> = ({
   );
 };
 
+/** A switch row's description: its line, then its screen-reader text. */
+const switchRowDescribedBy = (descId: string, desc: React.ReactNode, srDescription?: string) =>
+  [desc ? `${descId}-d` : "", srDescription ? `${descId}-sr` : ""].filter(Boolean).join(" ") || undefined;
+
 export const BizRow: React.FC<BizRowProps> = (props) => (usePaneWeb() ? <PaneRow {...props} /> : <MobileBizRow {...props} />);
 
 const MobileBizRow: React.FC<BizRowProps> = ({
@@ -425,11 +463,15 @@ const MobileBizRow: React.FC<BizRowProps> = ({
   disabled,
   chevron,
   ariaLabel,
+  srDescription,
   extra,
   id,
   className,
   rowRef,
 }) => {
+  const descId = useId();
+  // FP: a switch row with no action of its own is the switch.
+  const switchRow = !!toggle && !onClick && !valueAction && !value2;
   const index = well === "index";
   const hasIcon = !!Icon && !radio;
   const showChevron = chevron ?? (!!onClick && !toggle && !radio && value === undefined && !value2 && !checked);
@@ -474,10 +516,11 @@ const MobileBizRow: React.FC<BizRowProps> = ({
       <span className="flex-1 min-w-0">
         <span className={clsx("block text-[12px] font-bold leading-[16px] break-words", danger ? "text-status-high" : "text-charcoal")}>{title}</span>
         {desc && (
-          <span className={clsx("block text-[10px] leading-[13px]", DESC)} style={{ marginTop: 5, textWrap: "pretty" } as React.CSSProperties}>
+          <span id={`${descId}-d`} className={clsx("block text-[10px] leading-[13px]", DESC)} style={{ marginTop: 5, textWrap: "pretty" } as React.CSSProperties}>
             {desc}
           </span>
         )}
+        {srDescription && <span id={`${descId}-sr`} className="sr-only">{srDescription}</span>}
         {extra}
       </span>
       {badge !== undefined && badge !== null && (
@@ -510,8 +553,13 @@ const MobileBizRow: React.FC<BizRowProps> = ({
       )}
       {drop && <ChevronDown size={14} strokeWidth={2.4} aria-hidden className="shrink-0 text-primary-dark" style={{ marginInlineStart: -6 }} />}
       {toggle && (
-        <span className="relative z-[1] shrink-0 flex [html.high-contrast_&_button[aria-checked=false]]:outline [html.high-contrast_&_button[aria-checked=false]]:outline-1 [html.high-contrast_&_button[aria-checked=false]]:outline-[#5B5349]">
-          <Toggle size="onboarding" checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={toggle.label ?? (typeof title === "string" ? title : undefined)} />
+        // High contrast outlines the off switch (.toggle-off is on the drawn switch, a control or not).
+        <span className="relative z-[1] shrink-0 flex [html.high-contrast_&_.toggle-off]:outline [html.high-contrast_&_.toggle-off]:outline-1 [html.high-contrast_&_.toggle-off]:outline-[#5B5349]">
+          {switchRow ? (
+            <Toggle decorative size="onboarding" checked={toggle.checked} disabled={toggle.disabled} />
+          ) : (
+            <Toggle size="onboarding" checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={toggle.label ?? (typeof title === "string" ? title : undefined)} />
+          )}
         </span>
       )}
       {checked && <Check size={16} strokeWidth={2.6} aria-hidden className="shrink-0 text-primary-dark" />}
@@ -519,6 +567,23 @@ const MobileBizRow: React.FC<BizRowProps> = ({
     </>
   );
 
+  if (switchRow && toggle) {
+    return (
+      <SelectableBox
+        kind="switch"
+        id={id}
+        selected={toggle.checked}
+        onToggle={() => toggle.onChange(!toggle.checked)}
+        disabled={toggle.disabled || disabled}
+        label={toggle.label ?? (typeof title === "string" ? title : ariaLabel)}
+        describedBy={switchRowDescribedBy(descId, desc, srDescription)}
+        className={rowCls}
+        style={style}
+      >
+        {body}
+      </SelectableBox>
+    );
+  }
   if (toggle || valueAction || value2) {
     return (
       <div id={id} ref={rowRef as React.Ref<HTMLDivElement>} role={toggle ? "group" : undefined} aria-label={ariaLabel} className={rowCls} style={style}>

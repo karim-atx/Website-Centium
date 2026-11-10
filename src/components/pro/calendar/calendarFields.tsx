@@ -1,6 +1,7 @@
 import React, { useId } from "react";
 import { ChevronDown, ChevronRight, type LucideIcon } from "lucide-react";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
@@ -120,22 +121,38 @@ export const FieldInput: React.FC<
   );
 };
 
-/** r6a repeatRow6: the full-width row with the switch on the right (CA5 v2 fix). */
-export const SwitchRow: React.FC<{ title: string; sub?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }> = ({ title, sub, checked, onChange, disabled }) => (
-  <div className="flex items-center justify-between" style={{ gap: 16, minHeight: 48, borderRadius: 12, background: INK.soft, padding: "10px 12px" }}>
-    <span className="flex-1 min-w-0">
-      <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, lineHeight: 1.3 }}>
-        {title}
-      </span>
-      {sub && (
-        <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.35 }}>
-          {sub}
+/**
+ * r6a repeatRow6: the full-width row with the switch on the right (CA5 v2 fix).
+ * FP: the row is the switch, so a tap anywhere on it toggles; the line under
+ * the title describes it.
+ */
+export const SwitchRow: React.FC<{ title: string; sub?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }> = ({ title, sub, checked, onChange, disabled }) => {
+  const subId = useId();
+  return (
+    <SelectableBox
+      kind="switch"
+      selected={checked}
+      onToggle={() => onChange(!checked)}
+      disabled={disabled}
+      label={title}
+      describedBy={sub ? subId : undefined}
+      className="flex items-center justify-between"
+      style={{ gap: 16, minHeight: 48, borderRadius: 12, background: INK.soft, padding: "10px 12px" }}
+    >
+      <span className="flex-1 min-w-0">
+        <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch, lineHeight: 1.3 }}>
+          {title}
         </span>
-      )}
-    </span>
-    <Toggle checked={checked} onChange={onChange} label={title} disabled={disabled} />
-  </div>
-);
+        {sub && (
+          <span id={subId} className="block" style={{ fontSize: textPx(11.5), color: INK.chF, lineHeight: 1.35 }}>
+            {sub}
+          </span>
+        )}
+      </span>
+      <Toggle decorative checked={checked} disabled={disabled} />
+    </SelectableBox>
+  );
+};
 
 /**
  * ui.js sSection: a section label over its rows, 32 above (0 for the first).

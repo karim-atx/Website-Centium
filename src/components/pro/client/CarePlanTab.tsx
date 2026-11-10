@@ -7,6 +7,7 @@ import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton, PinnedCta } from "../../ui/PinnedCta";
 import { SegmentedTabs } from "../../ui/SegmentedTabs";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { INK } from "../proInk";
 import { EmptyState } from "../EmptyState";
@@ -432,10 +433,18 @@ const CarePlanSheet: React.FC<{ open: boolean; onClose: () => void; data: Client
             style={{ minHeight: 72, borderRadius: 12, background: INK.soft, border: `1px solid ${INK.b10}`, padding: "10px 12px", fontSize: textPx(14), color: INK.ch, lineHeight: 1.45 }}
           />
         </div>
-        <div className="flex items-center justify-between" style={{ gap: 16, borderRadius: 12, background: INK.soft, padding: "10px 12px" }}>
+        {/* FP: the row is the switch, so a tap anywhere on it toggles. */}
+        <SelectableBox
+          kind="switch"
+          selected={visible}
+          onToggle={() => setVisible(!visible)}
+          label={t("{firstName} can see this", { firstName })}
+          className="flex items-center justify-between"
+          style={{ gap: 16, borderRadius: 12, background: INK.soft, padding: "10px 12px" }}
+        >
           <span style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("{firstName} can see this", { firstName })}</span>
-          <Toggle checked={visible} onChange={setVisible} label={t("{firstName} can see this", { firstName })} />
-        </div>
+          <Toggle decorative checked={visible} />
+        </SelectableBox>
         {error && (
           <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>
             {error}

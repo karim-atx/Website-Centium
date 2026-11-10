@@ -23,6 +23,11 @@ import clsx from "clsx";
  *   then not a control of its own: pass its id as `labelledBy` and mark it
  *   `aria-hidden`, so the box is announced once.
  *
+ * A settings row with a switch (`kind="switch"`) works the same way: the row
+ * is the switch (role switch, aria-checked, named by its title), and the
+ * switch drawn inside it is decorative (`<Toggle decorative>`, aria-hidden),
+ * so a tap anywhere on the row does what a tap on the switch did.
+ *
  * Unfocused, both shapes draw exactly what the box drew before (the full-box
  * button is transparent). Focus outlines the whole box; on a desktop pointer
  * the whole box shows the pointer cursor and a light hover tint.
@@ -40,9 +45,9 @@ type Common = {
   onToggle: () => void;
   /**
    * How the state is announced: "pressed" (a toggle button, aria-pressed),
-   * "checkbox" or "radio" (aria-checked). Default "pressed".
+   * "checkbox", "radio" or "switch" (aria-checked). Default "pressed".
    */
-  kind?: "pressed" | "checkbox" | "radio";
+  kind?: "pressed" | "checkbox" | "radio" | "switch";
   /** The accessible name, when the box's own text is not it. */
   label?: string;
   /** The id(s) of the element(s) that name the box. */
@@ -54,12 +59,16 @@ type Common = {
   className?: string;
   style?: React.CSSProperties;
   children?: React.ReactNode;
+  /** The id the row carried before (an anchor or a test hook). */
+  id?: string;
+  /** Inert, so it takes no tap and no focus (a dimmed row under a switched-off master). */
+  inert?: boolean;
   /** data-* hooks the box carried before (kept on the box). */
   [data: `data-${string}`]: string | boolean | undefined;
 };
 
 const stateProps = (kind: Common["kind"], selected: boolean) =>
-  kind === "checkbox" || kind === "radio"
+  kind === "checkbox" || kind === "radio" || kind === "switch"
     ? { role: kind, "aria-checked": selected }
     : { "aria-pressed": selected };
 
@@ -69,7 +78,7 @@ export const SelectableBox: React.FC<Common & {
    * behind them (decision 7) instead of the box itself (decision 6).
    */
   inner?: boolean;
-}> = ({ selected, onToggle, kind = "pressed", label, labelledBy, describedBy, disabled, ariaDisabled, inner, className, style, children, ...data }) => {
+}> = ({ selected, onToggle, kind = "pressed", label, labelledBy, describedBy, disabled, ariaDisabled, inner, className, style, children, id, inert, ...data }) => {
   const a11y = {
     ...stateProps(kind, selected),
     "aria-label": label,
@@ -80,9 +89,11 @@ export const SelectableBox: React.FC<Common & {
   if (!inner) {
     return (
       <button
+        id={id}
         type="button"
         onClick={onToggle}
         disabled={disabled}
+        inert={inert}
         // The box's own className sets its display (block, flex...).
         className={clsx("selectable-box w-full text-start", RING, className)}
         style={style}
@@ -95,6 +106,8 @@ export const SelectableBox: React.FC<Common & {
   }
   return (
     <div
+      id={id}
+      inert={inert}
       className={clsx("selectable-box selectable-box--inner", className)}
       style={style}
       {...data}
