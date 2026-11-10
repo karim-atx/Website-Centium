@@ -605,7 +605,7 @@ const food: Catalogue = {
   "{n}/{max} added": "أُضيف {n} من {max}",
   "{n}/{max}: that's the limit. Remove one to add another.": "{n}/{max}: هذا هو الحد الأقصى. أزل واحدة لتضيف أخرى.",
   // note: FOR KARIM'S REVIEW (decision 21): the approved sheet line's Arabic
-  "Foods are checked by name only for allergies you add yourself.": "تُفحص الأطعمة بالاسم فقط بالنسبة إلى أنواع الحساسية التي تضيفها بنفسك.",
+  "Foods are checked by name only for allergies you add yourself.": "بالنسبة إلى الحساسيات التي تضيفها بنفسك، تُفحص الأطعمة بالاسم فقط.",
 };
 
 export default food;
