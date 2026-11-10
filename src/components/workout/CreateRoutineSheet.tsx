@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { SelectableBox } from "../ui/SelectableBox";
 import type { Exercise, Routine, WorkoutBlock } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useFreeLimit } from "../premium/useFreeLimit";
@@ -298,22 +299,25 @@ export const CreateRoutineSheet: React.FC<{
     const i = exercises.findIndex((e) => e.id === ex.id);
     const line = prescriptionLine(ex);
     const picked = selected.includes(ex.id);
-    return (
-      <div
-        key={ex.id}
-        draggable={!selecting}
-        onDragStart={() => setDragIndex(i)}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={() => handleDrop(i)}
-        className="tap flex items-center gap-2 bg-cream-soft rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing"
-      >
-        {selecting ? (
-          <button
-            onClick={() => setSelected((prev) => (prev.includes(ex.id) ? prev.filter((id) => id !== ex.id) : [...prev, ex.id]))}
-            role="checkbox"
-            aria-checked={picked}
-            aria-label={t("Select {name}", { name: ex.name })}
-            className="tap flex items-center justify-center shrink-0"
+    // FP: while grouping, the whole row is the one checkbox, a full-row
+    // control behind the note, Settings and Remove buttons, which keep their
+    // own taps. The name is then not a button (it used to open the settings).
+    if (selecting) {
+      return (
+        <SelectableBox
+          inner
+          key={ex.id}
+          kind="checkbox"
+          selected={picked}
+          label={t("Select {name}", { name: ex.name })}
+          onToggle={() => setSelected((prev) => (prev.includes(ex.id) ? prev.filter((id) => id !== ex.id) : [...prev, ex.id]))}
+          // No press shrink here: a box that shrinks under the pointer can
+          // lose a tap at its edge.
+          className="flex items-center gap-2 bg-cream-soft rounded-xl px-3 py-2.5"
+        >
+          <span
+            aria-hidden
+            className="flex items-center justify-center shrink-0"
             style={{
               width: 18,
               height: 18,
@@ -322,9 +326,30 @@ export const CreateRoutineSheet: React.FC<{
               background: picked ? "rgb(var(--th-aea1dc))" : "transparent",
             }}
           />
-        ) : (
-          <GripVertical size={14} className="text-charcoal-faint shrink-0" />
-        )}
+          <span aria-hidden className="flex-1 text-start min-w-0">
+            <span className="block text-sm font-medium text-charcoal truncate">{ex.name}</span>
+            {line && <span className="block text-[11px] text-charcoal-faint truncate">{line}</span>}
+          </span>
+          {noteIcon(ex)}
+          <button onClick={() => setSettingsIndex(i)} aria-label={t("Settings for {name}", { name: ex.name })} className="tap text-charcoal-faint shrink-0">
+            <Settings2 size={14} />
+          </button>
+          <button onClick={() => removeExercise(ex.id)} aria-label={t("Remove {name}", { name: ex.name })} className="tap text-charcoal-faint shrink-0">
+            <X size={14} />
+          </button>
+        </SelectableBox>
+      );
+    }
+    return (
+      <div
+        key={ex.id}
+        draggable
+        onDragStart={() => setDragIndex(i)}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={() => handleDrop(i)}
+        className="tap flex items-center gap-2 bg-cream-soft rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical size={14} className="text-charcoal-faint shrink-0" />
         <button onClick={() => setSettingsIndex(i)} className="flex-1 text-start min-w-0">
           <span className="block text-sm font-medium text-charcoal truncate">{ex.name}</span>
           {line && <span className="block text-[11px] text-charcoal-faint truncate">{line}</span>}

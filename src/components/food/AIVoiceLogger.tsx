@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { SelectableBox, SELECTABLE_INNER } from "../ui/SelectableBox";
 import { Check, ChevronDown, Globe, Mic, Plus, Sparkles, MicOff, Square, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { logFoodEntry, manualFood, type FoodSearchResult } from "../../services/food";
@@ -184,6 +185,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
   const [stage, setStage] = useState<Stage>("idle");
   const [items, setItems] = useState<ReviewItem[]>([]);
+  // Each result row's name names the row's one control (FP).
+  const rowId = useId();
   const [transcript, setTranscript] = useState("");
   // Seeded from the clock when the review opens, then the user's to change.
   const [meal, setMeal] = useState<MealType>(() => mealForHour(new Date().getHours()));
@@ -1040,20 +1043,26 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 const preview = previewFor(item);
                 const isOpen = expanded === i;
                 return (
-                  <div
+                  <SelectableBox
+                    inner
                     key={`${item.spokenName}-${i}`}
+                    selected={item.selected}
+                    onToggle={() => toggleItem(i)}
+                    labelledBy={`${rowId}-${i}`}
                     className={`rounded-2xl px-4 py-3 border transition-colors ${
                       item.selected ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       {/* The row toggles, the way a scanned blood panel is
-                          confirmed. The quantity field below stops its own clicks, so
-                          changing an amount is not also a deselect. */}
-                      <button
-                        onClick={() => toggleItem(i)}
-                        className="tap flex items-center gap-3 min-w-0 flex-1 text-start"
-                        aria-pressed={item.selected}
+                          confirmed: anywhere on it (FP), with the quantity
+                          field, the chips and the buttons below keeping their
+                          own taps, so changing an amount is not also a deselect.
+                          This names the row's one control, so it is hidden. */}
+                      <div
+                        id={`${rowId}-${i}`}
+                        aria-hidden
+                        className="flex items-center gap-3 min-w-0 flex-1 text-start"
                       >
                         <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
                           <Icon size={15} className="text-primary-dark" />
@@ -1080,9 +1089,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             </p>
                           )}
                         </div>
-                      </button>
+                      </div>
 
                       <div
+                        aria-hidden
                         className={`w-5 h-5 rounded-full flex items-center justify-center border-2 shrink-0 ${
                           item.selected ? "bg-primary-fill border-primary-fill" : "border-charcoal/20"
                         }`}
@@ -1161,7 +1171,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         {preview ? preview.quantityLabel : item.spokenUnit ? t("per {unit}", { unit: item.spokenUnit }) : tn(item.quantity, "serving", "servings")}
                       </span>
                       <div
-                        className="shrink-0"
+                        className={`shrink-0 ${SELECTABLE_INNER}`}
                         style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
                       >
                         <input
@@ -1244,7 +1254,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         )}
                       </div>
                     )}
-                  </div>
+                  </SelectableBox>
                 );
               })}
             </div>

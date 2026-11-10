@@ -12,6 +12,7 @@ import { assignMealPlan, fetchConflicts, type Assignment, type MealPlan } from "
 import type { ProLane } from "../subtypeLanes";
 import { allergenLabel, restrictionLabel } from "./nuFormat";
 import { useNuRoster } from "./hooks";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { clientConflictLine, type ClientConflictLine, type ConflictRow } from "./nutritionModel";
 import { t, tn } from "../../../i18n/core";
 
@@ -143,38 +144,41 @@ export const AssignSheet: React.FC<{
                   ? t("{conflicts} Swap it in the template first.", { conflicts: line.text })
                   : line.text;
           return (
-            <div key={c.clientId} style={{ padding: "10px 0", borderBottom: `1px solid ${INK.b06}` }}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                aria-disabled={disabled}
-                onClick={() => {
-                  if (disabled) return;
-                  setChecked((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(c.clientId)) next.delete(c.clientId);
-                    else next.add(c.clientId);
-                    return next;
-                  });
-                }}
-                className="tap w-full flex items-center text-start"
-                style={{ gap: 12, minHeight: 44, opacity: disabled && !on ? 0.85 : 1 }}
-              >
-                <span className="flex items-center justify-center shrink-0" style={{ width: 24, height: 24, borderRadius: 9999, ...(on ? { background: INK.fill } : { border: `1.5px solid ${dark ? "#9A8CD6" : "#D1CAEB"}` }) }}>
+            // FP: the whole row, dietary-needs line included, is the one checkbox.
+            <SelectableBox
+              key={c.clientId}
+              kind="checkbox"
+              selected={on}
+              ariaDisabled={disabled}
+              onToggle={() => {
+                if (disabled) return;
+                setChecked((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(c.clientId)) next.delete(c.clientId);
+                  else next.add(c.clientId);
+                  return next;
+                });
+              }}
+              className="block"
+              style={{ padding: "10px 0", borderBottom: `1px solid ${INK.b06}` }}
+            >
+              <div className="relative w-full flex items-center text-start" style={{ gap: 12, minHeight: 44, opacity: disabled && !on ? 0.85 : 1 }}>
+                <span aria-hidden className="flex items-center justify-center shrink-0" style={{ width: 24, height: 24, borderRadius: 9999, ...(on ? { background: INK.fill } : { border: `1.5px solid ${dark ? "#9A8CD6" : "#D1CAEB"}` }) }}>
                   {on && <Check size={14} strokeWidth={2.8} aria-hidden style={{ color: INK.onFill, ...NO_ICON_SCALE }} />}
                 </span>
-                <Avatar name={c.name} url={c.avatarUrl} size={32} />
+                <span aria-hidden className="contents">
+                  <Avatar name={c.name} url={c.avatarUrl} size={32} />
+                </span>
                 <span className="flex-1 min-w-0" style={{ fontSize: textPx(13.5), fontWeight: 600, color: INK.ch, overflowWrap: "anywhere" }}>
                   {c.name}
                 </span>
-              </button>
+              </div>
               <p className="flex" style={{ gap: 6, marginBlock: "6px 0", marginInline: "68px 0", fontSize: textPx(11.5), lineHeight: 1.45, color: colour, fontWeight: tone === "att" || tone === "req" ? 600 : 400 }}>
                 {tone === "att" && <TriangleAlert size={12} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 2, ...NO_ICON_SCALE }} />}
                 {tone === "req" && <CircleAlert size={12} strokeWidth={2.2} aria-hidden style={{ flexShrink: 0, marginTop: 2, ...NO_ICON_SCALE }} />}
                 <span>{text}</span>
               </p>
-            </div>
+            </SelectableBox>
           );
         })
       )}

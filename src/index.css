@@ -1172,6 +1172,54 @@ html.big-targets :where(.tap, .hit):where(:not(:has(button, a[href], input, sele
   height: max(100%, 48px);
 }
 
+/* FP (Batch B, decisions 6-8): a selectable box or row that toggles when it
+   is tapped anywhere on it. See components/ui/SelectableBox.tsx.
+   - The whole box shows the pointer cursor.
+   - In the `--inner` shape, the full-box button sits behind the content.
+     Everything else in the box lets taps through to it, except the inner
+     controls (.selectable-inner), which keep their own taps above it.
+   - Hover tints the whole box on a desktop pointer with charcoal at 5% (the
+     `hover:bg-charcoal/5` token). It is drawn as a background image, so the
+     box keeps its own background colour, inline or not, underneath. */
+.selectable-box {
+  cursor: pointer;
+}
+.selectable-box:disabled,
+.selectable-box[aria-disabled="true"] {
+  cursor: default;
+}
+.selectable-box--inner {
+  position: relative;
+}
+.selectable-box__hit {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  cursor: pointer;
+}
+.selectable-box__hit:disabled,
+.selectable-box__hit[aria-disabled="true"] {
+  cursor: default;
+}
+.selectable-box--inner > :not(.selectable-box__hit) {
+  pointer-events: none;
+}
+.selectable-box--inner :is(button, a[href], input, select, textarea, label, summary, [role="button"], [tabindex]:not([tabindex="-1"]), .selectable-inner):not(.selectable-box__hit) {
+  pointer-events: auto;
+}
+/* Above the full-box button. Zero specificity, so a control's own
+   positioning utility still wins. */
+:where(.selectable-box--inner) :where(button, a[href], input, select, textarea, label, summary, [role="button"], [tabindex]:not([tabindex="-1"]), .selectable-inner):where(:not(.selectable-box__hit)) {
+  position: relative;
+  z-index: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .selectable-box:not(.selectable-box--inner):not(:disabled):not([aria-disabled="true"]):hover,
+  .selectable-box--inner:has(> .selectable-box__hit:not(:disabled):not([aria-disabled="true"]):hover) {
+    background-image: linear-gradient(rgb(var(--c-charcoal) / 0.05), rgb(var(--c-charcoal) / 0.05)) !important;
+  }
+}
+
 /* Mobile v5.1, decision 20 (supersedes 17): the one section-label style, "with
    the line" (C-05). Foundations label.section.settings: 11 / 600 uppercase,
    0.14em, a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is NOT set
