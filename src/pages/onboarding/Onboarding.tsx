@@ -239,9 +239,10 @@ function OnboardingFlow({ viewer }: { viewer: Viewer }) {
   const [initial] = useState(() => {
     let s0 = initialStateFor(viewer);
     // Sign in with Apple's first name, kept across the sign-in's reload
-    // (services/auth/applePending): it fills an empty name (D-R1-2). Read here,
-    // cleared once mounted, so a second initialiser run still sees it.
-    const appleName = peekAppleGivenName();
+    // (services/auth/applePending), for the account it came with only: it fills
+    // an empty name (D-R1-2). Read here, cleared once mounted, so a second
+    // initialiser run still sees it.
+    const appleName = peekAppleGivenName(liveSession?.user);
     if (appleName && !s0.draft.firstName) s0 = { ...s0, draft: { ...s0.draft, firstName: appleName } };
     return authLink ? { ...s0, step: stepsFor(s0.draft.accountType, false).indexOf("auth") } : s0;
   });

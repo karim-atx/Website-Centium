@@ -1822,7 +1822,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // one would fail that foreign key on every single auth event. The
         // reported flag is what says which case this is.
         // A Sign in with Apple's one-time code the reload overtook (services/auth/applePending).
-        sendPendingAppleLink(next.access_token, getSupabaseConfig());
+        sendPendingAppleLink(next.access_token, next.user, getSupabaseConfig());
         void ensureProfileRow(next.user.id).then(({ profileEnsured }) => {
           if (!profileEnsured) return;
           // The phone app's install, once per session (report_app_install
