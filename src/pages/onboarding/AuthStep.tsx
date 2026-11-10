@@ -699,7 +699,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext, initialMode
         primary={{ label: busy ? (signIn ? t("Signing in…") : t("Signing up…")) : signIn ? t("Sign in") : t("Sign up"), type: "submit", form: "ob-auth", disabled: submitDisabled }}
         // Apple above Google where it is offered (platform/appleSignInModel).
         apple={
-          appleSignInOfferedOn(platform(), desktop() !== null)
+          appleSignInOfferedOn(platform(), desktop() !== null, import.meta.env.NEXT_PUBLIC_APPLE_SIGN_IN_WEB === "1")
             ? { label: t("Continue with Apple"), ariaLabel: t("Continue with Apple"), disabled: busy, onClick: () => void handleApple() }
             : undefined
         }
