@@ -20,6 +20,8 @@
 //   - Notification settings show Windows' answer, link to Windows' settings,
 //     and offer "Start Centium when I sign in" (settings/NotificationsPage).
 //   - A click on a notification routes inside the app (DesktopOpenRoutes).
+//   - The landing page's "Download the app" button, its Windows help and the
+//     Windows row of "Other platforms" are hidden (marketing/download).
 
 /** A notification as the shell shows it. `path` is an /app path for the click. */
 export interface DesktopNotice {

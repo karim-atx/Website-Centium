@@ -1501,9 +1501,12 @@ html.high-contrast .ob .ob-btn-primary:disabled {
   height: 170px;
   margin: 0 auto;
 }
+/* The rings and the glow are centred with margin-inline-start (inline styles),
+   so their 50% is logical too: a physical left: 50% left them off centre in
+   Arabic, past the right edge at 320px (FM finish-screen check). */
 .ob-status-ring {
   position: absolute;
-  left: 50%;
+  inset-inline-start: 50%;
   top: 50%;
   border-radius: 999px;
   border: 1px solid var(--ob-ring);
@@ -1511,7 +1514,7 @@ html.high-contrast .ob .ob-btn-primary:disabled {
 }
 .ob-status-glow {
   position: absolute;
-  left: 50%;
+  inset-inline-start: 50%;
   top: 50%;
   border-radius: 999px;
   background: radial-gradient(circle, var(--ob-glow) 0%, rgba(143, 104, 246, 0) 70%);
