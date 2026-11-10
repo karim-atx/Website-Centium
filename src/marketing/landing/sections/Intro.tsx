@@ -417,16 +417,19 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
             <p style={{ margin: r.subMt + " auto 0", maxWidth: "560px", fontSize: r.subSize, lineHeight: 1.5, color: "#5B5349" }}>
               {t("More clarity. More control. More you.")}
             </p>
-            {/* Task O: Get Started and the download button(s) share one width, the
-                widest label's, at least ctaW (ctaGrid); one full-width column below
-                640px. The download button takes the slot and styles of the
-                "Request a Demo" button it replaced (decision 1), with 20px each
-                side and one line for the longer labels. */}
+            {/* Task O / FM: Get Started and "Download the app" share one width,
+                the wider label's, at least ctaW (ctaGrid); one full-width column
+                below 640px. The download button takes the slot and styles of the
+                "Request a Demo" button it replaced, with 20px each side; where
+                there is no download it is not drawn and Get Started, held in the
+                first cell, stands alone, centred. */}
             <div style={{ ...ctaGrid(!r.sm, r.ctaW), margin: r.sm ? `${r.ctaMt} auto 0` : `${r.ctaMt} 0 0` }}>
               <Link
                 to="/app"
                 className="cl-lift"
                 style={{
+                  gridRow: 1,
+                  gridColumn: 1,
                   padding: "15px 20px",
                   whiteSpace: "nowrap",
                   borderRadius: "999px",
@@ -440,6 +443,7 @@ export const Intro: React.FC<IntroProps> = ({ r, twY, dotOp, readyOp, onPillar, 
                 {t("Get Started")}
               </Link>
               <DownloadButton
+                compact
                 stack={!r.sm}
                 btnStyle={{
                   padding: "15px 20px",
