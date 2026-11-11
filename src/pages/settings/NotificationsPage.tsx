@@ -1,4 +1,5 @@
 import React, { useEffect, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import {
   AtSign,
   Heart,
@@ -15,6 +16,7 @@ import {
   UserPlus,
   CalendarDays,
   ChevronDown,
+  CirclePause,
   Clock,
   Dumbbell,
   Gift,
@@ -23,9 +25,11 @@ import {
   Lock,
   MessageCircle,
   MessagesSquare,
+  MessageSquareText,
   Monitor,
   Moon,
   NotebookPen,
+  ShoppingBag,
   Store,
   Trophy,
   UtensilsCrossed,
@@ -64,6 +68,8 @@ import { ALL_MINUTES, fromParts, toParts, type Meridiem } from "../../components
 import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
+import { HealthNotificationGroup } from "../../components/settings/HealthNotificationGroup";
+import { HEALTH_GROUP, HEALTH_GROUP_ID } from "../../components/settings/healthNotificationModel";
 import { fetchGoneQuietDays } from "../../services/pro/practice";
 import { isNative } from "../../platform";
 import { desktop } from "../../platform/desktop";
@@ -102,7 +108,11 @@ import { t, tk, tn } from "../../i18n/core";
 // As drawn, the rows carry no subtitles; what each switch does is read to
 // screen readers instead.
 
-type Row = { key: NotificationToggleKey; label: string; desc: string; icon: typeof Bell; sub?: string };
+// desc is read to screen readers; sub is drawn under the title. FW (G8): the
+// five evening nudges say what they send (one, at 8 PM local, only when
+// nothing's logged: queue_activity_reminders) as a drawn line, not only to
+// screen readers, so the row no longer promises timed reminders.
+type Row = { key: NotificationToggleKey; label: string; desc?: string; icon: typeof Bell; sub?: string };
 type Group = { label: string; rows: Row[] };
 
 const QUIET = tk("Quiet hours");
@@ -118,16 +128,45 @@ function quietWindowText(from: string, to: string): string {
     : t("From {from} until {to}, your time, messages and updates wait and arrive together as one summary when quiet hours end. Reminders you set for a time still arrive, and so do safety alerts. Suggestions to log are skipped.", vars);
 }
 
+// FW (G6): app_preferences.message_push_preview (B4, OFF by default): a
+// message push may carry the first 140 characters of the message
+// (messages_queue_push). After Messages, wherever it is.
+const MESSAGE_TEXT_ROW: Row = {
+  key: "messagePushPreview",
+  label: tk("Message text on lock screen"),
+  desc: tk("Message notifications show the start of the message. Off, they say only who it's from."),
+  icon: MessageSquareText,
+};
+
+// FW (G9, decision D7): SWITCHES WITH NO SENDER ARE HIDDEN until the Database
+// builds one; a switch that does nothing undermines the others. To bring a row
+// back, take its key out of this list once its sender is live:
+//   proGoneQuiet  notification_pro_gone_quiet: a gone-quiet sweep queuing kind
+//                 'pro_gone_quiet' (Database, Batch C item 16).
+//   proPayments   notification_pro_payments: a trigger queuing kind
+//                 'pro_payment' when a payment is marked received (item 16).
+// (The business families are listed in services/business-more/notifications.)
+const NO_SENDER_YET: ReadonlySet<NotificationToggleKey> = new Set<NotificationToggleKey>(["proGoneQuiet", "proPayments"]);
+
 // MO1.8.3's groups, rows, order and glyphs (all 17 / 1.75).
 const GROUPS: Group[] = [
   {
     label: tk("Reminders"),
     rows: [
-      { key: "mealReminders", label: tk("Food logging"), desc: tk("Nudges to log breakfast, lunch, dinner & snacks"), icon: UtensilsCrossed },
-      { key: "workoutReminders", label: tk("Workouts"), desc: tk("Reminders for your scheduled routines"), icon: Dumbbell },
-      { key: "water", label: tk("Water"), desc: tk("Reminders to log your water"), icon: GlassWater },
-      { key: "habits", label: tk("Habits"), desc: tk("Reminders for today's habits"), icon: ListChecks },
-      { key: "journal", label: tk("Journal"), desc: tk("A nudge to write in your journal"), icon: NotebookPen },
+      { key: "mealReminders", label: tk("Food logging"), sub: tk("One reminder at 8 PM if no food is logged today"), icon: UtensilsCrossed },
+      { key: "workoutReminders", label: tk("Workouts"), sub: tk("One reminder at 8 PM if no workout is logged today"), icon: Dumbbell },
+      { key: "water", label: tk("Water"), sub: tk("One reminder at 8 PM if no water is logged today"), icon: GlassWater },
+      { key: "habits", label: tk("Habits"), sub: tk("One reminder at 8 PM if none of your habits are ticked today"), icon: ListChecks },
+      { key: "journal", label: tk("Journal"), sub: tk("One reminder at 8 PM if you haven't written in your journal today"), icon: NotebookPen },
+      // FW (G6): reminders_paused (notification_decision drops the reminder
+      // family while it is on: these rows, the Health group and health
+      // checks; never messages, updates or safety alerts). ON means paused.
+      {
+        key: "remindersPaused",
+        label: tk("Pause reminders"),
+        desc: tk("Stops every reminder, health reminders included, until you turn this off. Messages, updates and safety alerts still arrive."),
+        icon: CirclePause,
+      },
     ],
   },
   {
@@ -150,7 +189,8 @@ const GROUPS: Group[] = [
     label: tk("Professionals"),
     rows: [
       // V9 (QA 9.0): the label works for Client, Professional and Business alike.
-      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. Never the message itself."), icon: MessagesSquare },
+      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. The message itself only with Message text on lock screen on."), icon: MessagesSquare },
+      MESSAGE_TEXT_ROW,
       { key: "calendarEvents", label: tk("Calendar events"), desc: tk("Reminders for events in your calendar"), icon: CalendarDays },
     ],
   },
@@ -159,6 +199,9 @@ const GROUPS: Group[] = [
     rows: [
       { key: "memberships", label: tk("Memberships"), desc: tk("Updates about your gym and studio memberships"), icon: Store },
       { key: "referralRewards", label: tk("Referral rewards"), desc: tk("When a referral earns you a reward"), icon: Gift },
+      // FW (G6): notification_orders (order_update, to the customer). Only a
+      // customer account can buy (ProductPage canBuy), so only theirs shows it.
+      { key: "orders", label: tk("Orders"), desc: tk("When an order you placed in a store moves along"), icon: ShoppingBag },
     ],
   },
 ];
@@ -187,7 +230,8 @@ const PRO_GROUPS = (goneQuietDays: number | null): Group[] => [
   {
     label: tk("Messages and reviews"),
     rows: [
-      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. Never the message itself."), icon: MessageCircle },
+      { key: "professionalMessages", label: tk("Messages"), desc: tk("“New message from …” when someone writes to you. The message itself only with Message text on lock screen on."), icon: MessageCircle },
+      MESSAGE_TEXT_ROW,
       { key: "reviews", label: tk("New reviews"), desc: tk("When a client reviews you"), icon: Star },
       { key: "proCareNetwork", label: tk("Care network"), desc: tk("Referrals and requests from colleagues"), icon: Send },
     ],
@@ -329,9 +373,12 @@ function ErrorLine({ children }: { children: ReactNode }) {
 export default function NotificationsPage() {
   const { authUserId, user } = useApp();
   const isPro = user.accountType === "professional";
+  const isBusiness = user.accountType === "business";
+  const isCustomer = user.accountType === "customer";
   const [goneQuietDays, setGoneQuietDays] = useState<number | null>(null);
   useEffect(() => {
-    if (!isPro || !authUserId) return;
+    // Only for the "Clients gone quiet" row's line, while that row is shown.
+    if (!isPro || !authUserId || NO_SENDER_YET.has("proGoneQuiet")) return;
     let live = true;
     void fetchGoneQuietDays(authUserId).then((d) => live && setGoneQuietDays(d));
     return () => {
@@ -342,8 +389,19 @@ export default function NotificationsPage() {
   // the server sends those pushes to nobody with the mode on.
   const hideNumbers = useHideNumbers();
   const groups = withInApp(isPro ? [...PRO_GROUPS(goneQuietDays), ...PRO_OWN_GROUPS] : GROUPS)
-    .map((g) => (hideNumbers ? { ...g, rows: g.rows.filter((r) => r.key !== "streakAlerts") } : g))
+    .map((g) => ({
+      ...g,
+      rows: g.rows.filter(
+        (r) =>
+          !(hideNumbers && r.key === "streakAlerts") &&
+          // FW: no switch for something nothing sends; Orders only for an account that can order.
+          !NO_SENDER_YET.has(r.key) &&
+          !(r.key === "orders" && !isCustomer)
+      ),
+    }))
     .filter((g) => g.rows.length > 0);
+  // FW (G6): Cycle › Settings › Reminders opens this page at #health.
+  const { hash } = useLocation();
 
   // --- the account's values (app_preferences) --------------------------------
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -502,6 +560,13 @@ export default function NotificationsPage() {
   const [lockSaving, setLockSaving] = useState(false);
   const [lockNote, setLockNote] = useState<string | null>(null);
   const prefsLoaded = prefs !== null;
+  // FW (G6): #health (from Cycle › Settings › Reminders) scrolls to the Health
+  // group once the rows have loaded and the page has its full height.
+  useEffect(() => {
+    if (hash !== "#health" || !prefsLoaded) return;
+    const id = requestAnimationFrame(() => document.getElementById(HEALTH_GROUP_ID)?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(id);
+  }, [hash, prefsLoaded]);
   useEffect(() => {
     if (!nativeApp || !prefsLoaded) return;
     let cancelled = false;
@@ -567,9 +632,27 @@ export default function NotificationsPage() {
   const dimmed = allow === false;
   const messagesDimmed = dimmed;
 
+  /**
+   * FW (G13): a health reminder switched on from a device that can't receive
+   * push asks for it here, from the tap (permission AND registration, as the
+   * lead card reads it). Nothing to ask when it is already on, blocked (the
+   * lead card says where to fix it) or impossible here. The error sentence,
+   * or null.
+   */
+  const askDevice = async (): Promise<string | null> => {
+    if (!pushAvailable || deviceOn || permission === "denied") return null;
+    const r = await enablePush(authUserId);
+    setPermission(await readPushPermission());
+    setRegistered(await isThisDeviceRegistered());
+    return r.status === "ok" ? null : r.message;
+  };
+
   const toggleRow = async (group: string, key: NotificationToggleKey, value: boolean) => {
     setNote(group, null);
+    // FW: the medications master asks for push first, like the cycle rows.
+    const device = key === "medications" && value ? await askDevice() : null;
     const failed = await save({ [key]: value });
+    if (device && !failed) setNote(group, device);
     if (failed) {
       setNote(group, failed);
       return;
@@ -737,14 +820,15 @@ export default function NotificationsPage() {
       )}
 
       {groups.map((g) => (
-        <SettingsSection key={g.label} label={t(g.label)}>
+        <React.Fragment key={g.label}>
+        <SettingsSection label={t(g.label)}>
           {g.rows.map((r) => (
             <React.Fragment key={r.key}>
               <SettingsRow
                 icon={r.icon}
                 title={t(r.label)}
                 subtitle={r.sub && t(r.sub)}
-                srDescription={t(r.desc)}
+                srDescription={r.desc && t(r.desc)}
                 dimmed={
                   r.key === "messagePopups"
                     ? false
@@ -774,6 +858,22 @@ export default function NotificationsPage() {
           ))}
           {notes[g.label] && <ErrorLine>{t(notes[g.label])}</ErrorLine>}
         </SettingsSection>
+        {/* FW (G6): the Health group, straight after Reminders (not for a business account). */}
+        {g.label === "Reminders" && !isBusiness && (
+          <HealthNotificationGroup
+            dimmed={dimmed}
+            medications={{
+              checked: prefs?.medications ?? false,
+              disabled: !prefs || saving.has("medications"),
+              onChange: (v) => void toggleRow(HEALTH_GROUP, "medications", v),
+            }}
+            askDevice={askDevice}
+            setNote={(m) => setNote(HEALTH_GROUP, m)}
+          >
+            {notes[HEALTH_GROUP] && <ErrorLine>{t(notes[HEALTH_GROUP])}</ErrorLine>}
+          </HealthNotificationGroup>
+        )}
+        </React.Fragment>
       ))}
 
       <SettingsSection label={t(QUIET)}>

@@ -57,6 +57,9 @@ export const FILES: string[] = [
   "pages/settings/Settings.tsx",
   "pages/settings/LanguagePage.tsx",
   "pages/settings/NotificationsPage.tsx",
+  // FW: Settings › Notifications' Health group.
+  "components/settings/HealthNotificationGroup.tsx",
+  "components/settings/healthNotificationModel.ts",
   "pages/settings/AccessibilityPage.tsx",
   "pages/settings/DevicesSourcesPage.tsx",
   "pages/settings/GetSupportPage.tsx",
@@ -192,15 +195,20 @@ const settings: Catalogue = {
   "You'll still see new messages in the app.": "ستظل ترى الرسائل الجديدة داخل التطبيق.",
   Reminders: "التذكيرات",
   "Food logging": "تسجيل الطعام",
-  "Nudges to log breakfast, lunch, dinner & snacks": "تنبيهات لتسجيل الفطور والغداء والعشاء والوجبات الخفيفة",
+  // FW (G8): what the five evening nudges really send (queue_activity_reminders: one, 8 PM local).
+  "One reminder at 8 PM if no food is logged today": "تذكير واحد الساعة 8 مساءً إن لم يُسجَّل أي طعام اليوم",
   Workouts: "التمارين",
-  "Reminders for your scheduled routines": "تذكيرات بروتيناتك المجدولة",
+  "One reminder at 8 PM if no workout is logged today": "تذكير واحد الساعة 8 مساءً إن لم يُسجَّل أي تمرين اليوم",
   Water: "الماء",
-  "Reminders to log your water": "تذكيرات لتسجيل شرب الماء",
+  "One reminder at 8 PM if no water is logged today": "تذكير واحد الساعة 8 مساءً إن لم يُسجَّل شرب الماء اليوم",
   Habits: "العادات",
-  "Reminders for today's habits": "تذكيرات بعادات اليوم",
+  "One reminder at 8 PM if none of your habits are ticked today": "تذكير واحد الساعة 8 مساءً إن لم تُنجز أيًّا من عاداتك اليوم",
   Journal: "اليوميات",
-  "A nudge to write in your journal": "تنبيه للكتابة في يومياتك",
+  "One reminder at 8 PM if you haven't written in your journal today": "تذكير واحد الساعة 8 مساءً إن لم تكتب في يومياتك اليوم",
+  // FW (G6): reminders_paused.
+  "Pause reminders": "إيقاف التذكيرات مؤقتًا",
+  "Stops every reminder, health reminders included, until you turn this off. Messages, updates and safety alerts still arrive.":
+    "يوقف كل التذكيرات، بما فيها التذكيرات الصحية، حتى توقف هذا الخيار. تظل الرسائل والتحديثات وتنبيهات السلامة تصلك.", // note: health wording
   Progress: "التقدّم",
   "Streaks and achievements": "السلاسل والإنجازات",
   "When a streak is about to reset": "عندما توشك سلسلة على الانقطاع",
@@ -213,8 +221,12 @@ const settings: Catalogue = {
   "Once a day, when your posts and comments get likes": "مرة في اليوم، عندما تحصل منشوراتك وتعليقاتك على إعجابات",
   Mentions: "الإشارات",
   "When someone mentions you in the forum": "عندما يشير إليك أحد في المنتدى",
-  "“New message from …” when someone writes to you. Never the message itself.":
-    "«رسالة جديدة من …» عندما يراسلك أحد. لا يظهر نص الرسالة أبدًا.",
+  "“New message from …” when someone writes to you. The message itself only with Message text on lock screen on.":
+    "«رسالة جديدة من …» عندما يراسلك أحد. لا يظهر نص الرسالة إلا إذا شغّلت «نص الرسالة على شاشة القفل».",
+  // FW (G6): message_push_preview.
+  "Message text on lock screen": "نص الرسالة على شاشة القفل",
+  "Message notifications show the start of the message. Off, they say only who it's from.":
+    "تعرض إشعارات الرسائل بداية الرسالة. عند الإيقاف، تذكر فقط ممّن هي.",
   "Calendar events": "أحداث التقويم",
   "Reminders for events in your calendar": "تذكيرات بالأحداث في تقويمك",
   Account: "الحساب",
@@ -222,6 +234,15 @@ const settings: Catalogue = {
   "Updates about your gym and studio memberships": "تحديثات عن عضوياتك في النوادي الرياضية والاستوديوهات",
   "Referral rewards": "مكافآت الإحالة",
   "When a referral earns you a reward": "عندما تكسبك إحالةٌ مكافأة",
+  // FW (G6): notification_orders, for a customer.
+  "When an order you placed in a store moves along": "عندما يتقدّم طلب قدّمته في متجر",
+  // FW (G6): the Health group (components/settings/HealthNotificationGroup).
+  "Set up your method on the Contraception page": "أعدّ وسيلتك في صفحة منع الحمل", // note: health wording
+  "Daily at {time}": "يوميًا الساعة {time}", // note: health wording (the pill reminder's time)
+  "No reminder time set": "لم يُحدَّد وقت للتذكير", // note: health wording
+  "Needs cycle tracking on": "يتطلب تشغيل تتبّع الدورة", // note: health wording
+  "Reminders at the dose times you set for each medication. They never name the medicine.":
+    "تذكيرات في مواعيد الجرعات التي حدّدتها لكل دواء. لا تذكر اسم الدواء أبدًا.", // note: health wording
   "New hire and booking requests": "طلبات التعاقد والحجز الجديدة",
   "When someone asks to hire you or book a session": "عندما يطلب أحد التعاقد معك أو حجز جلسة",
   "Booking changes and cancellations": "تغييرات الحجوزات وإلغاؤها",

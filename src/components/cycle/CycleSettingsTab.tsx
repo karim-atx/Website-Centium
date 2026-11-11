@@ -16,6 +16,8 @@ import { usePremium } from "../../services/premium/hooks";
 import { useG4Available } from "../premium/g4/useG4";
 import { insightsToggleShown } from "../../services/premium/g4";
 import { getInsightsEnabled } from "../../services/cycle";
+import { useDeviceReminderPush } from "../../hooks/useDeviceReminderPush";
+import { ReminderPushLine } from "./ReminderPushLine";
 
 /**
  * undrawn (Round G, no handover)
@@ -84,6 +86,17 @@ export const CycleSettingsTab: React.FC<{
   const pregnancyWeek = p.pregnancy ? gestationOn(p.today, p.pregnancy) : null;
   const zoneCity = p.timezone ? zonePlace(p.timezone) : t(G.SETTINGS_TIMEZONE_NOT_SET);
   const insights = useInsightsSwitch();
+  const { authUserId } = useApp();
+  // FW (G13): the period reminder asks for push like the contraception ones.
+  // Switching it on from a device that can't receive it raises the prompt
+  // first (from the tap), then saves either way: the setting is the
+  // account's, and another device may be registered. While it is on and this
+  // device can't receive it, the line under it says why, with the fix.
+  const push = useDeviceReminderPush(authUserId);
+  const setPeriodReminder = async (on: boolean) => {
+    if (on && push.state === "needed") await push.turnOn();
+    await p.save({ periodReminder: on });
+  };
   const setInsights = async (on: boolean) => {
     if (await p.save({ insightsEnabled: on })) insights.set(on);
   };
@@ -206,8 +219,17 @@ export const CycleSettingsTab: React.FC<{
           icon={CalendarClock}
           title={t(G.PERIOD_REMINDER_TITLE)}
           subtitle={t(G.PERIOD_REMINDER_SUB)}
-          toggle={{ checked: settings.periodReminder, onChange: (on) => void p.save({ periodReminder: on }), disabled: p.busy, label: t(G.PERIOD_REMINDER_TITLE) }}
+          toggle={{ checked: settings.periodReminder, onChange: (on) => void setPeriodReminder(on), disabled: p.busy || push.busy, label: t(G.PERIOD_REMINDER_TITLE) }}
         />
+        {settings.periodReminder && (
+          <ReminderPushLine
+            state={push.state}
+            busy={p.busy || push.busy}
+            error={push.error}
+            onTurnOn={() => void push.turnOn()}
+            style={{ marginTop: 0, marginBottom: 12, paddingInlineStart: 50 }}
+          />
+        )}
         {settings.periodReminder && (
           <div style={{ paddingBlock: "0 12px", paddingInline: "50px 0" }}>
             <div className="flex" role="radiogroup" aria-label={t(G.PERIOD_REMINDER_DAYS_LABEL)} style={{ gap: 6 }}>
@@ -226,6 +248,8 @@ export const CycleSettingsTab: React.FC<{
             <CycleHelp style={{ marginTop: 6 }}>{G.PERIOD_REMINDER_WORDING[settings.notificationDetail]}</CycleHelp>
           </div>
         )}
+        {/* FW (G6): opens Settings › Notifications at its Health group, where
+            the contraception and period reminders now have rows. */}
         <CycleRow icon={Bell} title={t(G.SETTINGS_REMINDERS)} value={t(G.SETTINGS_REMINDERS_VALUE)} onClick={p.onReminders} />
         <CycleRow icon={Globe} title={t(G.TIMEZONE_TITLE)} value={zoneCity} onClick={p.onTimezone} last />
       </CycleSection>

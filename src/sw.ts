@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import { notificationTarget } from "./services/push/messagePushUrl";
 import { collapsedText, collapseTag } from "./services/push/collapse";
+import { effectiveFamily, pushNotificationOptions, type PushFamily } from "./services/push/notificationOptions";
 
 /** The `?v=` cache-buster for the app icons, injected at build time from ICON_VERSION in vite.config.ts. */
 declare const __ICON_VERSION__: string;
@@ -68,6 +69,12 @@ interface PushPayload {
   tag?: string;
   /** Set when this is a chat message that collapses with others from its chat. */
   chatTag?: string;
+  /**
+   * FW: the notification family (the Android channel_id), when the sender
+   * says, or a call (type "incoming_call"); null otherwise, and then the
+   * notification is shown exactly as before. See notificationOptions.ts.
+   */
+  family: PushFamily | null;
 }
 
 /**
@@ -86,7 +93,7 @@ interface PushPayload {
  * after.
  */
 function readPayload(data: PushMessageData | null): PushPayload {
-  const fallback: PushPayload = { title: FALLBACK_TITLE, body: FALLBACK_BODY, url: "/app" };
+  const fallback: PushPayload = { title: FALLBACK_TITLE, body: FALLBACK_BODY, url: "/app", family: null };
   if (!data) return fallback;
 
   let parsed: unknown;
@@ -112,6 +119,7 @@ function readPayload(data: PushMessageData | null): PushPayload {
     url: notificationTarget(raw, fallback.url),
     tag: str(raw.tag),
     chatTag: collapseTag(raw),
+    family: effectiveFamily(raw),
   };
 }
 
@@ -142,15 +150,30 @@ self.addEventListener("push", (event) => {
         }
         ({ title, body, count } = collapsedText(payload.title, payload.body, previous));
       }
-      await self.registration.showNotification(title, {
-        body,
-        icon: `/pwa-192x192.png${__ICON_VERSION__}`,
-        badge: `/pwa-192x192.png${__ICON_VERSION__}`,
-        tag: payload.chatTag ?? payload.tag,
-        // Without this a replaced notification updates silently.
-        renotify: !!payload.chatTag,
-        data: { url: payload.url, count },
-      } as NotificationOptions);
+      // FW: is this push's own tag already on screen? Only asked when the
+      // family is known (renotify on a reused tag is part of the family
+      // behaviour); without one, today's options exactly.
+      let tagShown = false;
+      if (payload.family && !payload.chatTag && payload.tag) {
+        try {
+          tagShown = (await self.registration.getNotifications({ tag: payload.tag })).length > 0;
+        } catch {
+          /* Can't read what is shown: no renotify, as before. */
+        }
+      }
+      await self.registration.showNotification(
+        title,
+        pushNotificationOptions({
+          family: payload.family,
+          body,
+          icon: `/pwa-192x192.png${__ICON_VERSION__}`,
+          url: payload.url,
+          count,
+          chatTag: payload.chatTag,
+          tag: payload.tag,
+          tagShown,
+        }) as NotificationOptions
+      );
     })()
   );
 });

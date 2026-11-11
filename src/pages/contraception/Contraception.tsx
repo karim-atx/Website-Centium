@@ -10,7 +10,7 @@ import { ReminderSettings } from "../../components/contraception/ReminderSetting
 import { endPlan, isDevice, isPill, logEvent, type EventKind, type Method } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
 import { useBack } from "../../hooks/useBack";
-import { clock12 } from "../../utils/time12";
+import { clock12, time12 } from "../../utils/time12";
 import {
   CycleHelp,
   CycleRow,
@@ -69,7 +69,7 @@ const dayLabel = (iso: string) => {
 
 export default function Contraception() {
   const back = useBack("/app/cycle?tab=settings");
-  const { authUserId, contraceptionPlan, contraceptionPlanLoaded, contraceptionStatus, contraceptionEvents, reloadContraception, reloadCycle } = useApp();
+  const { authUserId, contraceptionPlan, contraceptionPlanLoaded, contraceptionStatus, contraceptionEvents, reloadContraception, reloadCycle, cycleSettings } = useApp();
   const { dark, hc } = useCycleMode();
 
   const [setupOpen, setSetupOpen] = useState(false);
@@ -168,7 +168,16 @@ export default function Contraception() {
         <CycleRow
           icon={METHOD_ICON(plan.method)}
           title={t(G.METHOD_LABEL[plan.method])}
-          subtitle={G.STARTED_ON(shortDate(plan.startedOn))}
+          // FW (G4): a pill plan says whether its daily reminder will send:
+          // the switch on AND a time set (queue_contraception_reminders needs
+          // both), else "Reminder off", honestly, rather than nothing.
+          subtitle={
+            isPill(plan.method)
+              ? `${G.STARTED_ON(shortDate(plan.startedOn))} · ${
+                  cycleSettings?.pillReminder && plan.reminderTime ? G.PILL_REMINDER_AT(time12(plan.reminderTime.slice(0, 5))) : t(G.PILL_REMINDER_OFF)
+                }`
+              : G.STARTED_ON(shortDate(plan.startedOn))
+          }
           trailing={
             <button
               type="button"
