@@ -6,6 +6,7 @@ import { ConfirmCard } from "../ui/ConfirmCard";
 import { saveHours, saveVenueTimezone } from "../../services/venues/console";
 import { draftWrapsMidnight, draftsFromRows, validateDrafts, type DayDraft, type GymHoursTableRow } from "../../services/venues/consoleLogic";
 import { formatMinutes12 } from "../../utils/time12";
+import { ALL_MINUTES } from "../calendar/calendarTime";
 import { useOnline } from "../../hooks/useOnline";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { DIVIDER } from "./VenueKit";
@@ -13,8 +14,8 @@ import { isRtl, t, tk } from "../../i18n/core";
 
 // THE opening hours sheet (V6-163: one sheet, MA1 values). Drawn in MA1
 // (BizMarketV7 l.290-313, l.532-545; frames 009-019): rows of day · opens
-// "to" closes · switch (K18) and the floating 12-hour time wheel (K19,
-// 15-minute steps). This file adds what MA1 does not draw
+// "to" closes · switch (K18) and the floating 12-hour time wheel (K19;
+// MA1 drew 15-minute steps, FV offers every minute). This file adds what MA1 does not draw
 // (OURS-OP1-venue-hours rows 11-19): the "Open 24 hours" shape (a button in
 // the wheel card; the row's fields merge into one), overnight ranges
 // ("Closes the next day at …"), unpublished days ("Not set", never saved
@@ -120,6 +121,9 @@ function MiniWheel<V extends string | number>({ options, value, onChange, label 
   );
 }
 
+/** K19's minute column: every minute (FV; MA1 drew 00/15/30/45). */
+const MINUTE_OPTIONS = ALL_MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0") }));
+
 /** K19 · the floating time wheel card: hour · minute · AM/PM, a shape button, Done. */
 function TimeWheelCard({
   value,
@@ -146,8 +150,6 @@ function TimeWheelCard({
   const pm = h24 >= 12;
   const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
   const set = (h: number, m: number, p: boolean) => onChange(hhmmOf(((h % 12) + (p ? 12 : 0)) * 60 + m));
-  // 15-minute steps (MA1); a stored off-step minute joins the column so nothing is lost.
-  const minutes = [0, 15, 30, 45].includes(minute) ? [0, 15, 30, 45] : [0, 15, 30, 45, minute].sort((a, b) => a - b);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onDone();
     const onDown = (e: PointerEvent) => {
@@ -179,7 +181,7 @@ function TimeWheelCard({
         />
         <div className="relative flex h-full">
           <MiniWheel label={t("Hour")} value={h12} onChange={(h) => set(h, minute, pm)} options={[12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((h) => ({ value: h, label: String(h) }))} />
-          <MiniWheel label={t("Minute")} value={minute} onChange={(m) => set(h12, m, pm)} options={minutes.map((m) => ({ value: m, label: String(m).padStart(2, "0") }))} />
+          <MiniWheel label={t("Minute")} value={minute} onChange={(m) => set(h12, m, pm)} options={MINUTE_OPTIONS} />
           <MiniWheel label={t("AM or PM")} value={pm ? "PM" : "AM"} onChange={(p) => set(h12, minute, p === "PM")} options={[{ value: "AM", label: t("AM") }, { value: "PM", label: t("PM") }]} />
         </div>
       </div>

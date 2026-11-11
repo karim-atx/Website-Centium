@@ -46,14 +46,10 @@ export function fieldTime(hhmm: string): string {
 }
 
 /**
- * The wheel's minute column: 5-minute steps, plus the event's own minute when
- * it is not on a step, so an existing 18:07 keeps its time unless it is
- * changed (B37).
+ * The wheel's minute column: every minute, 0-59 (FV), so any stored minute
+ * (an existing 18:07) is a row of its own and keeps its time (B37).
  */
-export function minuteOptions(current: number): number[] {
-  const steps = Array.from({ length: 12 }, (_, i) => i * 5);
-  return steps.includes(current) ? steps : [...steps, current].sort((a, b) => a - b);
-}
+export const ALL_MINUTES: readonly number[] = Array.from({ length: 60 }, (_, i) => i);
 
 /**
  * A link as typed, made safe to open. A bare "zoom.us/j/1" gets https://;

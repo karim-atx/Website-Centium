@@ -148,6 +148,8 @@ const procalendar: Catalogue = {
   "Add time off": "إضافة إجازة",
   "Session types are what clients book: a name, a length and a price.": "أنواع الجلسات هي ما يحجزه العملاء: اسم ومدة وسعر.",
   "Add session type": "إضافة نوع جلسة",
+  // FV: under weekly availability and the business staff hours (pages/business-ops/appointments/ServicesPage).
+  "Bookable times start every 15 minutes from the start time.": "تبدأ أوقات الحجز كل 15 دقيقة من وقت البدء.",
 
   // == Calendar · hired classes and clashes ==
   "No hired classes yet": "لا حصص مُوظَّف لها بعد",

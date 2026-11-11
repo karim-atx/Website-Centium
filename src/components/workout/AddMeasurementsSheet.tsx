@@ -3,8 +3,9 @@ import { CalendarDays } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import { WheelPicker } from "../ui/WheelPicker";
+import { ALL_MINUTES } from "../calendar/calendarTime";
 import {
-  floorToFive,
+  floorToMinute,
   formatMeasured,
   laterThanNow,
   localDay,
@@ -41,7 +42,6 @@ import { t, tn } from "../../i18n/core";
 const GROUP_ORDER: MeasurementGroup[] = ["torso", "arms", "legs", "composition"];
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 
 /**
@@ -64,7 +64,7 @@ export const AddMeasurementsSheet: React.FC<{
   /** Resolves to an error message, or null when the entry was written. */
   onSave: (values: Partial<Record<MeasurementType, number>>, recordedAt: string) => Promise<string | null>;
 }> = ({ open, onClose, onSave }) => {
-  const [when, setWhen] = useState(() => floorToFive(new Date()));
+  const [when, setWhen] = useState(() => floorToMinute(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draftTime, setDraftTime] = useState<TimeParts>(() => timeParts(when));
   const [raw, setRaw] = useState<Partial<Record<MeasurementType, string>>>({});
@@ -272,7 +272,7 @@ export const AddMeasurementsSheet: React.FC<{
                   {
                     label: t("Minutes"),
                     value: draftTime.minute,
-                    options: MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0"), disabled: later.minute(m) })),
+                    options: ALL_MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0"), disabled: later.minute(m) })),
                     onChange: (v) => setDraftTime((t) => ({ ...t, minute: Number(v) })),
                   },
                   {

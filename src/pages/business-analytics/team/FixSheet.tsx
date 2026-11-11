@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, ChevronRight, CircleAlert, CircleCheck, Clock, UserRoundCog, WifiOff } from "lucide-react";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
+import { ALL_MINUTES } from "../../../components/calendar/calendarTime";
 import { useOnline } from "../../../hooks/useOnline";
 import { todayLocal } from "../../../utils/date";
 import { formatMinutes12, range12, rangeMinutes12, time12 } from "../../../utils/time12";
@@ -84,7 +85,7 @@ export function FixSheet({
   const prevEnding = [...others].filter((c) => minutesOf(c.end) <= start).sort((x, y) => minutesOf(y.end) - minutesOf(x.end))[0];
   const okLine = prevEnding ? t("No overlap: {class} ends at {time}.", { class: prevEnding.title, time: time12(prevEnding.end) }) : t("No overlap with their other classes that day.");
 
-  // 12-hour wheel: hour 1-12, minutes 00/15/30/45, AM/PM (DECIDED, AN5-036 row 8).
+  // 12-hour wheel: hour 1-12, any minute 00-59 (FV; was 00/15/30/45, AN5-036 row 8), AM/PM.
   const value = editing === "start" ? start : end;
   const setValue = (m: number) => {
     if (editing === "start") {
@@ -185,12 +186,12 @@ export function FixSheet({
                 label: t("Hour"),
                 value: h12,
                 options: Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: String(i + 1) })),
-                onChange: (h) => setValue(compose(Number(h), min - (min % 15), mer)),
+                onChange: (h) => setValue(compose(Number(h), min, mer)),
               },
               {
                 label: t("Minutes"),
-                value: min - (min % 15),
-                options: [0, 15, 30, 45].map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
+                value: min,
+                options: ALL_MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
                 onChange: (m) => setValue(compose(h12, Number(m), mer)),
               },
               {
@@ -200,7 +201,7 @@ export function FixSheet({
                   { value: "AM", label: t("AM") },
                   { value: "PM", label: t("PM") },
                 ],
-                onChange: (p) => setValue(compose(h12, min - (min % 15), String(p))),
+                onChange: (p) => setValue(compose(h12, min, String(p))),
               },
             ]}
           />

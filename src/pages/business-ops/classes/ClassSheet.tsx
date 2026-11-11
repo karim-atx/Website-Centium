@@ -6,7 +6,7 @@ import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
 import { SELECTABLE_INNER, SelectableBox } from "../../../components/ui/SelectableBox";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
-import { fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "../../../components/calendar/calendarTime";
+import { ALL_MINUTES, fromParts, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "../../../components/calendar/calendarTime";
 import { DAY_LETTERS, DAY_LONG } from "../../../utils/week";
 import {
   ABOUT_MAX,
@@ -682,7 +682,7 @@ function SheetBody({
                 band="business"
                 columns={[
                   { label: t("Hours"), value: parts.hour, options: HOURS.map((h) => ({ value: h, label: String(h) })), onChange: (v) => setTime({ hour: Number(v) }) },
-                  { label: t("Minutes"), value: parts.minute, options: minuteOptions(parts.minute).map((x) => ({ value: x, label: String(x).padStart(2, "0") })), onChange: (v) => setTime({ minute: Number(v) }) },
+                  { label: t("Minutes"), value: parts.minute, options: ALL_MINUTES.map((x) => ({ value: x, label: String(x).padStart(2, "0") })), onChange: (v) => setTime({ minute: Number(v) }) },
                   { label: t("AM or PM"), value: parts.meridiem, options: MERIDIEMS.map((x) => ({ value: x, label: t(x) })), onChange: (v) => setTime({ meridiem: v as Meridiem }) },
                 ]}
               />

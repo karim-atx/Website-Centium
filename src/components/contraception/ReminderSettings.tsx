@@ -140,7 +140,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
           />
           {wheelOpen && reminders && (
             <div style={{ padding: "8px 0 4px" }}>
-              <TimeWheel value={draftTime} onChange={setDraftTime} minuteStep={5} />
+              <TimeWheel value={draftTime} onChange={setDraftTime} />
               <div className="flex justify-end" style={{ marginTop: 6 }}>
                 <button
                   type="button"

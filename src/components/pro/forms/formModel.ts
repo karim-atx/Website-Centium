@@ -543,12 +543,6 @@ export function scheduleLine(s: Schedule): string {
   return tn(s.every ?? 1, "Every week · {day} {time}", "Every {n} weeks · {day} {time}", { day: weekdayLong(s.isoDay - 1), time: time12(s.time) });
 }
 
-/** Times offered in the schedule sheet: every 30 minutes, 6 AM to 10 PM. */
-export const SCHEDULE_TIMES: string[] = Array.from({ length: 33 }, (_, i) => {
-  const m = 6 * 60 + i * 30;
-  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-});
-
 // ---------------------------------------------------------------------------
 // Answers
 // ---------------------------------------------------------------------------

@@ -24,6 +24,8 @@ export interface WheelColumn<V extends string | number = string> {
 
 const ROW = 36;
 const VISIBLE = 5;
+/** PageUp / PageDown move one visible page (FV; the handover draws no keyboard, so this is ours). */
+const PAGE = VISIBLE;
 
 /**
  * BU AN3-020 O5: Reduce motion (the in-app switch puts `reduce-motion` on
@@ -150,6 +152,21 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
     []
   );
 
+  // FV: the keyboard turns the wheel on desktop, as MiniWheel (venue hours) and
+  // WheelCol (onboarding hours) do: ArrowUp / ArrowDown one row, PageUp /
+  // PageDown one visible page. A disabled row is skipped back towards the
+  // current one; the effect above scrolls to the new value.
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const by = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : e.key === "PageDown" ? PAGE : e.key === "PageUp" ? -PAGE : 0;
+    if (!by) return;
+    e.preventDefault();
+    const dir = by > 0 ? 1 : -1;
+    let i = Math.min(column.options.length - 1, Math.max(0, index + by));
+    while (i !== index && column.options[i]?.disabled) i -= dir;
+    const next = column.options[i];
+    if (i !== index && next && next.value !== column.value) column.onChange(next.value);
+  };
+
   const onScroll = () => {
     const el = ref.current;
     if (!el) return;
@@ -174,8 +191,10 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
       ref={ref}
       role="listbox"
       aria-label={column.label}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onScroll={onScroll}
-      className="h-full overflow-y-auto no-scrollbar"
+      className="h-full overflow-y-auto no-scrollbar outline-none focus-visible:ring-2 focus-visible:ring-primary-dark rounded-[8px]"
       style={{ flex: column.flex ?? 1, scrollSnapType: "y mandatory", paddingTop: ROW * 2, paddingBottom: ROW * 2 }}
     >
       {column.options.map((opt, i) => {
@@ -190,6 +209,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
               role="option"
               aria-selected={opt.value === column.value}
               aria-disabled={opt.disabled || undefined}
+              tabIndex={-1}
               onClick={() => {
                 if (opt.disabled) return;
                 ref.current?.scrollTo({ top: i * ROW, behavior: wheelBehavior() });
@@ -225,6 +245,7 @@ function WheelColumnView({ column, look = "default", row = ROW }: { column: Whee
             role="option"
             aria-selected={opt.value === column.value}
             aria-disabled={opt.disabled || undefined}
+            tabIndex={-1}
             onClick={() => {
               if (opt.disabled) return;
               ref.current?.scrollTo({ top: i * ROW, behavior: wheelBehavior() });
