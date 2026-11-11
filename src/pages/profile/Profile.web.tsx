@@ -533,8 +533,8 @@ function ClientProfileWeb() {
                   </button>
                   .
                 </p>
-                <div style={{ paddingTop: 12, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
-                  <CycleTrackingRow />
+                <div style={{ borderTop: "1px solid rgba(36,31,27,0.06)" }}>
+                  <CycleTrackingRow className="pt-3" />
                 </div>
               </div>
               <HealthChecksSetting />

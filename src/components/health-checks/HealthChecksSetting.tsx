@@ -74,7 +74,7 @@ export function HealthChecksSetting() {
           else void turnOff();
         }}
         disabled={checks.on === null || busy}
-        label={COPY.switchLabel}
+        label={t(COPY.switchLabel)}
         describedBy={descId}
         className="rounded-[17px] pt-4 px-4 pb-[18px]"
       >
@@ -86,7 +86,7 @@ export function HealthChecksSetting() {
             <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
               <HealthScanIcon className="text-primary-dark" />
             </span>
-            <span aria-hidden className="text-sm font-semibold text-charcoal">{COPY.switchLabel}</span>
+            <span aria-hidden className="text-sm font-semibold text-charcoal">{t(COPY.switchLabel)}</span>
           </span>
           <Toggle decorative checked={on || confirming} disabled={checks.on === null || busy} />
         </div>

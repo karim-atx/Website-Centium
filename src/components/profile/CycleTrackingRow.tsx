@@ -17,7 +17,10 @@ import { t } from "../../i18n/core";
 // Where it sits: inside Safety & content for a customer, in a Health
 // tracking section on a professional's Profile, and on a business's Business
 // Profile (the only profile a business account reaches).
-export const CycleTrackingRow: React.FC = () => {
+//
+// className goes on the switch box, so a caller's spacing above the row (the
+// web Profile's 12 above its divider) is part of what a tap reaches.
+export const CycleTrackingRow: React.FC<{ className?: string }> = ({ className }) => {
   const { cycleSettings, cycleSettingsLoaded, cycleOffered, setCycleTracking } = useApp();
   const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
   const [busy, setBusy] = useState(false);
@@ -52,6 +55,7 @@ export const CycleTrackingRow: React.FC = () => {
         disabled={busy || !cycleSettingsLoaded}
         label={t("Cycle tracking")}
         describedBy={descId}
+        className={className}
       >
         {/* MO1.5 anatomy row 8 (2x frame): the title centred beside a 36
             #F0EDF9 tile with a #7D6BB5 glyph (new tile, decision 22), and the
