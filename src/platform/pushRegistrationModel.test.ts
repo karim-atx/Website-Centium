@@ -7,8 +7,8 @@ test("push registration: the step it stopped at decides the message", () => {
   assert.equal(failedStep(true, null), "save", "a token came, the save never finished");
   assert.equal(failedStep(false, "refused"), "refused");
   assert.equal(failedStep(true, "save"), "save");
-  const messages = new Set((["no-token", "refused", "save", "check"] as const).map(pushRegistrationMessage));
-  assert.equal(messages.size, 4, "every step has its own message");
+  const messages = new Set((["no-token", "refused", "save"] as const).map(pushRegistrationMessage));
+  assert.equal(messages.size, 3, "every step has its own message");
 });
 
 test("push registration: a call that never answers gives up at its limit", async () => {

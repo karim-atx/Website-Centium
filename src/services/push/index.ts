@@ -5,7 +5,7 @@ import { isNative } from "../../platform";
 import { desktop, isDesktop } from "../../platform/desktop";
 import {
   nativePush,
-  nativePushFailure,
+  nativePushOutcome,
   nativePushPermission,
   nativePushRegistered,
   nativePushSupported,
@@ -281,11 +281,12 @@ async function enableNativePush(ownerId: string | null): Promise<EnableResult> {
   if (permission !== "granted") {
     return { status: "denied", message: "Notifications are blocked for Centium." };
   }
-  const registered = await nativePushRegistered();
-  if (registered) return { status: "ok", endpoint: "native", created: true };
-  // Which step stopped (platform/pushRegistrationModel.ts): no token, refused,
-  // the save, or the read-back.
-  return { status: "error", message: pushRegistrationMessage(nativePushFailure() ?? "check") };
+  // Decided by register_push_device's own answer, not by reading the row back
+  // (that read is only the status line). Otherwise the step that stopped
+  // (platform/pushRegistrationModel.ts): no token, refused, or the save.
+  const { saved, failure } = nativePushOutcome();
+  if (saved) return { status: "ok", endpoint: "native", created: true };
+  return { status: "error", message: pushRegistrationMessage(failure ?? "save") };
 }
 
 /**

@@ -30,6 +30,7 @@ import type { ReceivedPush } from "./pushBannerModel";
 import {
   failedStep,
   SAVE_TIMEOUT_MS,
+  SAVED_TOKEN_WAIT_MS,
   TOKEN_TIMEOUT_MS,
   withTimeout,
   type PushRegistrationFailure,
@@ -58,11 +59,14 @@ let listening: Promise<void> | null = null;
 let started = false;
 const opened = new Set<(url: string) => void>();
 const received = new Set<(push: ReceivedPush) => void>();
-/** register() calls waiting for this install's token to be recorded (or not). */
-const waiting = new Set<(token: string | null) => void>();
-/** Since the last register(): whether a token came, and the step that failed (./pushRegistrationModel). */
+/** The registration in flight: launch's and a tap on "Turn on" share it. */
+let inFlight: Promise<string | null> | null = null;
+let answer: ((token: string | null) => void) | null = null;
+/** Since that registration began: whether a token came, and the step that failed (./pushRegistrationModel). */
 let tokenArrived = false;
 let failure: PushRegistrationFailure | null = null;
+/** The token register_push_device last saved in this app run (an APNs/FCM token doesn't change within one). */
+let recorded: string | null = null;
 /** A tap that came while nothing listened (the app remounting): the next listener gets it. */
 let unopened: string | null = null;
 
@@ -102,8 +106,8 @@ function storeToken(token: string | null): void {
 }
 
 function settle(token: string | null): void {
-  for (const resolve of waiting) resolve(token);
-  waiting.clear();
+  answer?.(token);
+  answer = null;
 }
 
 /** Records the token; false (and failure "save") if it failed, threw or took too long. Never hangs. */
@@ -136,6 +140,7 @@ async function record(token: string): Promise<boolean> {
     return false;
   }
   storeToken(token);
+  recorded = token;
   return true;
 }
 
@@ -169,30 +174,50 @@ function listen(): Promise<void> {
 }
 
 /**
- * Asks APNs / FCM for this install's token and records it; resolves the token,
- * or null on failure (nativePushFailure says where). Gives up after
- * TOKEN_TIMEOUT_MS if no token comes, so Settings never waits forever.
+ * Asks APNs / FCM for this install's token and records it; resolves the saved
+ * token, or null on failure (nativePushOutcome says where). One at a time: a
+ * call while one is in flight gets the same answer. Never waits forever: if no
+ * new token comes but this run already saved one, that one stands (the token
+ * doesn't change within a run, and iOS may not answer every
+ * registerForRemoteNotifications).
  */
-async function register(): Promise<string | null> {
-  await listen();
-  tokenArrived = false;
-  failure = null;
-  const token = new Promise<string | null>((resolve) => {
-    waiting.add(resolve);
-    setTimeout(() => {
-      if (!waiting.delete(resolve)) return;
-      failure = failedStep(tokenArrived, failure);
-      console.error("[push] Gave up waiting:", failure);
-      resolve(null);
-    }, TOKEN_TIMEOUT_MS);
+function register(): Promise<string | null> {
+  inFlight ??= (async () => {
+    await listen();
+    tokenArrived = false;
+    failure = null;
+    const token = new Promise<string | null>((resolve) => {
+      answer = resolve;
+      setTimeout(
+        () => {
+          if (answer !== resolve) return;
+          answer = null;
+          if (recorded && !failure) {
+            console.warn("[push] No new token; this run's saved one stands");
+            resolve(recorded);
+            return;
+          }
+          failure = failedStep(tokenArrived, failure);
+          console.error("[push] Gave up waiting:", failure);
+          resolve(null);
+        },
+        recorded ? SAVED_TOKEN_WAIT_MS : TOKEN_TIMEOUT_MS,
+      );
+    });
+    await PushNotifications.register();
+    return token;
+  })().finally(() => {
+    inFlight = null;
   });
-  await PushNotifications.register();
-  return token;
+  return inFlight;
 }
 
-/** Where the last registration stopped, or null if it didn't (or none ran). */
-export function nativePushFailure(): PushRegistrationFailure | null {
-  return failure;
+/**
+ * How the last registration ended: saved (register_push_device answered), or
+ * the step that stopped. "Turn on" is decided by this, not by reading the row back.
+ */
+export function nativePushOutcome(): { saved: boolean; failure: PushRegistrationFailure | null } {
+  return { saved: failure === null && recorded !== null, failure };
 }
 
 /**
@@ -259,12 +284,14 @@ export async function nativePushRegistered(): Promise<boolean | null> {
   const token = storedToken();
   if (!token) return false;
   const read = (supabase as unknown as From).from("push_devices").select("id").eq("token", token).limit(1);
+  // A read that fails or stalls is "unknown", unless this run saved this very token.
+  const unknown = recorded === token ? true : null;
   try {
     const { data, error } = await withTimeout(read, SAVE_TIMEOUT_MS, "the push_devices read");
-    if (error) return null;
+    if (error) return unknown;
     return (data?.length ?? 0) > 0;
   } catch {
-    return null;
+    return unknown;
   }
 }
 
