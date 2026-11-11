@@ -11,7 +11,8 @@ import { INK } from "../proInk";
 import { ListCard } from "../client/kit";
 import { ChoiceChips, FieldLabel, RadioRows } from "./moKit";
 import { time12 } from "../../../utils/time12";
-import { SCHEDULE_TIMES, parseSchedule, scheduleLine, scheduleString, type ProfileField, type QuestionDraft, type ScheduleEvery } from "./formModel";
+import { ClockWheel } from "../../calendar/ClockWheel";
+import { parseSchedule, scheduleLine, scheduleString, type ProfileField, type QuestionDraft, type ScheduleEvery } from "./formModel";
 import { assignForm, cancelAssignment, setSendOnHire, type FormAssignment } from "../../../services/pro/forms";
 import { fetchActiveMealPlans, fetchActiveProgrammes } from "../../../services/pro/clients";
 import type { ProLane } from "../subtypeLanes";
@@ -281,12 +282,14 @@ export const ScheduleSheet: React.FC<{
     setBusy(null);
     onDone(targets.length === 1 ? t("Scheduled for {name}.", { name: firstOf(nameOf(targets[0])) }) : tn(targets.length, "Scheduled for {n} client.", "Scheduled for {n} clients."));
   };
+  // FV: "Due at" opens the shared time wheel (any minute, any hour; the
+  // database accepts daily|weekly:<1-7>@HH:MM with any minute), not a menu.
   const fieldBtn = (label: string, value: string, kind: "day" | "time", Icon: typeof ChevronDown) => (
-    <div className="min-w-0">
+    <div className="min-w-0 relative">
       <FieldLabel top={0}>{label}</FieldLabel>
       <button
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup={kind === "time" ? "dialog" : "listbox"}
         aria-expanded={menu?.kind === kind}
         aria-label={t("{label}: {value}", { label, value })}
         onClick={(e) => setMenu({ kind, el: e.currentTarget })}
@@ -296,6 +299,24 @@ export const ScheduleSheet: React.FC<{
         <span className="truncate">{value}</span>
         <Icon size={kind === "day" ? 14 : 16} strokeWidth={kind === "day" ? 2 : 1.75} aria-hidden style={{ color: INK.chF, flexShrink: 0 }} />
       </button>
+      {kind === "time" && menu?.kind === "time" && (
+        <>
+          <div className="fixed inset-0 z-[5]" onClick={() => setMenu(null)} aria-hidden />
+          <div
+            role="dialog"
+            aria-label={label}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" || e.key === "Enter") {
+                e.stopPropagation();
+                setMenu(null);
+              }
+            }}
+            className="absolute start-0 end-0 top-full mt-1.5 z-[6] rounded-2xl bg-cream-card border border-team-nav-accent/[0.22] shadow-lift p-1.5"
+          >
+            <ClockWheel value={time} onChange={setTime} />
+          </div>
+        </>
+      )}
     </div>
   );
 
@@ -401,15 +422,14 @@ export const ScheduleSheet: React.FC<{
         }}
       />
       <PopupMenu
-        open={!!menu}
+        open={menu?.kind === "day"}
         onClose={() => setMenu(null)}
         anchor={menu?.el ?? null}
-        heading={menu?.kind === "day" ? t("Day") : t("Due at")}
-        options={menu?.kind === "day" ? DAYS.map((d) => ({ value: String(d), label: weekdayLong(d - 1) })) : SCHEDULE_TIMES.map((x) => ({ value: x, label: time12(x) }))}
-        selected={menu?.kind === "day" ? String(day) : time}
+        heading={t("Day")}
+        options={DAYS.map((d) => ({ value: String(d), label: weekdayLong(d - 1) }))}
+        selected={String(day)}
         onSelect={(v) => {
-          if (menu?.kind === "day") setDay(Number(v));
-          else setTime(v);
+          setDay(Number(v));
           setMenu(null);
         }}
         width={180}

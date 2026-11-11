@@ -60,7 +60,7 @@ import {
   readPushPermission,
   unsubscribeFromPush,
 } from "../../services/push";
-import { fromParts, minuteOptions, toParts, type Meridiem } from "../../components/calendar/calendarTime";
+import { ALL_MINUTES, fromParts, toParts, type Meridiem } from "../../components/calendar/calendarTime";
 import { pushUnavailableReason } from "./platform";
 import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
@@ -230,7 +230,7 @@ const MERIDIEMS: Meridiem[] = ["AM", "PM"];
  * MO1.8.3 From / To: the label on the left, the time on the right in
  * 14 / 700 primary.accent with a ChevronDown 16 / 1.75 in the muted grey, 6
  * apart (measured on the 2x board). A tap opens the inline wheel under the
- * row (Foundations "Inline wheel picker": hour, minute in 5-minute steps,
+ * row (Foundations "Inline wheel picker": hour, any minute 0-59 (FV),
  * AM/PM, then a full-width Done); the wheel updates the shown time as it
  * turns, and the time is saved when the wheel closes.
  */
@@ -297,7 +297,7 @@ function TimeRow({
               {
                 label: t("Minutes"),
                 value: parts.minute,
-                options: minuteOptions(parts.minute).map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
+                options: ALL_MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0") })),
                 onChange: (v) => set({ minute: Number(v) }),
               },
               {

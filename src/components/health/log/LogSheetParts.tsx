@@ -159,19 +159,17 @@ const MERIDIEM: WheelOption<string>[] = [
 export const TimeWheel: React.FC<{
   value: { h: number; m: number };
   onChange: (v: { h: number; m: number }) => void;
-  minuteStep?: number;
   /** Minutes since midnight after which times are disabled. */
   maxMinutes?: number;
-}> = ({ value, onChange, minuteStep = 1, maxMinutes }) => {
+}> = ({ value, onChange, maxMinutes }) => {
   const h12 = value.h % 12 === 0 ? 12 : value.h % 12;
   const pm = value.h >= 12;
   const to24 = (h: number, isPm: boolean) => (h % 12) + (isPm ? 12 : 0);
   const over = (h24: number, m: number) => maxMinutes !== undefined && h24 * 60 + m > maxMinutes;
   const minutes: WheelOption<number>[] = [];
-  for (let m = 0; m < 60; m += minuteStep) minutes.push({ value: m, label: pad2(m), disabled: over(value.h, m) });
+  for (let m = 0; m < 60; m++) minutes.push({ value: m, label: pad2(m), disabled: over(value.h, m) });
   const hours = HOURS.map((o) => ({ ...o, disabled: over(to24(o.value, pm), 0) }));
   const mer = MERIDIEM.map((o) => ({ ...o, label: t(o.label), disabled: over(to24(h12, o.value === "PM"), 0) }));
-  const minuteValue = minutes.some((o) => o.value === value.m) ? value.m : Math.floor(value.m / minuteStep) * minuteStep;
   return (
     <WheelPicker
       variant="partB"
@@ -179,7 +177,7 @@ export const TimeWheel: React.FC<{
       separator={{ text: ":", size: 22 }}
       columns={[
         { label: t("Hours"), options: hours, value: h12, bandWidth: 70, onChange: (v) => onChange({ h: to24(Number(v), pm), m: value.m }) },
-        { label: t("Minutes"), options: minutes, value: minuteValue, bandWidth: 70, onChange: (v) => onChange({ h: value.h, m: Number(v) }) },
+        { label: t("Minutes"), options: minutes, value: value.m, bandWidth: 70, onChange: (v) => onChange({ h: value.h, m: Number(v) }) },
         { label: t("AM or PM"), options: mer, value: pm ? "PM" : "AM", bandWidth: 70, onChange: (v) => onChange({ h: to24(h12, v === "PM"), m: value.m }) },
       ]}
     />

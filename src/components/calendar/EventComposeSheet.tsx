@@ -5,12 +5,12 @@ import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
 import { SelectableBox } from "../ui/SelectableBox";
 import { PopupMenu } from "../ui/PopupMenu";
-import { WheelPicker } from "../ui/WheelPicker";
+import { ClockWheel } from "./ClockWheel";
 import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
 import type { CalendarEvent } from "../../types";
 import { EVENT_SWATCHES } from "./eventColour";
 import { ALERT_OPTIONS, alertLabel, type EventAlert } from "./eventAlert";
-import { fieldTime, fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "./calendarTime";
+import { fieldTime, minutesOf, fromMinutes } from "./calendarTime";
 import { useBackCloses } from "../../hooks/useBackCloses";
 import { PlaylistField } from "../music/PlaylistField";
 import { appLocale } from "../../i18n/format";
@@ -53,15 +53,6 @@ const REPEAT_OPTIONS: { value: CalendarEvent["repeat"]; label: string }[] = [
   { value: "monthly", label: tk("Monthly") },
 ];
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
-
-/** Minutes every `step`, plus the value's own minute when it is off the step. */
-const stepOptions = (step: number, current: number) => {
-  const steps = Array.from({ length: Math.ceil(60 / step) }, (_, i) => i * step);
-  return steps.includes(current) ? steps : [...steps, current].sort((a, b) => a - b);
-};
-const MERIDIEMS: Meridiem[] = ["AM", "PM"];
-
 const FIELD = "w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20";
 const LABEL = "text-xs font-semibold text-charcoal-soft mb-1.5 block";
 
@@ -83,7 +74,6 @@ export function TimeField({
   onClose,
   onChange,
   notBefore,
-  minuteStep = 5,
   fieldClass = FIELD,
   labelClass = LABEL,
 }: {
@@ -95,18 +85,9 @@ export function TimeField({
   onChange: (hhmm: string) => void;
   /** Ends: nothing earlier than this ("HH:MM") can be chosen. */
   notBefore?: string;
-  /** The wheel's minute step (5 here; the pro New session's wheel draws 15). */
-  minuteStep?: number;
   fieldClass?: string;
   labelClass?: string;
 }) {
-  const parts = toParts(value);
-  const floor = notBefore ? minutesOf(notBefore) : -1;
-  const tooEarly = (p: TimeParts) => minutesOf(fromParts(p)) < floor;
-  const set = (p: Partial<TimeParts>) => {
-    const next = { ...parts, ...p };
-    if (!tooEarly(next)) onChange(fromParts(next));
-  };
   return (
     <div className="relative min-w-0">
       <span className={labelClass}>{label}</span>
@@ -125,32 +106,7 @@ export function TimeField({
           {/* Tap outside closes (MO1.6.4's rule); the wheel updates as it turns. */}
           <div className="fixed inset-0 z-[5]" onClick={onClose} aria-hidden />
           <div className="absolute start-0 end-0 top-full mt-1.5 z-[6] rounded-2xl bg-cream-card border border-team-nav-accent/[0.22] shadow-lift p-1.5">
-            <WheelPicker
-              columns={[
-                {
-                  label: t("Hours"),
-                  value: parts.hour,
-                  options: HOURS.map((h) => ({ value: h, label: String(h), disabled: tooEarly({ ...parts, hour: h }) })),
-                  onChange: (v) => set({ hour: Number(v) }),
-                },
-                {
-                  label: t("Minutes"),
-                  value: parts.minute,
-                  options: (minuteStep === 5 ? minuteOptions(parts.minute) : stepOptions(minuteStep, parts.minute)).map((m) => ({
-                    value: m,
-                    label: String(m).padStart(2, "0"),
-                    disabled: tooEarly({ ...parts, minute: m }),
-                  })),
-                  onChange: (v) => set({ minute: Number(v) }),
-                },
-                {
-                  label: t("AM or PM"),
-                  value: parts.meridiem,
-                  options: MERIDIEMS.map((m) => ({ value: m, label: t(m), disabled: tooEarly({ ...parts, meridiem: m }) })),
-                  onChange: (v) => set({ meridiem: v as Meridiem }),
-                },
-              ]}
-            />
+            <ClockWheel value={value} onChange={onChange} notBefore={notBefore} />
           </div>
         </>
       )}

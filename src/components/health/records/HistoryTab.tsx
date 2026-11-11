@@ -13,6 +13,7 @@ import { CalendarPickerSheet } from "../../dashboard/CalendarPickerSheet";
 import { useApp } from "../../../context/AppContext";
 import { updateSurgeryRemote } from "../../../services/medical-history";
 import { time12, minutesOfDay, clockParts } from "../../../utils/time12";
+import { ALL_MINUTES } from "../../calendar/calendarTime";
 import { textPx, linePx } from "../../../theme/textSize";
 import type { Medication, MedicationRoute, Surgery } from "../../../types";
 import type { Injury } from "../../../services/injuries";
@@ -593,18 +594,18 @@ export const SurgerySheet: React.FC<{ open: boolean; surgery: Surgery | null; on
 };
 
 const HOURS = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: String(i + 1) }));
-const MINUTES = Array.from({ length: 12 }, (_, i) => ({ value: i * 5, label: String(i * 5).padStart(2, "0") }));
+const MINUTES = ALL_MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0") }));
 const toHHMM = (h: number, m: number, mer: "AM" | "PM") => {
   const h24 = (h % 12) + (mer === "PM" ? 12 : 0);
   return `${String(h24).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
-/** One dose time: the 12-hour value, opening a wheel (hours, minutes in 5s, AM/PM). */
+/** One dose time: the 12-hour value, opening a wheel (hours, any minute 0-59, AM/PM); a stored 08:58 shows and saves 08:58 (FV). */
 const TimeRow: React.FC<{ value: string; onChange: (v: string) => void; onRemove?: () => void; index: number }> = ({ value, onChange, onRemove, index }) => {
   const { dark, hc } = useHealthMode();
   const [open, setOpen] = useState(false);
   const parts = clockParts(minutesOfDay(value) ?? 480);
-  const minute = Math.round(parts.minute / 5) * 5 === 60 ? 55 : Math.round(parts.minute / 5) * 5;
+  const minute = parts.minute;
   return (
     <div style={{ marginTop: index ? 8 : 0 }}>
       <div className="flex items-center" style={{ gap: 8 }}>

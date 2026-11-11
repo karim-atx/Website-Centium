@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, ChevronDown, Clock, Pencil, Sparkles, Trash2 } from "lucide-react";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
+import { ClockWheel } from "../../../components/calendar/ClockWheel";
 import { addStaffHours, DURATIONS, fetchServices, fetchStaffHours, removeStaffHours, saveService, type Service, type StaffHours } from "../../../services/appointments";
 import { fetchTeam } from "../../../services/business-team/team";
 import type { Load } from "../../../services/store/backend";
@@ -21,7 +22,6 @@ import { useLive, useStoreBusiness } from "../store/storeShared";
 // service inside their hours. Only accepted team members can be booked.
 // Both need the schedule permission.
 
-const HALF_HOURS = Array.from({ length: 48 }, (_, i) => i * 30);
 const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 const toMin = (s: string) => {
   const [h, m] = s.split(":").map(Number);
@@ -238,7 +238,9 @@ export function HoursSheet({ open, businessId, people, onClose, onSaved }: { ope
   const [weekday, setWeekday] = useState(1);
   const [start, setStart] = useState(9 * 60);
   const [end, setEnd] = useState(17 * 60);
-  const [menu, setMenu] = useState<null | { k: "person" | "day" | "start" | "end"; el: HTMLElement }>(null);
+  const [menu, setMenu] = useState<null | { k: "person" | "day"; el: HTMLElement }>(null);
+  /** FV: From / To open the shared time wheel (any minute), not a 30-minute menu. */
+  const [wheel, setWheel] = useState<null | { k: "start" | "end"; el: HTMLElement }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -256,14 +258,46 @@ export function HoursSheet({ open, businessId, people, onClose, onSaved }: { ope
     if (!r.ok) setError(r.pending ? t("Setting up hours is coming soon.") : t("Couldn't save the hours. Try again."));
     else onSaved();
   };
-  const timeOpts = HALF_HOURS.map((m) => ({ value: String(m), label: formatMinutes12(m) }));
-  const options =
-    menu?.k === "person"
-      ? people.map((p) => ({ value: p.id, label: p.name }))
-      : menu?.k === "day"
-        ? DAY_LONG.map((d, i) => ({ value: String(i + 1), label: t(d) }))
-        : timeOpts;
-  const selected = menu?.k === "person" ? staffId : menu?.k === "day" ? String(weekday) : menu?.k === "start" ? String(start) : String(end);
+  const options = menu?.k === "person" ? people.map((p) => ({ value: p.id, label: p.name })) : DAY_LONG.map((d, i) => ({ value: String(i + 1), label: t(d) }));
+  const selected = menu?.k === "person" ? staffId : String(weekday);
+  const timeField = (k: "start" | "end") => {
+    const v = k === "start" ? start : end;
+    const label = k === "start" ? t("From") : t("To");
+    return (
+      <div className="relative">
+        <KitFieldButton
+          id={`hours-${k}`}
+          label={label}
+          value={formatMinutes12(v)}
+          placeholder=""
+          icon={Clock}
+          popup="dialog"
+          expanded={wheel?.k === k}
+          onClick={(el) => setWheel(wheel?.k === k ? null : { k, el })}
+          error={k === "end" && end <= start ? t("End after the start time.") : null}
+        />
+        {wheel?.k === k && (
+          <>
+            <div className="fixed inset-0 z-[5]" onClick={() => setWheel(null)} aria-hidden />
+            <div
+              role="dialog"
+              aria-label={label}
+              onKeyDown={(e) => {
+                if (e.key === "Escape" || e.key === "Enter") {
+                  e.stopPropagation();
+                  setWheel(null);
+                }
+              }}
+              className="absolute start-0 end-0 z-[6] bg-cream-card border border-solid border-th-aea1dc/50 dark:border-th-a991fe/50"
+              style={{ top: wheel.el.offsetTop + wheel.el.offsetHeight + 6, borderRadius: 16, boxShadow: "0 12px 32px rgba(95,80,147,0.18)", padding: 6 }}
+            >
+              <ClockWheel band="business" value={hhmm(v)} onChange={(x) => (k === "start" ? setStart(toMin(x)) : setEnd(toMin(x)))} />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
   return (
     <>
       <OpsSheet open={open} onClose={onClose} title={t("Add free slots")} button={t("Save")} onButton={() => void save()} disabled={!valid} busy={busy} error={error}>
@@ -277,16 +311,11 @@ export function HoursSheet({ open, businessId, people, onClose, onSaved }: { ope
           note={people.length === 0 ? t("Add people to your team first. Clients book them by their hours.") : undefined}
         />
         <KitFieldButton id="hours-day" label={t("Day")} value={t(DAY_LONG[weekday - 1])} placeholder="" icon={ChevronDown} onClick={(el) => setMenu({ k: "day", el })} />
-        <KitFieldButton id="hours-start" label={t("From")} value={formatMinutes12(start)} placeholder="" icon={Clock} onClick={(el) => setMenu({ k: "start", el })} />
-        <KitFieldButton
-          id="hours-end"
-          label={t("To")}
-          value={formatMinutes12(end)}
-          placeholder=""
-          icon={Clock}
-          onClick={(el) => setMenu({ k: "end", el })}
-          error={end > start ? null : t("End after the start time.")}
-        />
+        {timeField("start")}
+        {timeField("end")}
+        <p className="text-[11.5px] leading-[16px] text-charcoal-faint" style={{ marginTop: -4 }}>
+          {t("Bookable times start every 15 minutes from the start time.")}
+        </p>
       </OpsSheet>
       <PopupMenu
         open={!!menu}
@@ -298,9 +327,7 @@ export function HoursSheet({ open, businessId, people, onClose, onSaved }: { ope
         selected={selected}
         onSelect={(v) => {
           if (menu?.k === "person") setStaffId(v);
-          else if (menu?.k === "day") setWeekday(Number(v));
-          else if (menu?.k === "start") setStart(Number(v));
-          else setEnd(Number(v));
+          else setWeekday(Number(v));
         }}
       />
     </>

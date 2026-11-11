@@ -546,7 +546,6 @@ export const CheckReminderSheet: React.FC<{
           <FieldLabel>{t("Time")}</FieldLabel>
           <TimeWheel
             value={{ h: hh, m: mm }}
-            minuteStep={5}
             onChange={(v) => setR({ ...r, time: `${String(v.h).padStart(2, "0")}:${String(v.m).padStart(2, "0")}` })}
           />
           <span className="sr-only">{clock12(new Date(2000, 0, 1, hh, mm))}</span>

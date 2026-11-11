@@ -263,7 +263,9 @@ const HoursList: React.FC<{
 );
 
 const HOURS12 = ["12", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
-const MINS = ["00", "15", "30", "45"];
+// Every minute (FV; OB-223 drew 00/15/30/45). Every stored minute is a row, so
+// an off-step 09:07 is no longer read as index -1 and rewritten as :00.
+const MINS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
 const ROW = 26;
 
 /**

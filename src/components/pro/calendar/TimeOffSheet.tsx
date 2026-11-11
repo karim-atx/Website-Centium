@@ -138,8 +138,8 @@ export const TimeOffSheet: React.FC<{
           {!allDay && (
             <div>
               <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-                <TimeField label={t("From")} value={start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={setStart} minuteStep={15} />
-                <TimeField label={t("To")} value={end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={setEnd} notBefore={start} minuteStep={15} />
+                <TimeField label={t("From")} value={start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={setStart} />
+                <TimeField label={t("To")} value={end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={setEnd} notBefore={start} />
               </div>
               {wheel && <div aria-hidden style={{ height: 150 }} />}
             </div>

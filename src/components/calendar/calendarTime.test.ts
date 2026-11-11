@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { fieldTime, fromParts, linkLabel, minuteOptions, normaliseLink, toParts } from "./calendarTime.ts";
+import { fieldTime, fromParts, linkLabel, ALL_MINUTES, normaliseLink, toParts } from "./calendarTime.ts";
 
 test("the sheet's field is 12-hour with an unpadded hour (X-14)", () => {
   assert.equal(fieldTime("09:00"), "9:00 AM");
@@ -13,9 +13,9 @@ test("wheel parts round-trip", () => {
   assert.deepEqual(toParts("00:30"), { hour: 12, minute: 30, meridiem: "AM" });
 });
 
-test("an odd minute stays on the wheel", () => {
-  assert.equal(minuteOptions(10).length, 12);
-  assert.deepEqual(minuteOptions(7).slice(0, 3), [0, 5, 7]);
+test("the minute wheel offers every minute (FV)", () => {
+  assert.equal(ALL_MINUTES.length, 60);
+  assert.deepEqual([ALL_MINUTES[0], ALL_MINUTES[7], ALL_MINUTES[59]], [0, 7, 59]);
 });
 
 test("links: bare hosts get https, other schemes are refused", () => {

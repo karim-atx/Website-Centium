@@ -451,7 +451,6 @@ export const AddSessionSheet: React.FC<{
               onOpen={() => setWheel("start")}
               onClose={() => setWheel(null)}
               onChange={setStartKeepLength}
-              minuteStep={15}
               fieldClass="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal"
             />
             <TimeField
@@ -462,7 +461,6 @@ export const AddSessionSheet: React.FC<{
               onClose={() => setWheel(null)}
               onChange={setEnd}
               notBefore={start}
-              minuteStep={15}
               fieldClass="w-full h-10 rounded-xl bg-cream-soft border border-charcoal/10 px-3 text-sm text-charcoal"
             />
           </div>

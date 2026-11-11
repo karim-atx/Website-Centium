@@ -231,7 +231,6 @@ export const MethodSetupSheet: React.FC<{
               <>
                 <TimeWheel
                   value={time}
-                  minuteStep={5}
                   onChange={(v) => set("reminderTime", `${pad2(v.h)}:${pad2(v.m)}`)}
                 />
                 <button type="button" onClick={() => set("reminderTime", null)} className="tap text-charcoal-faint" style={{ minHeight: 36, ...type(12, 18, 600) }}>

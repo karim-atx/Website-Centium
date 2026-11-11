@@ -274,9 +274,11 @@ export default function CalendarAvailability() {
           {hoursEdit && (
             <>
               <div className="grid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 12 }}>
-                <TimeField label={t("From")} value={hoursEdit.start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, start: v })} minuteStep={15} />
-                <TimeField label={t("To")} value={hoursEdit.end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, end: v })} notBefore={hoursEdit.start} minuteStep={15} />
+                <TimeField label={t("From")} value={hoursEdit.start} open={wheel === "start"} onOpen={() => setWheel("start")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, start: v })} />
+                <TimeField label={t("To")} value={hoursEdit.end} open={wheel === "end"} onOpen={() => setWheel("end")} onClose={() => setWheel(null)} onChange={(v) => setHoursEdit({ ...hoursEdit, end: v })} notBefore={hoursEdit.start} />
               </div>
+              {/* FV: the hours take any minute; bookable starts stay on the server's 15-minute grid from the window's start (professional_open_slots). */}
+              <p style={{ marginTop: 8, fontSize: textPx(11.5), lineHeight: 1.5, color: INK.chF }}>{t("Bookable times start every 15 minutes from the start time.")}</p>
               <div aria-hidden style={{ height: wheel ? 190 : 8 }} />
             </>
           )}

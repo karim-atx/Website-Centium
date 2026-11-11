@@ -2,7 +2,7 @@ import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
 // Handover 2026-09-29 WO4.1, "Measured on": the Add measurements date field
 // opens the standard calendar popup with a wheel time picker below it (hours,
-// minutes in fives, AM/PM). No future: later days, and on today later hours,
+// any minute 0-59 (FV), AM/PM). No future: later days, and on today later hours,
 // minutes and PM, are disabled. All in the user's own local time, which is
 // what they mean by "9:30 this morning"; the caller converts to an instant.
 
@@ -11,7 +11,7 @@ export type Meridiem = "AM" | "PM";
 export interface TimeParts {
   /** 1–12. */
   hour: number;
-  /** 0–55 in fives. */
+  /** 0–59. */
   minute: number;
   meridiem: Meridiem;
 }
@@ -21,17 +21,16 @@ const pad = (n: number) => String(n).padStart(2, "0");
 /** "YYYY-MM-DD" of a Date, in local time. */
 export const localDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
-/** Now, rounded down to the wheel's five-minute steps: the field's default. */
-export function floorToFive(d: Date): Date {
+/** Now, floored to the minute (seconds 0): the field's default. */
+export function floorToMinute(d: Date): Date {
   const out = new Date(d);
   out.setSeconds(0, 0);
-  out.setMinutes(out.getMinutes() - (out.getMinutes() % 5));
   return out;
 }
 
 export function timeParts(d: Date): TimeParts {
   const h = d.getHours();
-  return { hour: h % 12 === 0 ? 12 : h % 12, minute: d.getMinutes() - (d.getMinutes() % 5), meridiem: h < 12 ? "AM" : "PM" };
+  return { hour: h % 12 === 0 ? 12 : h % 12, minute: d.getMinutes(), meridiem: h < 12 ? "AM" : "PM" };
 }
 
 export function combine(day: string, t: TimeParts): Date {
@@ -57,7 +56,7 @@ export function laterThanNow(day: string, t: TimeParts, now: Date) {
 /** The picked day and time, never later than now. */
 export function pickedInstant(day: string, t: TimeParts, now: Date): Date {
   const d = combine(day, t);
-  return d > now ? floorToFive(now) : d;
+  return d > now ? floorToMinute(now) : d;
 }
 
 /** "Sep 28, 2026 · 9:30 AM". */
