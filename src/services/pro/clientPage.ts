@@ -21,6 +21,7 @@ import { STAGE_LABEL, type Read, type Write, type ClientStage } from "./clients"
 import type { AccessCategory } from "./access";
 import { ACCESS_CATEGORIES } from "../consent";
 import { t, tx } from "../../i18n/core";
+import { otherAllergiesMissing } from "../nutrition/otherAllergies";
 
 const failed = (error: unknown, fallback: string): Write => ({ ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : fallback });
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
@@ -500,20 +501,33 @@ export async function fetchPregnancySummary(clientId: string): Promise<Read<{ pr
 export interface DietaryNeeds {
   allergies: { allergen: string; severity: "mild" | "moderate" | "severe"; note: string | null; updatedAt: string }[];
   restrictions: { restriction: string; kind: string; createdAt: string }[];
+  /** FQ: the client's "Other" allergies in their own words (custom_allergies), under the same switch. Empty before the Database has them. */
+  otherAllergies: { id: string; label: string; severity: "mild" | "moderate" | "severe"; note: string | null; updatedAt: string }[];
 }
 
+type OtherRow = { id: string; label: string; severity: DietaryNeeds["allergies"][number]["severity"]; note: string | null; updated_at: string };
+
 export async function fetchDietaryNeeds(clientId: string, allergiesShared: boolean): Promise<Read<DietaryNeeds>> {
-  const [a, r] = await Promise.all([
+  const [a, r, o] = await Promise.all([
     allergiesShared
       ? from("allergies").select("allergen, severity, note, updated_at").eq("user_id", clientId)
       : Promise.resolve({ data: [], error: null }),
     from("dietary_restrictions").select("restriction, kind, created_at").eq("user_id", clientId),
+    // FQ: read only under Allergies and dietary needs (RLS: has_client_access(user_id, 'allergies_dietary')).
+    allergiesShared
+      ? from("custom_allergies").select("id, label, severity, note, updated_at, created_at").eq("user_id", clientId).order("created_at" as never, { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
   ]);
   const e = a.error ?? r.error;
   if (e) return readFail(e);
+  // Today's database has no custom_allergies (PGRST205 / 42P01): nothing extra shows.
+  if (o.error && !otherAllergiesMissing(o.error)) return readFail(o.error);
   return {
     ok: true,
     data: {
+      otherAllergies: o.error
+        ? []
+        : ((o.data ?? []) as unknown as OtherRow[]).map((x) => ({ id: x.id, label: x.label, severity: x.severity, note: x.note, updatedAt: x.updated_at })),
       allergies: ((a.data ?? []) as unknown as { allergen: string; severity: DietaryNeeds["allergies"][number]["severity"]; note: string | null; updated_at: string }[]).map((x) => ({
         allergen: x.allergen,
         severity: x.severity,

@@ -330,6 +330,11 @@ const pronutrition: Catalogue = {
   "{delta} kg since {date}": "{delta} كغ منذ {date}",
   "Maintenance": "الحفاظ",
   "{n} a day": "{n} في اليوم",
+  // == FQ: a client's "Other" allergies (their own words, never translated) ==
+  "“{label}”": "«{label}»",
+  "Check: {label}": "تحقّق: {label}", // note: health-related; a name match only
+  "{name} added {allergy} as an allergy in their own words ({severity}). Only the name matches, so check the ingredients with {name}.": "أضاف {name} {allergy} كحساسية بكلماته ({severity}). الاسم وحده هو المطابق، لذا تحقّق من المكوّنات مع {name}.", // note: health-related; a name match only
+  "{name} added {allergy} as an allergy in their own words. Only the name matches, so check the ingredients with {name}.": "أضاف {name} {allergy} كحساسية بكلماته. الاسم وحده هو المطابق، لذا تحقّق من المكوّنات مع {name}.", // note: health-related; a name match only
 };
 
 export default pronutrition;

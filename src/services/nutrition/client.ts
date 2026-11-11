@@ -5,7 +5,9 @@
 // meal_plans (the client's own), meal_plan_detail(p_meal_plan_id),
 // food_log_feedback (own) and reply_to_food_feedback(p_feedback_id, p_reply),
 // allergies (own; insert allergen/severity/note/user_id, update
-// severity/note, delete), food_conflicts(...). The pure rules are in
+// severity/note, delete), custom_allergies (FQ: own; insert user_id/label/
+// severity/note, update label/severity/note, delete), food_conflicts(...).
+// The pure rules are in
 // clientNutritionModel.ts.
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -14,6 +16,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t } from "../../i18n/core";
 import type { Allergen, AllergySeverity, ConflictRow, MealPlanDetailRow, MyAllergy, ProfessionalTargets } from "./clientNutritionModel";
 import { allergyDiff, assignmentIsCurrent } from "./clientNutritionModel";
+import { cleanLabel, isOtherProblem, otherAllergiesMissing, otherAllergyError, otherDiff, type OtherAllergy, type OtherDraft, type OtherProblem } from "./otherAllergies";
 import type { WeightGoalType } from "../../types";
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
@@ -192,6 +195,72 @@ export async function saveMyAllergies(userId: string, before: MyAllergy[], after
   return { ok: true };
 }
 
+// ---------------------------------------------------------------------------
+// "Other" allergies in the member's own words (Batch B · FQ, custom_allergies)
+// ---------------------------------------------------------------------------
+
+// custom_allergies is newer than the generated types (they read production).
+const untyped = supabase as unknown as SupabaseClient;
+
+/**
+ * The member's own "Other" allergies, or `null` when the table isn't there
+ * yet (today's production: PGRST205 / 42P01). Null hides the Other section;
+ * it is never an error the member sees.
+ */
+export async function fetchMyOtherAllergies(userId: string): Promise<Read<OtherAllergy[] | null>> {
+  const { data, error } = await untyped.from("custom_allergies").select("id, label, severity, note").eq("user_id", userId).order("created_at", { ascending: true });
+  if (error) return otherAllergiesMissing(error) ? { ok: true, data: null } : readFail(error);
+  return { ok: true, data: ((data ?? []) as OtherAllergy[]).map((r) => ({ id: r.id, label: r.label, severity: r.severity, note: r.note ?? null })) };
+}
+
+/** What one Save did to custom_allergies: the rows as saved (ids filled in), or the row a refusal belongs to. */
+export type OtherSave =
+  | { ok: true; saved: OtherAllergy[]; inserted: Record<string, string> }
+  | { ok: false; saved: OtherAllergy[]; inserted: Record<string, string>; key: string | null; message: string; problem: OtherProblem | null };
+
+/**
+ * Applies the sheet's Other rows: deletes, then updates (label, severity),
+ * then inserts one at a time (with user_id) so a refusal lands on its own row.
+ * `saved` is always what the database now holds, so a retry diffs against
+ * that and never repeats a write that went through.
+ */
+export async function saveMyOtherAllergies(userId: string, before: OtherAllergy[], after: OtherDraft[]): Promise<OtherSave> {
+  const d = otherDiff(before, after);
+  let saved = [...before];
+  const inserted: Record<string, string> = {};
+  const fail = (error: { code?: string } | null, key: string | null): OtherSave => ({
+    ok: false,
+    saved,
+    inserted,
+    key,
+    message: otherAllergyError(error, isOffline(error)),
+    problem: error && isOtherProblem(error.code) ? error.code : null,
+  });
+  if (d.remove.length) {
+    const { error } = await untyped.from("custom_allergies").delete().in("id", d.remove);
+    if (error) return fail(error, null);
+    saved = saved.filter((s) => !d.remove.includes(s.id));
+  }
+  for (const a of d.update) {
+    const label = cleanLabel(a.label);
+    const { error } = await untyped.from("custom_allergies").update({ label, severity: a.severity }).eq("id", a.id as string);
+    if (error) return fail(error, a.key);
+    saved = saved.map((s) => (s.id === a.id ? { ...s, label, severity: a.severity } : s));
+  }
+  for (const a of d.insert) {
+    const { data, error } = await untyped
+      .from("custom_allergies")
+      .insert({ user_id: userId, label: cleanLabel(a.label), severity: a.severity, ...(a.note ? { note: a.note } : {}) })
+      .select("id, label, severity, note")
+      .single();
+    if (error || !data) return fail(error, a.key);
+    const r = data as OtherAllergy;
+    saved = [...saved, { id: r.id, label: r.label, severity: r.severity, note: r.note ?? null }];
+    inserted[a.key] = r.id;
+  }
+  return { ok: true, saved, inserted };
+}
+
 /** First names of the connected professionals the client shares Allergies and dietary needs with. */
 export async function fetchAllergiesSharedWith(userId: string): Promise<Read<string[]>> {
   const { data, error } = await supabase
@@ -209,11 +278,13 @@ export async function fetchAllergiesSharedWith(userId: string): Promise<Read<str
 
 /** Whether the client has any structured allergy or dietary row food_conflicts could match. */
 export async function hasConflictData(userId: string): Promise<boolean> {
-  const [a, d] = await Promise.all([
+  const [a, d, o] = await Promise.all([
     supabase.from("allergies").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase.from("dietary_restrictions").select("id", { count: "exact", head: true }).eq("user_id", userId),
+    // FQ: the member's own "Other" allergies (no table on today's database: the count is null, so 0).
+    untyped.from("custom_allergies").select("id", { count: "exact", head: true }).eq("user_id", userId),
   ]);
-  return (a.count ?? 0) > 0 || (d.count ?? 0) > 0;
+  return (a.count ?? 0) > 0 || (d.count ?? 0) > 0 || (o.count ?? 0) > 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -233,8 +304,9 @@ export async function fetchFoodConflicts(
     p_name: item.name ?? undefined,
   } as never);
   if (error) return readFail(error);
-  type R = { kind: string; allergen: string | null; severity: string | null; restriction: string | null; detail: string | null };
-  return { ok: true, data: ((data ?? []) as unknown as R[]).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail })) };
+  // custom_allergy (FQ, 20261227020000): an "Other" allergy's label on its allergy_check rows; absent on today's database.
+  type R = { kind: string; allergen: string | null; severity: string | null; restriction: string | null; detail: string | null; custom_allergy?: string | null };
+  return { ok: true, data: ((data ?? []) as unknown as R[]).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail, customAllergy: r.custom_allergy ?? null })) };
 }
 
 // ---------------------------------------------------------------------------

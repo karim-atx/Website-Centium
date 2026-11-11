@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu } from "../ui/PopupMenu";
 import { textPx } from "../../theme/textSize";
-import { saveMyAllergies } from "../../services/nutrition/client";
+import { saveMyAllergies, saveMyOtherAllergies } from "../../services/nutrition/client";
+import { draftsFrom, type OtherAllergy, type OtherDraft } from "../../services/nutrition/otherAllergies";
+import { OtherAllergiesSection } from "./OtherAllergiesSection";
 import { ALLERGENS, SEVERITIES, severityLabel, type Allergen, type AllergySeverity, type MyAllergy } from "../../services/nutrition/clientNutritionModel";
 import { t } from "../../i18n/core";
 
@@ -22,24 +24,57 @@ import { t } from "../../i18n/core";
  *
  * Severity is shown only from these structured rows; food matching is the
  * database's (food_conflicts), never this sheet's.
+ *
+ * Batch B · FQ: after the 14, the member's own "Other" allergies
+ * (OtherAllergiesSection, custom_allergies), saved by the same Save. Before
+ * the Database has the table, `initialOthers` is null and the sheet is
+ * exactly as it was.
  */
 export function AllergiesSheet({
   open,
   onClose,
   userId,
   initial,
+  initialOthers = null,
   onSaved,
 }: {
   open: boolean;
   onClose: () => void;
   userId: string | null;
   initial: MyAllergy[];
+  /** FQ: the member's own "Other" allergies; null (today's database, or not read) hides the Other section. */
+  initialOthers?: OtherAllergy[] | null;
   onSaved: () => void;
 }) {
   const [draft, setDraft] = useState<Map<Allergen, AllergySeverity>>(() => new Map(initial.map((a) => [a.allergen, a.severity])));
   const [menu, setMenu] = useState<{ allergen: Allergen; anchor: HTMLElement } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // FQ: what each table holds now (a Save that stops part-way never repeats a write that went through),
+  // the Other rows being edited, their refusals by row, and whether a rename is waiting on a rule.
+  const [savedStd, setSavedStd] = useState<MyAllergy[]>(initial);
+  const [savedOthers, setSavedOthers] = useState<OtherAllergy[]>(initialOthers ?? []);
+  const [others, setOthers] = useState<OtherDraft[] | null>(() => (initialOthers ? draftsFrom(initialOthers) : null));
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  // Opened before the Other read came back: take it when it arrives (once; the member's edits are never replaced).
+  const [arrived, setArrived] = useState(initialOthers);
+  if (initialOthers !== arrived) {
+    setArrived(initialOthers);
+    if (others === null && initialOthers) {
+      setOthers(draftsFrom(initialOthers));
+      setSavedOthers(initialOthers);
+    }
+  }
+  const blocking = useRef(false);
+  const wrote = useRef(false);
+  const onBlockingChange = useCallback((b: boolean) => {
+    blocking.current = b;
+  }, []);
+  // A Save that stopped part-way still changed something: the screen behind reloads on close.
+  const close = () => {
+    if (wrote.current) onSaved();
+    onClose();
+  };
 
   const toggle = (a: Allergen) =>
     setDraft((prev) => {
@@ -50,16 +85,32 @@ export function AllergiesSheet({
     });
 
   const save = async () => {
-    if (!userId || saving) return;
+    if (!userId || saving || blocking.current) return;
     setSaving(true);
     setError(null);
+    setRowErrors({});
     const after = [...draft.entries()].map(([allergen, severity]) => ({ allergen, severity }));
-    const r = await saveMyAllergies(userId, initial, after);
-    setSaving(false);
+    const r = await saveMyAllergies(userId, savedStd, after);
     if (!r.ok) {
+      setSaving(false);
       setError(r.message);
       return;
     }
+    setSavedStd(after);
+    wrote.current = true;
+    // FQ: the same Save applies the Other rows (decision: one Save for both tables).
+    if (others) {
+      const o = await saveMyOtherAllergies(userId, savedOthers, others);
+      setSavedOthers(o.saved);
+      setOthers((prev) => prev && prev.map((d) => (o.inserted[d.key] ? { ...d, id: o.inserted[d.key] } : d)));
+      if (!o.ok) {
+        setSaving(false);
+        if (o.key) setRowErrors({ [o.key]: o.message });
+        else setError(o.message);
+        return;
+      }
+    }
+    setSaving(false);
     onSaved();
     onClose();
   };
@@ -67,7 +118,7 @@ export function AllergiesSheet({
   return (
     <BottomSheet
       open={open}
-      onClose={onClose}
+      onClose={close}
       title={t("Allergies")}
       footer={
         <div>
@@ -144,6 +195,17 @@ export function AllergiesSheet({
           );
         })}
       </div>
+      {others && (
+        <OtherAllergiesSection
+          rows={others}
+          onChange={(next) => {
+            setOthers(next);
+            setRowErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => next.some((n) => n.key === k && others.find((o) => o.key === k) === n))));
+          }}
+          rowErrors={rowErrors}
+          onBlockingChange={onBlockingChange}
+        />
+      )}
       <PopupMenu
         open={!!menu}
         anchor={menu?.anchor ?? null}

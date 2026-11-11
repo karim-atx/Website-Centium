@@ -4,7 +4,7 @@ import { textPx } from "../../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "../proInk";
 import type { DietaryNeeds } from "../../../services/pro/clientPage";
 import { allergenLabel, restrictionLabel } from "./nuFormat";
-import type { ConflictRow } from "./nutritionModel";
+import { customLabel, isolateLabel, ownWords, type ConflictRow } from "./nutritionModel";
 import { t } from "../../../i18n/core";
 
 /**
@@ -105,7 +105,10 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
     row.kind === "allergy_confirmed"
       ? t("{allergen} allergy", { allergen: allergenLabel(row.allergen ?? "") })
       : row.kind === "allergy_check"
-        ? t("Check this")
+        ? // FQ: an "Other" allergy names the client's own label (isolated, as written).
+          !row.allergen && customLabel(row)
+          ? t("Check: {label}", { label: isolateLabel(customLabel(row) as string) })
+          : t("Check this")
         : row.kind === "restriction"
           ? t("Not {restriction}", { restriction: restrictionLabel(row.restriction ?? "").toLowerCase() })
           : restrictionLabel(row.restriction ?? "");
@@ -134,7 +137,9 @@ export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; sha
   const restrictions = (needs?.restrictions ?? []).filter((r) => r.kind !== "preference");
   const prefs = (needs?.restrictions ?? []).filter((r) => r.kind === "preference");
   const allergies = needs?.allergies ?? [];
-  const none = !!needs && !allergies.length && !restrictions.length && !prefs.length;
+  // FQ: the client's "Other" allergies, in their own words (empty until the Database has them).
+  const others = needs?.otherAllergies ?? [];
+  const none = !!needs && !allergies.length && !others.length && !restrictions.length && !prefs.length;
   return (
     <div role="region" aria-label={t("Dietary needs")} style={{ borderRadius: 14, background: INK.raised, border: `1px solid ${INK.b06}`, padding: web ? "12px 14px" : "9px 10px", marginBottom: web ? 0 : 12 }}>
       <p style={{ fontSize: web ? 13 : textPx(10.5), lineHeight: web ? "20px" : undefined, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: INK.chF, marginBottom: web ? 8 : 6, overflowWrap: "anywhere" }}>{t("{name}'s dietary needs", { name })}</p>
@@ -148,6 +153,9 @@ export const DietStrip: React.FC<{ name: string; needs: DietaryNeeds | null; sha
         <div className="flex flex-wrap" style={{ gap: 5 }}>
           {allergies.map((a) => (
             <AllergyTag key={a.allergen} label={t("Allergy: {allergen}", { allergen: allergenLabel(a.allergen) })} />
+          ))}
+          {others.map((o) => (
+            <AllergyTag key={`o:${o.id}`} label={t("Allergy: {allergen}", { allergen: ownWords(o.label) })} />
           ))}
           {restrictions.map((r) => (
             <RestrictionTag key={r.restriction} label={restrictionLabel(r.restriction)} />
