@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ClipboardCheck } from "lucide-react";
 import clsx from "clsx";
 import { Toggle } from "../ui/Toggle";
+import { SelectableBox } from "../ui/SelectableBox";
 import { settingsRowClass } from "../ui/SettingsRows";
 import { textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
@@ -46,13 +47,24 @@ export const HealthChecksNotificationRow: React.FC<{
   const { authUserId } = useApp();
   const store = useHealthCheckStore(authUserId);
   const names = store.reminders.map((r) => checkNameOf(r.checkId, store.custom));
+  // FP: the row is the switch, as the other Notifications rows (a full-row
+  // switch behind it); the count line keeps its own tap and opens the list.
   return (
-    <div inert={dimmed || undefined} aria-disabled={dimmed || undefined} className={clsx(settingsRowClass, dimmed && "opacity-40")}>
+    <SelectableBox
+      inner
+      kind="switch"
+      inert={dimmed}
+      selected={checked}
+      onToggle={() => onChange(!checked)}
+      disabled={disabled || dimmed}
+      label={t("Health checks")}
+      className={clsx(settingsRowClass, dimmed && "opacity-40")}
+    >
       <span aria-hidden className="w-9 h-9 rounded-[11px] flex items-center justify-center shrink-0 bg-primary-pale text-th-7d6bb5 dark:text-primary-deep-text">
         <ClipboardCheck size={18} strokeWidth={1.75} />
       </span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[14px] font-semibold leading-[19px] text-charcoal">{t("Health checks")}</span>
+        <span aria-hidden className="block text-[14px] font-semibold leading-[19px] text-charcoal">{t("Health checks")}</span>
         <button
           type="button"
           onClick={() => navigate("/app/settings/notifications/health-checks")}
@@ -62,7 +74,7 @@ export const HealthChecksNotificationRow: React.FC<{
           {store.status === "ready" ? reminderCountLine(names) : " "}
         </button>
       </span>
-      <Toggle checked={checked} onChange={onChange} disabled={disabled} label={t("Health checks")} />
-    </div>
+      <Toggle decorative checked={checked} disabled={disabled} />
+    </SelectableBox>
   );
 };

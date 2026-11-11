@@ -251,10 +251,28 @@ export function fieldStyle(m: MarketPalette, invalid?: boolean): React.CSSProper
  * The board's sheet switch (B-MA.2 "Show in showcase"): 42 × 26 radius 999,
  * on --fill, off --swoff; knob 22 #FFFFFF, 2 from the edge, shadow 0 1px 3px
  * rgba(0,0,0,0.18). The 44 target comes from .tap.
+ *
+ * `decorative` (FP): only the drawing (aria-hidden), for a row that is itself
+ * the switch (SelectableBox kind="switch").
  */
-export function SheetSwitch({ on, onChange, label, describedBy, disabled }: { on: boolean; onChange: (v: boolean) => void; label: string; describedBy?: string; disabled?: boolean }) {
+export function SheetSwitch({
+  on,
+  onChange,
+  label,
+  describedBy,
+  disabled,
+  decorative,
+}: { on: boolean; describedBy?: string; disabled?: boolean } & ({ onChange: (v: boolean) => void; label: string; decorative?: false } | { decorative: true; onChange?: never; label?: never })) {
   const m = useMarketColors();
   const reduce = useReducedMotion();
+  const knob = <span aria-hidden style={{ position: "absolute", top: 2, insetInlineStart: on ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: reduce ? undefined : "inset-inline-start 140ms ease" }} />;
+  if (decorative) {
+    return (
+      <span aria-hidden className="tap" style={{ display: "block", width: 42, height: 26, borderRadius: 999, background: on ? m.fill : m.swoff, position: "relative", flexShrink: 0, opacity: disabled ? 0.4 : 1 }}>
+        {knob}
+      </span>
+    );
+  }
   return (
     <button
       type="button"
@@ -263,11 +281,11 @@ export function SheetSwitch({ on, onChange, label, describedBy, disabled }: { on
       aria-label={label}
       aria-describedby={describedBy}
       disabled={disabled}
-      onClick={() => onChange(!on)}
+      onClick={() => onChange?.(!on)}
       className="tap market-focus"
       style={{ width: 42, height: 26, borderRadius: 999, background: on ? m.fill : m.swoff, position: "relative", flexShrink: 0, border: 0, padding: 0, cursor: disabled ? "default" : "pointer", opacity: disabled ? 0.4 : 1 }}
     >
-      <span aria-hidden style={{ position: "absolute", top: 2, insetInlineStart: on ? 18 : 2, width: 22, height: 22, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 3px rgba(0,0,0,0.18)", transition: reduce ? undefined : "inset-inline-start 140ms ease" }} />
+      {knob}
     </button>
   );
 }

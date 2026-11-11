@@ -4,6 +4,7 @@ import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { WheelPicker } from "../../../components/ui/WheelPicker";
 import { ConfirmCard } from "../../../components/ui/ConfirmCard";
+import { SELECTABLE_INNER, SelectableBox } from "../../../components/ui/SelectableBox";
 import { CalendarPickerSheet } from "../../../components/dashboard/CalendarPickerSheet";
 import { fromParts, minuteOptions, minutesOf, fromMinutes, toParts, type Meridiem, type TimeParts } from "../../../components/calendar/calendarTime";
 import { DAY_LETTERS, DAY_LONG } from "../../../utils/week";
@@ -934,19 +935,30 @@ function SheetBody({
             </p>
           )}
 
-          {/* B13 MK-04 (the old Spots tab): Show on Explore and the spots open on Centium. */}
-          <div data-class-explore="" style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}>
+          {/* B13 MK-04 (the old Spots tab): Show on Explore and the spots open on Centium.
+              FP: the box is the switch (a full-box switch behind it); the spots
+              block under it keeps its own taps and never toggles. */}
+          <SelectableBox
+            inner
+            kind="switch"
+            data-class-explore=""
+            selected={form.listedOnExplore}
+            onToggle={() => update({ listedOnExplore: !form.listedOnExplore })}
+            label={form.title.trim() ? t("Show {class} on Explore", { class: form.title.trim() }) : t("Show this class on Explore")}
+            describedBy={`${uid}-explore-sub`}
+            style={{ gridColumn: stack ? "span 1" : "span 2", background: m.sgrey, borderRadius: 14, padding: "12px 14px" }}
+          >
             <div className="flex items-center" style={{ gap: 12 }}>
               <div className="flex-1 min-w-0">
-                <p style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{t("Show on Explore")}</p>
-                <p style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>
+                <p aria-hidden style={{ margin: 0, fontSize: textPx(14), fontWeight: 700, color: m.ink }}>{t("Show on Explore")}</p>
+                <p id={`${uid}-explore-sub`} aria-hidden style={{ margin: "2px 0 0", fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>
                   {form.listedOnExplore ? t("New clients can find and book this class on Centium.") : t("Members only. It's off Explore, and members can still book it.")}
                 </p>
               </div>
-              <BoardSwitch m={m} checked={form.listedOnExplore} onChange={(on) => update({ listedOnExplore: on })} label={form.title.trim() ? t("Show {class} on Explore", { class: form.title.trim() }) : t("Show this class on Explore")} />
+              <BoardSwitch decorative m={m} checked={form.listedOnExplore} />
             </div>
             {form.listedOnExplore && (
-              <div style={{ marginTop: 12 }}>
+              <div className={SELECTABLE_INNER} style={{ marginTop: 12 }}>
                 <p style={{ margin: "0 0 8px", fontSize: textPx(13), fontWeight: 500, color: m.slabel }}>{t("Spots on Centium")}</p>
                 <div style={{ ...fieldStyle(m), padding: 0, gap: 0 }}>
                   <button
@@ -978,7 +990,7 @@ function SheetBody({
                 </p>
               </div>
             )}
-          </div>
+          </SelectableBox>
 
           <FieldBox m={m} label={t("Notes for the instructor (optional)")} htmlFor={`${uid}-notes`} span={stack ? 1 : 2}>
             <textarea

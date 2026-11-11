@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown, DoorOpen, GraduationCap, Plus, Sparkles, Sun, Ticket, X, type LucideIcon } from "lucide-react";
 import { MenuStepper, PopupMenu, type PopupMenuOption } from "../../../components/ui/PopupMenu";
 import { sheetChipStyle } from "../../../components/ui/sheetChip";
+import { SelectableBox } from "../../../components/ui/SelectableBox";
 import { FOCUS_CSS } from "../../../components/market/usePress";
 import { useOnline } from "../../../hooks/useOnline";
 import { useReducedMotion } from "../../../hooks/useReducedMotion";
@@ -515,26 +516,30 @@ const PlanForm: React.FC<PlanSheetProps & { footerId: string }> = ({ editing, ru
   });
   const PreviewIcon = PREVIEW_ICON[kind];
 
+  // FP: the Active box is the switch (Box's look), so a tap anywhere on it toggles.
   const activeRow = (
-    <Box>
+    <SelectableBox
+      kind="switch"
+      selected={active}
+      onToggle={() => {
+        edited();
+        setActive(!active);
+      }}
+      label={tx("Active", "plan")}
+      describedBy={active ? ids.active : `${ids.active} ${ids.pausedNote}`}
+      disabled={saving}
+      className="block"
+      style={{ background: m.sgrey, borderRadius: 14, padding: "12px 14px", lineHeight: "normal", color: m.ink }}
+    >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div id={ids.active}>
           <div style={{ fontSize: textPx(14), fontWeight: 700 }}>{tx("Active", "plan")}</div>
           <div style={{ fontSize: textPx(11.5), color: m.faint }}>{t("Members can buy this plan")}</div>
         </div>
-        <SheetSwitch
-          on={active}
-          onChange={(v) => {
-            edited();
-            setActive(v);
-          }}
-          label={tx("Active", "plan")}
-          describedBy={active ? ids.active : `${ids.active} ${ids.pausedNote}`}
-          disabled={saving}
-        />
+        <SheetSwitch decorative on={active} disabled={saving} />
       </div>
       {!active ? <BoxNote id={ids.pausedNote}>{t("Paused plans are hidden from members.")}</BoxNote> : null}
-    </Box>
+    </SelectableBox>
   );
 
   const priceBorder = errors.price ? `1px solid ${m.high}` : priceChanged ? `1px solid ${m.fill}` : "1px solid transparent";

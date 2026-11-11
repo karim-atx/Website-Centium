@@ -5,6 +5,7 @@ import { FixedHeader } from "../../components/ui/FixedHeader";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { Toast } from "../../components/ui/Toast";
 import { Toggle } from "../../components/ui/Toggle";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { CheckTile, InfoBox } from "../../components/health-checks/HealthCheckParts";
 import { CheckReminderSheet, NotificationsOffLine, type CheckOption } from "../../components/health-checks/HealthCheckPopups";
 import { checkNameOf } from "../../components/health-checks/HealthChecksNotificationRow";
@@ -102,15 +103,24 @@ export default function HealthCheckRemindersPage() {
         </p>
       </InfoBox>
 
-      <div className="flex items-center bg-cream-card" style={{ marginTop: 16, gap: 14, minHeight: 50 }}>
+      {/* FP: the row is the switch, so a tap anywhere on it toggles. */}
+      <SelectableBox
+        kind="switch"
+        selected={on ?? false}
+        onToggle={() => void setPaused(!(on ?? false))}
+        disabled={on === null || saving}
+        label={t("Health checks")}
+        className="flex items-center bg-cream-card"
+        style={{ marginTop: 16, gap: 14, minHeight: 50 }}
+      >
         <span aria-hidden className="w-9 h-9 rounded-[11px] grid place-items-center shrink-0 bg-primary-pale text-th-7d6bb5 dark:text-primary-deep-text">
           <ClipboardCheck size={18} strokeWidth={1.75} />
         </span>
         <span className="flex-1 text-charcoal" style={{ fontSize: textPx(14), lineHeight: "19px", fontWeight: 600 }}>
           {t("Health checks")}
         </span>
-        <Toggle checked={on ?? false} disabled={on === null || saving} onChange={(v) => void setPaused(v)} label={t("Health checks")} />
-      </div>
+        <Toggle decorative checked={on ?? false} disabled={on === null || saving} />
+      </SelectableBox>
 
       <p className="text-primary-accent" style={{ margin: "24px 0 0", fontSize: textPx(11), lineHeight: "14px", fontWeight: 600, letterSpacing: 1.5, textTransform: "uppercase" }}>
         {t("Your reminders")}

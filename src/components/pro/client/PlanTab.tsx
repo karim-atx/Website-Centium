@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Apple, BookOpenCheck, ClipboardPlus, Dumbbell, Pencil, Plus, Target, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
@@ -6,6 +6,7 @@ import { useIsDark } from "../../../hooks/useIsDark";
 import { textPx } from "../../../theme/textSize";
 import { CtaButton } from "../../ui/PinnedCta";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { INK } from "../proInk";
 import { LockLine } from "../LockLine";
@@ -266,6 +267,7 @@ const NutritionSection: React.FC<{
   const { rel, firstName, stage } = data;
   const [on, setOn] = useState<boolean>(stage?.nutritionCoaching ?? true);
   const [err, setErr] = useState<string | null>(null);
+  const subId = useId();
   useEffect(() => {
     if (stage) setOn(stage.nutritionCoaching);
   }, [stage]);
@@ -282,13 +284,22 @@ const NutritionSection: React.FC<{
   return (
     <>
       <SectionHead label={t("Nutrition")} right={on ? t("Open builder") : undefined} onRight={on ? () => navigate(`${PRO_ROUTES.library}/meal-plans`) : undefined} />
-      <div className="flex items-center justify-between" style={{ gap: 16, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginBottom: on ? 10 : 6 }}>
+      {/* FP: the row is the switch, so a tap anywhere on it toggles. */}
+      <SelectableBox
+        kind="switch"
+        selected={on}
+        onToggle={() => void toggle(!on)}
+        label={t("Include nutrition coaching")}
+        describedBy={subId}
+        className="flex items-center justify-between"
+        style={{ gap: 16, borderRadius: 14, background: INK.soft, padding: "10px 12px", marginBottom: on ? 10 : 6 }}
+      >
         <span className="min-w-0">
           <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("Include nutrition coaching")}</span>
-          <span className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{on ? t("Meal plan, targets and journal review for {firstName}", { firstName }) : t("Off for {firstName}. Nutrition sections are hidden.", { firstName })}</span>
+          <span id={subId} className="block" style={{ fontSize: textPx(11.5), color: INK.chF }}>{on ? t("Meal plan, targets and journal review for {firstName}", { firstName }) : t("Off for {firstName}. Nutrition sections are hidden.", { firstName })}</span>
         </span>
-        <Toggle checked={on} onChange={(v) => void toggle(v)} label={t("Include nutrition coaching")} />
-      </div>
+        <Toggle decorative checked={on} />
+      </SelectableBox>
       {err && (
         <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi, marginBottom: 8 }}>
           {err}

@@ -33,6 +33,7 @@ import {
 import clsx from "clsx";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Toggle } from "../../components/ui/Toggle";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { Button } from "../../components/ui/Button";
 import { WheelPicker } from "../../components/ui/WheelPicker";
 import { SettingsBody, SettingsRow, SettingsSection, settingsRowClass } from "../../components/ui/SettingsRows";
@@ -646,13 +647,24 @@ export default function NotificationsPage() {
           colours (decision 22): rgba(154,140,214,0.12) (measured #F3F1FA), a
           #9A8CD6 tile and the status in #7D67D9. MO1.8.3: radius 20, padding
           20, gap 14, a 48 pt tile with Bell 22 / 1.75, the title 17 / 600 and
-          the status 13 / 700. */}
-      <div className={clsx("flex items-center gap-3.5 rounded-[20px] bg-th-9a8cd6/[0.12] dark:bg-primary-pale p-5", loadError ? "mb-3" : "mb-8")}>
+          the status 13 / 700.
+          FP: the card is the switch (a full-card switch behind it), so a tap
+          anywhere on it does what the switch does; "Open settings" keeps its
+          own tap. */}
+      <SelectableBox
+        inner
+        kind="switch"
+        selected={on}
+        onToggle={() => void setMaster(!on)}
+        disabled={!prefs || busy || (pushAvailable && registered === null)}
+        label={t("Allow notifications")}
+        className={clsx("flex items-center gap-3.5 rounded-[20px] bg-th-9a8cd6/[0.12] dark:bg-primary-pale p-5", loadError ? "mb-3" : "mb-8")}
+      >
         <span className="w-12 h-12 rounded-2xl bg-th-9a8cd6 text-white dark:bg-primary-fill dark:text-on-primary-fill flex items-center justify-center shrink-0" aria-hidden>
           <Bell size={22} strokeWidth={1.75} />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[17px] font-semibold text-charcoal">{t("Allow notifications")}</p>
+          <p aria-hidden className="text-[17px] font-semibold text-charcoal">{t("Allow notifications")}</p>
           <p className="text-[13px] font-bold text-primary-accent mt-px" role="status">
             {deviceLine}
             {offInPhone && (
@@ -666,14 +678,13 @@ export default function NotificationsPage() {
           </p>
         </div>
         <Toggle
+          decorative
           checked={on}
-          onChange={(v) => void setMaster(v)}
           disabled={!prefs || busy || (pushAvailable && registered === null)}
-          label={t("Allow notifications")}
           // MO1.8.3's lead switch, drawn larger than the rows' (decision 23).
           lead
         />
-      </div>
+      </SelectableBox>
       {loadError && (
         <div className="mb-8">
           <ErrorLine>

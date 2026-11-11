@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { BottomSheet } from "../../ui/BottomSheet";
 import { CtaButton } from "../../ui/PinnedCta";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { useApp } from "../../../context/AppContext";
 import { textPx } from "../../../theme/textSize";
 import { INK } from "../proInk";
@@ -33,6 +34,7 @@ export const OfflineClientSheet: React.FC<{
   const [phone, setPhone] = useState("");
   const [goal, setGoal] = useState("");
   const [invite, setInvite] = useState(true);
+  const inviteSubId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,13 +92,22 @@ export const OfflineClientSheet: React.FC<{
         <ProField label={t("Phone (optional)")} type="tel" inputMode="tel" value={phone} onChange={setPhone} placeholder={t("Add a number")} />
         <ProField label={t("Goal")} value={goal} onChange={setGoal} autoComplete="off" maxLength={OFFLINE_GOAL_MAX} placeholder={t("Add a goal")} />
         {invitesAllowed && (
-          <div className="flex items-center justify-between" style={{ minHeight: 52, borderRadius: 12, background: INK.soft, padding: "6px 12px", gap: 12 }}>
+          // FP: the row is the switch, so a tap anywhere on it toggles.
+          <SelectableBox
+            kind="switch"
+            selected={invite}
+            onToggle={() => setInvite(!invite)}
+            label={t("Invite them to connect")}
+            describedBy={inviteSubId}
+            className="flex items-center justify-between"
+            style={{ minHeight: 52, borderRadius: 12, background: INK.soft, padding: "6px 12px", gap: 12 }}
+          >
             <span className="min-w-0">
               <span className="block" style={{ fontSize: textPx(14), fontWeight: 600, color: INK.ch }}>{t("Invite them to connect")}</span>
-              <span className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("Their data stays private until they accept")}</span>
+              <span id={inviteSubId} className="block" style={{ fontSize: textPx(11), color: INK.chF }}>{t("Their data stays private until they accept")}</span>
             </span>
-            <Toggle checked={invite} onChange={setInvite} label={t("Invite them to connect")} />
-          </div>
+            <Toggle decorative checked={invite} />
+          </SelectableBox>
         )}
         {error && (
           <p role="alert" style={{ fontSize: textPx(12), fontWeight: 600, color: INK.hi }}>

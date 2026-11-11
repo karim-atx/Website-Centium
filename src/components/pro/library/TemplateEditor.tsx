@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import clsx from "clsx";
 import { Briefcase, Check } from "lucide-react";
 import { CreateRoutineSheet, type RoutineDraft, type RoutineSheetPro } from "../../workout/CreateRoutineSheet";
 import type { ExerciseSettingsPro } from "../../workout/ExerciseSettingsSheet";
 import { Toggle } from "../../ui/Toggle";
+import { SelectableBox } from "../../ui/SelectableBox";
 import { PopupMenu } from "../../ui/PopupMenu";
 import { useApp } from "../../../context/AppContext";
 import type { Exercise, WorkoutTemplate } from "../../../types";
@@ -53,6 +54,7 @@ export const TemplateEditor: React.FC<{
 
   // Fresh each time it opens (the sheet itself resets from `initial`).
   const [lastOpen, setLastOpen] = useState(false);
+  const saveSubId = useId();
   if (open !== lastOpen) {
     setLastOpen(open);
     if (open) {
@@ -121,13 +123,23 @@ export const TemplateEditor: React.FC<{
           </button>
         </div>
       )}
-      <div className="flex items-center justify-between rounded-2xl bg-cream-soft" style={{ padding: "12px 16px", gap: 12 }}>
+      {/* FP: the row is the switch (always on, so disabled, as the switch was). */}
+      <SelectableBox
+        kind="switch"
+        selected
+        onToggle={() => undefined}
+        disabled
+        label={t("Save as template")}
+        describedBy={`${saveSubId}-m`}
+        className="flex items-center justify-between rounded-2xl bg-cream-soft"
+        style={{ padding: "12px 16px", gap: 12 }}
+      >
         <span className="min-w-0">
           <span className="block text-sm font-semibold text-charcoal">{t("Save as template")}</span>
-          <span className="block text-[12px] text-charcoal-faint">{t("Reuse it in other programmes")}</span>
+          <span id={`${saveSubId}-m`} className="block text-[12px] text-charcoal-faint">{t("Reuse it in other programmes")}</span>
         </span>
-        <Toggle checked onChange={() => undefined} disabled label={t("Save as template")} />
-      </div>
+        <Toggle decorative checked disabled />
+      </SelectableBox>
       <label className="block">
         {label(t("Programme length (weeks)"))}
         <input
@@ -203,13 +215,14 @@ export const TemplateEditor: React.FC<{
           </button>
         </div>
       )}
-      <div style={W.switchRow}>
+      {/* FP: the row is the switch (always on, so disabled, as the switch was). */}
+      <SelectableBox kind="switch" selected onToggle={() => undefined} disabled label={t("Save as template")} describedBy={`${saveSubId}-w`} style={W.switchRow}>
         <span className="min-w-0">
           <span className="block" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>{t("Save as template")}</span>
-          <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Reuse it in other programmes")}</span>
+          <span id={`${saveSubId}-w`} className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t("Reuse it in other programmes")}</span>
         </span>
-        <Toggle checked onChange={() => undefined} disabled label={t("Save as template")} />
-      </div>
+        <Toggle decorative checked disabled />
+      </SelectableBox>
       <label className="block">
         <span style={routineLabel}>{t("Programme length (weeks)")}</span>
         <input value={weeks} onChange={(e) => setWeeks(e.target.value.replace(/\D/g, "").slice(0, 3))} inputMode="numeric" className={W.focus} style={W.weeks} />

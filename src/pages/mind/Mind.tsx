@@ -25,6 +25,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { CoachAvatar } from "../../components/workout/CoachAvatar";
 import { coachTone } from "../workout/coachColors";
 import { getCoachHabits, groupCoachHabits } from "../../services/habits";
@@ -238,20 +239,25 @@ export default function Mind() {
         label={h.label}
         // Recovery-sensitive mode: the tick only, no streak count.
         days={hideNumbers ? null : h.streakDays}
+        // FP: the whole row ticks the habit, one control with the name the
+        // check used to carry.
+        toggle={{
+          selected: h.done,
+          onToggle: () => toggleHabit(h.id),
+          label: h.done ? t("{habit}, today: done", { habit: h.label }) : t("{habit}, today: not done", { habit: h.label }),
+        }}
         check={
-          <button
-            onClick={() => toggleHabit(h.id)}
-            aria-label={h.done ? t("{habit}, today: done", { habit: h.label }) : t("{habit}, today: not done", { habit: h.label })}
-            aria-pressed={h.done}
+          <span
+            aria-hidden
             // MO1.1 #6 (2x frame): done #4F7F78 with a white tick, open
             // a 1 px #6F9993-at-35% ring on the strip (decision 22).
             className={clsx(
-              "tap w-6 h-6 rounded-full flex items-center justify-center border shrink-0",
+              "w-6 h-6 rounded-full flex items-center justify-center border shrink-0",
               h.done ? "bg-team-teal-deep border-team-teal-deep" : "border-th-6f9993/[0.35] dark:border-[#807C93]"
             )}
           >
             {h.done && <Check size={13} strokeWidth={3} className="text-white" />}
-          </button>
+          </span>
         }
       />
     );
@@ -587,6 +593,7 @@ function Row({
   check,
   divider,
   shade,
+  toggle,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -599,9 +606,11 @@ function Row({
       14 padding + 28 tile + 12 gap) and stopping at the streak strip, so
       the strip runs unbroken (MO1.1 #6). */
   divider?: boolean;
+  /** FP: a habit row is one control, ticked anywhere on it; `check` is then its aria-hidden mark. */
+  toggle?: { selected: boolean; onToggle: () => void; label: string };
 }) {
-  return (
-    <div className="flex items-stretch h-14">
+  const content = (
+    <>
       <div className="relative flex-1 min-w-0 flex items-center gap-3 ps-3.5 pe-2">
         {divider && <span aria-hidden className="absolute start-[54px] end-0 top-0 h-px bg-charcoal/[0.05]" />}
         <span
@@ -625,6 +634,13 @@ function Row({
         )}
         {check ?? <span className="w-6 shrink-0" aria-hidden />}
       </div>
-    </div>
+    </>
+  );
+  return toggle ? (
+    <SelectableBox selected={toggle.selected} onToggle={toggle.onToggle} label={toggle.label} className="flex items-stretch h-14">
+      {content}
+    </SelectableBox>
+  ) : (
+    <div className="flex items-stretch h-14">{content}</div>
   );
 }
