@@ -34,7 +34,7 @@ import { t, tk, tn, tx } from "../../i18n/core";
 // notification_business_*). The server reads them by family, not by kind, so
 // each section is one switch for its family (the source's per-event switches
 // would each have to share one column). Flagged reviews stay always on for
-// safety. How you're told, and quiet hours, stay the live Notifications page
+// safety, once a sender exists. How you're told, and quiet hours, stay the live Notifications page
 // (KEEP-RESTYLE).
 
 export function BusinessNotificationsPage() {
@@ -113,10 +113,15 @@ export function BusinessNotificationsPage() {
               <BizRow title={t("Payments")} desc={t("Money owed, weekly summary")} toggle={sw("payments", tk("Payments"))} />
             </BizSection>
           )}
-          <BizSection label={t("Reputation")}>
-            {sent("reviews") && <BizRow title={t("New reviews")} toggle={sw("reviews", tk("New reviews"))} />}
-            <BizRow title={t("Flagged reviews")} desc={t("Always on for safety")} toggle={{ checked: true, onChange: () => undefined, disabled: true }} dim />
-          </BizSection>
+          {/* "Flagged reviews" (always on) is hidden with the rest: nothing sends
+              a business a flagged-review push yet (gym_reviews_reopen_on_new_flag
+              only reopens the review). Shown again with the reviews sender. */}
+          {sent("reviews") && (
+            <BizSection label={t("Reputation")}>
+              <BizRow title={t("New reviews")} toggle={sw("reviews", tk("New reviews"))} />
+              <BizRow title={t("Flagged reviews")} desc={t("Always on for safety")} toggle={{ checked: true, onChange: () => undefined, disabled: true }} dim />
+            </BizSection>
+          )}
         </>
       )}
       <BizSection label={t("How you're told")}>
