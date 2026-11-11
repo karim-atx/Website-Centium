@@ -14,12 +14,20 @@
 //   that isn't (D-EL5), and writes the cookie jar to disk at once, so a rotated
 //   token is never lost to a crash.
 //
+// ON THE iPHONE the WebView keeps no cookies (Website #122): the session lives
+// in ./cookieJar's jar in localStorage, and native keeps a Keychain copy
+// (App-Centium IPHONE_ROUND_1.md §4), so it outlives WebKit's storage being
+// cleared and native work can use it. So there, a third thing: the persistent
+// jar after each auth write (saveJar), or null once it's empty (signed out).
+//
 // Nothing happens in a browser.
 import { Capacitor, registerPlugin } from '@capacitor/core'
 
 interface CentiumSessionPlugin {
   configure(options: { url: string; anonKey: string; storageKey: string }): Promise<void>
   setPersistent(options: { on: boolean }): Promise<void>
+  /** iPhone only: the persistent jar's JSON for the Keychain copy, or null when empty. */
+  saveJar(options: { jar: string | null }): Promise<void>
 }
 
 const CentiumSession = registerPlugin<CentiumSessionPlugin>('CentiumSession')
@@ -39,5 +47,20 @@ export function tellNativeSessionPersists(on: boolean): void {
   if (!inApp()) return
   CentiumSession.setPersistent({ on }).catch(() => {
     // An app build without the plugin: native simply never acts.
+  })
+}
+
+let lastJar: string | null | undefined
+
+/**
+ * iPhone only: the persistent jar after an auth write, for native's Keychain
+ * copy (null when the jar is empty: signed out, or "Remember me" off). Sent
+ * only when it changed; best effort.
+ */
+export function tellNativeJar(jar: string | null): void {
+  if (Capacitor.getPlatform() !== 'ios' || jar === lastJar) return
+  lastJar = jar
+  CentiumSession.saveJar({ jar }).catch(() => {
+    // An app build without the plugin: there is no Keychain copy.
   })
 }

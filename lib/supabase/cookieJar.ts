@@ -24,7 +24,8 @@
 // client's cookie adapter, the tab's identity (tabIdentity), the stored-token
 // check (services/auth) and the recovery check (./recovery).
 import { Capacitor } from '@capacitor/core'
-import { jarRead, jarWrite, type JarStores } from './cookieJarModel'
+import { JAR_KEY, jarRead, jarWrite, type JarStores } from './cookieJarModel'
+import { tellNativeJar } from './nativeSession'
 
 const IPHONE_APP = Capacitor.getPlatform() === 'ios'
 
@@ -59,5 +60,9 @@ export function writeCookie(header: string): void {
     return
   }
   const s = stores()
-  if (s) jarWrite(s, header, Date.now())
+  if (!s) return
+  jarWrite(s, header, Date.now())
+  // Native's Keychain copy follows the persistent jar (App-Centium
+  // IPHONE_ROUND_1.md §4); it restores it if WebKit's storage is cleared.
+  tellNativeJar(s.persistent.getItem(JAR_KEY))
 }
