@@ -283,6 +283,10 @@ const settings: Catalogue = {
   "Notifications aren't configured yet.": "لم تُهيَّأ الإشعارات بعد.",
   "This browser blocked push for Centium.": "حظر هذا المتصفح الإشعارات الفورية لـ Centium.",
   "Couldn't register for notifications.": "تعذّر التسجيل لتلقّي الإشعارات.",
+  "The phone's notification service didn't answer. Try again in a minute.": "لم تستجب خدمة الإشعارات في الهاتف. حاول مجددًا بعد دقيقة.",
+  "The phone's notification service turned this device down.": "رفضت خدمة الإشعارات في الهاتف هذا الجهاز.",
+  "Couldn't save this device for notifications. Try again.": "تعذّر حفظ هذا الجهاز لتلقّي الإشعارات. حاول مجددًا.",
+  "Couldn't confirm this device for notifications. Try again.": "تعذّر تأكيد هذا الجهاز لتلقّي الإشعارات. حاول مجددًا.",
   "Couldn't save your notification settings.": "تعذّر حفظ إعدادات الإشعارات.",
   "Couldn't remove this device.": "تعذّرت إزالة هذا الجهاز.",
 

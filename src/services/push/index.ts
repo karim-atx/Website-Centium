@@ -5,12 +5,14 @@ import { isNative } from "../../platform";
 import { desktop, isDesktop } from "../../platform/desktop";
 import {
   nativePush,
+  nativePushFailure,
   nativePushPermission,
   nativePushRegistered,
   nativePushSupported,
   thisInstallPushToken,
   unregisterNativePush,
 } from "../../platform/push";
+import { pushRegistrationMessage } from "../../platform/pushRegistrationModel";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
@@ -280,9 +282,10 @@ async function enableNativePush(ownerId: string | null): Promise<EnableResult> {
     return { status: "denied", message: "Notifications are blocked for Centium." };
   }
   const registered = await nativePushRegistered();
-  return registered
-    ? { status: "ok", endpoint: "native", created: true }
-    : { status: "error", message: "Couldn't register for notifications." };
+  if (registered) return { status: "ok", endpoint: "native", created: true };
+  // Which step stopped (platform/pushRegistrationModel.ts): no token, refused,
+  // the save, or the read-back.
+  return { status: "error", message: pushRegistrationMessage(nativePushFailure() ?? "check") };
 }
 
 /**
