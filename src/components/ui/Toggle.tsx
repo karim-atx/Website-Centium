@@ -24,7 +24,6 @@ const SIZES: Record<ToggleSize, [number, number, number]> = {
 
 export const Toggle: React.FC<{
   checked: boolean;
-  onChange: (checked: boolean) => void;
   label?: string;
   /** The id of the line that describes the switch (aria-describedby). */
   describedBy?: string;
@@ -55,7 +54,18 @@ export const Toggle: React.FC<{
    * none (MA1 opening-hours days). Ignored on client sizes.
    */
   knobShadow?: boolean;
-}> = ({ checked, onChange, label, describedBy, disabled, lead, size = "default", onColor, knobShadow = true }) => {
+} & (
+  | { onChange: (checked: boolean) => void; decorative?: false }
+  | {
+      /**
+       * FP: only the drawing (aria-hidden, not a control), for a settings row
+       * that is itself the switch (SelectableBox kind="switch"). The row takes
+       * the tap, the focus and the name; this draws the same switch.
+       */
+      decorative: true;
+      onChange?: never;
+    }
+)> = ({ checked, onChange, label, describedBy, disabled, lead, size = "default", onColor, knobShadow = true, decorative }) => {
   const kind: ToggleSize = lead ? "lead" : size;
   const [w, h, knob] = SIZES[kind];
   const business = kind === "business" || kind === "business-lg" || kind === "onboarding";
@@ -71,6 +81,45 @@ export const Toggle: React.FC<{
   // modes with 0 1px 3px rgba(36,31,27,0.25). Hit box 44 via .tap.
   //
   // Disabled is 40% in every size.
+  const className = clsx(
+    "tap rounded-full flex items-center transition-colors duration-150 ease-out shrink-0",
+    checked
+      ? clsx(
+          !onColor && (kind === "lead" ? "bg-fill-pinned" : "bg-primary"),
+          "justify-end"
+        )
+      : clsx(
+          "toggle-off justify-start",
+          // charcoal is #241F1B light and #F5F3FA dark.
+          business ? "bg-track" : "bg-charcoal/[0.12]"
+        ),
+    // A decorative switch leaves the cursor to its row.
+    disabled && (decorative ? "opacity-40" : "opacity-40 cursor-not-allowed")
+  );
+  const style: React.CSSProperties = { width: w, height: h, paddingInlineStart: pad, paddingInlineEnd: pad, ...(checked && onColor ? { background: onColor } : null) };
+  const knobEl = (
+    <span
+      aria-hidden
+      className={clsx(
+        "block rounded-full shrink-0",
+        business ? "bg-white" : "bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-cream-card dark:shadow-none"
+      )}
+      style={{
+        width: knob,
+        height: knob,
+        ...(business && knobShadow
+          ? { boxShadow: kind === "onboarding" ? "0 1px 2px rgba(0,0,0,0.12)" : "0 1px 3px rgba(36,31,27,0.25)" }
+          : null),
+      }}
+    />
+  );
+  if (decorative) {
+    return (
+      <span aria-hidden className={className} style={style}>
+        {knobEl}
+      </span>
+    );
+  }
   return (
     <button
       type="button"
@@ -79,37 +128,11 @@ export const Toggle: React.FC<{
       aria-label={label}
       aria-describedby={describedBy}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={clsx(
-        "tap rounded-full flex items-center transition-colors duration-150 ease-out shrink-0",
-        checked
-          ? clsx(
-              !onColor && (kind === "lead" ? "bg-fill-pinned" : "bg-primary"),
-              "justify-end"
-            )
-          : clsx(
-              "toggle-off justify-start",
-              // charcoal is #241F1B light and #F5F3FA dark.
-              business ? "bg-track" : "bg-charcoal/[0.12]"
-            ),
-        disabled && "opacity-40 cursor-not-allowed"
-      )}
-      style={{ width: w, height: h, paddingInlineStart: pad, paddingInlineEnd: pad, ...(checked && onColor ? { background: onColor } : null) }}
+      onClick={() => onChange?.(!checked)}
+      className={className}
+      style={style}
     >
-      <span
-        aria-hidden
-        className={clsx(
-          "block rounded-full shrink-0",
-          business ? "bg-white" : "bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] dark:bg-cream-card dark:shadow-none"
-        )}
-        style={{
-          width: knob,
-          height: knob,
-          ...(business && knobShadow
-            ? { boxShadow: kind === "onboarding" ? "0 1px 2px rgba(0,0,0,0.12)" : "0 1px 3px rgba(36,31,27,0.25)" }
-            : null),
-        }}
-      />
+      {knobEl}
     </button>
   );
 };

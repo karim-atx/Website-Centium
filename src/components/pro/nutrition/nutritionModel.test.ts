@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildQueue,
   clientConflictLine,
+  customLabel,
   dayDate,
   dayLabels,
   dayRange,
@@ -156,4 +157,29 @@ test("TDEE (Release A client_body_basics): the frame's numbers, and each missing
   assert.equal(partial.tdee === null ? partial.line : "", "John hasn't added their height and activity level yet, so no maintenance estimate is made.");
   const noWeight = tdeeView(basics, null, false, "John");
   assert.equal(noWeight.tdee === null ? noWeight.title : "", "Needs a weigh-in");
+});
+
+// FQ: an "Other" allergy's row (kind allergy_check, allergen null, custom_allergy the label).
+const FSI = "⁨";
+const PDI = "⁩";
+
+test("FQ: an Other allergy's check row is listed with the client's own label, amber, never blocking", () => {
+  const kiwi: ConflictRow = { kind: "allergy_check", allergen: null, severity: "severe", restriction: null, detail: "Check this: the name matches an Other allergy", customAllergy: "Kiwi" };
+  const arabic: ConflictRow = { kind: "allergy_check", allergen: null, severity: "moderate", restriction: null, detail: "Check this: the name matches an Other allergy", customAllergy: "كيوي" };
+  const line = clientConflictLine([{ name: "Kiwi smoothie", rows: [kiwi] }, { name: "عصير الكيوي", rows: [arabic] }], label);
+  assert.equal(line.blocked, false);
+  assert.equal(line.tone, "req");
+  assert.equal(line.text, `2 conflicts: Kiwi smoothie (check for ${FSI}Kiwi${PDI}), عصير الكيوي (check for ${FSI}كيوي${PDI}).`);
+  // Two labels on one food are two parts; the same one twice is one.
+  const pea: ConflictRow = { ...kiwi, customAllergy: "Pea" };
+  assert.equal(clientConflictLine([{ name: "Pea soup", rows: [kiwi, pea, { ...kiwi }] }], label).text.startsWith("2 conflicts:"), true);
+  assert.equal(worstConflict([kiwi])?.customAllergy, "Kiwi");
+});
+
+test("FQ: rows from today's database (no custom_allergy at all) read exactly as before", () => {
+  const legacy = { kind: "allergy_check", allergen: null, severity: null, restriction: null, detail: null } as ConflictRow;
+  assert.equal(customLabel(legacy), null);
+  // A check row with no allergen and no label still adds nothing (as before FQ).
+  assert.equal(clientConflictLine([{ name: "Satay", rows: [legacy] }], label).text, "No conflicts");
+  assert.equal(customLabel({ customAllergy: "  " }), null);
 });

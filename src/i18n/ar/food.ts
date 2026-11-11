@@ -10,6 +10,7 @@ export const FILES: string[] = [
   "components/food/AddFoodSheet.tsx",
   "components/food/AIVoiceLogger.tsx",
   "components/food/AllergiesSheet.tsx",
+  "components/food/OtherAllergiesSection.tsx",
   "components/food/BarcodeScanner.tsx",
   "components/food/CopyToSheet.tsx",
   "components/food/CreateMealSheet.tsx",
@@ -595,6 +596,16 @@ const food: Catalogue = {
   "The camera couldn't start. Type the number under the barcode instead.": "تعذّر تشغيل الكاميرا. اكتب الرقم الموجود تحت الباركود بدلًا من ذلك.",
   "Open phone settings": "فتح إعدادات الهاتف",
   "Scan with camera": "المسح بالكاميرا",
+  // == FQ: "Other" allergies in the member's own words (OtherAllergiesSection) ==
+  // note: health wording (allergies); the member's own labels are never translated
+  "Other allergies": "حساسيات أخرى",
+  "Add allergies that aren't listed, in your own words. Up to 20.": "أضف أنواع حساسية غير موجودة في القائمة، بكلماتك. حتى 20.",
+  "Rename {name}": "إعادة تسمية {name}",
+  "Add another allergy": "أضف حساسية أخرى",
+  "{n}/{max} added": "أُضيف {n} من {max}",
+  "{n}/{max}: that's the limit. Remove one to add another.": "{n}/{max}: هذا هو الحد الأقصى. أزل واحدة لتضيف أخرى.",
+  // note: FOR KARIM'S REVIEW (decision 21): the approved sheet line's Arabic
+  "Foods are checked by name only for allergies you add yourself.": "بالنسبة إلى الحساسيات التي تضيفها بنفسك، تُفحص الأطعمة بالاسم فقط.",
 };
 
 export default food;

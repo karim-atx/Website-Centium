@@ -9,10 +9,12 @@ import {
   fetchEntryFeedback,
   fetchFoodConflicts,
   fetchMyAllergies,
+  fetchMyOtherAllergies,
   hasConflictData,
   type EntryFeedback,
 } from "../../services/nutrition/client";
 import { type ConflictRow, type MyAllergy } from "../../services/nutrition/clientNutritionModel";
+import type { OtherAllergy } from "../../services/nutrition/otherAllergies";
 import type { FoodLogEntry } from "../../types";
 
 // CU3's targets sync lives in AppContext (context/useProfessionalTargetsSync.ts),
@@ -21,29 +23,37 @@ import type { FoodLogEntry } from "../../types";
 /** CU13 / CU15: the client's own allergies, and who they're shared with (not read when disabled: the professional's Goals view). */
 export function useMyAllergies(enabled = true): {
   allergies: MyAllergy[];
+  /**
+   * FQ: the member's own "Other" allergies; null while the Database doesn't
+   * have them yet (today's production) or they couldn't be read, which hides
+   * the sheet's Other section and leaves everything else as it was.
+   */
+  others: OtherAllergy[] | null;
   sharedWith: string[];
   status: "loading" | "ok" | "error";
   reload: () => void;
 } {
   const { authUserId } = useApp();
   const [allergies, setAllergies] = useState<MyAllergy[]>([]);
+  const [others, setOthers] = useState<OtherAllergy[] | null>(null);
   const [sharedWith, setSharedWith] = useState<string[]>([]);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!authUserId || !enabled) return;
     let live = true;
-    void Promise.all([fetchMyAllergies(authUserId), fetchAllergiesSharedWith(authUserId)]).then(([a, s]) => {
+    void Promise.all([fetchMyAllergies(authUserId), fetchAllergiesSharedWith(authUserId), fetchMyOtherAllergies(authUserId)]).then(([a, s, o]) => {
       if (!live) return;
       if (a.ok) setAllergies(a.data);
       if (s.ok) setSharedWith(s.data);
+      setOthers(o.ok ? o.data : null);
       setStatus(a.ok ? "ok" : "error");
     });
     return () => {
       live = false;
     };
   }, [authUserId, tick, enabled]);
-  return { allergies, sharedWith, status, reload: useCallback(() => setTick((t) => t + 1), []) };
+  return { allergies, others, sharedWith, status, reload: useCallback(() => setTick((t) => t + 1), []) };
 }
 
 const conflictKey = (e: Pick<FoodLogEntry, "foodId" | "customFoodId" | "name">) => `${e.foodId ?? ""}|${e.customFoodId ?? ""}|${e.name.toLowerCase()}`;

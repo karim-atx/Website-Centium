@@ -48,8 +48,8 @@ import { textPx } from "../../theme/textSize";
 import { enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
 import { provisionalFoodEntry } from "../../services/food/provisional";
 import type { LogFoodEntryParams } from "../../services/food";
-import { searchFoodsOnline } from "../../services/food/onlineSearch";
-import { brandServing, onlineQuery, type OnlineFood, type OnlineSearchOutcome } from "../../services/food/onlineSearchModel";
+import { brandServing, onlineQuery } from "../../services/food/onlineSearchModel";
+import { useOnlineFoodSearch } from "./useOnlineFoodSearch";
 import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
 import { t, tn, tk } from "../../i18n/core";
 import { useIsWeb } from "../web/useWebLayout";
@@ -206,8 +206,8 @@ export const AddFoodSheet: React.FC<{
   const [scansLeft, setScansLeft] = useState<string | null>(null);
   // Round G2: online food search and AI voice logging are Premium while the
   // free limits apply; their entry points show a "Premium" label and open
-  // the prompt instead (nothing changes while the switch is off).
-  const onlineLock = usePremiumOnly("online_food_search");
+  // the prompt instead (nothing changes while the switch is off). Online
+  // search's gate lives in useOnlineFoodSearch, below.
   const voiceLock = usePremiumOnly("ai_voice_food_logging");
   const [creating, setCreating] = useState(false);
   // HO2.1: the camera scanner over this sheet, and an Open Food Facts product
@@ -222,29 +222,18 @@ export const AddFoodSheet: React.FC<{
   const [addError, setAddError] = useState<string | null>(null);
 
   // --- Round D · DP: search online ----------------------------------------
-  // Started only by the user's tap (30 an hour), never as they type. The term
-  // searched opens the online step; `onlineResult` is null while it runs; a
-  // picked result waits on its confirm card until the user saves it.
-  const [onlineTerm, setOnlineTerm] = useState<string | null>(null);
-  const [onlineResult, setOnlineResult] = useState<OnlineSearchOutcome | null>(null);
-  const [foundFood, setFoundFood] = useState<OnlineFood | null>(null);
-  const onlineRun = useRef(0);
-  const searchOnline = (term: string) => {
-    if (onlineLock.locked) return onlineLock.ask();
-    const run = ++onlineRun.current;
-    setOnlineTerm(term);
-    setOnlineResult(null);
-    setFoundFood(null);
-    void searchFoodsOnline(term).then((r) => {
-      if (run === onlineRun.current) setOnlineResult(r);
-    });
-  };
-  const closeOnline = () => {
-    onlineRun.current++;
-    setOnlineTerm(null);
-    setOnlineResult(null);
-    setFoundFood(null);
-  };
+  // Started only by the user's tap (30 an hour), never as they type. The state
+  // and the Premium gate live in useOnlineFoodSearch, shared with the AI voice
+  // logger's unmatched rows (batch B · FO); see there.
+  const {
+    locked: onlineLocked,
+    term: onlineTerm,
+    result: onlineResult,
+    found: foundFood,
+    setFound: setFoundFood,
+    search: searchOnline,
+    close: closeOnline,
+  } = useOnlineFoodSearch();
 
   // Search runs against Supabase, so it is debounced: a query per keystroke
   // would be a request per keystroke. FO7: nothing is fetched until the user
@@ -541,12 +530,9 @@ export const AddFoodSheet: React.FC<{
     setBarcodeError(null);
     setSaving(false);
     setAddError(null);
-    onlineRun.current++;
-    setOnlineTerm(null);
-    setOnlineResult(null);
-    setFoundFood(null);
+    closeOnline();
     onClose();
-  }, [onClose]);
+  }, [onClose, closeOnline]);
 
 
   /**
@@ -1413,7 +1399,7 @@ export const AddFoodSheet: React.FC<{
             )}
             {/* Round D · DP (D17): "Search online" as a row under the results. */}
             {onlineQuery(query) && !loading && filtered.length > 0 && !multi && (
-              <SearchOnlineButton variant="row" premium={onlineLock.locked} onClick={() => searchOnline(query.trim())} />
+              <SearchOnlineButton variant="row" premium={onlineLocked} onClick={() => searchOnline(query.trim())} />
             )}
             {query.trim() !== "" && !loading && filtered.length === 0 && (
               <div className="flex flex-col" style={{ gap: 4, padding: "24px 0 16px" }}>
@@ -1423,7 +1409,7 @@ export const AddFoodSheet: React.FC<{
                 {/* …and in the nothing-found state (not when the search itself couldn't run). */}
                 {!searchFailed && onlineQuery(query) && (
                   <div className="flex justify-center" style={{ marginTop: 10 }}>
-                    <SearchOnlineButton variant="empty" premium={onlineLock.locked} onClick={() => searchOnline(query.trim())} />
+                    <SearchOnlineButton variant="empty" premium={onlineLocked} onClick={() => searchOnline(query.trim())} />
                   </div>
                 )}
               </div>

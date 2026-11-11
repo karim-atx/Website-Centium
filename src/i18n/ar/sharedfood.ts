@@ -8,6 +8,7 @@ export const FILES: string[] = [
   "services/food/index.ts",
   "services/nutrition/client.ts",
   "services/nutrition/clientNutritionModel.ts",
+  "services/nutrition/otherAllergies.ts",
   "services/nutrition/index.ts",
   "services/workout/blocks.ts",
   "services/workout/prescription.ts",
@@ -308,6 +309,14 @@ const sharedfood: Catalogue = {
   // == services/music/playlistLink.ts ==
   "Paste the full playlist link, starting with https://": "الصق رابط قائمة التشغيل كاملًا، بدءًا بـ https://",
   "That link isn't a playlist or an album.": "هذا الرابط ليس قائمة تشغيل ولا ألبومًا.",
+  // == FQ: "Other" allergies (services/nutrition/otherAllergies.ts, clientNutritionModel) ==
+  "Use 1 to 60 characters.": "استخدم من 1 إلى 60 حرفًا.", // note: ATXK3, an allergy's name
+  "Use letters, numbers and punctuation on one line.": "استخدم حروفًا وأرقامًا وعلامات ترقيم في سطر واحد.", // note: ATXK4
+  "You've already added this allergy.": "سبق أن أضفت هذه الحساسية.", // note: ATXK5
+  "You can add up to 20 of your own.": "يمكنك إضافة 20 حساسية خاصة بك كحد أقصى.", // note: ATXK6
+  "Keep the note to 200 characters.": "اجعل الملاحظة 200 حرف أو أقل.", // note: 23514, the note's check
+  "Check: {label}": "تحقّق: {label}", // note: health-related; amber, a name match only; {label} is the member's own words
+  "The name suggests {food} may contain {label}. Check the ingredients before you eat it.": "يوحي الاسم بأن {food} قد يحتوي على {label}. تحقّق من المكوّنات قبل أن تأكله.", // note: health-related; {label} is the member's own words
 };
 
 export default sharedfood;

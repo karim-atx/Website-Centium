@@ -11,6 +11,7 @@ import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { BottomSheet } from "../../../components/ui/BottomSheet";
 import { Button } from "../../../components/ui/Button";
 import { Toast } from "../../../components/ui/Toast";
+import { SelectableBox } from "../../../components/ui/SelectableBox";
 import { ColorPopover, ColorSwatches, InsertionLine, Placeholder, RenameField } from "../../../components/folders/FolderParts";
 import { folderColorOptions, withPlaceholder } from "../../../components/folders/folderList";
 import { ExerciseSettingsSheet } from "../../../components/workout/ExerciseSettingsSheet";
@@ -1204,6 +1205,46 @@ const RoutineDetail: React.FC<{
   const exRow = (ex: Exercise) => {
     const line = prescriptionLine(ex);
     const targets = setTargetLines(ex.setTargets);
+    const rowStyle: React.CSSProperties = { gap: 12, minHeight: 56, padding: "6px 12px", boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", boxShadow: overId === ex.id ? "inset 0 0 0 2px #AEA1DC" : "none", opacity: dragId === ex.id ? 0.5 : 1 };
+    const text = (
+      <>
+        <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
+          {ex.name}
+        </span>
+        {line && <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{line}</span>}
+        {targets.map((x) => (
+          <span key={x} className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
+            {x}
+          </span>
+        ))}
+      </>
+    );
+    // FP: while grouping, the whole row is the one checkbox (nothing else in
+    // it is a control then); the tick is its aria-hidden mark.
+    if (selecting) {
+      const on = picked.includes(ex.id);
+      return (
+        <SelectableBox
+          key={ex.id}
+          kind="checkbox"
+          selected={on}
+          disabled={!!ex.blockId}
+          label={t("Select {name}", { name: ex.name })}
+          onToggle={() => setPicked((p) => (p.includes(ex.id) ? p.filter((x) => x !== ex.id) : [...p, ex.id]))}
+          className="group flex items-center hover:!bg-[#EFEFF1]"
+          style={rowStyle}
+        >
+          <span
+            aria-hidden
+            className="grid place-items-center"
+            style={{ width: 20, height: 20, borderRadius: 6, flex: "none", border: `2px solid ${ex.blockId ? "#D6D2CB" : on ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`, background: on ? "#AEA1DC" : "transparent" }}
+          >
+            {on && <Check size={12} strokeWidth={3} color="#FFFFFF" />}
+          </span>
+          <span className="flex-1 min-w-0 text-start">{text}</span>
+        </SelectableBox>
+      );
+    }
     return (
       <div
         key={ex.id}
@@ -1219,75 +1260,48 @@ const RoutineDetail: React.FC<{
           setOverId(null);
         }}
         className="group flex items-center hover:!bg-[#EFEFF1]"
-        style={{ gap: 12, minHeight: 56, padding: "6px 12px", boxSizing: "border-box", borderRadius: 12, background: "#F5F5F6", boxShadow: overId === ex.id ? "inset 0 0 0 2px #AEA1DC" : "none", opacity: dragId === ex.id ? 0.5 : 1 }}
+        style={rowStyle}
       >
-        {selecting ? (
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={picked.includes(ex.id)}
-            disabled={!!ex.blockId}
-            aria-label={t("Select {name}", { name: ex.name })}
-            onClick={() => setPicked((p) => (p.includes(ex.id) ? p.filter((x) => x !== ex.id) : [...p, ex.id]))}
-            className="grid place-items-center"
-            style={{ width: 20, height: 20, borderRadius: 6, flex: "none", border: `2px solid ${ex.blockId ? "#D6D2CB" : picked.includes(ex.id) ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`, background: picked.includes(ex.id) ? "#AEA1DC" : "transparent" }}
-          >
-            {picked.includes(ex.id) && <Check size={12} strokeWidth={3} color="#FFFFFF" />}
-          </button>
-        ) : (
-          <span
-            role="button"
-            tabIndex={0}
-            draggable
-            aria-label={t("Drag {name}", { name: ex.name })}
-            title={t("Drag {name}", { name: ex.name })}
-            onDragStart={(e) => {
-              setDragId(ex.id);
-              e.dataTransfer.effectAllowed = "move";
-              e.dataTransfer.setData("text/plain", ex.id);
-            }}
-            onDragEnd={() => {
-              setDragId(null);
-              setOverId(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                e.preventDefault();
-                step(ex.id, e.key === "ArrowUp" ? "up" : "down");
-              }
-            }}
-            className="flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
-            style={{ color: "#776E64", cursor: "grab", flex: "none" }}
-          >
-            <GripVertical size={16} />
-          </span>
-        )}
-        <button type="button" onClick={() => !selecting && onSettings(ex)} className="flex-1 min-w-0 text-start">
-          <span className="block truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 600, color: "#241F1B" }}>
-            {ex.name}
-          </span>
-          {line && <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{line}</span>}
-          {targets.map((x) => (
-            <span key={x} className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
-              {x}
-            </span>
-          ))}
+        <span
+          role="button"
+          tabIndex={0}
+          draggable
+          aria-label={t("Drag {name}", { name: ex.name })}
+          title={t("Drag {name}", { name: ex.name })}
+          onDragStart={(e) => {
+            setDragId(ex.id);
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", ex.id);
+          }}
+          onDragEnd={() => {
+            setDragId(null);
+            setOverId(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+              e.preventDefault();
+              step(ex.id, e.key === "ArrowUp" ? "up" : "down");
+            }
+          }}
+          className="flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#AEA1DC]"
+          style={{ color: "#776E64", cursor: "grab", flex: "none" }}
+        >
+          <GripVertical size={16} />
+        </span>
+        <button type="button" onClick={() => onSettings(ex)} className="flex-1 min-w-0 text-start">
+          {text}
         </button>
-        {!selecting && (
-          <>
-            <span className="hidden group-hover:flex group-focus-within:flex items-center" style={{ gap: 6 }}>
-              <button type="button" onClick={() => setReplaceTarget(ex.id)} aria-label={t("Replace {name}", { name: ex.name })} title={t("Replace {name}", { name: ex.name })} className="grid place-items-center" style={{ width: 32, height: 32, borderRadius: 10, background: "#FFFFFF", color: "#5B5349" }}>
-                <Repeat size={16} />
-              </button>
-              <button type="button" onClick={() => onDeleteExercise(ex.id)} aria-label={t("Delete {name}", { name: ex.name })} title={t("Delete {name}", { name: ex.name })} className="grid place-items-center" style={{ width: 32, height: 32, borderRadius: 10, background: "#FCEDEC", color: "#B4372C" }}>
-                <Trash2 size={16} />
-              </button>
-            </span>
-            <button type="button" onClick={() => onSettings(ex)} aria-label={t("Settings for {name}", { name: ex.name })} className="flex" style={{ color: "#776E64", flex: "none" }}>
-              <Settings2 size={16} />
-            </button>
-          </>
-        )}
+        <span className="hidden group-hover:flex group-focus-within:flex items-center" style={{ gap: 6 }}>
+          <button type="button" onClick={() => setReplaceTarget(ex.id)} aria-label={t("Replace {name}", { name: ex.name })} title={t("Replace {name}", { name: ex.name })} className="grid place-items-center" style={{ width: 32, height: 32, borderRadius: 10, background: "#FFFFFF", color: "#5B5349" }}>
+            <Repeat size={16} />
+          </button>
+          <button type="button" onClick={() => onDeleteExercise(ex.id)} aria-label={t("Delete {name}", { name: ex.name })} title={t("Delete {name}", { name: ex.name })} className="grid place-items-center" style={{ width: 32, height: 32, borderRadius: 10, background: "#FCEDEC", color: "#B4372C" }}>
+            <Trash2 size={16} />
+          </button>
+        </span>
+        <button type="button" onClick={() => onSettings(ex)} aria-label={t("Settings for {name}", { name: ex.name })} className="flex" style={{ color: "#776E64", flex: "none" }}>
+          <Settings2 size={16} />
+        </button>
       </div>
     );
   };

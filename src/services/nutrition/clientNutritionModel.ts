@@ -7,6 +7,7 @@
 import type { MacroSplit, NutritionGoal, WeightGoalType } from "../../types";
 import { appLocale } from "../../i18n/format";
 import { getLanguage, t, tk, tn } from "../../i18n/core";
+import { isolate } from "./otherAllergies";
 
 // ---------------------------------------------------------------------------
 // Allergens (the 14 regulated allergens, enum `allergen`)
@@ -87,14 +88,17 @@ export function allergyDiff(
  * with Dana." Several allergies are listed in the sheet's order. Severity
  * comes only from the client's own structured rows.
  */
-export function allergyLine(allergies: MyAllergy[], sharedWith: string[]): string | null {
-  if (allergies.length === 0) return null;
+export function allergyLine(allergies: MyAllergy[], sharedWith: string[], others: { label: string; severity: AllergySeverity }[] = []): string | null {
+  const n = allergies.length + others.length;
+  if (n === 0) return null;
   const order = (a: Allergen) => ALLERGENS.findIndex((x) => x.value === a);
-  const list = [...allergies]
-    .sort((x, y) => order(x.allergen) - order(y.allergen))
-    .map((a) => `${t(allergenLabel(a.allergen))} (${t(severityLabel(a.severity)).toLowerCase()})`)
-    .join(listSep());
-  const head = allergies.length === 1 ? t("Allergy: {list}.", { list }) : t("Allergies: {list}.", { list });
+  const sev = (s: AllergySeverity) => t(severityLabel(s)).toLowerCase();
+  const list = [
+    ...[...allergies].sort((x, y) => order(x.allergen) - order(y.allergen)).map((a) => `${t(allergenLabel(a.allergen))} (${sev(a.severity)})`),
+    // FQ: the member's own "Other" allergies after the 14, in their words (isolated, never translated).
+    ...others.map((o) => `${isolate(o.label)} (${sev(o.severity)})`),
+  ].join(listSep());
+  const head = n === 1 ? t("Allergy: {list}.", { list }) : t("Allergies: {list}.", { list });
   if (sharedWith.length === 0) return head;
   return `${head} ${t("Shared with {names}.", { names: joinNames(sharedWith) })}`;
 }
@@ -119,6 +123,12 @@ export interface ConflictRow {
   severity: string | null;
   restriction: string | null;
   detail: string | null;
+  /**
+   * FQ (20261227020000): on an "Other" allergy's row (kind allergy_check,
+   * allergen null) the member's own label. Absent on today's database, so
+   * optional: a row without it reads exactly as before.
+   */
+  customAllergy?: string | null;
 }
 
 export interface FoodBadge {
@@ -133,7 +143,15 @@ export interface FoodBadge {
   /** The allergen, for a confirmed allergy (never named for a keyword match's severity). */
   allergen: Allergen | null;
   restriction: string | null;
+  /** FQ: an "Other" allergy's label (the member's own words, never translated), on a check-this row. */
+  customAllergy: string | null;
 }
+
+/** The member's own label on a conflict row, trimmed, or null (a standard row, or today's database). */
+export const customLabelOf = (row: Pick<ConflictRow, "customAllergy">): string | null => {
+  const l = typeof row.customAllergy === "string" ? row.customAllergy.trim() : "";
+  return l ? l : null;
+};
 
 const RANK: Record<ConflictKind, number> = { allergy_confirmed: 0, allergy_check: 1, restriction: 2, preference: 3, allergies_unknown: 9 };
 
@@ -157,17 +175,22 @@ export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => stri
         severity: sev,
         allergen: (row.allergen as Allergen) ?? null,
         restriction: null,
+        customAllergy: null,
       };
     }
-    case "allergy_check":
-      return { kind: "allergy_check", tone: "amber", text: t("Check this"), blocks: false, severity: null, allergen: null, restriction: null };
+    case "allergy_check": {
+      // FQ (decision 20): an "Other" allergy is amber "check this" only, named
+      // with the member's own label (isolated, never translated).
+      const custom = customLabelOf(row);
+      return { kind: "allergy_check", tone: "amber", text: custom ? t("Check: {label}", { label: isolate(custom) }) : t("Check this"), blocks: false, severity: null, allergen: null, restriction: null, customAllergy: custom };
+    }
     case "restriction": {
       const label = row.restriction ? t(restrictionLabel(row.restriction)) : "";
-      return { kind: "restriction", tone: "amber", text: label ? t("Not {restriction}", { restriction: label.toLowerCase() }) : t("Not compatible"), blocks: false, severity: null, allergen: null, restriction: row.restriction };
+      return { kind: "restriction", tone: "amber", text: label ? t("Not {restriction}", { restriction: label.toLowerCase() }) : t("Not compatible"), blocks: false, severity: null, allergen: null, restriction: row.restriction, customAllergy: null };
     }
     case "preference": {
       const label = row.restriction ? t(restrictionLabel(row.restriction)) : t("Preference");
-      return { kind: "preference", tone: "soft", text: label, blocks: false, severity: null, allergen: null, restriction: row.restriction };
+      return { kind: "preference", tone: "soft", text: label, blocks: false, severity: null, allergen: null, restriction: row.restriction, customAllergy: null };
     }
     default:
       return null;
@@ -217,7 +240,9 @@ export function addNotice(
     return {
       tone: "amber",
       title: t("Check this"),
-      body: t("The name suggests {food} may contain something you're allergic to. Check the ingredients before you eat it.", { food: foodName }),
+      body: b.customAllergy
+        ? t("The name suggests {food} may contain {label}. Check the ingredients before you eat it.", { food: foodName, label: isolate(b.customAllergy) })
+        : t("The name suggests {food} may contain something you're allergic to. Check the ingredients before you eat it.", { food: foodName }),
       blocks: false,
       addAnyway: false,
     };

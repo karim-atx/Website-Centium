@@ -2,6 +2,7 @@ import React, { useContext, useId } from "react";
 import clsx from "clsx";
 import { ChevronRight, ExternalLink, type LucideIcon } from "lucide-react";
 import { Toggle } from "./Toggle";
+import { SelectableBox } from "./SelectableBox";
 import { BizRow } from "../business-more/kit";
 
 import { SettingsRowVariant } from "./settingsRowVariant";
@@ -131,7 +132,19 @@ type RowProps = RowBase &
       }
     | {
         /** A switch at the end; the row itself is not a button. */
-        toggle: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string; describedBy?: string };
+        toggle: {
+          checked: boolean;
+          onChange: (checked: boolean) => void;
+          disabled?: boolean;
+          label?: string;
+          describedBy?: string;
+          /**
+           * The subtitle holds a control of its own (CalendarSyncRow's "Open
+           * settings"): the row toggles from a full-row switch behind it
+           * (SelectableBox inner) instead of being the switch itself.
+           */
+          inner?: boolean;
+        };
         onClick?: never;
         value?: never;
         valueTight?: never;
@@ -167,6 +180,7 @@ export const SettingsRow: React.FC<RowProps> = ({
   paneExternal,
 }) => {
   const variant = useContext(SettingsRowVariant);
+  const subId = useId();
   if (variant === "business") {
     return (
       <BizRow
@@ -175,7 +189,10 @@ export const SettingsRow: React.FC<RowProps> = ({
         icon={Icon}
         title={title}
         desc={subtitle}
-        ariaLabel={srDescription ? `${title}. ${srDescription}` : undefined}
+        // A switch row is the switch (FP): the title names it and the
+        // screen-reader line describes it.
+        ariaLabel={srDescription && !toggle ? `${title}. ${srDescription}` : undefined}
+        srDescription={toggle ? srDescription : undefined}
         value={value ?? undefined}
         onClick={onClick}
         toggle={toggle}
@@ -227,6 +244,7 @@ export const SettingsRow: React.FC<RowProps> = ({
       )}
       <span className="flex-1 min-w-0">
         <span
+          aria-hidden={toggle?.inner || undefined}
           className={clsx(
             "block text-[14px] font-semibold leading-[19px] break-words",
             destructive ? "text-status-high" : "text-charcoal"
@@ -234,8 +252,8 @@ export const SettingsRow: React.FC<RowProps> = ({
         >
           {title}
         </span>
-        {subtitle && <span className="block mt-0.5 text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
-        {srDescription && <span className="sr-only">{srDescription}</span>}
+        {subtitle && <span id={`${subId}-sub`} className="block mt-0.5 text-[12px] leading-4 text-charcoal-faint">{subtitle}</span>}
+        {srDescription && <span id={`${subId}-sr`} className="sr-only">{srDescription}</span>}
       </span>
       {!valueTight && value !== undefined && value !== null && (
         <span className="shrink-0 max-w-[45%] truncate text-[12.5px] text-charcoal-faint">{value}</span>
@@ -258,17 +276,25 @@ export const SettingsRow: React.FC<RowProps> = ({
   const inert = dimmed || undefined;
 
   if (toggle) {
+    // FP: the row is the switch, so a tap anywhere on it toggles. The drawn
+    // switch is decorative; the row carries the name, the state and the
+    // subtitle (aria-describedby).
     return (
-      <div id={id} inert={inert} aria-disabled={dimmed || undefined} className={clsx(settingsRowClass, dim, className)}>
+      <SelectableBox
+        kind="switch"
+        inner={toggle.inner}
+        id={id}
+        inert={dimmed}
+        selected={toggle.checked}
+        onToggle={() => toggle.onChange(!toggle.checked)}
+        disabled={toggle.disabled || dimmed}
+        label={toggle.label ?? title}
+        describedBy={switchDescribedBy(toggle, subtitle ? `${subId}-sub` : undefined, srDescription ? `${subId}-sr` : undefined)}
+        className={clsx(settingsRowClass, dim, className)}
+      >
         {body}
-        <Toggle
-          checked={toggle.checked}
-          onChange={toggle.onChange}
-          disabled={toggle.disabled}
-          label={toggle.label ?? title}
-          describedBy={toggle.describedBy}
-        />
-      </div>
+        <Toggle decorative checked={toggle.checked} disabled={toggle.disabled} />
+      </SelectableBox>
     );
   }
 
@@ -296,6 +322,14 @@ export const SettingsRow: React.FC<RowProps> = ({
 };
 
 /**
+ * What describes a switch row: the caller's own describedBy, else the subtitle
+ * and the screen-reader line. A row with a control in its subtitle (inner)
+ * keeps them as text beside the switch, as before, so they aren't read twice.
+ */
+const switchDescribedBy = (toggle: { describedBy?: string; inner?: boolean }, ...ids: (string | undefined)[]) =>
+  toggle.describedBy ?? (toggle.inner ? undefined : ids.filter(Boolean).join(" ") || undefined);
+
+/**
  * Website viewport (Professional handover v1, WP-MO.10; WP-MO Practice
  * Settings Web): a row of a page in the spanning Settings pane. 56 high (64
  * with a subtitle), 16 in, the 32 r10 tile with an 18 glyph, the title 15/24
@@ -315,9 +349,10 @@ const PaneRow: React.FC<{
   dimmed?: boolean;
   value?: React.ReactNode;
   onClick?: () => void;
-  toggle?: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string };
+  toggle?: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; label?: string; describedBy?: string; inner?: boolean };
   external?: boolean;
 }> = ({ id, className, icon: Icon, tile, title, subtitle, srDescription, destructive, dimmed, value, onClick, toggle, external }) => {
+  const subId = useId();
   const style: React.CSSProperties = { minHeight: subtitle ? 64 : 56, boxSizing: "border-box", gap: 12, padding: "0 16px" };
   const cls = clsx("relative w-full flex items-center text-start [&+&]:border-t [&+&]:border-[rgba(36,31,27,0.06)]", dimmed && "opacity-40", className);
   const body = (
@@ -328,9 +363,9 @@ const PaneRow: React.FC<{
         </span>
       )}
       <span className="flex-1 min-w-0">
-        <span className="block break-words" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: destructive ? "#B3261E" : "#241F1B" }}>{title}</span>
-        {subtitle && <span className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{subtitle}</span>}
-        {srDescription && <span className="sr-only">{srDescription}</span>}
+        <span aria-hidden={toggle?.inner || undefined} className="block break-words" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: destructive ? "#B3261E" : "#241F1B" }}>{title}</span>
+        {subtitle && <span id={`${subId}-sub`} className="block" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{subtitle}</span>}
+        {srDescription && <span id={`${subId}-sr`} className="sr-only">{srDescription}</span>}
       </span>
       {value !== undefined && value !== null && (
         <span className="shrink-0 max-w-[45%] truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{value}</span>
@@ -339,22 +374,30 @@ const PaneRow: React.FC<{
   );
   if (toggle) {
     const on = toggle.checked;
+    // FP: the row is the switch (as SettingsRow); the drawn switch is decorative.
     return (
-      <div id={id} inert={dimmed || undefined} aria-disabled={dimmed || undefined} className={cls} style={style}>
+      <SelectableBox
+        kind="switch"
+        inner={toggle.inner}
+        id={id}
+        inert={dimmed}
+        selected={on}
+        onToggle={() => toggle.onChange(!on)}
+        disabled={toggle.disabled || dimmed}
+        label={toggle.label ?? title}
+        describedBy={switchDescribedBy(toggle, subtitle ? `${subId}-sub` : undefined, srDescription ? `${subId}-sr` : undefined)}
+        className={cls}
+        style={style}
+      >
         {body}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-label={toggle.label ?? title}
-          disabled={toggle.disabled}
-          onClick={() => toggle.onChange(!on)}
-          className="flex shrink-0 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#AEA1DC]"
+        <span
+          aria-hidden
+          className={clsx("flex shrink-0", toggle.disabled && "opacity-40")}
           style={{ width: 44, height: 26, boxSizing: "border-box", borderRadius: 999, background: on ? "#9A8CD6" : "#E4E2EA", padding: 3, justifyContent: on ? "flex-end" : "flex-start" }}
         >
           <span style={{ width: 20, height: 20, borderRadius: 999, background: "#FFFFFF", boxShadow: "0 1px 2px rgba(36,31,27,0.2)" }} />
-        </button>
-      </div>
+        </span>
+      </SelectableBox>
     );
   }
   if (onClick) {

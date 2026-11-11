@@ -29,7 +29,8 @@ describe("the value confirm_form_profile_proposal takes", () => {
     const d = draftFrom(p({ field: "allergies", suggested: { text: "Peanuts", allergen: "peanuts", severity: "moderate" } }));
     assert.equal(proposalTitle(d), "Peanuts allergy");
     assert.deepEqual(shapeValue(d, TODAY), { ok: true, value: { allergen: "peanuts", severity: "moderate", note: "" } });
-    const unknown = draftFrom(p({ field: "allergies", suggested: { text: "Kiwi", severity: "moderate" } }));
+    // No standard allergen, the Other path refused (today's database): choose one of the 14.
+    const unknown = draftFrom(p({ field: "allergies", suggested: { text: "Kiwi", severity: "moderate" } }), false);
     assert.equal(proposalTitle(unknown), "Kiwi");
     assert.deepEqual(shapeValue(unknown, TODAY), { ok: false, problem: "Choose the allergen." });
     if (unknown.field === "allergies") assert.deepEqual(shapeValue({ ...unknown, allergen: "sesame", severity: "severe" }, TODAY), { ok: true, value: { allergen: "sesame", severity: "severe", note: "" } });
@@ -107,5 +108,43 @@ describe("halal and kosher (Database 20261222075000) are words", () => {
     assert.equal(confirmedAnswerRow({ field: "dietary_restrictions", value: { restriction: "low_fodmap" } }).title, "Low fodmap");
     assert.equal(proposalTitle(draftFrom({ field: "dietary_restrictions", suggested: { text: "I eat halal", restriction: "halal" } })), "Halal");
     assert.equal(proposalTitle(draftFrom({ field: "dietary_restrictions", suggested: { text: "Kosher", restriction: "kosher" } })), "Kosher");
+  });
+});
+
+describe("FQ: an allergy with no standard allergen is saved as an Other allergy", () => {
+  it("prefills the label from the answer, trimmed to 60, at Severe, and sends {label, severity, note}", () => {
+    const d = draftFrom(p({ field: "allergies", suggested: { text: "  Kiwi  ", severity: "moderate" } }));
+    assert.equal(d.field === "allergies" && d.asOther, true);
+    assert.equal(proposalTitle(d), "Kiwi");
+    assert.deepEqual(shapeValue(d, TODAY), { ok: true, value: { label: "Kiwi", severity: "severe", note: "" } });
+    // The Database's suggestion carries "allergen": null today; the same as no key.
+    const nul = draftFrom(p({ field: "allergies", suggested: { text: "كيوي", allergen: null, severity: "moderate" } }));
+    assert.deepEqual(shapeValue(nul, TODAY), { ok: true, value: { label: "كيوي", severity: "severe", note: "" } });
+    const long = draftFrom(p({ field: "allergies", suggested: { text: "x".repeat(120) } }));
+    if (long.field === "allergies") assert.equal(long.label.length, 60);
+  });
+
+  it("the label's rules (ATXK3, ATXK4) before it is sent; the severity is editable", () => {
+    const d = draftFrom(p({ field: "allergies", suggested: { text: "Kiwi" } }));
+    if (d.field !== "allergies") throw new Error("allergies");
+    assert.deepEqual(shapeValue({ ...d, label: "  " }, TODAY), { ok: false, problem: "Use 1 to 60 characters." });
+    assert.deepEqual(shapeValue({ ...d, label: "Ki\nwi" }, TODAY), { ok: false, problem: "Use letters, numbers and punctuation on one line." });
+    assert.deepEqual(shapeValue({ ...d, severity: "mild", note: " since 2019 " }, TODAY), { ok: true, value: { label: "Kiwi", severity: "mild", note: "since 2019" } });
+  });
+
+  it("choosing a listed allergen instead, or a database that refused labels, is today's card", () => {
+    const d = draftFrom(p({ field: "allergies", suggested: { text: "Kiwi", severity: "moderate" } }));
+    if (d.field !== "allergies") throw new Error("allergies");
+    assert.deepEqual(shapeValue({ ...d, asOther: false }, TODAY), { ok: false, problem: "Choose the allergen." });
+    const today = draftFrom(p({ field: "allergies", suggested: { text: "Kiwi", severity: "moderate" } }), false);
+    assert.equal(today.field === "allergies" && today.otherOffered, false);
+    assert.deepEqual(shapeValue(today, TODAY), { ok: false, problem: "Choose the allergen." });
+    // A matched standard allergen never offers it.
+    const std = draftFrom(p({ field: "allergies", suggested: { text: "Peanuts", allergen: "peanuts", severity: "moderate" } }));
+    assert.equal(std.field === "allergies" && std.otherOffered, false);
+  });
+
+  it("the professional's box quotes a confirmed Other allergy", () => {
+    assert.deepEqual(confirmedAnswerRow({ field: "allergies", value: { label: "Kiwi", severity: "severe", note: "" } }), { title: "“⁨Kiwi⁩” allergy, severe", where: "Dietary needs card" });
   });
 });

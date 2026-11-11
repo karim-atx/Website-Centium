@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { HealthScanIcon } from "./HealthScanIcon";
 import { Toggle } from "../ui/Toggle";
+import { SelectableBox } from "../ui/SelectableBox";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { TurnOffTrackingPopup } from "../cycle/TurnOffTrackingPopup";
@@ -16,10 +17,14 @@ import { t } from "../../i18n/core";
 // Where it sits: inside Safety & content for a customer, in a Health
 // tracking section on a professional's Profile, and on a business's Business
 // Profile (the only profile a business account reaches).
-export const CycleTrackingRow: React.FC = () => {
+//
+// className goes on the switch box, so a caller's spacing above the row (the
+// web Profile's 12 above its divider) is part of what a tap reaches.
+export const CycleTrackingRow: React.FC<{ className?: string }> = ({ className }) => {
   const { cycleSettings, cycleSettingsLoaded, cycleOffered, setCycleTracking } = useApp();
   const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
   const [busy, setBusy] = useState(false);
+  const descId = useId();
   const [error, setError] = useState<string | null>(null);
   // HE1.10.b K5: turning off asks first (HE1.10.b.5), the same popup as Cycle
   // tracking › Settings; the switch moves only after Turn off.
@@ -40,23 +45,36 @@ export const CycleTrackingRow: React.FC = () => {
 
   return (
     <div>
-      {/* MO1.5 anatomy row 8 (2x frame): the title centred beside a 36
-          #F0EDF9 tile with a #7D6BB5 glyph (new tile, decision 22), and the
-          12/400 line under the row at the title's x, 10 below the tile, like
-          the Recovery body above it. The glyph is the one MO1.5 draws
-          (HealthScanIcon, copied from the handover asset; was Droplet). */}
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-3 min-w-0">
-          <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark shrink-0" aria-hidden>
-            <HealthScanIcon />
+      {/* FP: the row and its line are the switch (a full-row switch behind
+          them), so a tap anywhere on them toggles. */}
+      <SelectableBox
+        inner
+        kind="switch"
+        selected={cycleOn}
+        onToggle={() => void toggle(!cycleOn)}
+        disabled={busy || !cycleSettingsLoaded}
+        label={t("Cycle tracking")}
+        describedBy={descId}
+        className={className}
+      >
+        {/* MO1.5 anatomy row 8 (2x frame): the title centred beside a 36
+            #F0EDF9 tile with a #7D6BB5 glyph (new tile, decision 22), and the
+            12/400 line under the row at the title's x, 10 below the tile, like
+            the Recovery body above it. The glyph is the one MO1.5 draws
+            (HealthScanIcon, copied from the handover asset; was Droplet). */}
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex items-center gap-3 min-w-0">
+            <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark shrink-0" aria-hidden>
+              <HealthScanIcon />
+            </span>
+            <span aria-hidden className="block text-sm font-semibold text-charcoal">{t("Cycle tracking")}</span>
           </span>
-          <span className="block text-sm font-semibold text-charcoal">{t("Cycle tracking")}</span>
-        </span>
-        <Toggle checked={cycleOn} onChange={(on) => void toggle(on)} label={t("Cycle tracking")} disabled={busy || !cycleSettingsLoaded} />
-      </div>
-      <p className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">
-        {cycleOn ? t(TRACKER_OFF_KEEPS_DATA) : t("Switch it on to start tracking.")}
-      </p>
+          <Toggle decorative checked={cycleOn} disabled={busy || !cycleSettingsLoaded} />
+        </div>
+        <p id={descId} aria-hidden className="ps-12 mt-2.5 text-xs text-charcoal-faint leading-normal">
+          {cycleOn ? t(TRACKER_OFF_KEEPS_DATA) : t("Switch it on to start tracking.")}
+        </p>
+      </SelectableBox>
       {error && (
         <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{t(error)}</p>
       )}

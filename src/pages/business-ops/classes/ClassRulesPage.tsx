@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
+import { SelectableBox } from "../../../components/ui/SelectableBox";
 import { Toast } from "../../../components/ui/Toast";
 import { useConsoleAccess } from "../../../hooks/useConsoleAccess";
 import { fetchVenueCancellationDefault } from "../../../services/business-classes";
@@ -199,6 +200,7 @@ function RuleCard({
   onLate: (h: number) => void;
 }) {
   const [menu, setMenu] = useState<{ which: "size" | "late"; el: HTMLButtonElement } | null>(null);
+  const waitlistSubId = useId();
   const on = waitlistCap > 0;
   const picker = (which: "size" | "late", value: string, aria: string) => (
     <button
@@ -214,12 +216,16 @@ function RuleCard({
       <ChevronDown size={14} style={{ color: m.faint }} />
     </button>
   );
+  const rowStyle = (first: boolean): CSSProperties => ({ gap: 10, padding: "10px 16px", borderTop: first ? "none" : `0.5px solid ${m.div}`, minHeight: 54 });
+  const rowText = (label: string, s: string | null, sId?: string) => (
+    <div className="flex-1 min-w-0" style={{ minWidth: 140 }}>
+      <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{label}</p>
+      {s && <p id={sId} style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>{s}</p>}
+    </div>
+  );
   const row = (label: string, s: string | null, right: ReactNode, first = false) => (
-    <div className="flex items-center flex-wrap" style={{ gap: 10, padding: "10px 16px", borderTop: first ? "none" : `0.5px solid ${m.div}`, minHeight: 54 }}>
-      <div className="flex-1 min-w-0" style={{ minWidth: 140 }}>
-        <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 700, lineHeight: linePx(17), color: m.ink }}>{label}</p>
-        {s && <p style={{ margin: 0, fontSize: textPx(11.5), lineHeight: linePx(15), color: m.faint }}>{s}</p>}
-      </div>
+    <div className="flex items-center flex-wrap" style={rowStyle(first)}>
+      {rowText(label, s)}
       {right}
     </div>
   );
@@ -228,12 +234,20 @@ function RuleCard({
   return (
     <div style={{ marginBottom: 12, borderRadius: 20, background: m.card, border: `1px solid ${m.border}`, overflow: "hidden" }}>
       <p style={{ margin: 0, padding: "14px 16px 6px", fontSize: textPx(14), fontWeight: 800, color: m.ink }}>{title}</p>
-      {row(
-        t("Waitlist"),
-        on ? t("When the class is full") : t("Members can't join a waitlist"),
-        <BoardSwitch m={m} checked={on} onChange={(v) => onWaitlist(v)} disabled={disabled || busy} label={t("Waitlist for {class}", { class: title })} />,
-        true
-      )}
+      {/* FP: the Waitlist row is the switch, so a tap anywhere on it toggles. */}
+      <SelectableBox
+        kind="switch"
+        selected={on}
+        onToggle={() => onWaitlist(!on)}
+        disabled={disabled || busy}
+        label={t("Waitlist for {class}", { class: title })}
+        describedBy={waitlistSubId}
+        className="flex items-center flex-wrap"
+        style={rowStyle(true)}
+      >
+        {rowText(t("Waitlist"), on ? t("When the class is full") : t("Members can't join a waitlist"), waitlistSubId)}
+        <BoardSwitch decorative m={m} checked={on} disabled={disabled || busy} />
+      </SelectableBox>
       {on && row(t("Waitlist size"), null, picker("size", t("Up to {n}", { n: waitlistCap }), t("Waitlist size for {class}, up to {n}", { class: title, n: waitlistCap })))}
       {row(t("Late cancel"), t("Cancelling later than this loses the booking"), picker("late", hoursBefore(lateHours), t("Late cancel for {class}, {late}", { class: title, late: hoursBefore(lateHours) })))}
       {note && (

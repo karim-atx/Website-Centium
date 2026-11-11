@@ -666,6 +666,8 @@ export interface DoctorSummary {
   person: { firstName: string | null; age: number | null; sex: string | null } | null;
   medications: { name: string; dose: string | null; route: string | null; times: string | null; notes: string | null }[];
   allergies: { allergen: string; severity: string | null; note: string | null }[];
+  /** FQ (20261227020000 other_allergies): the member's own "Other" allergies, in their words. Empty before the Database sends them. */
+  otherAllergies: { label: string; severity: string | null; note: string | null }[];
   conditions: string[];
   surgeries: { name: string; date: string | null; datePrecision: DatePrecision }[];
   bloodPressure: {
@@ -715,6 +717,10 @@ export function parseDoctorSummary(data: unknown): DoctorSummary | null {
     allergies: rowsOf(r.allergies).flatMap((a) => {
       const allergen = str(a.allergen);
       return allergen ? [{ allergen, severity: str(a.severity), note: str(a.note) }] : [];
+    }),
+    otherAllergies: rowsOf(r.other_allergies).flatMap((a) => {
+      const label = str(a.label);
+      return label ? [{ label, severity: str(a.severity), note: str(a.note) }] : [];
     }),
     conditions: strList(r.conditions),
     surgeries: rowsOf(r.surgeries).flatMap((s) => {
@@ -791,7 +797,7 @@ export function summarySections(s: DoctorSummary, formatDay: (ymd: string) => st
   // note: health wording
   out.push({ key: "medications", title: t("Medications"), lines: s.medications.map((m) => join([m.name, m.dose, m.route, m.times, m.notes])), empty: t("No medications recorded.") });
   // note: health wording
-  out.push({ key: "allergies", title: t("Allergies"), lines: s.allergies.map((a) => join([a.allergen, a.severity, a.note])), empty: t("No allergies recorded.") });
+  out.push({ key: "allergies", title: t("Allergies"), lines: [...s.allergies.map((a) => join([a.allergen, a.severity, a.note])), ...s.otherAllergies.map((a) => join([t("“{label}”", { label: `⁨${a.label}⁩` }), a.severity, a.note]))], empty: t("No allergies recorded.") });
   // note: health wording
   out.push({ key: "conditions", title: t("Conditions"), lines: [...s.conditions], empty: t("No conditions recorded.") });
   out.push({ key: "surgeries", title: t("Surgeries"), lines: s.surgeries.map((x) => join([x.name, x.date ? surgeryDate({ date: x.date, datePrecision: x.datePrecision }, formatDay) : null])), empty: t("No surgeries recorded.") });

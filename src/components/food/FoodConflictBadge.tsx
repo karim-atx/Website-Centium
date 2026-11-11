@@ -24,7 +24,10 @@ export function FoodConflictBadge({ badge }: { badge: FoodBadge }) {
       // The same classes as the client's own "Not compatible" badge (so Larger text treats both alike).
       className="text-[9px] font-bold uppercase rounded-full px-1.5 py-0.5 shrink-0 whitespace-nowrap"
       aria-label={badge.kind === "allergy_confirmed" && badge.severity ? t("{allergy}, {severity}", { allergy: badge.text, severity: t(severityLabel(badge.severity)).toLowerCase() }) : undefined}
-      style={{ background: tone.bg, color: tone.ink }}
+      // FQ: an "Other" allergy's label is the member's own (up to 60 characters): the badge
+      // stops at 14em with an ellipsis, the full text in its title. Standard badges are unchanged.
+      title={badge.customAllergy ? badge.text : undefined}
+      style={badge.customAllergy ? { background: tone.bg, color: tone.ink, maxWidth: "14em", overflow: "hidden", textOverflow: "ellipsis" } : { background: tone.bg, color: tone.ink }}
     >
       {badge.text}
     </span>

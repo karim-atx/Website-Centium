@@ -6,9 +6,10 @@ import { textPx } from "../../theme/textSize";
 import { useApp } from "../../context/AppContext";
 import { todayLocal } from "../../utils/date";
 import { ALLERGENS, SEVERITIES } from "../../services/nutrition/clientNutritionModel";
+import { OTHER_LABEL_MAX } from "../../services/nutrition/otherAllergies";
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 import { confirmProfileProposal, declineProfileProposal, fetchProfileProposals } from "../../services/client-forms";
-import { FIELD_LABEL, MEDICATION_ROUTES, draftFrom, offeredProposals, proposalTitle, shapeValue, type ProfileProposal, type ProposalDraft } from "../../services/client-forms/proposals";
+import { FIELD_LABEL, MEDICATION_ROUTES, draftFrom, markOtherAllergyRefused, offeredProposals, otherAllergyRefused, proposalTitle, shapeValue, type ProfileProposal, type ProposalDraft } from "../../services/client-forms/proposals";
 import { notifyInjuriesChanged } from "../../services/injuries";
 import { t } from "../../i18n/core";
 
@@ -74,7 +75,7 @@ type CardState = { kind: "open" } | { kind: "added" } | { kind: "skipped" } | { 
 
 const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => {
   const { reloadHealthRecords } = useApp();
-  const [draft, setDraft] = useState<ProposalDraft>(() => draftFrom(proposal));
+  const [draft, setDraft] = useState<ProposalDraft>(() => draftFrom(proposal, !otherAllergyRefused()));
   const [state, setState] = useState<CardState>({ kind: "open" });
   const [busy, setBusy] = useState<"add" | "skip" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +90,11 @@ const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => 
     setError(null);
     const r = await confirmProfileProposal(proposal.id, shaped.value);
     setBusy(null);
+    if (!r.ok && r.code === "22023" && draft.field === "allergies" && draft.asOther) {
+      // Today's database has no "Other" allergies: quietly back to "choose the allergen".
+      markOtherAllergyRefused();
+      return setDraft({ ...draft, otherOffered: false, asOther: false });
+    }
     if (!r.ok) return r.gone ? setState({ kind: "gone", message: r.message }) : setError(r.message);
     setState({ kind: "added" });
     if (proposal.field === "medications") void reloadHealthRecords();
@@ -110,7 +116,9 @@ const ProposalCard: React.FC<{ proposal: ProfileProposal }> = ({ proposal }) => 
       <span className="block" style={{ fontSize: textPx(10.5), fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase", color: INK.prDeep }}>
         {t(FIELD_LABEL[proposal.field])}
       </span>
-      <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginTop: 2, overflowWrap: "anywhere" }}>{proposalTitle(draft)}</p>
+      <p style={{ fontSize: textPx(14), fontWeight: 700, color: INK.ch, marginTop: 2, overflowWrap: "anywhere" }}>
+        {draft.field === "allergies" && draft.asOther ? <bdi>{proposalTitle(draft)}</bdi> : proposalTitle(draft)}
+      </p>
       {proposal.prompt && <p style={{ fontSize: textPx(11.5), color: INK.chF, marginTop: 2, overflowWrap: "anywhere" }}>{t("Your answer to \"{prompt}\"", { prompt: proposal.prompt })}</p>}
     </>
   );
@@ -173,8 +181,38 @@ function Chips<V extends string>({ label, items, value, onChange }: { label: str
 const Editor: React.FC<{ draft: ProposalDraft; today: string; onChange: (d: ProposalDraft) => void }> = ({ draft: d, today, onChange }) => {
   switch (d.field) {
     case "allergies":
+      if (d.asOther)
+        // FQ (decision 22): no standard allergen fits, so "Save as an Other allergy" in the
+        // member's words: the label (their text, trimmed, up to 60, `dir="auto"`), severity
+        // (Severe until they pick) and the note. "Choose a listed allergen instead" is today's card.
+        return (
+          <>
+            <p style={{ fontSize: textPx(12), fontWeight: 700, color: INK.ch, marginBottom: 4 }}>{t("Save as an Other allergy")}</p>
+            <label style={{ ...labelStyle, marginTop: 0 }}>
+              <span className="flex items-center justify-between" style={{ gap: 8 }}>
+                {t("Allergy, in your words")}
+                <span aria-hidden style={{ fontWeight: 400, color: INK.chF }}>{`${[...d.label].length}/${OTHER_LABEL_MAX}`}</span>
+              </span>
+              <input dir="auto" value={d.label} maxLength={OTHER_LABEL_MAX} onChange={(e) => onChange({ ...d, label: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6, fontWeight: 600 }} />
+            </label>
+            <span style={labelStyle}>{t("How severe")}</span>
+            <Chips label={t("How severe")} items={SEVERITIES} value={d.severity} onChange={(v) => onChange({ ...d, severity: v })} />
+            <label style={labelStyle}>
+              {t("Note (optional)")}
+              <input dir="auto" value={d.note} maxLength={200} onChange={(e) => onChange({ ...d, note: e.target.value })} className="outline-none focus-visible:ring-2 focus-visible:ring-primary/40" style={{ ...fieldStyle, marginTop: 6 }} />
+            </label>
+            <button type="button" onClick={() => onChange({ ...d, asOther: false })} className="tap" style={{ minHeight: 44, marginTop: 4, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
+              {t("Choose a listed allergen instead")}
+            </button>
+          </>
+        );
       return (
         <>
+          {d.otherOffered && (
+            <button type="button" onClick={() => onChange({ ...d, asOther: true })} className="tap" style={{ minHeight: 44, marginTop: -6, fontSize: textPx(12.5), fontWeight: 700, color: INK.prDeep }}>
+              {t("Save as an Other allergy")}
+            </button>
+          )}
           <label style={{ ...labelStyle, marginTop: 0 }}>
             {t("Allergen")}
             <select

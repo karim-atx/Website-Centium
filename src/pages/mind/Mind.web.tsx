@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
 import { useWebLayout, WEB_CONTENT_MAX } from "../../components/web/useWebLayout";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { earnedCount, visibleAchievements } from "../../services/achievements";
 import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
@@ -40,7 +41,7 @@ const CSS = `
 .mind-web-tile { transition: transform .15s cubic-bezier(0.22,1,0.36,1); }
 .mind-web-tile:hover { transform: scale(0.99); }
 .mind-web-tile:active { transform: scale(0.97); }
-.mind-web-tile:focus-visible, .mind-web-link:focus-visible, .mind-web-check:focus-visible { outline: 2px solid #AEA1DC; outline-offset: 2px; }
+.mind-web-tile:focus-visible, .mind-web-link:focus-visible { outline: 2px solid #AEA1DC; outline-offset: 2px; }
 .mind-web-row:hover { background: #FAF8FE; }
 `;
 
@@ -175,7 +176,17 @@ function MindHubWeb() {
     const Icon = habitIcon[h.icon];
     const shade = habitShade(h.colour, dark, hc);
     return (
-      <div key={h.id} data-mind-habit className="mind-web-row flex items-stretch" style={{ height: 56, flex: "none" }}>
+      // FP: the whole row ticks the habit, one control with the name the
+      // check used to carry; the dot is its aria-hidden mark.
+      <SelectableBox
+        key={h.id}
+        data-mind-habit
+        selected={h.done}
+        onToggle={() => toggleHabit(h.id)}
+        label={h.done ? t("{habit}, today: done", { habit: h.label }) : t("{habit}, today: not done", { habit: h.label })}
+        className="mind-web-row flex items-stretch"
+        style={{ height: 56, flex: "none" }}
+      >
         <div className="relative flex items-center" style={{ flex: 1, minWidth: 0, gap: 12, paddingInlineStart: 16, paddingInlineEnd: 10 }}>
           {divider && <span aria-hidden className="absolute" style={{ insetInlineStart: 64, insetInlineEnd: 0, top: 0, height: 1, background: "rgba(36,31,27,0.05)" }} />}
           <span className="grid place-items-center" style={{ width: 36, height: 36, borderRadius: 10, flex: "none", background: shade ? shade.tile : "#F0EDF9" }}>
@@ -187,18 +198,11 @@ function MindHubWeb() {
         </div>
         <div className="flex items-center justify-end" style={{ width: 128, flex: "none", gap: 12, paddingInlineEnd: 16, background: "rgba(111,153,147,0.12)" }}>
           {!hideNumbers && <Count n={h.streakDays} size={22} />}
-          <button
-            type="button"
-            onClick={() => toggleHabit(h.id)}
-            aria-label={h.done ? t("{habit}, today: done", { habit: h.label }) : t("{habit}, today: not done", { habit: h.label })}
-            aria-pressed={h.done}
-            className="mind-web-check"
-            style={{ borderRadius: 999, display: "flex" }}
-          >
+          <span aria-hidden style={{ borderRadius: 999, display: "flex" }}>
             <CheckDot done={h.done} />
-          </button>
+          </span>
         </div>
-      </div>
+      </SelectableBox>
     );
   };
 

@@ -125,3 +125,46 @@ test("feedback text: the note, else the reaction's words", () => {
   assert.equal(feedbackText({ body: null, reaction: "like" }), "Great choice.");
   assert.equal(feedbackText({ body: null, reaction: null }), "");
 });
+
+// FQ: food_conflicts rows for an "Other" allergy (kind allergy_check, allergen null, custom_allergy set).
+const FSI = "⁨";
+const PDI = "⁩";
+
+test("FQ: an Other allergy's badge is amber Check: {label}, the member's words isolated, no severity, never blocks", () => {
+  const b = badgeFor(row("allergy_check", { severity: "severe", customAllergy: "kiwi", detail: "Check this: the name matches an Other allergy" }))!;
+  assert.equal(b.tone, "amber");
+  assert.equal(b.text, `Check: ${FSI}kiwi${PDI}`);
+  assert.equal(b.blocks, false);
+  assert.equal(b.severity, null);
+  assert.equal(b.customAllergy, "kiwi");
+  const ar = badgeFor(row("allergy_check", { severity: "mild", customAllergy: "كيوي" }))!;
+  assert.equal(ar.text, `Check: ${FSI}كيوي${PDI}`);
+  // A confirmed allergy still outranks it.
+  assert.equal(worstBadge([row("allergy_check", { customAllergy: "kiwi" }), row("allergy_confirmed", { allergen: "milk", severity: "mild" })])!.kind, "allergy_confirmed");
+});
+
+test("FQ: Add Food says which of the member's words matched, amber, and adding stays allowed", () => {
+  const n = addNotice("Kiwi smoothie", [row("allergy_check", { severity: "severe", customAllergy: "Kiwi" })])!;
+  assert.equal(n.tone, "amber");
+  assert.equal(n.blocks, false);
+  assert.equal(n.title, "Check this");
+  assert.equal(n.body, `The name suggests Kiwi smoothie may contain ${FSI}Kiwi${PDI}. Check the ingredients before you eat it.`);
+});
+
+test("FQ: rows from today's database (no custom_allergy key) are unchanged", () => {
+  const legacy = { kind: "allergy_check", allergen: "peanuts", severity: null, restriction: null, detail: null } as ConflictRow;
+  const b = badgeFor(legacy)!;
+  assert.equal(b.text, "Check this");
+  assert.equal(b.customAllergy, null);
+  assert.equal(addNotice("Satay", [legacy])!.body, "The name suggests Satay may contain something you're allergic to. Check the ingredients before you eat it.");
+  assert.equal(badgeFor(row("allergy_check", { customAllergy: "  " }))!.text, "Check this");
+});
+
+test("FQ: the allergy line lists the member's own after the 14", () => {
+  assert.equal(
+    allergyLine([{ allergen: "milk", severity: "mild" }], [], [{ label: "Kiwi", severity: "severe" }]),
+    `Allergies: Milk (mild), ${FSI}Kiwi${PDI} (severe).`
+  );
+  assert.equal(allergyLine([], [], [{ label: "كيوي", severity: "moderate" }]), `Allergy: ${FSI}كيوي${PDI} (moderate).`);
+  assert.equal(allergyLine([], []), null);
+});

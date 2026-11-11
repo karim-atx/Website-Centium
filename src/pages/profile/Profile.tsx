@@ -49,6 +49,7 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { HealthChecksSetting } from "../../components/health-checks/HealthChecksSetting";
@@ -663,7 +664,22 @@ function ClientProfile() {
               {/* MO1.5 anatomy row 7: radius 18, padding 16 16 18 (its own
                   values here; the shared Card stays as it is elsewhere). */}
               <Card padded={false} className="mb-3 !rounded-[18px] pt-4 px-4 pb-[18px]">
-                <div className="flex items-center justify-between gap-3">
+                {/* FP: the row is the switch, as Cycle tracking below it. */}
+                <SelectableBox
+                  kind="switch"
+                  selected={recoverySensitive}
+                  onToggle={() => {
+                    const v = !recoverySensitive;
+                    setRecoverySensitive(v);
+                    if (v) {
+                      setJustToggledRecovery(true);
+                      setRecoverySensitiveIntroSeen(false);
+                      window.setTimeout(() => setJustToggledRecovery(false), 6000);
+                    }
+                  }}
+                  label={t("Recovery-sensitive experience")}
+                  className="flex items-center justify-between gap-3"
+                >
                   <span className="flex items-center gap-3 min-w-0">
                     {/* MO1.5: HandHeart 17/1.5, title 14/600; the 36 icon
                         tile is #F0EDF9 (new, decision 22; 2x frame x 66–137). */}
@@ -672,19 +688,8 @@ function ClientProfile() {
                     </span>
                     <span className="text-sm font-semibold text-charcoal">{t("Recovery-sensitive experience")}</span>
                   </span>
-                  <Toggle
-                    checked={recoverySensitive}
-                    onChange={(v) => {
-                      setRecoverySensitive(v);
-                      if (v) {
-                        setJustToggledRecovery(true);
-                        setRecoverySensitiveIntroSeen(false);
-                        window.setTimeout(() => setJustToggledRecovery(false), 6000);
-                      }
-                    }}
-                    label={t("Recovery-sensitive experience")}
-                  />
-                </div>
+                  <Toggle decorative checked={recoverySensitive} />
+                </SelectableBox>
                 {/* MO1.5 anatomy rows 7–8 (measured on the 2x frame): the body
                     sits under the title (x 162, past the 36 tile and its 12
                     gap), 10 below the tile row, 12/400 on an 18 line, 8

@@ -352,8 +352,9 @@ export async function fetchConflicts(clientId: string, ref: ItemRef | null, name
     p_name: name,
   });
   if (error) return null;
-  type Row = { kind: ConflictKind; allergen: string | null; severity: ConflictRow["severity"]; restriction: string | null; detail: string | null };
-  return ((data ?? []) as Row[]).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail }));
+  // custom_allergy (FQ, 20261227020000): an "Other" allergy's label; absent on today's database.
+  type Row = { kind: ConflictKind; allergen: string | null; severity: ConflictRow["severity"]; restriction: string | null; detail: string | null; custom_allergy?: string | null };
+  return ((data ?? []) as Row[]).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail, customAllergy: r.custom_allergy ?? null }));
 }
 
 export async function assignMealPlan(templateId: string, clientId: string, startsOn: string, endsOn: string | null): Promise<{ ok: true; planId: string } | { ok: false; message: string; blocked?: boolean }> {

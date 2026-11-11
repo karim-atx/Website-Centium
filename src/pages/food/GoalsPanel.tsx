@@ -766,7 +766,7 @@ export default function GoalsPanel({
           </Chip>
           {/* Release 3 · CU13: the Allergies chip beside Dietary restriction (same chip). */}
           <Chip
-            active={myAllergies.allergies.length > 0 || allergiesOpen}
+            active={myAllergies.allergies.length + (myAllergies.others?.length ?? 0) > 0 || allergiesOpen}
             className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
             onClick={() => setAllergiesOpen(true)}
             aria-haspopup="dialog"
@@ -809,7 +809,7 @@ export default function GoalsPanel({
         {/* Release 3 · CU13 (gen/r23.js goals23 o.allergy): 12 / 700 status.high,
             TriangleAlert 12 / 2.4, 8 above, 2 × 0. Severity from the client's own rows. */}
         {(() => {
-          const line = allergyLine(myAllergies.allergies, myAllergies.sharedWith);
+          const line = allergyLine(myAllergies.allergies, myAllergies.sharedWith, myAllergies.others ?? []);
           return line ? (
             <p className="flex items-center text-status-high" style={{ gap: 6, margin: "8px 0 0", padding: "2px 0", fontSize: textPx(12), fontWeight: 700 }}>
               <TriangleAlert size={12} strokeWidth={2.4} className="shrink-0" aria-hidden />
@@ -837,6 +837,7 @@ export default function GoalsPanel({
           onClose={() => setAllergiesOpen(false)}
           userId={authUserId}
           initial={myAllergies.allergies}
+          initialOthers={myAllergies.others}
           onSaved={() => {
             myAllergies.reload();
             onAllergiesSaved?.();

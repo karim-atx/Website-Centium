@@ -1320,6 +1320,7 @@ const health: Catalogue = {
   Overdue: "متأخر", // note: health wording; only shown once the status words are approved
 
   // == Health · Advanced health monitoring (setting, plan and check-in) ==
+  "Advanced health monitoring": "المراقبة الصحية المتقدمة", // note: health wording; the switch's title only (its description stays English, approved clinical copy)
   "Couldn't turn it on. Please try again.": "تعذّر التشغيل. يُرجى المحاولة مرة أخرى.",
   "Couldn't turn it off. Please try again.": "تعذّر الإيقاف. يُرجى المحاولة مرة أخرى.",
   "Turn on": "تفعيل",

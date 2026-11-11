@@ -24,6 +24,7 @@ import type { ActivityLevel, Goal, Sex } from "../../types";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import { ageFromDateOfBirth, formatDisplayDate, isoDateYearsAgo, validateDateOfBirth, MIN_AGE, MAX_AGE } from "../../utils/date";
 import { PaneSwitch } from "../../components/business-more/paneWeb";
+import { SelectableBox } from "../../components/ui/SelectableBox";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { HealthChecksSetting } from "../../components/health-checks/HealthChecksSetting";
@@ -487,26 +488,31 @@ function ClientProfileWeb() {
             <section ref={safetyRef} className="flex flex-col" style={{ flex: "1 0 auto", gap: 10 }}>
               <MoLabel>{t("Safety & content")}</MoLabel>
               <div className="flex flex-col" style={{ flex: 1, borderRadius: 18, border: CARD_BORDER, padding: "16px 16px 18px", gap: 12 }}>
-                <div className="flex items-center" style={{ gap: 12 }}>
+                {/* FP: the row is the switch, as Cycle tracking below it. */}
+                <SelectableBox
+                  kind="switch"
+                  selected={recoverySensitive}
+                  onToggle={() => {
+                    const v = !recoverySensitive;
+                    setRecoverySensitive(v);
+                    if (v) {
+                      setJustToggledRecovery(true);
+                      setRecoverySensitiveIntroSeen(false);
+                      window.setTimeout(() => setJustToggledRecovery(false), 6000);
+                    }
+                  }}
+                  label={t("Recovery-sensitive experience")}
+                  className="flex items-center"
+                  style={{ gap: 12 }}
+                >
                   <span aria-hidden className="shrink-0 grid place-items-center" style={{ width: 36, height: 36, borderRadius: 16, background: "#F0EDF9" }}>
                     <HandHeart size={18} strokeWidth={1.75} style={{ color: "#7D6BB5" }} />
                   </span>
                   <span className="flex-1 min-w-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
                     {t("Recovery-sensitive experience")}
                   </span>
-                  <PaneSwitch
-                    checked={recoverySensitive}
-                    label={t("Recovery-sensitive experience")}
-                    onChange={(v) => {
-                      setRecoverySensitive(v);
-                      if (v) {
-                        setJustToggledRecovery(true);
-                        setRecoverySensitiveIntroSeen(false);
-                        window.setTimeout(() => setJustToggledRecovery(false), 6000);
-                      }
-                    }}
-                  />
-                </div>
+                  <PaneSwitch decorative checked={recoverySensitive} />
+                </SelectableBox>
                 {recoverySensitive && (
                   <p style={{ margin: 0, maxWidth: "72ch", fontSize: 13, lineHeight: "20px", color: "#5B5349" }}>
                     {t("Personalize food tracking to reduce number-focused and potentially triggering content. Numbers like calories, weight and streaks are hidden, and you can change this at any time.")}
@@ -527,8 +533,8 @@ function ClientProfileWeb() {
                   </button>
                   .
                 </p>
-                <div style={{ paddingTop: 12, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
-                  <CycleTrackingRow />
+                <div style={{ borderTop: "1px solid rgba(36,31,27,0.06)" }}>
+                  <CycleTrackingRow className="pt-3" />
                 </div>
               </div>
               <HealthChecksSetting />
