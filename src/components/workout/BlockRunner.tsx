@@ -19,6 +19,7 @@ import {
 } from "../../services/workout/clock";
 import { textPx } from "../../theme/textSize";
 import { t, tx } from "../../i18n/core";
+import { vibrateIfOn } from "../../platform/haptics";
 
 // Running a block, as opposed to reading one.
 //
@@ -103,17 +104,14 @@ function useTick(active: boolean): number {
  * fight once the context has been resumed by a real tap, and nothing to fail
  * silently if a network request for a sound does not land mid-workout.
  * Vibration is attempted alongside and ignored where unsupported, which is
- * most desktops and all of iOS Safari.
+ * most desktops and all of iOS Safari; FX item 27: only with the Vibration
+ * switch on.
  */
 function useBeeper(enabled: boolean) {
   const ctxRef = React.useRef<AudioContext | null>(null);
   return React.useCallback(() => {
     if (!enabled) return;
-    try {
-      navigator.vibrate?.(180);
-    } catch {
-      // Unsupported. Not worth a branch — the beep is the primary signal.
-    }
+    vibrateIfOn(180);
     try {
       const Ctor = window.AudioContext ?? (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctor) return;

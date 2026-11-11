@@ -70,6 +70,7 @@ import { time12 } from "../../utils/time12";
 import { HealthChecksNotificationRow } from "../../components/health-checks/HealthChecksNotificationRow";
 import { HealthNotificationGroup } from "../../components/settings/HealthNotificationGroup";
 import { HEALTH_GROUP, HEALTH_GROUP_ID } from "../../components/settings/healthNotificationModel";
+import { VibrationRow } from "../../components/settings/VibrationRow";
 import { fetchGoneQuietDays } from "../../services/pro/practice";
 import { isNative } from "../../platform";
 import { desktop } from "../../platform/desktop";
@@ -800,6 +801,8 @@ export default function NotificationsPage() {
             }}
           />
           {lockNote && <ErrorLine>{t(lockNote)}</ErrorLine>}
+          {/* FX: the device's Vibration switch. */}
+          <VibrationRow />
         </SettingsSection>
       )}
 

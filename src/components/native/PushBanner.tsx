@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { neutralPushText, onPushReceived, openPushLink } from "../../platform/push";
 import { bannerFromPush, enqueueBanner, type PushBannerCard } from "../../platform/pushBannerModel";
+import { fxHaptic } from "../../platform/haptics";
 import { CentiumMark } from "../icons/CentiumMark";
 import { t } from "../../i18n/core";
 
@@ -22,6 +23,9 @@ import { t } from "../../i18n/core";
 // screen" gives the push's family, never the push's own; while the setting is
 // still being read the banner waits, so nothing detailed flashes. With
 // "Hide details on lock screen" on, the push's own text already is that line.
+//
+// FX: a Light tap as the card shows (in Pill, so a card that never shows never
+// buzzes), once per push; the same push again replaces its card in place.
 
 const ENTER_MS = 300;
 const HOLD_MS = 4000;
@@ -76,6 +80,7 @@ export const PushBanner: React.FC = () => {
   return (
     <Pill
       key={current.key}
+      hapticKey={`push:${current.key}`}
       text={text}
       onOpen={() => openPushLink(current.path)}
       onDone={() => setQueue((q) => q.filter((c) => c.key !== current.key))}
@@ -85,7 +90,7 @@ export const PushBanner: React.FC = () => {
 
 type Stage = "before" | "in" | "out";
 
-const Pill: React.FC<{ text: Text; onOpen: () => void; onDone: () => void }> = ({ text, onOpen, onDone }) => {
+const Pill: React.FC<{ text: Text; hapticKey: string; onOpen: () => void; onDone: () => void }> = ({ text, hapticKey, onOpen, onDone }) => {
   const reduced = useReducedMotion();
   const [stage, setStage] = useState<Stage>("before");
   const [dragY, setDragY] = useState(0);
@@ -107,6 +112,11 @@ const Pill: React.FC<{ text: Text; onOpen: () => void; onDone: () => void }> = (
     setStage("out");
     exitTimer.current = window.setTimeout(() => doneRef.current(), EXIT_MS);
   }, []);
+
+  // FX: the tap, as it shows.
+  useEffect(() => {
+    fxHaptic("banner", { key: hapticKey });
+  }, [hapticKey]);
 
   useEffect(() => {
     let raf = window.requestAnimationFrame(() => {

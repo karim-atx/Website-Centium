@@ -95,6 +95,15 @@ export interface CentiumNativePlugin {
    */
   signedOut(): Promise<void>;
 
+  /**
+   * FX (App #31): whether a haptic may play now. Android: a vibrator, the
+   * ringer not on silent and the system's touch feedback on; iOS: always,
+   * since the phone mutes haptics itself under System Haptics. `reduced`:
+   * the phone's Reduce Motion / Remove animations, or the website's Reduce
+   * motion (setReducedMotion). Missing on builds before App #31.
+   */
+  hapticsAllowed(): Promise<{ allowed: boolean; reduced: boolean }>;
+
   /** The phone's notification settings for Centium (its channels, and the switch the person turned off). */
   openNotificationSettings(): Promise<void>;
 

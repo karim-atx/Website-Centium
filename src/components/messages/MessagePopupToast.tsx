@@ -5,6 +5,7 @@ import { Megaphone } from "lucide-react";
 import { useMessagePopup } from "../../context/UnreadContext";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import type { PopupCard } from "../../services/messaging/popupModel";
+import { fxHaptic } from "../../platform/haptics";
 import { t } from "../../i18n/core";
 
 // AX, the in-app message pop-up (Round C Release 1; PLAN S5, undrawn, in the
@@ -21,6 +22,9 @@ import { t } from "../../i18n/core";
 // MOTION as the unlock pill: in from the top with a fade, 300 ms
 // cubic-bezier(.22,1,.36,1); holds 4 s (6 s while the pointer is over it);
 // out upward, 200 ms. Reduce motion: the same timing as a fade only.
+//
+// FX: a Light tap when a pill appears (in the app only), once per pill: a
+// same-thread follow-up restarts the hold without buzzing again.
 
 const ENTER_MS = 300;
 const HOLD_MS = 4000;
@@ -61,6 +65,13 @@ const Pill: React.FC<{ card: PopupCard; onDone: () => void }> = ({ card, onDone 
     setStage("out");
     exitTimer.current = window.setTimeout(() => doneRef.current(), EXIT_MS);
   }, []);
+
+  // FX: the pill's first message names it, so a follow-up (a new stamp in the
+  // same pill) doesn't tap again; a later pill for the thread does.
+  const [hapticKey] = useState(() => `message:${card.threadId}:${card.stamp}`);
+  useEffect(() => {
+    fxHaptic("banner", { key: hapticKey });
+  }, [hapticKey]);
 
   useEffect(() => {
     let raf = window.requestAnimationFrame(() => {

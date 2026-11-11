@@ -8,6 +8,7 @@ import { hiddenInRecovery, LEVEL_LABEL } from "../../services/achievements";
 import { pillColours } from "./achievementStyle";
 import { AchievementIcon } from "./AchievementIcon";
 import { appLocale } from "../../i18n/format";
+import { fxHaptic } from "../../platform/haptics";
 import { t } from "../../i18n/core";
 
 // The unlock moment, v6 MO1.1.3.2: a pill at the top of whatever page earned
@@ -29,6 +30,11 @@ import { t } from "../../i18n/core";
 // my_achievements() call plus an in-memory set (AppContext). Unlocks awarded
 // by the 01:15 sweep or on another device get no pill until stage B3
 // (user_achievements.notified_at) is on the stack.
+//
+// FX: the celebration haptic as the pill shows (in the app only), once per
+// achievement and level a session. In Pill, so a badge recovery-sensitive
+// mode drops never buzzes. Every streak, badge, level, goal day and milestone
+// comes through here.
 
 const ENTER_MS = 300;
 const HOLD_MS = 4000;
@@ -100,6 +106,12 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
   useEffect(() => {
     leaveRef.current = leave;
   });
+
+  // FX: the celebration, as it shows.
+  const hapticKey = `achievement:${achievement.key}:${achievement.level ?? ""}`;
+  useEffect(() => {
+    fxHaptic("celebrate", { key: hapticKey });
+  }, [hapticKey]);
 
   useEffect(() => {
     // Two frames so the "before" state paints and the entry transitions.
