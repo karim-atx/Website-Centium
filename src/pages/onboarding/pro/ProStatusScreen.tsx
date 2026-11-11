@@ -12,7 +12,35 @@ import { ProfilePreview, SummaryCard, Timeline } from "./parts";
 import { formatShortDate } from "../../../utils/date";
 import { useCoverPicker } from "../../../components/pro/profile/useCoverPicker";
 import { ImageApprovalBadge } from "../../../components/moderation/ImageApproval";
+import { useApp } from "../../../context/AppContext";
+import { fxHaptic } from "../../../platform/haptics";
 import { t } from "../../../i18n/core";
+
+// FX: "You're live" / "Verified" celebrates the first time only. It used to
+// replay on every visit to the screen; there is no server flag for a
+// professional (the business lane has onboarding_progress "approval_seen"),
+// so the seen mark is device-local, per account. It carries the account id,
+// so sign-out clears it with the account's other data (accountStorageKeys)
+// and the next sign-in on this device celebrates once more.
+const liveSeenKey = (uid: string) => `centium.proLiveSeen:${uid}`;
+
+function liveSeen(uid: string | null): boolean {
+  if (!uid) return false;
+  try {
+    return globalThis.localStorage?.getItem(liveSeenKey(uid)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markLiveSeen(uid: string | null): void {
+  if (!uid) return;
+  try {
+    globalThis.localStorage?.setItem(liveSeenKey(uid), "1");
+  } catch {
+    // Storage refused: it celebrates again next time.
+  }
+}
 
 export type ProStatus = "pending" | "live" | "verified" | "rejected";
 
@@ -71,7 +99,16 @@ export const ProStatusScreen: React.FC<ProStatusProps> = ({
   extra,
 }) => {
   const reduced = useReducedMotion();
-  const celebrate = status === "live" || status === "verified";
+  const { authUserId } = useApp();
+  const live = status === "live" || status === "verified";
+  // Read once per visit: this visit still celebrates after it marks it seen.
+  const [fresh] = useState(() => !liveSeen(authUserId));
+  const celebrate = live && fresh;
+  useEffect(() => {
+    if (!live) return;
+    if (fresh) fxHaptic("celebrate", { key: "pro-live" });
+    markLiveSeen(authUserId);
+  }, [live, fresh, authUserId]);
   const [k, setK] = useState(celebrate && !reduced ? 1 : 4);
   // Release B: the cover added on Review shows on the preview (read only here).
   const { url: coverUrl, image: coverImage } = useCoverPicker();

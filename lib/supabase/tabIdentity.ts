@@ -293,7 +293,8 @@ export const ACCOUNT_KEYS_WITHOUT_ID: ReadonlySet<string> = new Set([
  *
  * KEPT, because they belong to the device and not to anyone on it: the cookie
  * choice, units, the map area, view toggles, the update notice, the push-ask
- * state ("this phone's permission, not the account"), the pass device tag
+ * state ("this phone's permission, not the account"), the phone's Vibration
+ * switch (platform/haptics.ts), the pass device tag
  * (services/venues/passDevice: "not account data, so it outlives sign-out"),
  * the landing page's own keys, and the tab's sign-in and suspension marks.
  */

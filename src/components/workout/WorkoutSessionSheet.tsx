@@ -77,6 +77,7 @@ import { MusicSection } from "../music/MusicSection";
 import { providerHeading } from "../../services/music/whichMusic";
 import { playlistServiceOf } from "../../services/music/playlistLink";
 import { appLocale } from "../../i18n/format";
+import { fxHaptic } from "../../platform/haptics";
 import { t, tk, tx } from "../../i18n/core";
 
 // Set-type colours (one definition, shared with WO10): see setTypeStyle.ts.
@@ -654,6 +655,9 @@ export const WorkoutSessionSheet: React.FC<{
         setBurst({ key: Date.now(), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
       }
       recordPr(exIdx, next);
+      // FX: the celebration haptic, here rather than in PrBurst, which draws
+      // nothing under reduced motion (the haptic then plays Success only).
+      fxHaptic("celebrate");
     }
     return true;
   };

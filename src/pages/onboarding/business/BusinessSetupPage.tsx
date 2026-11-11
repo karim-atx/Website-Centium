@@ -23,6 +23,7 @@ import "../shell/onboarding.css";
 import { t, tk } from "../../../i18n/core";
 import { usePlanLevel } from "../../../components/premium/usePlanLevel";
 import { mustChooseLevel, awaitingPurchase } from "../../../services/premium/model";
+import { fxHaptic } from "../../../platform/haptics";
 
 // /app/business/setup: where a business lands after Submit for review, and
 // what it sees until it is live: OB-238 Pending review; OB-240 You're live,
@@ -105,6 +106,8 @@ export default function BusinessSetupPage() {
       const seen = await hasProgress(row.value.id, "approval_seen");
       if (!seen) {
         setCelebrate(true);
+        // FX: the celebration haptic, with it (once: approval_seen).
+        fxHaptic("celebrate", { key: `business-approved:${row.value.id}` });
         void markProgress(row.value.id, "approval_seen");
       }
     }

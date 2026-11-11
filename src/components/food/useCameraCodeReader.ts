@@ -1,6 +1,7 @@
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { canUseBarcodeScanner, createFrameReader, type CodeKind } from "../../services/barcode/scanner";
+import { vibrateIfOn } from "../../platform/haptics";
 
 export type CameraState = "starting" | "scanning" | "denied" | "unavailable";
 
@@ -67,7 +68,8 @@ export function useCameraCodeReader({
         const raw = await reader.read(video.current).catch(() => null);
         if (raw && !done.current && acceptRef.current(raw)) {
           done.current = true;
-          navigator.vibrate?.(40);
+          // FX item 27: behind the Vibration switch.
+          vibrateIfOn(40);
           return;
         }
         timer = window.setTimeout(() => void tick(), READ_EVERY_MS);

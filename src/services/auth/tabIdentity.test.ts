@@ -127,6 +127,8 @@ test("sign-out: the account's keys go, the device's stay", () => {
     ["centium.weightUnit", "kg"],
     ["centium-map:area", "beirut"],
     ["centium.pushAsk", "{}"],
+    // FX: the phone's Vibration switch (platform/haptics.ts).
+    ["centium.vibration", "off"],
     ["centium-pass-device-tag", "x1"],
     ["centium-account-suspended", "1"],
     ["centium-landing:returning", "1"],

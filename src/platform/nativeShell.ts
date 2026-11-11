@@ -50,6 +50,22 @@ export async function nativeTextZoom(): Promise<{ percent: number; max: number }
   }
 }
 
+/**
+ * Whether a haptic may play now (FX; App #31's CentiumNative.hapticsAllowed).
+ * Not allowed in a browser, and not allowed when the build has no such method
+ * or no plugin, so app builds before #31 stay silent.
+ */
+export async function nativeHapticsAllowed(): Promise<{ allowed: boolean; reduced: boolean }> {
+  const no = { allowed: false, reduced: false };
+  if (!isNative()) return no;
+  try {
+    const r = await CentiumNative.hapticsAllowed();
+    return { allowed: r?.allowed === true, reduced: r?.reduced === true };
+  } catch {
+    return no;
+  }
+}
+
 const SIGN_OUT_WAIT_MS = 2000;
 
 /**

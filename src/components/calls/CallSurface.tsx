@@ -2,6 +2,7 @@ import React, { Suspense, lazy, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useCall } from "../../context/CallContext";
+import { startRing, stopRing } from "../../platform/haptics";
 import { t } from "../../i18n/core";
 
 /**
@@ -121,6 +122,16 @@ export const CallSurface: React.FC = () => {
     return () => window.clearTimeout(id);
   }, [error, dismissError]);
 
+  // FX: the incoming-call overlay rings (in the app only; there is no ring
+  // sound): two Medium taps, a pause, repeated, until it is answered,
+  // declined or ends, or the page goes hidden.
+  const ringing = phase === "incoming" && !!call;
+  useEffect(() => {
+    if (!ringing) return;
+    startRing();
+    return stopRing;
+  }, [ringing]);
+
   // TOASTS ONLY WHEN NOTHING IS LIVE, and the call overlays take precedence
   // below. Since a call ending now returns to idle at once, an incoming ring
   // can arrive while a notice is still on screen — CallContext clears
@@ -164,14 +175,20 @@ export const CallSurface: React.FC = () => {
             </div>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => void decline()}
+                onClick={() => {
+                  stopRing();
+                  void decline();
+                }}
                 disabled={busy}
                 className="tap flex-1 rounded-2xl bg-charcoal/5 text-charcoal py-3 text-sm font-semibold disabled:opacity-60"
               >
                 {t("Decline")}
               </button>
               <button
-                onClick={() => void answer()}
+                onClick={() => {
+                  stopRing();
+                  void answer();
+                }}
                 disabled={busy}
                 className="tap flex-1 rounded-2xl bg-status-good text-white dark:text-[#0D0B1A] py-3 text-sm font-semibold disabled:opacity-60"
               >

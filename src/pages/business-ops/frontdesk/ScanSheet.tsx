@@ -22,6 +22,7 @@ import { t } from "../../../i18n/core";
 import { EmptyCard, StatusChip } from "./frontDeskKit";
 import { camera as phoneCamera, useNativeCamera } from "../../../platform/camera";
 import type { ScanFeedback } from "../../../platform/contracts";
+import { vibrateIfOn } from "../../../platform/haptics";
 
 // OURS-OP1-front-desk-scan: the camera (zxing-wasm / BarcodeDetector, QR
 // format) and a hardware scanner both feed check_in_with_pass(desk venue,
@@ -334,7 +335,8 @@ export const ScanSheet: React.FC<{
           onKeyDown={(e) => {
             if (e.key !== "Enter") return;
             const el = e.currentTarget;
-            if (take(el.value)) navigator.vibrate?.(40);
+            // FX item 27: behind the Vibration switch.
+            if (take(el.value)) vibrateIfOn(40);
             el.value = "";
           }}
         />

@@ -278,6 +278,10 @@ const notifications: Catalogue = {
   "Open settings": "فتح الإعدادات",
   "On this phone": "على هذا الهاتف",
   "Hide details on lock screen": "إخفاء التفاصيل على شاشة القفل",
+  // == FX: the Vibration switch (components/settings/VibrationRow) ==
+  "Vibration": "الاهتزاز",
+  "A tap for banners and calls, and a buzz for achievements.": "نقرة خفيفة للتنبيهات والمكالمات، واهتزاز احتفالي للإنجازات.",
+  "Notifications outside Centium vibrate as your phone's settings say.": "تهتز الإشعارات خارج Centium حسب إعدادات هاتفك.",
   // == Round J · J-2e: Health Connect (pages/settings/HealthConnectPage, components/settings/HealthConnectRow, services/health-connect) ==
   "Heart rate and resting heart rate": "نبض القلب ونبض الراحة",
   "Health Connect needs an update": "يحتاج Health Connect إلى تحديث",
