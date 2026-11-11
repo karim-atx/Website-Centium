@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Check, ChevronDown, Mic, Plus, Sparkles, MicOff, Square, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronDown, Globe, Mic, Plus, Sparkles, MicOff, Square, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { logFoodEntry, manualFood, type FoodSearchResult } from "../../services/food";
 import { getFoodNutrients } from "../../services/food-nutrients";
@@ -14,6 +14,10 @@ import {
 } from "../../services/nutrition";
 import { NutrientDetailSections } from "./NutrientSections";
 import { CustomFoodForm } from "./CustomFoodForm";
+import { FoundFoodCard, OnlineResults } from "./OnlineFoodSearch";
+import { useOnlineFoodSearch } from "./useOnlineFoodSearch";
+import { PremiumLabel } from "../premium/PremiumAskHost";
+import { onlineQuery } from "../../services/food/onlineSearchModel";
 import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
@@ -26,6 +30,7 @@ import {
   transcribeAndParse,
   type VoiceFoodItem,
 } from "../../services/ai/voiceFood";
+import { matchVoiceRow } from "../../services/ai/voiceReview";
 import { foodCategoryIcon } from "../../utils/icons";
 import type { MealType } from "../../types";
 import { resolveCssColor } from "../../theme/cssColor";
@@ -192,6 +197,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   // The item whose food is being created, or null. Swaps this sheet's body
   // for the shared Create Custom Food form and comes back with a real food.
   const [creatingFor, setCreatingFor] = useState<number | null>(null);
+  // Batch B · FO: the item being looked up online, or null. The search itself
+  // (its term, its answer, the result being checked, the Premium gate) is the
+  // same hook Add Food's search bar uses, so the request, the 30-an-hour limit
+  // and every state on the way are the search bar's own, not a second copy.
+  const [onlineFor, setOnlineFor] = useState<number | null>(null);
+  const online = useOnlineFoodSearch();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -470,6 +481,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     setNutrientsByFoodId({});
     setExpanded(null);
     setCreatingFor(null);
+    online.close();
+    setOnlineFor(null);
   };
 
   const handleClose = () => {
@@ -656,8 +669,40 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
    * path with no nutrition behind it.
    */
   const attachCreatedFood = (index: number, food: FoodSearchResult) => {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, food, selected: true } : it)));
+    setItems((prev) => matchVoiceRow(prev, index, food));
     setCreatingFor(null);
+  };
+
+  /**
+   * Looks up what was said online (batch B · FO), the second way to give a new
+   * food real macros.
+   *
+   * THE SAME SEARCH AS ADD FOOD'S, started only by this tap: what was heard is
+   * the term (the results screen shows it and has no box to edit, as in the
+   * search bar). While the free limits apply the hook opens the Premium prompt
+   * instead and nothing here changes, so the row simply stays as it was.
+   */
+  const searchOnlineFor = (index: number) => {
+    const item = items[index];
+    if (item && online.search(item.spokenName)) setOnlineFor(index);
+  };
+
+  /** Back from the online results: the review exactly as it was left. */
+  const closeOnlineFor = () => {
+    online.close();
+    setOnlineFor(null);
+  };
+
+  /**
+   * A result saved from "Check this food" joins the recording.
+   *
+   * SAVED FIRST, AS THE MEMBER'S OWN FOOD, by the card itself, exactly as from
+   * the search bar; what comes back is attached the way a created food is, so
+   * the spoken quantity and unit stay and the preview rescales them.
+   */
+  const attachFoundFood = (index: number, food: FoodSearchResult) => {
+    setItems((prev) => matchVoiceRow(prev, index, food));
+    closeOnlineFor();
   };
 
   /**
@@ -788,6 +833,46 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         initialName={pending?.spokenName}
         onSaved={(food) => attachCreatedFood(creatingFor, food)}
       />
+    );
+  }
+
+  // SEARCHING ONLINE SWAPS THE BODY TOO, for the same reason as Create food.
+  // The screens are Add Food's own (Round D · DP, D-S17 and D-S18), with the
+  // same empty, failed and retry states; only where they lead differs. A saved
+  // result becomes this row's match instead of opening the add step, and "Add
+  // it yourself" is this row's Create food. Back from the card returns to the
+  // results, and back from the results to the review, with every row, amount
+  // and the meal as they were: none of that state is touched on the way.
+  if (onlineFor !== null && online.term !== null) {
+    const term = online.term;
+    const found = online.found;
+    return (
+      <BottomSheet
+        open={open}
+        onClose={handleClose}
+        title={found ? t("Check this food") : t("Search online")}
+        onBack={found ? () => online.setFound(null) : closeOnlineFor}
+      >
+        {found ? (
+          <FoundFoodCard
+            key={`${found.source}:${found.ref}`}
+            food={found}
+            onDone={() => online.setFound(null)}
+            onLog={(saved) => attachFoundFood(onlineFor, saved)}
+          />
+        ) : (
+          <OnlineResults
+            term={term}
+            result={online.result}
+            onPick={online.setFound}
+            onRetry={() => online.search(term)}
+            onAddYourself={() => {
+              closeOnlineFor();
+              setCreatingFor(onlineFor);
+            }}
+          />
+        )}
+      </BottomSheet>
     );
   }
 
@@ -1092,15 +1177,27 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                       </div>
                     </div>
 
-                    {/* A NEW FOOD'S PRIMARY ACTION. Logging it with no nutrition
+                    {/* A NEW FOOD'S PRIMARY ACTIONS. Logging it with no nutrition
                         is still offered and still honest, but it is the lesser
                         of the two and now looks like it: creating the food once
-                        fixes every future recording that names it. */}
+                        fixes every future recording that names it.
+                        Batch B · FO: Search online sits beside Create food as
+                        an equal, for a food someone else has already measured
+                        (a packaged drink, a brand). Shown only for a name the
+                        search accepts, as in the search bar, and with the same
+                        "Premium" label while the free limits apply. The row
+                        wraps rather than squeezing the two at phone width. */}
                     {!item.food && (
-                      <div className="mt-2.5 ps-11 flex items-center gap-3">
+                      <div className="mt-2.5 ps-11 flex flex-wrap items-center gap-x-3 gap-y-2">
                         <Button size="sm" className="!px-3" onClick={() => setCreatingFor(i)}>
                           <Plus size={13} /> {t("Create food")}
                         </Button>
+                        {onlineQuery(item.spokenName) && (
+                          <Button size="sm" variant="outline" className="!px-3" onClick={() => searchOnlineFor(i)}>
+                            <Globe size={13} /> {t("Search online")}
+                            {online.locked && <PremiumLabel />}
+                          </Button>
+                        )}
                         <button
                           onClick={() => toggleItem(i)}
                           className="tap text-[11px] font-semibold text-charcoal-faint underline"
