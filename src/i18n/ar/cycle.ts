@@ -43,6 +43,8 @@ export const FILES: string[] = [
   "components/contraception/MethodSetupSheet.tsx",
   "components/contraception/PillPack.tsx",
   "components/contraception/ReminderSettings.tsx",
+  // FW: the push line under the contraception and period reminders.
+  "components/cycle/ReminderPushLine.tsx",
   "services/contraception/index.ts",
   "services/contraception/schedule.ts",
   "services/contraception/guidance.ts",
@@ -473,6 +475,11 @@ const cycle: Catalogue = {
   "Reminder time": "وقت التذكير", // note: health wording
   "Reminders arrive as notifications, so this device needs permission first.": "تصل التذكيرات كإشعارات، لذا يحتاج هذا الجهاز إلى إذن أولًا.", // note: health wording
   "Turn on notifications": "تفعيل الإشعارات", // note: health wording
+  // FW (G13): permission granted, this device not registered; FW (G4): the plan's reminder line.
+  "Notifications are allowed, but this device isn't set up to receive them yet.": "الإشعارات مسموح بها، لكن هذا الجهاز غير مُعدّ لتلقّيها بعد.", // note: health wording
+  "Turn on notifications on this device": "تفعيل الإشعارات على هذا الجهاز", // note: health wording
+  "Reminder off": "التذكير متوقف", // note: health wording
+  "Reminder at {time}": "التذكير الساعة {time}", // note: health wording
   "This browser can't receive notifications, so reminders aren't available here.": "لا يستطيع هذا المتصفح تلقّي الإشعارات، لذا التذكيرات غير متاحة هنا.", // note: health wording
   "What the notification says": "ما يقوله الإشعار", // note: health wording
   Neutral: "محايد", // note: health wording

@@ -16,7 +16,7 @@ import { useConsoleAccess } from "../../hooks/useConsoleAccess";
 import { formatShortDate } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
 import { useOnline } from "../../hooks/useOnline";
-import { fetchBusinessFamilies, setBusinessFamily, type BusinessFamily, type BusinessFamilyPrefs } from "../../services/business-more/notifications";
+import { BUSINESS_FAMILIES_WITH_SENDER, fetchBusinessFamilies, setBusinessFamily, type BusinessFamily, type BusinessFamilyPrefs } from "../../services/business-more/notifications";
 import { CustomRangeSheet } from "../business-analytics/CustomRangeSheet";
 import { dayMonth, isoOf } from "../business-analytics/analyticsRange";
 import { buildExport, exportFileName, presetExportRange, saveCsv, type ExportKind, type ExportRange } from "./exportReports";
@@ -76,6 +76,8 @@ export function BusinessNotificationsPage() {
   };
   const sw = (family: BusinessFamily, label: string) =>
     prefs ? { checked: prefs[family], onChange: flip(family), disabled: !online || saving !== null, label: t(label) } : undefined;
+  // FW (G9): a family's switch shows only once something sends it (services/business-more/notifications).
+  const sent = (family: BusinessFamily) => BUSINESS_FAMILIES_WITH_SENDER.has(family);
 
   return (
     <BizPage title={t("Notifications")} sub={t("Choose what you're told about, and how.")}>
@@ -97,20 +99,22 @@ export function BusinessNotificationsPage() {
             ) : (
               <>
                 <BizRow title={t("Bookings")} desc={t("New bookings, cancellations and classes under 40% booked")} toggle={sw("bookings", tk("Bookings"))} />
-                <BizRow title={t("Members")} desc={t("New members and renewals")} toggle={sw("members", tk("Members"))} />
+                {sent("members") && <BizRow title={t("Members")} desc={t("New members and renewals")} toggle={sw("members", tk("Members"))} />}
               </>
             )}
           </BizSection>
-          {!store && (
+          {!store && sent("team") && (
             <BizSection label={t("Team")}>
               <BizRow title={t("Team")} desc={t("Join requests and substitute requests")} toggle={sw("team", tk("Team"))} />
             </BizSection>
           )}
-          <BizSection label={t("Payments")}>
-            <BizRow title={t("Payments")} desc={t("Money owed, weekly summary")} toggle={sw("payments", tk("Payments"))} />
-          </BizSection>
+          {sent("payments") && (
+            <BizSection label={t("Payments")}>
+              <BizRow title={t("Payments")} desc={t("Money owed, weekly summary")} toggle={sw("payments", tk("Payments"))} />
+            </BizSection>
+          )}
           <BizSection label={t("Reputation")}>
-            <BizRow title={t("New reviews")} toggle={sw("reviews", tk("New reviews"))} />
+            {sent("reviews") && <BizRow title={t("New reviews")} toggle={sw("reviews", tk("New reviews"))} />}
             <BizRow title={t("Flagged reviews")} desc={t("Always on for safety")} toggle={{ checked: true, onChange: () => undefined, disabled: true }} dim />
           </BizSection>
         </>

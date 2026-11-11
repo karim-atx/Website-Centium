@@ -143,6 +143,17 @@ export const REMINDER_TIME_NOT_SET = tk("Not set");
 export const PUSH_NEEDED =
   tk("Reminders arrive as notifications, so this device needs permission first.");
 export const PUSH_ENABLE = tk("Turn on notifications");
+/**
+ * FW (G13): permission is granted but THIS device has no push registration
+ * (no push_subscriptions row, or the phone's register_push_device failed), so
+ * the server has nowhere to send the reminder. One tap registers it.
+ */
+export const PUSH_NOT_REGISTERED = tk("Notifications are allowed, but this device isn't set up to receive them yet.");
+export const PUSH_ENABLE_HERE = tk("Turn on notifications on this device");
+/** FW (G4): the plan's line when the daily pill reminder is not set to send. */
+export const PILL_REMINDER_OFF = tk("Reminder off");
+/** FW (G4): "Reminder at 9:00 PM", on the plan's line. */
+export const PILL_REMINDER_AT = (time: string) => t("Reminder at {time}", { time });
 export const PUSH_BLOCKED = tk(
   "Notifications are blocked for Centium in this browser. You can allow them again in your browser's site settings.",
 );

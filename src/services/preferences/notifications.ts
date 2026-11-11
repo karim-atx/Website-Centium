@@ -43,6 +43,18 @@ export type NotificationPrefs = {
   /** AX (Round C): the in-app pop-up for a new message, and its first line. Not push. */
   messagePopups: boolean;
   messagePreviews: boolean;
+  /**
+   * FW (G6): four columns that existed with an UPDATE grant and no switch.
+   * notification_medications (B4, 20261117000000): the master over every
+   * medication's own notify_enabled. notification_orders (same migration):
+   * order_update, to the customer. reminders_paused (20260906004033): the
+   * reminder family only (notification_decision). message_push_preview (B4,
+   * OFF by default): a message push may carry the message's text.
+   */
+  medications: boolean;
+  orders: boolean;
+  remindersPaused: boolean;
+  messagePushPreview: boolean;
   quietHoursEnabled: boolean;
   /** "HH:MM", 24-hour, in the person's own timezone (profiles.timezone). */
   quietHoursFrom: string;
@@ -81,6 +93,10 @@ export const NOTIFICATION_COLUMNS = {
   proUnpaidSessions: "notification_pro_unpaid_sessions",
   messagePopups: "message_popups",
   messagePreviews: "message_previews",
+  medications: "notification_medications",
+  orders: "notification_orders",
+  remindersPaused: "reminders_paused",
+  messagePushPreview: "message_push_preview",
   quietHoursEnabled: "quiet_hours_enabled",
   quietHoursFrom: "quiet_hours_from",
   quietHoursTo: "quiet_hours_to",

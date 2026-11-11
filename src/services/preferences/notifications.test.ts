@@ -43,16 +43,26 @@ const DEFAULT_ROW = {
   notification_pro_unpaid_sessions: true,
   message_popups: true,
   message_previews: true,
+  // FW: four columns that had no switch until now.
+  notification_medications: true,
+  notification_orders: true,
+  reminders_paused: false,
+  message_push_preview: false,
   quiet_hours_enabled: false,
   quiet_hours_from: "22:00:00",
   quiet_hours_to: "07:00:00",
 };
 
-test("every MO1.8.3 row has its contract column, and the select names all twenty-nine", () => {
-  // Round I · FD added notification_forum_likes.
-  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 29);
+test("every MO1.8.3 row has its contract column, and the select names all thirty-three", () => {
+  // Round I · FD added notification_forum_likes; FW the four below.
+  assert.equal(Object.keys(NOTIFICATION_COLUMNS).length, 33);
   assert.deepEqual(new Set(Object.values(NOTIFICATION_COLUMNS)), new Set(Object.keys(DEFAULT_ROW)));
-  assert.equal(NOTIFICATION_SELECT.split(", ").length, 29);
+  assert.equal(NOTIFICATION_SELECT.split(", ").length, 33);
+  // FW (G6): the medications master, orders, the reminder pause and the message text on the lock screen.
+  assert.equal(NOTIFICATION_COLUMNS.medications, "notification_medications");
+  assert.equal(NOTIFICATION_COLUMNS.orders, "notification_orders");
+  assert.equal(NOTIFICATION_COLUMNS.remindersPaused, "reminders_paused");
+  assert.equal(NOTIFICATION_COLUMNS.messagePushPreview, "message_push_preview");
   // AX (Round C Release 1): the in-app pop-up's two switches.
   assert.equal(NOTIFICATION_COLUMNS.messagePopups, "message_popups");
   assert.equal(NOTIFICATION_COLUMNS.messagePreviews, "message_previews");

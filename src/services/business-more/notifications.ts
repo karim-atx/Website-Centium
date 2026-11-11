@@ -23,6 +23,19 @@ export type BusinessFamily = "bookings" | "members" | "orders" | "payments" | "r
 export type BusinessFamilyPrefs = Record<BusinessFamily, boolean>;
 
 export const BUSINESS_FAMILIES: BusinessFamily[] = ["bookings", "members", "orders", "payments", "reviews", "team"];
+
+/**
+ * FW (G9, decision D7): THE FAMILIES WITH A SENDER, the only ones given a
+ * switch. notification_family() maps no kind to the other four, so their
+ * switches would gate nothing (the inbox still gets its rows, without push).
+ * Their columns stay read and saved as before. To bring a switch back, add
+ * its family here once the Database maps a pushed kind to it (Batch C item
+ * 16): members (new members, renewals), payments (money owed, the weekly
+ * summary), reviews (a new review of the business), team (join and
+ * substitute requests).
+ *   bookings  appointment_booked (B12)   orders  order_placed (B11)
+ */
+export const BUSINESS_FAMILIES_WITH_SENDER: ReadonlySet<BusinessFamily> = new Set<BusinessFamily>(["bookings", "orders"]);
 const column = (f: BusinessFamily) => `notification_business_${f}`;
 const SELECT = BUSINESS_FAMILIES.map(column).join(", ");
 

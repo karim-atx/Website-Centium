@@ -761,7 +761,7 @@ export default function Cycle() {
           onEndPregnancy={() => setEndPregnancyOpen(true)}
           onResume={() => void turnOn()}
           onContraception={() => navigate("/app/contraception")}
-          onReminders={() => navigate("/app/settings/notifications")}
+          onReminders={() => navigate("/app/settings/notifications#health")}
           onTimezone={() => navigate("/app/settings#timezone")}
           onSharing={() => openPage("sharing")}
           onDeleteAll={() => setConfirmDelete(true)}

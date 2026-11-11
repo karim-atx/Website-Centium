@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { Bell, BellOff, CalendarClock, Clock } from "lucide-react";
+import { Bell, CalendarClock, Clock } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contraception";
 import type { NotificationDetail } from "../../services/cycle/types";
-import { enablePush, permissionTriState, pushPermissionNow, pushSupported } from "../../services/push";
+import { useDeviceReminderPush } from "../../hooks/useDeviceReminderPush";
 import * as G from "../../services/contraception/guidance";
 import { time12 } from "../../utils/time12";
 import { TimeWheel } from "../health/log/LogSheetParts";
 import { CycleHelp, CycleRow, CycleSection, OptionButton, type } from "../cycle/cycleUi";
+import { ReminderPushLine } from "../cycle/ReminderPushLine";
 import { t } from "../../i18n/core";
 
 // Reminders (HE1.10.b.2 #25-#46): what is sent, when, and how much it says.
@@ -23,6 +24,10 @@ import { t } from "../../i18n/core";
 // The switches are disabled until push is on, and the prompt is raised by
 // services/push's enablePush from a real button press (K2, the repo
 // PUSH_NEEDED line and "Turn on notifications").
+// FW (G13): "on" is permission AND this device registered for push
+// (useDeviceReminderPush), not permission alone: a granted browser with no
+// push_subscriptions row gets nothing, and now says so with its own button
+// (components/cycle/ReminderPushLine, shared with the period reminder).
 //
 // NEUTRAL IS THE DEFAULT AND IT IS EXPLAINED RATHER THAN ASSUMED: the help
 // line says exactly what each option puts on a lock screen.
@@ -44,9 +49,7 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
   const [wheelOpen, setWheelOpen] = useState(false);
   const [draftTime, setDraftTime] = useState(() => parseTime(plan.reminderTime));
 
-  const [supported] = useState(pushSupported);
-  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() => (pushSupported() ? permissionTriState(pushPermissionNow()) : null));
-  const [pushError, setPushError] = useState<string | null>(null);
+  const push = useDeviceReminderPush(authUserId);
 
   // No settings row yet means nothing to switch.
   if (!cycleSettings) return null;
@@ -71,50 +74,13 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan; onError?: (me
     reloadContraception();
   };
 
-  const turnPushOn = async () => {
-    setBusy(true);
-    setPushError(null);
-    const result = await enablePush(authUserId);
-    setBusy(false);
-    if (result.status === "ok") {
-      setPushAllowed(true);
-      return;
-    }
-    if (result.status === "denied") setPushAllowed(false);
-    else setPushAllowed(permissionTriState(pushPermissionNow()));
-    setPushError(result.message);
-  };
-
-  // GRANTED IS THE ONLY STATE THE SWITCHES OPEN ON.
-  const reminders = pushAllowed === true;
+  // GRANTED AND REGISTERED IS THE ONLY STATE THE SWITCHES OPEN ON.
+  const reminders = push.state === "on";
   const stored = (plan.reminderTime ?? "").slice(0, 5);
 
   return (
     <CycleSection label={t(G.REMINDERS_TITLE)} style={{ marginTop: 32 }}>
-      {!reminders && (
-        <div className="flex" style={{ gap: 8, marginTop: 12 }}>
-          <BellOff size={14} aria-hidden className="shrink-0 text-charcoal-faint" style={{ marginTop: 2 }} />
-          <div className="min-w-0">
-            <CycleHelp>{!supported ? t(G.PUSH_UNSUPPORTED) : pushAllowed === false ? t(G.PUSH_BLOCKED) : t(G.PUSH_NEEDED)}</CycleHelp>
-            {supported && pushAllowed !== false && (
-              <button
-                type="button"
-                onClick={() => void turnPushOn()}
-                disabled={busy}
-                className="tap text-primary-dark disabled:opacity-40"
-                style={{ minHeight: 36, ...type(13, 19.5, 700) }}
-              >
-                {t(G.PUSH_ENABLE)}
-              </button>
-            )}
-            {pushError && (
-              <p role="alert" className="text-status-high" style={type(11.5, 17.3, 600, { marginTop: 4 })}>
-                {t(pushError)}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      <ReminderPushLine state={push.state} busy={busy || push.busy} error={push.error} onTurnOn={() => void push.turnOn()} />
 
       {isPill(plan.method) && (
         <>

@@ -19,6 +19,7 @@ import {
   type PlanShape,
 } from "../../services/contraception";
 import * as G from "../../services/contraception/guidance";
+import { useDeviceReminderPush } from "../../hooks/useDeviceReminderPush";
 import { MONDAY_FIRST_JS_WEEKDAYS } from "../../utils/week";
 import { getLanguage, t, tk, tx } from "../../i18n/core";
 
@@ -72,7 +73,8 @@ export const MethodSetupSheet: React.FC<{
   plan: ContraceptionPlan | null;
   onSaved: () => void;
 }> = ({ open, onClose, plan, onSaved }) => {
-  const { authUserId } = useApp();
+  const { authUserId, cycleSettings, saveCycleSettingsAndReload } = useApp();
+  const push = useDeviceReminderPush(authUserId);
   const dark = useIsDark();
   const { hc } = useCycleMode();
   const today = todayISO();
@@ -129,16 +131,40 @@ export const MethodSetupSheet: React.FC<{
     }
     setBusy(true);
     setError(null);
+    // FW (G4): A PILL TIME SET HERE TURNS THE DAILY PILL REMINDER ON
+    // (cycle_settings.pill_reminder, off by default). Before, the time was
+    // saved and nothing was ever sent until the separate switch on the
+    // Contraception page was found. Only when the time is new or changed in
+    // this sheet: editing a pack date never overrides a reminder someone
+    // switched off. The push prompt comes first, while the tap still counts
+    // as the gesture the browser needs; a refusal doesn't stop the save (the
+    // setting is the account's, another device may receive it), and the
+    // Reminders section then says what this device needs.
+    const storedTime = (plan && isPill(plan.method) ? plan.reminderTime ?? "" : "").slice(0, 5);
+    const turnReminderOn =
+      isPill(draft.method) && !!draft.reminderTime && draft.reminderTime.slice(0, 5) !== storedTime && cycleSettings?.pillReminder !== true;
+    if (turnReminderOn && push.state === "needed") await push.turnOn();
     // SAME METHOD = AN EDIT; a different one is a new plan, which ends the old.
     const result =
       plan && plan.method === draft.method
         ? await updatePlan(plan.id, draft)
         : await startPlan(authUserId, draft);
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setError(result.message);
       return;
     }
+    if (turnReminderOn) {
+      const on = await saveCycleSettingsAndReload({ pillReminder: true });
+      if (!on.ok) {
+        // The plan is saved; the reminder isn't. Say so here, where it was set.
+        setBusy(false);
+        onSaved();
+        setError(on.message ?? G.SAVE_FAILED);
+        return;
+      }
+    }
+    setBusy(false);
     onSaved();
     onClose();
   };
