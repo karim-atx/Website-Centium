@@ -27,6 +27,15 @@ import { featureAvailable } from "./features";
 import { isNative, platform } from "./index";
 import { CentiumNative } from "./native";
 import type { ReceivedPush } from "./pushBannerModel";
+import {
+  failedStep,
+  SAVE_TIMEOUT_MS,
+  SAVED_TOKEN_WAIT_MS,
+  TOKEN_TIMEOUT_MS,
+  withTimeout,
+  type PushRegistrationFailure,
+} from "./pushRegistrationModel";
+import { serverPushToken } from "./pushTokenModel";
 
 // Not in the generated types yet (Database DB-Z3 is newer than database.types.ts).
 type Rpc = { rpc: (fn: string, args: object) => PromiseLike<{ data: unknown; error: { message: string; code?: string } | null }> };
@@ -50,7 +59,14 @@ let listening: Promise<void> | null = null;
 let started = false;
 const opened = new Set<(url: string) => void>();
 const received = new Set<(push: ReceivedPush) => void>();
-let waiting: ((token: string | null) => void) | null = null;
+/** The registration in flight: launch's and a tap on "Turn on" share it. */
+let inFlight: Promise<string | null> | null = null;
+let answer: ((token: string | null) => void) | null = null;
+/** Since that registration began: whether a token came, and the step that failed (./pushRegistrationModel). */
+let tokenArrived = false;
+let failure: PushRegistrationFailure | null = null;
+/** The token register_push_device last saved in this app run (an APNs/FCM token doesn't change within one). */
+let recorded: string | null = null;
 /** A tap that came while nothing listened (the app remounting): the next listener gets it. */
 let unopened: string | null = null;
 
@@ -60,9 +76,11 @@ function toPermission(s: PermissionStatus): PushPermission {
   return "prompt";
 }
 
+/** As the server keeps it: a phone that stored an uppercase iOS token before the fix reads lowercase too (./pushTokenModel). */
 function storedToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    const raw = localStorage.getItem(TOKEN_KEY);
+    return raw ? serverPushToken(platform(), raw) : null;
   } catch {
     return null;
   }
@@ -87,39 +105,57 @@ function storeToken(token: string | null): void {
   }
 }
 
+function settle(token: string | null): void {
+  answer?.(token);
+  answer = null;
+}
+
+/** Records the token; false (and failure "save") if it failed, threw or took too long. Never hangs. */
 async function record(token: string): Promise<boolean> {
-  const [{ id }, info] = await Promise.all([CentiumNative.installId(), App.getInfo()]);
-  const { error } = await rpc("register_push_device", {
-    p_platform: platform(),
-    p_kind: "alert",
-    p_token: token,
-    // TestFlight, the App Store and Android are all production; only an iOS
-    // Debug build is sandbox, which the iOS half will say.
-    p_environment: "production",
-    p_app_version: info.version,
-    p_locale: getLanguage(),
-    p_device_id: id,
-  });
+  let error: { message: string; code?: string } | null;
+  try {
+    const [{ id }, info] = await withTimeout(
+      Promise.all([CentiumNative.installId(), App.getInfo()]),
+      SAVE_TIMEOUT_MS,
+      "the install id",
+    );
+    const call = rpc("register_push_device", {
+      p_platform: platform(),
+      p_kind: "alert",
+      p_token: token,
+      // TestFlight, the App Store and Android are all production; only an iOS
+      // Debug build is sandbox, which the iOS half will say.
+      p_environment: "production",
+      p_app_version: info.version,
+      p_locale: getLanguage(),
+      p_device_id: id,
+    });
+    ({ error } = await withTimeout(call, SAVE_TIMEOUT_MS, "register_push_device"));
+  } catch (e) {
+    error = { message: e instanceof Error ? e.message : String(e) };
+  }
   if (error) {
+    failure = "save";
     console.error("[push] Could not register this device:", error.code, error.message);
     return false;
   }
   storeToken(token);
+  recorded = token;
   return true;
 }
 
 function listen(): Promise<void> {
   listening ??= (async () => {
-    await PushNotifications.addListener("registration", ({ value }) => {
-      void record(value).then((ok) => {
-        waiting?.(ok ? value : null);
-        waiting = null;
-      });
+    await PushNotifications.addListener("registration", ({ value: raw }) => {
+      // As the server keeps it: lowercase on iOS (./pushTokenModel).
+      const value = serverPushToken(platform(), raw);
+      tokenArrived = true;
+      void record(value).then((ok) => settle(ok ? value : null));
     });
     await PushNotifications.addListener("registrationError", (e) => {
       console.error("[push] Registration failed:", e.error);
-      waiting?.(null);
-      waiting = null;
+      failure = "refused";
+      settle(null);
     });
     // A tapped notification: its `url` (/app/calls/{id}, /app/messages?push=…,
     // a reminder's link) goes to NativeOpenPath, which follows only /app paths.
@@ -137,14 +173,51 @@ function listen(): Promise<void> {
   return listening;
 }
 
-/** Asks FCM for this install's token and records it; resolves the token, or null on failure. */
-async function register(): Promise<string | null> {
-  await listen();
-  const token = new Promise<string | null>((resolve) => {
-    waiting = resolve;
+/**
+ * Asks APNs / FCM for this install's token and records it; resolves the saved
+ * token, or null on failure (nativePushOutcome says where). One at a time: a
+ * call while one is in flight gets the same answer. Never waits forever: if no
+ * new token comes but this run already saved one, that one stands (the token
+ * doesn't change within a run, and iOS may not answer every
+ * registerForRemoteNotifications).
+ */
+function register(): Promise<string | null> {
+  inFlight ??= (async () => {
+    await listen();
+    tokenArrived = false;
+    failure = null;
+    const token = new Promise<string | null>((resolve) => {
+      answer = resolve;
+      setTimeout(
+        () => {
+          if (answer !== resolve) return;
+          answer = null;
+          if (recorded && !failure) {
+            console.warn("[push] No new token; this run's saved one stands");
+            resolve(recorded);
+            return;
+          }
+          failure = failedStep(tokenArrived, failure);
+          console.error("[push] Gave up waiting:", failure);
+          resolve(null);
+        },
+        recorded ? SAVED_TOKEN_WAIT_MS : TOKEN_TIMEOUT_MS,
+      );
+    });
+    await PushNotifications.register();
+    return token;
+  })().finally(() => {
+    inFlight = null;
   });
-  await PushNotifications.register();
-  return token;
+  return inFlight;
+}
+
+/**
+ * How the last registration ended: saved (register_push_device answered), or
+ * the step that stopped. "Turn on" is decided by this, not by reading the row back.
+ */
+export function nativePushOutcome(): { saved: boolean; failure: PushRegistrationFailure | null } {
+  return { saved: failure === null && recorded !== null, failure };
 }
 
 /**
@@ -210,13 +283,16 @@ export async function unregisterNativePush(): Promise<{ removed: boolean; error?
 export async function nativePushRegistered(): Promise<boolean | null> {
   const token = storedToken();
   if (!token) return false;
-  const { data, error } = await (supabase as unknown as From)
-    .from("push_devices")
-    .select("id")
-    .eq("token", token)
-    .limit(1);
-  if (error) return null;
-  return (data?.length ?? 0) > 0;
+  const read = (supabase as unknown as From).from("push_devices").select("id").eq("token", token).limit(1);
+  // A read that fails or stalls is "unknown", unless this run saved this very token.
+  const unknown = recorded === token ? true : null;
+  try {
+    const { data, error } = await withTimeout(read, SAVE_TIMEOUT_MS, "the push_devices read");
+    if (error) return unknown;
+    return (data?.length ?? 0) > 0;
+  } catch {
+    return unknown;
+  }
 }
 
 /** A tapped notification's link, for NativeOpenPath. */

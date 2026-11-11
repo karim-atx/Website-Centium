@@ -5,12 +5,14 @@ import { isNative } from "../../platform";
 import { desktop, isDesktop } from "../../platform/desktop";
 import {
   nativePush,
+  nativePushOutcome,
   nativePushPermission,
   nativePushRegistered,
   nativePushSupported,
   thisInstallPushToken,
   unregisterNativePush,
 } from "../../platform/push";
+import { pushRegistrationMessage } from "../../platform/pushRegistrationModel";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
@@ -279,10 +281,12 @@ async function enableNativePush(ownerId: string | null): Promise<EnableResult> {
   if (permission !== "granted") {
     return { status: "denied", message: "Notifications are blocked for Centium." };
   }
-  const registered = await nativePushRegistered();
-  return registered
-    ? { status: "ok", endpoint: "native", created: true }
-    : { status: "error", message: "Couldn't register for notifications." };
+  // Decided by register_push_device's own answer, not by reading the row back
+  // (that read is only the status line). Otherwise the step that stopped
+  // (platform/pushRegistrationModel.ts): no token, refused, or the save.
+  const { saved, failure } = nativePushOutcome();
+  if (saved) return { status: "ok", endpoint: "native", created: true };
+  return { status: "error", message: pushRegistrationMessage(failure ?? "save") };
 }
 
 /**
