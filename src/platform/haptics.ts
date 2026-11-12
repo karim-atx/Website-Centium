@@ -14,7 +14,7 @@
 //   vibrate    the barcode / front-desk scanners and the EMOM beeper: their
 //              web vibration as before, now behind the switch (item 27)
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
-import { isNative } from "./index";
+import { isNative, platform } from "./index";
 import { nativeHapticsAllowed } from "./nativeShell";
 import { createHaptics, type HapticKind, type ImpactWeight } from "./hapticsModel";
 
@@ -60,9 +60,11 @@ const haptics = createHaptics({
   hapticsAllowed: nativeHapticsAllowed,
   impact: (weight) => Haptics.impact({ style: WEIGHT[weight] }),
   success: () => Haptics.notification({ type: NotificationType.Success }),
-  // Start, changed, end: both platforms play selectionChanged only after a
-  // start (iOS keeps the generator from it; Android checks a flag).
+  // iOS: the system's selection tick (start, changed, end; selectionChanged
+  // plays only after a start). Android: the Light impact (50 ms), crisper
+  // than the plugin's selection pattern (one 100 ms pulse). Karim, 2026-11-12.
   selection: async () => {
+    if (platform() === "android") return Haptics.impact({ style: ImpactStyle.Light });
     await Haptics.selectionStart();
     try {
       await Haptics.selectionChanged();
