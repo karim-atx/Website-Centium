@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../../../context/AppContext";
+import { platform } from "../../../platform";
 import { sourceName, useActivitySources, useSleepSessions } from "../../../services/health-metrics/b1";
 import { removeSyncedActivityDay, removeSyncedReading } from "../../../services/health-metrics/readers";
 import { syncedActivitySource, type ActivityField } from "../../../services/health-metrics/readersModel";
@@ -55,7 +56,7 @@ export function useSyncedRemove(field: ActivityField, fromDay: string, toDay: st
   const { open, popup } = useRemovePopup(
     onToast,
     async (d) => [await removeSyncedActivityDay(d)],
-    (d) => sourceName(synced(d) ?? "apple_health"),
+    (d) => sourceName(synced(d) ?? phoneStore()),
     read.reload
   );
   return {
@@ -70,6 +71,12 @@ export function useSyncedRemove(field: ActivityField, fromDay: string, toDay: st
   };
 }
 
+/**
+ * The name when a synced row's source isn't known yet: this phone's own store
+ * (Batch C item 36), not always Apple Health, which misnamed it on Android.
+ */
+const phoneStore = () => (platform() === "ios" ? "apple_health" : "android_health");
+
 /** Sleep: the day's synced main night from my_sleep_nights, removed with remove_synced_reading('sleep'). */
 export function useSyncedSleepRemove(fromDay: string, toDay: string, onToast: (m: string) => void) {
   const nights = useSleepSessions(fromDay, toDay);
@@ -77,7 +84,7 @@ export function useSyncedSleepRemove(fromDay: string, toDay: string, onToast: (m
   const { open, popup } = useRemovePopup(
     onToast,
     (d) => Promise.all(synced(d).map((n) => removeSyncedReading("sleep", n.id))),
-    (d) => sourceName(synced(d)[0]?.source ?? "apple_health"),
+    (d) => sourceName(synced(d)[0]?.source ?? phoneStore()),
     nights.reload
   );
   return {

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { backgroundAfter, connectErrorKey, healthView, rowLine, syncResultKey, typesToRead, type HealthStatus } from "./model.ts";
+import { backgroundAfter, connectErrorKey, healthCopy, healthView, rowLine, syncResultKey, typesToRead, type HealthStatus } from "./model.ts";
 
 describe("backgroundAfter (Sync in the background)", () => {
   it("on and off move the switch, with no line", () => {
@@ -64,5 +64,46 @@ describe("errors in words", () => {
     assert.match(connectErrorKey({ code: "ATXZ0" }, true), /switched off/);
     assert.match(connectErrorKey({ code: "XX000" }, true), /offline/);
     assert.match(connectErrorKey(new Error("x"), false), /Couldn't connect/);
+  });
+});
+
+describe("Apple Health on iPhone (Batch C item 36)", () => {
+  const conn: HealthStatus = { connected: true, granted: ["steps"], lastSyncedAt: null, accessState: "ok" };
+
+  it("is named Apple Health, opens Health, and says where access is changed", () => {
+    const c = healthCopy("apple_health");
+    assert.equal(c.name, "Apple Health");
+    assert.equal(c.connect, "Connect Apple Health");
+    assert.equal(c.changeAccess, "Open Health");
+    assert.equal(c.showsAccessPerType, false);
+    assert.match(c.accessHint ?? "", /Health › your profile › Apps › Centium/);
+    assert.match(c.disconnectNote ?? "", /Centium stops reading/);
+    assert.match(c.backgroundOn, /iOS decides the exact time/);
+    assert.equal(c.disconnectTitle, "Disconnect Apple Health?");
+  });
+
+  it("Android keeps every Health Connect word as it was", () => {
+    const c = healthCopy("android_health");
+    assert.equal(c.name, "Health Connect");
+    assert.equal(c.connect, "Connect Health Connect");
+    assert.equal(c.changeAccess, "Change access");
+    assert.equal(c.showsAccessPerType, true);
+    assert.equal(c.accessHint, null);
+    assert.equal(c.disconnectNote, null);
+    assert.equal(c.backgroundOn, "About once an hour, while Centium is closed.");
+  });
+
+  it("never shows the install or update state on iPhone", () => {
+    assert.deepEqual(healthView({ ok: false, reason: "needs_install" }, null, "apple_health"), { kind: "unavailable" });
+    assert.deepEqual(healthView({ ok: false, reason: "needs_update" }, null, "apple_health"), { kind: "unavailable" });
+    assert.deepEqual(healthView({ ok: false, reason: "needs_install" }, null, "android_health"), { kind: "install", update: false });
+    assert.deepEqual(healthView({ ok: true }, conn, "apple_health"), { kind: "connected", lastSyncedAt: null, accessState: "ok" });
+  });
+
+  it("connect errors name Apple Health on iPhone", () => {
+    assert.equal(connectErrorKey({ code: "ATXZ0" }, false, "apple_health"), "Syncing from Apple Health is switched off right now. Try again later.");
+    assert.equal(connectErrorKey(new Error("x"), false, "apple_health"), "Couldn't connect to Apple Health. Try again.");
+    assert.equal(connectErrorKey(new Error("x"), true, "apple_health"), "You're offline. Connect again when you're back online.");
+    assert.equal(connectErrorKey(new Error("x"), false), "Couldn't connect to Health Connect. Try again.");
   });
 });
