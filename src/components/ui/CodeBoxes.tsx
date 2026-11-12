@@ -5,11 +5,18 @@ import { t } from "../../i18n/core";
 
 // Mobile v5.1 handover, Foundations 2.5 "Code boxes": six boxes 48 x 52, gap
 // 8, radius 12, digits 20 / 800. The focused box takes a 1.5 px primary
-// border; an error turns every border danger. Used wherever a 6-digit code is
-// typed: the two-factor set-up, turning it off, the sign-in check, and the
-// password reset and change steps.
+// border; an error turns every border danger. Six boxes (CODE_LENGTH) for an
+// authenticator code: the two-factor set-up, turning it off, the sign-in
+// check and the password reset step.
 //
-// SIX REAL INPUTS, ONE VALUE. The parent holds the code as a string; each box
+// `length` sets another count: EMAIL_CODE_LENGTH (8) for a code Supabase
+// emails (the journal's unlock code, the password-change code). The handover
+// specifies six boxes only; eight at 48 px with gap 8 are 440 px, wider than
+// a phone popup, so past six the boxes share the row (up to 48 px each, gap 6)
+// and keep the same height, radius, type and borders. onComplete fires when
+// every box is filled; a shorter code (emailCodeReady) is the caller's to send.
+//
+// REAL INPUTS, ONE VALUE. The parent holds the code as a string; each box
 // shows one character of it. Typing moves on, Backspace on an empty box moves
 // back, and a paste (or a password manager or the phone's one-time-code
 // suggestion, which arrive as a multi-character input) fills from the first
@@ -25,7 +32,9 @@ export { CODE_LENGTH };
 export const CodeBoxes: React.FC<{
   value: string;
   onChange: (code: string) => void;
-  /** Called once all six digits are in. */
+  /** How many boxes: CODE_LENGTH (6) unless given. */
+  length?: number;
+  /** Called once every box is filled. */
   onComplete?: (code: string) => void;
   /** Danger borders on every box (a wrong code). */
   error?: boolean;
@@ -34,9 +43,9 @@ export const CodeBoxes: React.FC<{
   /** Read out for the group, e.g. "Six-digit authentication code". */
   label: string;
   className?: string;
-}> = ({ value, onChange, onComplete, error, disabled, autoFocus, label, className }) => {
+}> = ({ value, onChange, onComplete, error, disabled, autoFocus, label, className, length = CODE_LENGTH }) => {
   const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = value.replace(/\D/g, "").slice(0, CODE_LENGTH);
+  const digits = value.replace(/\D/g, "").slice(0, length);
   const empty = digits.length === 0;
   // The code as last set, ahead of the parent's re-render: set() moves focus
   // before the new value comes back as a prop, and the focus guard below must
@@ -53,21 +62,21 @@ export const CodeBoxes: React.FC<{
   }, [autoFocus, disabled, empty]);
 
   const set = (next: string, focusAt?: number) => {
-    const clean = next.replace(/\D/g, "").slice(0, CODE_LENGTH);
+    const clean = next.replace(/\D/g, "").slice(0, length);
     latest.current = clean;
     onChange(clean);
-    if (focusAt !== undefined) refs.current[Math.min(focusAt, CODE_LENGTH - 1)]?.focus();
-    if (clean.length === CODE_LENGTH) onComplete?.(clean);
+    if (focusAt !== undefined) refs.current[Math.min(focusAt, length - 1)]?.focus();
+    if (clean.length === length) onComplete?.(clean);
   };
 
   const onInput = (i: number, raw: string) => {
-    const edit = codeAfterInput(latest.current, i, raw);
+    const edit = codeAfterInput(latest.current, i, raw, length);
     if (edit) set(edit.code, edit.focusAt);
   };
 
   return (
-    <div role="group" aria-label={label} className={clsx("flex justify-center gap-2", className)}>
-      {Array.from({ length: CODE_LENGTH }, (_, i) => (
+    <div role="group" aria-label={label} className={clsx("flex justify-center", length > CODE_LENGTH ? "gap-1.5" : "gap-2", className)}>
+      {Array.from({ length }, (_, i) => (
         <input
           key={i}
           ref={(el) => {
@@ -79,10 +88,10 @@ export const CodeBoxes: React.FC<{
           inputMode="numeric"
           pattern="[0-9]*"
           autoComplete={i === 0 ? "one-time-code" : "off"}
-          aria-label={t("Digit {n} of {total}", { n: i + 1, total: CODE_LENGTH })}
+          aria-label={t("Digit {n} of {total}", { n: i + 1, total: length })}
           aria-invalid={error || undefined}
           // Wider than one character so a paste or an autofill arrives whole.
-          maxLength={CODE_LENGTH}
+          maxLength={length}
           onChange={(e) => onInput(i, e.target.value)}
           onPaste={(e) => {
             const text = e.clipboardData.getData("text");
@@ -103,7 +112,7 @@ export const CodeBoxes: React.FC<{
             } else if (e.key === "ArrowLeft" && i > 0) {
               e.preventDefault();
               refs.current[i - 1]?.focus();
-            } else if (e.key === "ArrowRight" && i < CODE_LENGTH - 1) {
+            } else if (e.key === "ArrowRight" && i < length - 1) {
               e.preventDefault();
               refs.current[i + 1]?.focus();
             }
@@ -115,7 +124,8 @@ export const CodeBoxes: React.FC<{
             else e.target.select();
           }}
           className={clsx(
-            "w-12 h-[52px] min-w-0 rounded-xl bg-cream-soft text-center text-[20px] font-extrabold text-charcoal tabular-nums",
+            length > CODE_LENGTH ? "flex-1 max-w-12" : "w-12",
+            "h-[52px] min-w-0 rounded-xl bg-cream-soft text-center text-[20px] font-extrabold text-charcoal tabular-nums",
             "border outline-none transition-colors disabled:opacity-40",
             error
               ? "border-status-high"

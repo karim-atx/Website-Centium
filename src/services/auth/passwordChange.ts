@@ -75,7 +75,7 @@ export async function changePassword(newPassword: string, code?: string): Promis
   return passwordChangeOutcome(error.code) ?? { status: "error", message: describeAuthError(error) };
 }
 
-/** Emails the 6-digit code ("Your Centium verification code"). */
+/** Emails the code ("Your Centium verification code"), EMAIL_CODE_LENGTH digits. */
 export async function sendReauthenticationCode(): Promise<{ ok: true } | { ok: false; message: string }> {
   const { error } = await supabase.auth.reauthenticate();
   if (error) return { ok: false, message: describeAuthError(error) };
