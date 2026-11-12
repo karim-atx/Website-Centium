@@ -315,6 +315,8 @@ type SessionRow = {
   duration_sec: number | null;
   total_volume_kg: number | null;
   notes: string | null;
+  /** manual (logged in Centium), or the provider a synced workout came from (20261226510000). */
+  source?: "manual" | "apple_health" | "android_health" | "whoop" | null;
   routine_id: string | null;
   workout_block_results: BlockResultRow[] | null;
   logged_exercises: {
@@ -357,7 +359,7 @@ const toBlockResult = (b: BlockResultRow): BlockResult => ({
 
 /** The columns every session read needs, in one place so they cannot drift. */
 export const SESSION_SELECT =
-  "id, routine_id, routine_name, started_at, activity_date, ended_at, duration_sec, total_volume_kg, notes," +
+  "id, routine_id, routine_name, started_at, activity_date, ended_at, duration_sec, total_volume_kg, notes, source," +
   " workout_block_results(id, kind, label, time_cap_seconds, interval_seconds, rounds, rounds_completed, extra_reps, time_seconds, capped, notes)," +
   " logged_exercises(id, name, position, exercise_id, custom_exercise_id, block_result_id, endurance_result," +
   " logged_sets(set_number, reps, weight_kg, completed, set_type, outcome, is_pr, notes, rpe, mood, pain))";
@@ -422,6 +424,8 @@ export function toWorkoutSession(row: unknown): WorkoutSession {
     exercises,
     ...(blockResults.length > 0 ? { blockResults } : {}),
     ...(r.notes ? { notes: r.notes } : {}),
+    // Only a synced workout carries it; one logged in Centium leaves it out.
+    ...(r.source && r.source !== "manual" ? { source: r.source } : {}),
   };
 }
 

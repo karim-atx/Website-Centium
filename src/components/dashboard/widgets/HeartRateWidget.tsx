@@ -31,7 +31,7 @@ export const HeartRateWidget: React.FC<{ size: "small" | "large"; editMode: bool
   const isToday = selectedDate === today;
   const day = useHeartRateDay(selectedDate, metricsLoadedAt);
   // B1: activity_daily.resting_bpm when a source reported it ("Resting"); else the latest sample, "Latest" (V6-21).
-  const resting = useRestingBpm(selectedDate);
+  const resting = useRestingBpm(selectedDate, metricsLoadedAt);
   const word = resting !== null ? tx("Resting", "heart rate") : t("Latest");
   const latest = resting ?? (day.samples.length ? day.samples[day.samples.length - 1] : valueOn(healthSeries.heartRate, selectedDate));
   const loading = latest === null && ((metricsLoadedAt === null && !metricsError) || day.loading);

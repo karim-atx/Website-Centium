@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Dumbbell, Play } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { nextRoutine } from "../../../services/workout/nextRoutine";
+import { workoutOfDay } from "../../../services/health-metrics/dayRule";
 import { mondayFirstWeek } from "../../../utils/week";
 import { t, tn } from "../../../i18n/core";
 import { appLocale } from "../../../i18n/format";
@@ -94,14 +95,15 @@ const WeekDots: React.FC<{ days: boolean[]; todayIndex: number; dark: boolean; h
 
 export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolean }> = ({ size, editMode }) => {
   const navigate = useNavigate();
-  const { routines, workoutSessions, selectedDate, today, activeSession, pausedSessions } = useApp();
+  const { routines, workoutSessions, selectedDate, today, activeSession, pausedSessions, metricsLoadedAt } = useApp();
   const { dark, hc } = useHomeMode();
   const [logger, setLogger] = useState(false);
   const isLarge = size === "large";
   const c = homeColors("workout", dark);
   const colors = { tint: c.tint, icon: c.icon, label: c.label, ink: c.ink, tile: c.tile };
 
-  const sessionToday = [...workoutSessions].reverse().find((s) => s.date === selectedDate) ?? null;
+  // The selected day's workout: logged in Centium first, else synced (dayRule).
+  const sessionToday = workoutOfDay(workoutSessions, selectedDate);
   const done = !!sessionToday;
   const routine = done ? routines.find((r) => r.id === sessionToday!.routineId) ?? null : nextRoutine(routines, workoutSessions);
   const name = done ? sessionToday!.routineName : routine?.name ?? null;
@@ -110,10 +112,13 @@ export const WorkoutWidget: React.FC<{ size: "small" | "large"; editMode: boolea
   const weekDays = week.map((d) => workoutSessions.some((s) => s.date === d));
   const todayIndex = week.indexOf(today);
   // B3 my_workout_week(): done this week and the days scheduled (0 without a coach: "/N" hidden).
-  const ww = useWorkoutWeek(workoutSessions.length);
+  // Read again when the list changes or after a wearable sync (metricsLoadedAt):
+  // a synced workout added and another deleted leave the length unchanged.
+  const wwKey = `${workoutSessions.length}:${metricsLoadedAt}`;
+  const ww = useWorkoutWeek(wwKey);
   const sessionsThisWeek = ww?.done ?? weekDays.filter(Boolean).length;
   const ringLabel = ww && ww.scheduled > 0 ? `${sessionsThisWeek}/${ww.scheduled}` : String(sessionsThisWeek);
-  const assigned = useAssignedDays(today, workoutSessions.length);
+  const assigned = useAssignedDays(today, wwKey);
   const nextAssigned =
     !done && selectedDate === today && ww && ww.scheduled > 0 && assigned && !assigned.some((a) => a.day === today)
       ? assigned.map((a) => ({ ...a, routine: routines.find((r) => r.id === a.routineId) })).find((a) => a.day > today && a.routine)

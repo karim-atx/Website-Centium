@@ -11,3 +11,14 @@ export const AUTO_SYNC_EVERY_MS = 15 * 60 * 1000;
 export function autoSyncDue(lastAttemptAt: number | null, now: number): boolean {
   return lastAttemptAt === null || now - lastAttemptAt >= AUTO_SYNC_EVERY_MS;
 }
+
+/**
+ * Whether the cards read again after a sync resolves (syncBus). Every sync
+ * that finished, not only one that saved something: a sync whose only change
+ * was a deletion in Apple Health / Health Connect resolves with saved 0 (the
+ * phones don't count deletions), and a failed one may have saved some rows
+ * before its error.
+ */
+export function reloadAfterSync(r: { saved: number; error?: string }): boolean {
+  return !r.error || r.saved > 0;
+}

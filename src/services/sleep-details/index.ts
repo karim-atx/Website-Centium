@@ -32,6 +32,8 @@ export interface SleepDetail {
   date: string;
   /** Null when the source recorded no score. */
   score: number | null;
+  /** Minutes asleep (my_sleep_nights.asleep_min): a synced night's total, used when no hours were logged by hand. */
+  asleepMin: number | null;
   /**
    * ALL FOUR OR NONE. Every stage column is nullable, and three stages plus a
    * hole is not a breakdown: the bar would be drawn to a total that excludes
@@ -83,6 +85,7 @@ export async function getSleepDetails(sinceDay: string, toDay: string): Promise<
     return {
       date: row.day,
       score: row.score,
+      asleepMin: row.asleepMin,
       stages: complete ? { remMin, deepMin, lightMin, awakeMin } : null,
       summary: row.summary,
     };

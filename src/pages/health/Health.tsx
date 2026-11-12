@@ -38,6 +38,7 @@ import { t, tk } from "../../i18n/core";
 import { useActivityStepsOn } from "../../components/dashboard/widgets/data";
 import { stepsOfDay } from "../../services/health-metrics/stepsRule";
 import { valueOn } from "../../services/health-metrics/periods";
+import { kcalBurnedOn, ownFirst, sleepHistory, sleepHoursOn } from "../../services/health-metrics/dayRule";
 
 // HE1 · Health (v6 Part B, health-handover.md HE1; checklist
 // design-handover/v5-partB/frame-check/HE1.md). Replaces the History-style
@@ -84,6 +85,7 @@ export default function Health() {
     waterByDate,
     waterGoalMl,
     metricValues,
+    sleepNights,
     healthSeries,
     metricsLoadedAt,
     bloodPressure,
@@ -182,7 +184,6 @@ export default function Health() {
     const list = joinAnd(names);
     return latest ? t("Synced {when} from {list}", { when: localDay(latest) === today ? clock12(latest) : whenText(latest, today), list }) : t("Connected: {list}", { list });
   })();
-  const week = (type: MetricReadings["type"]) => withinDays(healthSeries[type], 7, today);
 
   // --- Water (#5-#16): today's total of the goal; the bottle and bar fill to it (K6).
   // B1 water_intakes: today's drinks (a backfilled row is a day total); a
@@ -194,21 +195,29 @@ export default function Health() {
 
   // --- Steps (#17-#25): of the step goal (follows HE1.2.1 Save).
   // Today's steps by the one rule (stepsRule, Round J follow-up): hand-logged,
-  // else synced (activity_daily), so a Health Connect-only member sees theirs;
-  // a day with neither keeps the latest hand-logged reading, as before.
+  // else synced (activity_daily), so a Health Connect-only member sees theirs.
+  // TODAY ONLY (Karim, 2026-11-12): a day with neither shows none, never an
+  // older day's reading.
   const syncedStepsToday = useActivityStepsOn(today, metricsLoadedAt);
-  const steps = stepsOfDay(valueOn(healthSeries.steps, today), syncedStepsToday) ?? metricValues.steps;
+  const steps = stepsOfDay(valueOn(healthSeries.steps, today), syncedStepsToday);
   // --- Sleep (#26-#34): bed/wake times need PB-H-07 (B-stage); until then the
   // kept weekly average (K9) is the context line.
-  const sleep = metricValues.sleepHours;
-  const sleepAvg = averageOf(week("sleep"));
+  // Today only, own first then synced (dayRule): last night's hours logged by
+  // hand, else the synced night's time asleep (filed on the wake-up date).
+  // The week's average takes both the same way.
+  const sleep = sleepHoursOn(valueOn(healthSeries.sleep, today), sleepNights.find((n) => n.date === today)?.asleepMin);
+  const sleepAvg = averageOf(withinDays({ ...healthSeries.sleep, history: sleepHistory(healthSeries.sleep.history, sleepNights) }, 7, today));
   // HA-06 (Database B1 sleep_details.bed_start / wake_end): last night's times
   // when a source recorded them; the weekly average otherwise (K9).
   const lastNight = useSleepSessions(today, today).data.find((x) => !x.isNap && x.bedStart && x.wakeEnd) ?? null;
   const sleepContext = lastNight ? rangeClock12(lastNight.bedStart as string, lastNight.wakeEnd as string) : sleepAvg === null ? undefined : t("{time} avg this week", { time: hm(sleepAvg) });
   // --- Calories burned (#35-#44): of the 2,600 kcal app constant.
   const KCAL_GOAL = 2600;
-  const kcal = metricValues.caloriesBurned;
+  // Today only, own first then synced (dayRule): today's hand-logged figure,
+  // else the synced day's kcal_burned (my_activity_days; null in
+  // recovery-sensitive mode, where the tile is hidden anyway).
+  const activityToday = activityByDay(useActivityDaily(today, today).data)[today];
+  const kcal = kcalBurnedOn(valueOn(healthSeries.caloriesBurned, today), activityToday?.kcalBurned);
   // Recovery-sensitive mode (AJ R4, D19): the tile goes, steps stay. Pending
   // counts as on, so a kcal figure never flashes while the setting loads.
   const hideKcal = recoverySensitive || recoveryModePending;
@@ -218,14 +227,17 @@ export default function Health() {
   // labelled "latest" (V6-21). Never a rhythm label (V6-07). Day low to high
   // from today's samples (health_metrics keeps every sample).
   const hrSamples = useMetricRows("heart_rate", today, today).data;
-  const restingToday = activityByDay(useActivityDaily(today, today).data)[today]?.restingBpm ?? null;
+  const restingToday = activityToday?.restingBpm ?? null;
   const restSample = [...hrSamples].reverse().find((r) => r.context === "rest")?.value ?? null;
   const resting = restingToday ?? restSample;
-  const hr = resting ?? metricValues.heartRate;
+  // Without a resting figure, today's latest: a reading logged by hand first,
+  // else the latest synced hour's average. Never another day's (Karim, 2026-11-12).
+  const hrHours = useActivityHourly(today).data;
+  const lastSyncedHour = [...hrHours].reverse().find((h) => h.hrAvg !== null)?.hrAvg ?? null;
+  const hr = resting ?? ownFirst(hrSamples.length ? hrSamples[hrSamples.length - 1].value : null, lastSyncedHour);
   const hrWord = resting !== null ? t("resting") : t("latest");
   // Round J (DB-Z4): synced heart rate is hourly (min, average, max), not samples;
   // each synced hour adds its min and max to the day's range.
-  const hrHours = useActivityHourly(today).data;
   const hrVals = [...hrSamples.map((r) => r.value), ...hrHours.flatMap((h) => (h.hrAvg === null ? [] : [h.hrMin ?? h.hrAvg, h.hrMax ?? h.hrAvg]))];
   const hrRange = hrVals.length > 1 ? t("{low} to {high}", { low: Math.round(Math.min(...hrVals)), high: Math.round(Math.max(...hrVals)) }) : null;
 

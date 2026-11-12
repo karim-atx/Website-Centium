@@ -177,12 +177,13 @@ export function useStepsGoalOn(day: string): number | null {
 /**
  * The day's resting heart rate ("while inactive", HA-08), from my_activity_days:
  * one source per day, chosen by priority (Database DB-Z4). Null: show the
- * latest sample as "Latest" (V6-21).
+ * latest sample as "Latest" (V6-21). `reloadKey`: metricsLoadedAt, so it reads
+ * again after a wearable sync.
  */
-export function useRestingBpm(day: string): number | null {
+export function useRestingBpm(day: string, reloadKey: unknown): number | null {
   return useRead(
     () => readActivityDays(day, day).then((r) => (r.ok ? (r.rows.find((d) => d.day === day)?.restingBpm ?? null) : null)),
-    [day]
+    [day, reloadKey]
   );
 }
 

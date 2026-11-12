@@ -28,8 +28,9 @@ import { supabase } from "../../lib/supabase/client";
 import { nativeFeatureOn } from "./appConfig";
 import type { HealthAvailability, HealthBackgroundState, HealthModule, HealthType } from "./contracts";
 import { featureAvailable } from "./features";
-import { autoSyncDue, type SyncResult } from "./healthModel";
+import { autoSyncDue, reloadAfterSync, type SyncResult } from "./healthModel";
 import { isNative, platform } from "./index";
+import { healthSynced } from "../services/health-metrics/syncBus";
 
 interface CentiumHealthPlugin {
   status(): Promise<{ connected: boolean; granted: HealthType[] }>;
@@ -79,6 +80,8 @@ async function sync(): Promise<SyncResult> {
     lastAttemptAt = null;
     return { saved: 0, skipped: 0, error: "server" };
   }
+  // The cards read again (syncBus; the rule is reloadAfterSync's).
+  if (reloadAfterSync(r)) healthSynced();
   return r.error ? { saved: r.saved, skipped: r.skipped, error: r.error } : { saved: r.saved, skipped: r.skipped };
 }
 
@@ -165,13 +168,19 @@ export const health: HealthModule = {
  * The app opened or came back (D2): syncs if this account is connected, the
  * mode is known and the last attempt was 15 minutes ago or more. Nothing in a
  * browser. Never throws.
+ *
+ * Not due, it still has the cards read again: the phone's background sync
+ * (hourly, or HealthKit's delivery) never calls into the page, so what it
+ * wrote shows the next time the app comes to the front. A sync already
+ * running reloads when it ends.
  */
 export async function syncHealthIfDue(): Promise<void> {
-  if (!isNative() || recoverySensitive === null || running || connecting || !autoSyncDue(lastAttemptAt, Date.now())) return;
+  if (!isNative() || recoverySensitive === null || running || connecting) return;
   try {
     if (!(await health.available()).ok) return;
     if (!(await CentiumHealth.status()).connected) return;
-    await health.syncNow();
+    if (autoSyncDue(lastAttemptAt, Date.now())) await health.syncNow();
+    else healthSynced();
   } catch (e) {
     console.warn("[health] Automatic sync skipped:", e);
   }

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Moon } from "lucide-react";
 import { useApp } from "../../../context/AppContext";
 import { valueOn } from "../../../services/health-metrics/periods";
+import { sleepHistory, sleepHoursOn } from "../../../services/health-metrics/dayRule";
 import { shiftDate as shiftDay } from "../../../utils/date";
 import { NoDeviceSheet } from "../NoDeviceSheet";
 import { t, tk } from "../../../i18n/core";
@@ -43,9 +44,11 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
   const connected = useSourceConnected();
   const [sheet, setSheet] = useState(false);
   const isLarge = size === "large";
-  // K1: the night that ended on the selected day.
-  const hours = valueOn(healthSeries.sleep, selectedDate);
+  // K1: the night that ended on the selected day: hours logged by hand, else
+  // the synced night's time asleep (dayRule; a night is filed on its wake date).
   const detail = sleepNights.find((n) => n.date === selectedDate) ?? null;
+  const hours = sleepHoursOn(valueOn(healthSeries.sleep, selectedDate), detail?.asleepMin);
+  const nights = sleepHistory(healthSeries.sleep.history, sleepNights);
   const loading = hours === null && metricsLoadedAt === null && !metricsError;
   const timedOut = useLoadingTimeout(loading);
   const open = () => navigate("/app/health/sleep");
@@ -91,8 +94,8 @@ export const SleepWidget: React.FC<{ size: "small" | "large"; editMode: boolean 
 
   // "↑ 0.3 h vs last wk": this Monday-to-selected-day window against the 7
   // days before it; hidden when either has under 3 nights.
-  const thisWeek = weekAverage(healthSeries.sleep.history, shiftDay(selectedDate, -6), selectedDate);
-  const lastWeek = weekAverage(healthSeries.sleep.history, shiftDay(selectedDate, -13), shiftDay(selectedDate, -7));
+  const thisWeek = weekAverage(nights, shiftDay(selectedDate, -6), selectedDate);
+  const lastWeek = weekAverage(nights, shiftDay(selectedDate, -13), shiftDay(selectedDate, -7));
   const delta = thisWeek !== null && lastWeek !== null ? Math.round((thisWeek - lastWeek) * 10) / 10 : null;
   const trend = delta === null ? null : delta === 0 ? t("Same as last wk") : t("{arrow} {h} h vs last wk", { arrow: delta > 0 ? "↑" : "↓", h: Math.abs(delta).toFixed(1) });
   const trendAria = delta === null ? null : delta === 0 ? trend : delta > 0 ? t("up {h} h vs last wk", { h: Math.abs(delta).toFixed(1) }) : t("down {h} h vs last wk", { h: Math.abs(delta).toFixed(1) });
