@@ -15,7 +15,9 @@ const booking = (over: Partial<BookedEventIn> = {}): BookedEventIn => ({
   sourceKind: "class_booking",
   ...over,
 });
-const base: PhoneEventsInput = { accountType: "customer", today: TODAY, booked: [booking()], taught: null, hideDetails: false, neutralTitle: "Centium booking" };
+const base: PhoneEventsInput = { accountType: "customer", today: TODAY, booked: [booking()], taught: null, hideDetails: false, neutralTitle: "Centium booking", neutralEventTitle: "Centium event" };
+/** The person's own event: no source_kind, no invitation. */
+const ownEvent = (over: Partial<BookedEventIn> = {}): BookedEventIn => booking({ id: "p1", title: "Dentist", location: "Achrafieh", sourceKind: undefined, ...over });
 
 describe("buildPhoneEvents", () => {
   it("writes a booking with a stable id, its times as ISO and its in-app path", () => {
@@ -33,7 +35,7 @@ describe("buildPhoneEvents", () => {
     assert.deepEqual(out.map((e) => e.id), ["event:e1", "event:e2", "event:e3"]);
   });
 
-  it("takes bookings, hires, appointments and accepted places; nothing else", () => {
+  it("takes bookings, hires, appointments, accepted places and own events; nothing else", () => {
     const out = buildPhoneEvents({
       ...base,
       booked: [
@@ -47,8 +49,51 @@ describe("buildPhoneEvents", () => {
         booking({ id: "declined", mine: false, sourceKind: undefined, invite: { status: "declined" } }),
       ],
     });
-    assert.deepEqual(out.map((e) => e.id).sort(), ["event:appt", "event:class", "event:hire", "event:place"]);
+    assert.deepEqual(out.map((e) => e.id).sort(), ["event:appt", "event:class", "event:hire", "event:own", "event:place"]);
     assert.equal(out.find((e) => e.id === "event:place")?.url, CLIENT_CALENDAR_PATH);
+    assert.equal(out.find((e) => e.id === "event:own")?.url, CLIENT_CALENDAR_PATH);
+  });
+
+  it("an own event is written as it is, inside the same window", () => {
+    assert.deepEqual(buildPhoneEvents({ ...base, booked: [ownEvent()] }), [
+      { id: "event:p1", title: "Dentist", start: localIso(TODAY, "18:00"), end: localIso(TODAY, "18:45"), allDay: false, location: "Achrafieh", url: CLIENT_CALENDAR_PATH },
+    ]);
+    const days = [-8, -7, 90, 91].map((n) => addDays(TODAY, n));
+    const out = buildPhoneEvents({ ...base, booked: days.map((d, n) => ownEvent({ id: `p${n}`, date: d })) });
+    assert.deepEqual(out.map((e) => e.id), ["event:p1", "event:p2"]);
+  });
+
+  it("a repeating own event is one phone event per occurrence, with that day's change or cancellation", () => {
+    const weekly = ownEvent({ id: "gym", title: "Gym", date: "2026-10-23", repeat: "weekly", repeatUntil: "2026-11-27" });
+    const out = buildPhoneEvents({
+      ...base,
+      booked: [weekly],
+      exceptions: {
+        gym: {
+          "2026-11-06": { cancelled: true, override: null },
+          "2026-11-13": { cancelled: false, override: { title: "Gym (late)", start_time: "20:00:00", end_time: "21:00:00" } },
+        },
+      },
+    });
+    // 23 Oct is before the window (30 Oct); 6 Nov is cancelled; the series ends 27 Nov.
+    assert.deepEqual(out.map((e) => e.id), ["event:gym:2026-10-30", "event:gym:2026-11-13", "event:gym:2026-11-20", "event:gym:2026-11-27"]);
+    const late = out.find((e) => e.id === "event:gym:2026-11-13");
+    assert.equal(late?.title, "Gym (late)");
+    assert.equal(late?.start, localIso("2026-11-13", "20:00"));
+    assert.equal(late?.end, localIso("2026-11-13", "21:00"));
+  });
+
+  it("a programme session a coach put on the person's calendar goes in; one scheduled for a client stays out", () => {
+    const out = buildPhoneEvents({
+      ...base,
+      booked: [ownEvent({ id: "programme" }), ownEvent({ id: "for-client", mine: false, scheduledForClient: true })],
+    });
+    assert.deepEqual(out.map((e) => e.id), ["event:programme"]);
+  });
+
+  it("a professional's own events open on their calendar", () => {
+    const out = buildPhoneEvents({ ...base, accountType: "professional", booked: [ownEvent()] });
+    assert.deepEqual(out.map((e) => e.url), [TEACHING_PATH]);
   });
 
   it("an all-day booking is its date; a missing end time is an hour", () => {
@@ -65,10 +110,11 @@ describe("buildPhoneEvents", () => {
       ...base,
       accountType: "professional",
       hideDetails: true,
+      booked: [booking(), ownEvent({ startTime: "20:00", endTime: "21:00" })],
       taught: [{ classSessionId: "s1", title: "Morning HIIT", location: "Cedar Studio", date: TODAY, start: "07:00", end: "08:00", status: "scheduled" }],
     });
-    assert.deepEqual(out.map((e) => e.title), ["Centium booking", "Centium booking"]);
-    assert.deepEqual(out.map((e) => e.location), [null, null]);
+    assert.deepEqual(out.map((e) => e.title), ["Centium booking", "Centium booking", "Centium event"]);
+    assert.deepEqual(out.map((e) => e.location), [null, null, null]);
   });
 
   it("a professional also gets the classes they teach, cancelled ones left out", () => {

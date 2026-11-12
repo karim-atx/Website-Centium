@@ -337,10 +337,11 @@ const notifications: Catalogue = {
   "Disconnecting…": "جارٍ قطع الاتصال…",
   // == Round J · J-2d: "Add to my calendar" (components/settings/CalendarSyncRow, native/PhoneCalendarSync) ==
   "Add to my calendar": "إضافة إلى تقويمي",
-  "Your bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.": "تُضاف حجوزاتك وحصصك ومواعيدك إلى تقويم Centium على هذا الهاتف، وتتبعها التغييرات والإلغاءات.",
+  "Your events, bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.": "تُضاف أحداثك وحجوزاتك وحصصك ومواعيدك إلى تقويم Centium على هذا الهاتف، وتتبعها التغييرات والإلغاءات.",
   "Calendar access is off": "الوصول إلى التقويم متوقف",
   "Removed from this phone's calendar.": "أُزيل من تقويم هذا الهاتف.",
   "Centium booking": "حجز Centium",
+  "Centium event": "حدث Centium",
   // == Round J · J-2c: the workout widget's line (components/native/WidgetSnapshotSync) ==
   "Week {week} · Day {day}": "الأسبوع {week} · اليوم {day}",
   "Notifications show only a short line, never names or details. Messages follow their own preview setting.": "تُظهر الإشعارات سطرًا قصيرًا فقط، من دون أسماء أو تفاصيل. تتبع الرسائل إعداد المعاينة الخاص بها.",

@@ -94,7 +94,7 @@ export function CalendarSyncRow() {
               </button>
             </>
           ) : (
-            t("Your bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.")
+            t("Your events, bookings, classes and appointments go into a Centium calendar on this phone. Changes and cancellations follow.")
           )}
           {note && (
             <span role="status" className="block mt-1">

@@ -3,19 +3,27 @@
 // their own; PhoneCalendarSync reads the lists and hands the result to
 // calendar.sync(), which adds, moves and removes to match.
 //
-// - What goes in: the account's bookings (classes, appointments, hires: a
-//   calendar_events row a booking made, source_kind set) and the sessions it
-//   booked a place on (an accepted invitation), from the past 7 days to the
-//   next 90. A professional also gets the classes they teach (my_calendar,
-//   not cancelled). A business account gets nothing.
-// - What stays out: the person's own events, programme sessions, sessions a
-//   professional scheduled for a client, pending or declined invitations.
-// - The id is stable ("event:<calendar_events id>", "class:<class session
-//   id>"), so a later sync moves or removes the same event.
+// - What goes in, from the past 7 days to the next 90:
+//   - the account's bookings (classes, appointments, hires: a calendar_events
+//     row a booking made, source_kind set);
+//   - the sessions it booked a place on (an accepted invitation);
+//   - its own events (Karim, 2026-11-12): the ones it made, and the programme
+//     sessions a coach put on its calendar. A repeating one is written once
+//     per occurrence, with that day's change applied and a cancelled day left
+//     out (the calendar's own rule, occurrences.ts);
+//   - for a professional, the classes they teach (my_calendar, not cancelled).
+//   A business account gets nothing.
+// - What stays out: sessions a professional scheduled for a client (they are
+//   the client's), pending or declined invitations.
+// - The id is stable ("event:<calendar_events id>", "event:<id>:<date>" for
+//   one occurrence of a repeating event, "class:<class session id>"), so a
+//   later sync moves or removes the same event.
 // - "Hide details on lock screen" on (notification_lock_screen_details =
-//   false): every title is "Centium booking" and no location is written.
+//   false): a booking's title is "Centium booking", any other event's
+//   "Centium event", and no location is written.
+import { expandOccurrences, type ExceptionMap } from "../../components/calendar/occurrences";
 import type { PhoneCalendarEvent } from "../../platform/contracts";
-import type { AccountType } from "../../types";
+import type { AccountType, CalendarEvent } from "../../types";
 
 export const CALENDAR_PAST_DAYS = 7;
 export const CALENDAR_NEXT_DAYS = 90;
@@ -35,6 +43,9 @@ export type BookedEventIn = {
   sourceKind?: "class_booking" | "hire" | "appointment";
   invite?: { status: "pending" | "accepted" | "declined" };
   scheduledForClient?: boolean;
+  /** Absent reads as "none". */
+  repeat?: CalendarEvent["repeat"];
+  repeatUntil?: string;
 };
 
 /** A class the professional teaches, as my_calendar returns it. */
@@ -59,6 +70,10 @@ export type PhoneEventsInput = {
   hideDetails: boolean;
   /** "Centium booking", in the app's language. */
   neutralTitle: string;
+  /** "Centium event", in the app's language: the title of the person's own events when details are hidden. */
+  neutralEventTitle: string;
+  /** getCalendar()'s changed or cancelled occurrences of the person's repeating events. */
+  exceptions?: ExceptionMap;
 };
 
 /** Where each kind of event opens in the app (NativeOpenPath follows /app paths). */
@@ -98,21 +113,28 @@ export function buildPhoneEvents(i: PhoneEventsInput): PhoneCalendarEvent[] {
   const title = (t: string) => (i.hideDetails ? i.neutralTitle : t);
   const place = (l: string | null | undefined) => (i.hideDetails ? null : l?.trim() || null);
   const out: PhoneCalendarEvent[] = [];
+  const write = (e: BookedEventIn, id: string, name: string, url: string) => {
+    const when = e.allDay || !e.startTime ? { start: e.date, end: e.date } : timed(e.date, e.startTime, e.endTime);
+    out.push({ id, title: name, start: when.start, end: when.end, allDay: e.allDay || !e.startTime, location: place(e.location), url });
+  };
+  const own: (BookedEventIn & { repeat: CalendarEvent["repeat"] })[] = [];
 
   for (const e of i.booked) {
     const booking = e.mine && !!e.sourceKind && !e.scheduledForClient;
     const place_ = !e.mine && e.invite?.status === "accepted";
+    if (e.mine && !e.sourceKind && !e.scheduledForClient && !e.invite) {
+      own.push({ ...e, repeat: e.repeat ?? "none" });
+      continue;
+    }
     if ((!booking && !place_) || !inWindow(e.date)) continue;
-    const when = e.allDay || !e.startTime ? { start: e.date, end: e.date } : timed(e.date, e.startTime, e.endTime);
-    out.push({
-      id: `event:${e.id}`,
-      title: title(e.title),
-      start: when.start,
-      end: when.end,
-      allDay: e.allDay || !e.startTime,
-      location: place(e.location),
-      url: booking ? BOOKINGS_PATH : CLIENT_CALENDAR_PATH,
-    });
+    write(e, `event:${e.id}`, title(e.title), booking ? BOOKINGS_PATH : CLIENT_CALENDAR_PATH);
+  }
+
+  // The person's own events, each occurrence of a repeating one on its day.
+  const ownUrl = i.accountType === "professional" ? TEACHING_PATH : CLIENT_CALENDAR_PATH;
+  for (const e of expandOccurrences(own, i.exceptions ?? {}, from, to)) {
+    const id = e.repeat === "none" ? `event:${e.id}` : `event:${e.id}:${e.date}`;
+    write(e, id, i.hideDetails ? i.neutralEventTitle : e.title, ownUrl);
   }
 
   if (i.accountType === "professional") {
