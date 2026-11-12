@@ -1177,6 +1177,8 @@ export interface WorkoutSession {
    */
   blockResults?: BlockResult[];
   notes?: string;
+  /** Set on a workout synced from Apple Health, Health Connect or WHOOP; absent on one logged in Centium. */
+  source?: "apple_health" | "android_health" | "whoop";
 }
 
 export interface HealthMetricPoint {

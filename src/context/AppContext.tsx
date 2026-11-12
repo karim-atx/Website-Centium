@@ -297,6 +297,7 @@ import {
   type MetricReadings,
 } from "../services/health-metrics/series";
 import { getSleepDetails, latestNight, type SleepDetail } from "../services/sleep-details";
+import { onHealthSynced } from "../services/health-metrics/syncBus";
 import {
   fetchClientBloodPressure,
   getBloodPressureReadings,
@@ -2591,6 +2592,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [metricsLoadedAt, setMetricsLoadedAt] = useState<string | null>(null);
   const [metricsReloadKey, setMetricsReloadKey] = useState(0);
   const reloadMetrics = useCallback(() => setMetricsReloadKey((k) => k + 1), []);
+  // Bumped when a wearable sync finishes (syncBus): workouts read again with it.
+  const [healthSyncKey, setHealthSyncKey] = useState(0);
   const [medicalError, setMedicalError] = useState<string | null>(null);
   const [imagingError, setImagingError] = useState<string | null>(null);
   const [labsError, setLabsError] = useState<string | null>(null);
@@ -2881,6 +2884,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     startHealthSync(recoverySensitive);
   }, [authUserId, profileReady, user.onboarded, recoveryModePending, recoverySensitive]);
+  // A wearable sync finished (or the app came back, after a background sync
+  // the page never heard of): health_metrics read again, and with them every
+  // card keyed on metricsLoadedAt, the sleep nights (keyed on the reload) and
+  // the workout history (healthSyncKey). Karim, 2026-11-12.
+  useEffect(
+    () =>
+      onHealthSynced(() => {
+        reloadMetrics();
+        setHealthSyncKey((k) => k + 1);
+      }),
+    [reloadMetrics]
+  );
   const [twoFactorNudgeDismissed, setTwoFactorNudgeDismissed] = usePersistentState<boolean>(
     "twoFactorNudgeDismissed",
     false
@@ -3359,12 +3374,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // top, Home suggested the routine trained longest ago, and the volume
       // sparkline drew time right-to-left with "Last logged session" naming
       // the first one. Reversing here is the one place that fixes all four.
-      setWorkoutSessions([...result.sessions].reverse());
+      // A workout saved offline and still queued (id "queued:…") isn't on
+      // the server yet: it stays, after the server's rows, until the outbox
+      // saves it. Read again after a wearable sync (healthSyncKey), which can
+      // add or delete synced workouts.
+      setWorkoutSessions((prev) => [...[...result.sessions].reverse(), ...prev.filter((s) => s.id.startsWith("queued:"))]);
     });
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, setWorkoutSessions]);
+  }, [authUserId, profileReady, setWorkoutSessions, healthSyncKey]);
 
   // V10 (QA 10.0): "logging... metrics in a day that is not today should
   // add and log values pertaining to that mentioned day" — water is now
@@ -5786,7 +5805,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, metricWindowStart, today]);
+    // metricsReloadKey: read again with health_metrics (after a wearable sync,
+    // or a night logged or removed by hand).
+  }, [authUserId, profileReady, metricWindowStart, today, metricsReloadKey]);
   const sleepDetail = latestNight(sleepNights);
 
   // --- the cycle tracker ---------------------------------------------------
