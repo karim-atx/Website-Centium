@@ -20,6 +20,7 @@ import {
 } from "../../services/auth/passwordChange";
 import { hasEmailPassword } from "../../services/auth/passwordChangeLogic";
 import { CodeBoxes } from "../ui/CodeBoxes";
+import { EMAIL_CODE_LENGTH, emailCodeReady } from "../ui/codeBoxesInput";
 import {
   meetsPasswordRule,
   passwordChecks,
@@ -38,7 +39,8 @@ type Step = "loading" | "google" | "form" | "code" | "done";
  * Email accounts: current password, new, confirm. The current one is checked
  * first without touching this session (verifyCurrentPassword), then the new
  * one is set. If Supabase's "Secure password change" is on and this session
- * is over 24 hours old, it asks for the 6-digit code it emails, then sets it.
+ * is over 24 hours old, it asks for the code it emails (EMAIL_CODE_LENGTH, 8; 6 to 8 digits
+ * can be sent), then sets it.
  *
  * Google-only accounts have no password to ask for, so they are told they
  * sign in with Google and may set one (Supabase allows it; email and password
@@ -149,7 +151,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
   };
 
   const submitCode = async () => {
-    if (busy || code.length !== 6) return;
+    if (busy || !emailCodeReady(code)) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -332,18 +334,19 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
             noValidate
             onSubmit={(e) => {
               e.preventDefault();
-              if (!busy && code.length === 6) void singleFlight(submitCode);
+              if (!busy && emailCodeReady(code)) void singleFlight(submitCode);
             }}
             className="space-y-4"
           >
             <div className="flex items-start gap-2.5 rounded-2xl bg-primary-pale px-4 py-3.5">
               <Mail size={16} className="shrink-0 mt-0.5 text-primary-dark" />
               <p className="text-sm text-primary-dark leading-relaxed">
-                {t("For your security, we emailed a 6-digit code to {email}. Enter it to finish changing your password.", { email })}
+                {t("For your security, we emailed a code to {email}. Enter it to finish changing your password.", { email })}
               </p>
             </div>
-            {/* Six boxes (Foundations 2.5), as on every code screen. */}
+            {/* The code boxes (Foundations 2.5), eight for an emailed code. */}
             <CodeBoxes
+              length={EMAIL_CODE_LENGTH}
               value={code}
               onChange={(v) => {
                 setCode(v);
@@ -352,7 +355,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               error={!!error}
               disabled={busy}
               autoFocus
-              label={t("Six-digit code from your email")}
+              label={t("The code from your email")}
             />
             {notice && <p className="text-xs text-charcoal-soft text-center">{notice}</p>}
             {error && (
@@ -360,7 +363,7 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
                 {error}
               </p>
             )}
-            <Button type="submit" fullWidth size="lg" disabled={busy || code.length !== 6}>
+            <Button type="submit" fullWidth size="lg" disabled={busy || !emailCodeReady(code)}>
               {busy ? t("Checking…") : t("Confirm")}
             </Button>
             <button

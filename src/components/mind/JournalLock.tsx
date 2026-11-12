@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Eye, EyeOff, Fingerprint, KeyRound, Lock } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CodeBoxes } from "../ui/CodeBoxes";
+import { EMAIL_CODE_LENGTH, emailCodeReady } from "../ui/codeBoxesInput";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useCooldown } from "../security/useCooldown";
 import { formatCountdown } from "../../services/auth/cooldown";
@@ -307,7 +308,8 @@ const CODE_COPY: Record<PasswordPurpose, { body: (name: string) => string; cta: 
  * Round K (DB-Z8, D-BK4): the same prompt for an account WITHOUT a password
  * (Google- or Apple-only). "Email me a code" sends the approved
  * reauthentication email ("{code} is your Centium verification code"); the
- * six boxes take it, and the server opens the same five-minute window, or
+ * boxes take it (EMAIL_CODE_LENGTH, 8; 6 to 8 digits can be sent), and the
+ * server opens the same five-minute window, or
  * removes the lock. A code works for 10 minutes and once; a wrong or used one
  * is the server's own sentence ("That code is not correct."), shown under
  * the boxes, which clear for the next try. A refused send (the email limit)
@@ -355,7 +357,7 @@ function JournalCodePopup({
   };
 
   const submit = async (value = code) => {
-    if (busy || value.length !== 6) return;
+    if (busy || !emailCodeReady(value)) return;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -380,17 +382,18 @@ function JournalCodePopup({
       body={custom ? custom.body : copy.body(folderName)}
       cta={
         sent
-          ? { label: custom ? custom.cta : t(copy.cta), onClick: () => void submit(), loading: busy, disabled: code.length !== 6 }
+          ? { label: custom ? custom.cta : t(copy.cta), onClick: () => void submit(), loading: busy, disabled: !emailCodeReady(code) }
           : { label: t("Email me a code"), onClick: () => void send(false), loading: busy, disabled: cooldown.active }
       }
     >
       {device && <DeviceUnlockButton option={device} disabled={busy} />}
       {!sent ? (
-        <p className="text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("We'll email a 6-digit code to {email}.", { email: shownEmail })}</p>
+        <p className="text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("We'll email a code to {email}.", { email: shownEmail })}</p>
       ) : (
         <>
-          <p className="mb-3 text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("Enter the 6-digit code we emailed to {email}.", { email: shownEmail })}</p>
+          <p className="mb-3 text-[13px] leading-[18px] font-medium text-charcoal-soft">{t("Enter the code from your email. We sent it to {email}.", { email: shownEmail })}</p>
           <CodeBoxes
+            length={EMAIL_CODE_LENGTH}
             value={code}
             onChange={(v) => {
               setCode(v);
@@ -400,7 +403,7 @@ function JournalCodePopup({
             error={!!error}
             disabled={busy}
             autoFocus
-            label={t("Six-digit code from your email")}
+            label={t("The code from your email")}
           />
           <button
             type="button"
