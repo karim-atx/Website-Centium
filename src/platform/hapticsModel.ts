@@ -21,6 +21,14 @@
 //
 // NO DRUM ROLLS: a moment with a key plays at most once per key per session,
 // and two moments are at least 1.5 s apart.
+//
+// THE SWITCH TICK (FX follow-up): every toggle switch turned on or off plays
+// the phone's selection feedback (UISelectionFeedbackGenerator on iOS; the
+// plugin's selection pattern on Android). Same three gates; a reduced answer
+// still plays it, since it is already the lightest there is. It is not a
+// "moment": the 1.5 s gap doesn't apply to it and it doesn't hold one back,
+// so turning several switches plays one tick each. Only a single tap's
+// doubles are dropped (TICK_GAP_MS). switchTicks.ts says when to call it.
 
 export type HapticKind = "banner" | "celebrate";
 export type ImpactWeight = "light" | "medium" | "heavy";
@@ -37,6 +45,8 @@ export interface HapticsDeps {
   hapticsAllowed(): Promise<HapticsAllowed>;
   impact(weight: ImpactWeight): Promise<void>;
   success(): Promise<void>;
+  /** The selection tick: Haptics.selectionStart, selectionChanged, selectionEnd. */
+  selection(): Promise<void>;
   /** navigator.vibrate, for the three web vibrations that predate FX. */
   vibrate(ms: number): void;
   now(): number;
@@ -58,12 +68,16 @@ export const CELEBRATE_STEPS: readonly { at: number; weight: ImpactWeight }[] = 
 /** Ring: two Medium impacts 150 ms apart, then 1.2 s of quiet, repeated (reduced: one impact a cycle). */
 export const RING_PAIR_MS = 150;
 export const RING_PAUSE_MS = 1_200;
+/** Two switch ticks closer than this are one tap's double (a switch inside a switch row). */
+export const TICK_GAP_MS = 80;
 
 const NOT_ALLOWED: HapticsAllowed = { allowed: false, reduced: false };
 
 export interface Haptics {
   /** Plays a moment; resolves to whether it played (for tests). Never rejects. */
   play(kind: HapticKind, opts?: { key?: string }): Promise<boolean>;
+  /** A switch turned on or off; resolves to whether it played (for tests). Never rejects. */
+  tick(): Promise<boolean>;
   /** The incoming-call ring, until stopRing() or the page goes hidden. */
   startRing(): void;
   stopRing(): void;
@@ -74,6 +88,7 @@ export interface Haptics {
 export function createHaptics(d: HapticsDeps): Haptics {
   let cached: { at: number; value: HapticsAllowed } | null = null;
   let lastAt = -Infinity;
+  let lastTickAt = -Infinity;
   const played = new Set<string>();
   let ring: { stop: () => void } | null = null;
 
@@ -114,6 +129,20 @@ export function createHaptics(d: HapticsDeps): Haptics {
           for (const step of CELEBRATE_STEPS) d.setTimeout(() => safe(d.impact(step.weight)), step.at);
         }
       }
+    } catch {
+      return false;
+    }
+    return true;
+  };
+
+  const tick = async (): Promise<boolean> => {
+    if (!d.isNative() || !d.switchOn() || !d.visible()) return false;
+    if (d.now() - lastTickAt < TICK_GAP_MS) return false;
+    lastTickAt = d.now();
+    const a = await allowed();
+    if (!a.allowed || !d.visible()) return false;
+    try {
+      safe(d.selection());
     } catch {
       return false;
     }
@@ -171,5 +200,5 @@ export function createHaptics(d: HapticsDeps): Haptics {
     }
   };
 
-  return { play, startRing, stopRing, vibrate };
+  return { play, tick, startRing, stopRing, vibrate };
 }

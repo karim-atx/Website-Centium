@@ -10,6 +10,8 @@ import { ErrorBoundary } from './components/navigation/ErrorBoundary'
 import { isNative } from './platform'
 import { startAppConfig } from './platform/appConfig'
 import { primeNativePush } from './platform/push'
+import { switchTick } from './platform/haptics'
+import { installSwitchTicks } from './platform/switchTicks'
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //
@@ -44,6 +46,10 @@ if (!isNative()) {
 // switches (app_config). Mobile round Z, Z1.5.
 startAppConfig()
 primeNativePush()
+
+// FX follow-up: a light tick whenever a toggle switch is turned on or off.
+// The phone app only; nothing in a browser.
+if (isNative()) installSwitchTicks(switchTick)
 
 // The web app's pages are their own chunk (appPagesLazy.ts): on an app
 // address its download starts now, alongside the session check.
