@@ -5,6 +5,7 @@ import type { CalendarEvent } from "../../types";
 import { signedUrlFor, uploadPrivateFile } from "../storage";
 import { alertNeedsWrite, toEventAlert, type EventAlert } from "../../components/calendar/eventAlert";
 import type { ExceptionMap, OccurrenceOverride } from "../../components/calendar/occurrences";
+import { calendarChanged } from "../phone-calendar/bus";
 
 // The client's own calendar, and the invitations they have received.
 //
@@ -503,6 +504,8 @@ export async function createEvent(
     console.error("[calendar] Could not create event:", error?.message);
     return { ok: false, message: playlistSaveError(error?.code) ?? "Couldn't save that event. Try again." };
   }
+  // The phone's "Centium" calendar follows (PhoneCalendarSync).
+  calendarChanged();
   return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
 
@@ -531,6 +534,7 @@ export async function updateEvent(
     console.error("[calendar] Could not update event:", error?.message);
     return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
   }
+  calendarChanged();
   return withAlert(userId, toEvent(data as unknown as EventRow, userId), draft.alert);
 }
 
@@ -548,6 +552,7 @@ export async function deleteEvent(
     console.error("[calendar] Could not delete event:", error.message);
     return { ok: false, message: writeMessage(error, "Couldn't delete that event. Try again.") };
   }
+  calendarChanged();
   return { ok: true };
 }
 
@@ -575,6 +580,7 @@ export async function endSeries(
     console.error("[calendar] Could not end the series:", error.message);
     return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
   }
+  calendarChanged();
   return { ok: true };
 }
 
@@ -608,6 +614,7 @@ export async function setOccurrence(
     console.error("[calendar] Could not change one occurrence:", error.message);
     return { ok: false, message: writeMessage(error, "Couldn't save your changes. Try again.") };
   }
+  calendarChanged();
   return { ok: true };
 }
 
@@ -667,6 +674,7 @@ export async function respondToInvite(
     console.error("[calendar] Could not record your response:", error.message);
     return { ok: false, message: "Couldn't save your response. Try again." };
   }
+  calendarChanged();
   return { ok: true };
 }
 
