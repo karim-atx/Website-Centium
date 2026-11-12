@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { createHaptics, ALLOWED_TTL_MS, MIN_GAP_MS, RING_PAIR_MS, RING_PAUSE_MS, type HapticsAllowed, type HapticsDeps } from "./hapticsModel.ts";
+import { createHaptics, ALLOWED_TTL_MS, MIN_GAP_MS, RING_PAIR_MS, RING_PAUSE_MS, TICK_GAP_MS, type HapticsAllowed, type HapticsDeps } from "./hapticsModel.ts";
 
 // A page and a phone in a box: a clock that only moves when told, timers on
 // that clock, and a log of what the plugin was asked to play.
@@ -26,6 +26,9 @@ function rig(opts: { native?: boolean; on?: boolean; visible?: boolean; allowed?
     },
     success: async () => {
       log.push(`success@${now}`);
+    },
+    selection: async () => {
+      log.push(`selection@${now}`);
     },
     vibrate: (ms) => {
       log.push(`vibrate:${ms}`);
@@ -239,4 +242,53 @@ test("the web vibrations (scanners, EMOM) follow the switch only", () => {
   const off = rig({ native: false, on: false });
   off.h.vibrate(40);
   assert.deepEqual(off.log, []);
+});
+
+// The switch tick (FX follow-up).
+
+test("a switch tick is one selection feedback", async () => {
+  const r = rig();
+  assert.equal(await r.h.tick(), true);
+  assert.deepEqual(r.rel(), ["selection@0"]);
+});
+
+test("switch ticks follow the Vibration switch, the app, visibility and the phone", async () => {
+  for (const opts of [{ on: false }, { native: false }, { visible: false }] as const) {
+    const r = rig(opts);
+    assert.equal(await r.h.tick(), false);
+    assert.deepEqual(r.log, []);
+    assert.equal(r.asked(), 0);
+  }
+  for (const allowed of [{ allowed: false, reduced: false }, "reject"] as const) {
+    const r = rig({ allowed });
+    assert.equal(await r.h.tick(), false);
+    assert.deepEqual(r.log, []);
+  }
+});
+
+test("reduced: the tick still plays (it is already the lightest)", async () => {
+  const r = rig({ allowed: { allowed: true, reduced: true } });
+  assert.equal(await r.h.tick(), true);
+  assert.deepEqual(r.rel(), ["selection@0"]);
+});
+
+test("every switch ticks: no 1.5 s gap between ticks, only one tap's double is dropped", async () => {
+  const r = rig();
+  assert.equal(await r.h.tick(), true);
+  assert.equal(await r.h.tick(), false); // the same instant: one tap
+  await r.advance(TICK_GAP_MS);
+  assert.equal(await r.h.tick(), true);
+  await r.advance(200);
+  assert.equal(await r.h.tick(), true);
+  assert.deepEqual(r.rel(), ["selection@0", `selection@${TICK_GAP_MS}`, `selection@${TICK_GAP_MS + 200}`]);
+});
+
+test("ticks and moments don't hold each other back", async () => {
+  const r = rig();
+  assert.equal(await r.h.play("banner"), true);
+  assert.equal(await r.h.tick(), true);
+  await r.advance(TICK_GAP_MS);
+  assert.equal(await r.h.tick(), true);
+  await r.advance(MIN_GAP_MS);
+  assert.equal(await r.h.play("celebrate"), true);
 });

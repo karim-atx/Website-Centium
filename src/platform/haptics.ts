@@ -9,6 +9,8 @@
 //              milestones), the workout PR burst, a business's approval, a
 //              professional's first "You're live"
 //   ring       CallSurface's incoming-call overlay
+//   tick       every toggle switch turned on or off, app-wide, by one
+//              watcher (switchTicks.ts, installed in main.tsx)
 //   vibrate    the barcode / front-desk scanners and the EMOM beeper: their
 //              web vibration as before, now behind the switch (item 27)
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
@@ -58,6 +60,16 @@ const haptics = createHaptics({
   hapticsAllowed: nativeHapticsAllowed,
   impact: (weight) => Haptics.impact({ style: WEIGHT[weight] }),
   success: () => Haptics.notification({ type: NotificationType.Success }),
+  // Start, changed, end: both platforms play selectionChanged only after a
+  // start (iOS keeps the generator from it; Android checks a flag).
+  selection: async () => {
+    await Haptics.selectionStart();
+    try {
+      await Haptics.selectionChanged();
+    } finally {
+      await Haptics.selectionEnd();
+    }
+  },
   vibrate: (ms) => {
     navigator.vibrate?.(ms);
   },
@@ -79,6 +91,11 @@ const haptics = createHaptics({
  */
 export function fxHaptic(kind: HapticKind, opts?: { key?: string }): void {
   void haptics.play(kind, opts);
+}
+
+/** A switch turned on or off: the light selection tick, in the app only. */
+export function switchTick(): void {
+  void haptics.tick();
 }
 
 /** The incoming-call ring, until stopRing() or the page goes hidden. */
