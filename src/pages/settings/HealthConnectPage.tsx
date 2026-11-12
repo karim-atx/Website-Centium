@@ -17,6 +17,7 @@ import {
   connectErrorKey,
   HEALTH_CONNECT_PLAY_URL,
   HEALTH_TYPE_LABEL,
+  healthCopy,
   healthView,
   rowLine,
   syncResultKey,
@@ -41,6 +42,10 @@ import { t } from "../../i18n/core";
 // - Connected, Round K (D-EL4): "Sync in the background", off by default,
 //   from health.background(); disabled with the reason when this phone can't.
 // - Not installed or out of date: a link to Health Connect on Google Play.
+// - On iPhone (Batch C item 36, after App #30) it is Apple Health: its name,
+//   "Open Health", no Allowed / Not allowed per type (HealthKit never says
+//   what was refused) but where to change it, the iOS background line, and
+//   in the Disconnect popup that Centium can't withdraw its own access.
 // Automatic syncs are AppContext's (platform/health.ts); nothing here starts one.
 
 function openPlayStore() {
@@ -65,6 +70,8 @@ export default function HealthConnectPage() {
   const [bgBusy, setBgBusy] = useState(false);
   const [bgNote, setBgNote] = useState<{ text: string; danger: boolean; settings: boolean } | null>(null);
   const allowed = isNative() && user.accountType === "customer";
+  const provider = health.provider();
+  const copy = healthCopy(provider);
 
   const read = useCallback(async () => {
     const a = await health.available().catch((): HealthAvailability => ({ ok: false }));
@@ -90,7 +97,7 @@ export default function HealthConnectPage() {
 
   if (!allowed) return <Navigate to="/app/settings/devices" replace />;
 
-  const view = healthView(avail, status);
+  const view = healthView(avail, status, provider);
   if (view?.kind === "unavailable") return <Navigate to="/app/settings/devices" replace />;
 
   const sync = async () => {
@@ -118,7 +125,7 @@ export default function HealthConnectPage() {
       // Connected: the first sync now (30 days), not at the next resume.
       await sync();
     } catch (e) {
-      setNote({ text: t(connectErrorKey(e, !online)), danger: true });
+      setNote({ text: t(connectErrorKey(e, !online, provider)), danger: true });
       setBusy(null);
     }
   };
@@ -130,7 +137,7 @@ export default function HealthConnectPage() {
       await health.disconnect({ removeSyncedData: removeData });
       setConfirm(false);
       setAsked(null);
-      setNote({ text: removeData ? t("Disconnected. Health Connect's data was removed.") : t("Disconnected. What's synced so far stays."), danger: false });
+      setNote({ text: removeData ? t(copy.removedNote) : t("Disconnected. What's synced so far stays."), danger: false });
       await read();
     } catch {
       setNote({ text: online ? t("Couldn't disconnect. Try again.") : t("You're offline. Try again when you're back online."), danger: true });
@@ -160,7 +167,7 @@ export default function HealthConnectPage() {
 
   return (
     <div>
-      <PageHeader title="Health Connect" showBack tightBack />
+      <PageHeader title={copy.name} showBack tightBack />
       <SettingsBody>
         {view === null && <p className="text-[13px] text-charcoal-faint">{t("Loading…")}</p>}
 
@@ -185,11 +192,11 @@ export default function HealthConnectPage() {
             </SettingsSection>
             {recoverySensitive && <p className="-mt-4 mb-6 px-1 text-[12.5px] text-charcoal-muted">{t("Weight and body fat aren't read while recovery-sensitive mode is on.")}</p>}
             <div className="mb-6 px-1 flex flex-col gap-2 text-[13px] leading-5 text-charcoal-muted">
-              <p>{t("Centium only reads. It never writes to {provider}.", { provider: "Health Connect" })}</p>
+              <p>{t("Centium only reads. It never writes to {provider}.", { provider: copy.name })}</p>
               <p>{t("What's read is saved to your Centium account and used only in Centium. It's shared only with professionals you choose, and never sold.")}</p>
             </div>
             <Button className="w-full" onClick={() => void connect()} disabled={busy !== null}>
-              {busy === "connect" ? t("Connecting…") : t("Connect Health Connect")}
+              {busy === "connect" ? t("Connecting…") : t(copy.connect)}
             </Button>
           </div>
         )}
@@ -215,7 +222,7 @@ export default function HealthConnectPage() {
                     title={t("Sync in the background")}
                     subtitle={
                       <span id="hc-bg-desc">
-                        {bg.available ? t("About once an hour, while Centium is closed.") : t("This phone can't sync Health Connect in the background.")}
+                        {bg.available ? t(copy.backgroundOn) : t(copy.backgroundUnavailable)}
                       </span>
                     }
                     toggle={{ checked: bg.on, onChange: (on) => void setBackground(on), disabled: !bg.available || bgBusy, describedBy: "hc-bg-desc" }}
@@ -241,13 +248,15 @@ export default function HealthConnectPage() {
                 </div>
               </div>
             )}
-            <SettingsSection label={t("Access")}>
+            <SettingsSection label={copy.showsAccessPerType ? t("Access") : t("What's read")}>
               {types.map((x) => {
+                if (!copy.showsAccessPerType) return <SettingsRow key={x} icon={Activity} title={t(HEALTH_TYPE_LABEL[x])} />;
                 const on = status.granted.includes(x);
                 return <SettingsRow key={x} icon={on ? Check : X} title={t(HEALTH_TYPE_LABEL[x])} value={on ? t("Allowed") : t("Not allowed")} />;
               })}
-              <SettingsRow icon={SlidersHorizontal} title={t("Change access")} onClick={() => void health.openSettings().catch(() => undefined)} />
+              <SettingsRow icon={SlidersHorizontal} title={t(copy.changeAccess)} onClick={() => void health.openSettings().catch(() => undefined)} />
             </SettingsSection>
+            {copy.accessHint && <p data-hc-access-hint className="-mt-4 mb-6 px-1 text-[12.5px] text-charcoal-muted">{t(copy.accessHint)}</p>}
             {recoverySensitive && <p className="-mt-4 mb-6 px-1 text-[12.5px] text-charcoal-muted">{t("Weight and body fat aren't read while recovery-sensitive mode is on.")}</p>}
             <SettingsSection label={t("When sources overlap")}>
               <SettingsRow icon={ArrowDownUp} title={t("Source order")} onClick={() => navigate("/app/settings/devices")} />
@@ -258,7 +267,8 @@ export default function HealthConnectPage() {
           </div>
         )}
 
-        {asked && (asked.granted.length > 0 || asked.refused.length > 0) && (
+        {/* iPhone: HealthKit doesn't say what was refused, so there is no list to show. */}
+        {copy.showsAccessPerType && asked && (asked.granted.length > 0 || asked.refused.length > 0) && (
           <div data-hc-asked className="mt-4 px-1 text-[12.5px] text-charcoal-muted">
             {asked.granted.length > 0 && <p>{t("Allowed: {types}", { types: asked.granted.map((x) => t(HEALTH_TYPE_LABEL[x])).join(t(", ")) })}</p>}
             {asked.refused.length > 0 && <p>{t("Not allowed: {types}", { types: asked.refused.map((x) => t(HEALTH_TYPE_LABEL[x])).join(t(", ")) })}</p>}
@@ -272,16 +282,17 @@ export default function HealthConnectPage() {
         )}
       </SettingsBody>
 
-      <CentredPopup open={confirm} onClose={() => setConfirm(false)} title={t("Disconnect Health Connect?")}>
-        <div role="radiogroup" aria-label={t("Disconnect Health Connect?")} className="flex flex-col gap-2 text-start">
+      <CentredPopup open={confirm} onClose={() => setConfirm(false)} title={t(copy.disconnectTitle)}>
+        {copy.disconnectNote && <p data-hc-disconnect-note className="mb-3 text-[13px] leading-5 text-charcoal-muted text-start">{t(copy.disconnectNote)}</p>}
+        <div role="radiogroup" aria-label={t(copy.disconnectTitle)} className="flex flex-col gap-2 text-start">
           {[false, true].map((remove) => (
             <label key={String(remove)} className="flex items-start gap-3 rounded-[14px] border border-charcoal/[0.11] p-3">
               <input type="radio" name="hc-remove" checked={removeData === remove} onChange={() => setRemoveData(remove)} className="mt-1" />
               <span>
-                <span className="block text-[14px] font-semibold text-charcoal">{remove ? t("Remove {provider}'s data", { provider: "Health Connect" }) : t("Keep what's synced so far")}</span>
+                <span className="block text-[14px] font-semibold text-charcoal">{remove ? t("Remove {provider}'s data", { provider: copy.name }) : t("Keep what's synced so far")}</span>
                 <span className="block text-[12px] text-charcoal-muted">
                   {remove
-                    ? t("Deletes everything Centium synced from Health Connect: steps, sleep, workouts, heart rate, weight and body fat. What you entered yourself stays.")
+                    ? t(copy.removeDetail)
                     : t("Nothing new is read. What's already in Centium stays.")}
                 </span>
               </span>

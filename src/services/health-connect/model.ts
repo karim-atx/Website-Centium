@@ -4,6 +4,63 @@
 import type { HealthAvailability, HealthBackgroundState, HealthType } from "../../platform/contracts";
 import { tk } from "../../i18n/core";
 
+/** The phone's own health store: Health Connect on Android, Apple Health on iPhone (health.provider()). */
+export type PhoneProvider = "android_health" | "apple_health";
+
+/**
+ * Batch C item 36 (Karim, 2026-11-11; App-Centium #30): the words that name
+ * the phone's health store, and the iPhone's honest notes. HealthKit never
+ * tells an app whether a read was refused, never reports access as off, and
+ * an app can't withdraw its own access; Apple Health opens in the Health app.
+ * Keys are literal (tk) so the catalogue holds both sets.
+ */
+export interface HealthCopy {
+  name: string;
+  connect: string;
+  disconnectTitle: string;
+  removedNote: string;
+  removeDetail: string;
+  backgroundOn: string;
+  backgroundUnavailable: string;
+  changeAccess: string;
+  /** iPhone: what was asked can't be told from what was allowed, so no Allowed / Not allowed per type. */
+  showsAccessPerType: boolean;
+  /** iPhone: where access is changed, under the list. */
+  accessHint: string | null;
+  /** iPhone: in the Disconnect popup. */
+  disconnectNote: string | null;
+}
+
+export function healthCopy(p: PhoneProvider): HealthCopy {
+  return p === "apple_health"
+    ? {
+        name: "Apple Health",
+        connect: tk("Connect Apple Health"),
+        disconnectTitle: tk("Disconnect Apple Health?"),
+        removedNote: tk("Disconnected. Apple Health's data was removed."),
+        removeDetail: tk("Deletes everything Centium synced from Apple Health: steps, sleep, workouts, heart rate, weight and body fat. What you entered yourself stays."),
+        backgroundOn: tk("About once an hour, while Centium is closed. iOS decides the exact time."),
+        backgroundUnavailable: tk("This iPhone can't sync Apple Health in the background."),
+        changeAccess: tk("Open Health"),
+        showsAccessPerType: false,
+        accessHint: tk("To change what Centium reads, open Health › your profile › Apps › Centium."),
+        disconnectNote: tk("Centium stops reading. To remove its access too, open Health › your profile › Apps › Centium."),
+      }
+    : {
+        name: "Health Connect",
+        connect: tk("Connect Health Connect"),
+        disconnectTitle: tk("Disconnect Health Connect?"),
+        removedNote: tk("Disconnected. Health Connect's data was removed."),
+        removeDetail: tk("Deletes everything Centium synced from Health Connect: steps, sleep, workouts, heart rate, weight and body fat. What you entered yourself stays."),
+        backgroundOn: tk("About once an hour, while Centium is closed."),
+        backgroundUnavailable: tk("This phone can't sync Health Connect in the background."),
+        changeAccess: tk("Change access"),
+        showsAccessPerType: true,
+        accessHint: null,
+        disconnectNote: null,
+      };
+}
+
 /** Health Connect on Google Play, for "not installed" and "out of date". */
 export const HEALTH_CONNECT_PLAY_URL = "https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata";
 
@@ -42,9 +99,10 @@ export type HealthView =
   | { kind: "not_connected" }
   | { kind: "connected"; lastSyncedAt: string | null; accessState: HealthStatus["accessState"] };
 
-export function healthView(a: HealthAvailability | null, s: HealthStatus | null): HealthView | null {
+export function healthView(a: HealthAvailability | null, s: HealthStatus | null, p: PhoneProvider = "android_health"): HealthView | null {
   if (!a) return null;
-  if (!a.ok) return a.reason === "needs_install" || a.reason === "needs_update" ? { kind: "install", update: a.reason === "needs_update" } : { kind: "unavailable" };
+  // Installing or updating is Health Connect's; Apple Health is always there (item 36).
+  if (!a.ok) return p === "android_health" && (a.reason === "needs_install" || a.reason === "needs_update") ? { kind: "install", update: a.reason === "needs_update" } : { kind: "unavailable" };
   if (!s) return null;
   if (!s.connected) return { kind: "not_connected" };
   return { kind: "connected", lastSyncedAt: s.lastSyncedAt, accessState: s.accessState };
@@ -75,11 +133,12 @@ export function syncResultKey(r: { saved: number; skipped: number; error?: "offl
 }
 
 /** connect() threw: the words for it. ATXZ0: syncing is switched off on the server. */
-export function connectErrorKey(e: unknown, offline: boolean): string {
+export function connectErrorKey(e: unknown, offline: boolean, p: PhoneProvider = "android_health"): string {
   const code = (e as { code?: string } | null)?.code;
-  if (code === "ATXZ0") return tk("Syncing from Health Connect is switched off right now. Try again later.");
+  const apple = p === "apple_health";
+  if (code === "ATXZ0") return apple ? tk("Syncing from Apple Health is switched off right now. Try again later.") : tk("Syncing from Health Connect is switched off right now. Try again later.");
   if (offline) return tk("You're offline. Connect again when you're back online.");
-  return tk("Couldn't connect to Health Connect. Try again.");
+  return apple ? tk("Couldn't connect to Apple Health. Try again.") : tk("Couldn't connect to Health Connect. Try again.");
 }
 
 /**

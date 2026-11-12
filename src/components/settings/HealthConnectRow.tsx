@@ -6,7 +6,7 @@ import { useApp } from "../../context/AppContext";
 import { isNative } from "../../platform";
 import { health } from "../../platform/health";
 import type { HealthAvailability } from "../../platform/contracts";
-import { healthView, rowLine, type HealthStatus } from "../../services/health-connect/model";
+import { healthCopy, healthView, rowLine, type HealthStatus } from "../../services/health-connect/model";
 import { syncedWhen } from "../../services/health-connect/when";
 import { t } from "../../i18n/core";
 
@@ -48,13 +48,15 @@ export function HealthConnectRow({ fallback }: { fallback: ReactNode }) {
     };
   }, []);
 
-  const view = healthView(avail, status);
+  const provider = health.provider();
+  const view = healthView(avail, status, provider);
   if (!isNative() || !view || view.kind === "unavailable") return <>{fallback}</>;
   const line = rowLine(view);
   return (
     <SettingsRow
-      icon={DEVICE_PLACEHOLDER_ICON["health-connect"]}
-      title="Health Connect"
+      // Batch C item 36: Apple Health on iPhone, Health Connect on Android.
+      icon={DEVICE_PLACEHOLDER_ICON[provider === "apple_health" ? "apple-health" : "health-connect"]}
+      title={healthCopy(provider).name}
       subtitle={line ? <span data-hc-row={view.kind}>{t(line.key, line.time ? { time: syncedWhen(line.time, today) } : undefined)}</span> : undefined}
       onClick={() => navigate("/app/settings/devices/health")}
     />
