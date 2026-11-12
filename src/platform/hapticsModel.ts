@@ -24,7 +24,7 @@
 //
 // THE SWITCH TICK (FX follow-up): every toggle switch turned on or off plays
 // the phone's selection feedback (UISelectionFeedbackGenerator on iOS; the
-// plugin's selection pattern on Android). Same three gates; a reduced answer
+// Light impact, 50 ms, on Android). Same three gates; a reduced answer
 // still plays it, since it is already the lightest there is. It is not a
 // "moment": the 1.5 s gap doesn't apply to it and it doesn't hold one back,
 // so turning several switches plays one tick each. Only a single tap's
@@ -45,7 +45,7 @@ export interface HapticsDeps {
   hapticsAllowed(): Promise<HapticsAllowed>;
   impact(weight: ImpactWeight): Promise<void>;
   success(): Promise<void>;
-  /** The selection tick: Haptics.selectionStart, selectionChanged, selectionEnd. */
+  /** The switch tick: iOS selectionStart, selectionChanged, selectionEnd; Android the Light impact. */
   selection(): Promise<void>;
   /** navigator.vibrate, for the three web vibrations that predate FX. */
   vibrate(ms: number): void;
