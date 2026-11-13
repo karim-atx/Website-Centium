@@ -16,6 +16,7 @@ import {
 import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { t, tn } from "../../i18n/core";
+import { ShareEntryButton } from "../share/client/ShareEntryButton";
 
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
@@ -48,12 +49,17 @@ export const OrmIcon: React.FC<{ size: number }> = ({ size }) => (
  * (services/workout/oneRepMax), with its 30-day change (teal up, muted down,
  * "–" if none) and last trained date. Sorted from a popup anchored to the
  * sort button, Highest 1RM by default. A row opens that lift's detail (WO19).
+ *
+ * Batch D GG: every lift has its share button (the PR card, `onShare`), a
+ * sibling of the row's button so a tap on the row still opens the detail.
  */
 export const OneRepMaxesSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   onSelect?: (lift: LiftMax) => void;
-}> = ({ open, onClose, onSelect }) => {
+  /** Batch D GG: share this lift's personal best (absent: no share buttons). */
+  onShare?: (lift: LiftMax) => void;
+}> = ({ open, onClose, onSelect, onShare }) => {
   const { workoutSessions } = useApp();
   const [sort, setSort] = useState<LiftSort>("highest");
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -111,10 +117,10 @@ export const OneRepMaxesSheet: React.FC<{
 
             <ul>
               {lifts.map((lift, i) => (
-                <li key={lift.key} style={{ borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}>
+                <li key={lift.key} className="flex items-center" style={{ borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}>
                   <button
                     onClick={() => onSelect?.(lift)}
-                    className="tap w-full flex items-center text-start"
+                    className="tap flex-1 min-w-0 flex items-center text-start"
                     style={{ height: 62, gap: 10 }}
                   >
                     <span className="flex-1 min-w-0">
@@ -134,6 +140,15 @@ export const OneRepMaxesSheet: React.FC<{
                     </span>
                     <ChevronRight size={14} className="flex-none" style={{ color: ormColor("faint", dark) }} />
                   </button>
+                  {onShare && (
+                    <ShareEntryButton
+                      size={28}
+                      ring={false}
+                      label={t("Share {name}", { name: lift.name })}
+                      onPress={() => onShare(lift)}
+                      style={{ marginInlineStart: 4 }}
+                    />
+                  )}
                 </li>
               ))}
             </ul>

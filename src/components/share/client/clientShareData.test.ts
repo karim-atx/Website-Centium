@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { foodFacts, isNewPr, prFacts, streakFacts, weightOn, workoutFacts } from "./clientShareData.ts";
+import { prCard } from "./clientCardModel.ts";
 import type { FoodLogEntry, WorkoutSession } from "../../../types/index.ts";
 
 const set = (weightKg: number, reps: number, extra: Record<string, unknown> = {}) => ({ setNumber: 1, reps, weightKg, completed: true, ...extra });
@@ -64,4 +65,18 @@ test("body weight on or before the session's day", () => {
   const w = { "2026-10-01": 75, "2026-10-10": 74.2, "2026-10-20": 73.9 };
   assert.equal(weightOn(w, "2026-10-16"), 74.2);
   assert.equal(weightOn(w, "2026-09-01"), null);
+});
+
+test("Batch D GG: an old personal best shares truthfully (dated its day, never called new)", () => {
+  const today = "2026-11-13";
+  const old = { name: "Deadlift", oneRm: 180, best: { weightKg: 170, reps: 2, date: "2026-03-02" }, change30: null, sessions: [{ oneRm: 150 }, { oneRm: 180 }, { oneRm: 165 }] };
+  assert.equal(isNewPr(old.best.date, today), false);
+  const card = prCard(prFacts(old, today));
+  assert.equal(card.eyebrow, "Personal best");
+  assert.equal(card.date, "Mon, Mar 2");
+  assert.equal(card.headline.value, "180 kg");
+  // No 30-day change without a best before the window: no "since" stat.
+  assert.deepEqual(card.stats.map((s) => s.key), ["best_set"]);
+  const words = [card.eyebrow, card.subject, card.line, card.sheetTitle, card.headline.title, ...card.stats.flatMap((s) => [s.title, s.label])].join(" ");
+  assert.doesNotMatch(words, /\bnew\b/i);
 });

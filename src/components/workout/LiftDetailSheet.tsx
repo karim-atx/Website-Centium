@@ -14,6 +14,7 @@ import {
 import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
+import { ShareEntryButton } from "../share/client/ShareEntryButton";
 
 const RANGES: LiftRange[] = ["3M", "6M", "All"];
 /** The frame shows the four most recent sessions. */
@@ -44,8 +45,11 @@ const shortDate = (t: number) => new Date(t).toLocaleDateString(appLocale("en-US
  * purple card with a 3M / 6M / All toggle; the most recent sessions with
  * their best set, estimate and the PR chip. One session: a single point and
  * "Log another session to see your trend."
+ *
+ * Batch D GG: a share button beside the 1RM shares this lift's personal best
+ * (`onShare`), however long ago it was set.
  */
-export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => void }> = ({ lift, onClose }) => {
+export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => void; onShare?: (lift: LiftMax) => void }> = ({ lift, onClose, onShare }) => {
   const [range, setRange] = useState<LiftRange>("3M");
   const dark = useIsDark();
   if (!lift) return null;
@@ -57,12 +61,16 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
   return (
     <BottomSheet open onClose={onClose} title={lift.name} handle>
       <div className="animate-fade-slide-up">
-        <div className="flex items-baseline" style={{ gap: 10 }}>
-          <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(30), fontWeight: 800, lineHeight: 1 }}>
-            {kgWhole(lift.oneRm)}
-            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginInlineStart: 4 }}>kg</span>
-          </p>
-          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("estimated 1RM")}</span>
+        <div className="flex items-center" style={{ gap: 10 }}>
+          <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 10 }}>
+            <p style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(30), fontWeight: 800, lineHeight: 1 }}>
+              {kgWhole(lift.oneRm)}
+              <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(15), fontWeight: 700, marginInlineStart: 4 }}>kg</span>
+            </p>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(11) }}>{t("estimated 1RM")}</span>
+          </div>
+          {/* The 44 target overhangs the 30 row (margin -7) so nothing below moves. */}
+          {onShare && <ShareEntryButton label={t("Share your {name} personal best", { name: lift.name })} onPress={() => onShare(lift)} style={{ margin: "-7px 0" }} />}
         </div>
         <p style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: textPx(12), marginTop: 8 }}>
           {setLine(lift.best)} · {shortDate(dayMs(lift.best.date))}
