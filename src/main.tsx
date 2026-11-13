@@ -12,6 +12,9 @@ import { startAppConfig } from './platform/appConfig'
 import { primeNativePush } from './platform/push'
 import { switchTick } from './platform/haptics'
 import { installSwitchTicks } from './platform/switchTicks'
+import { initTioDebug } from './components/ui/tioDebug'
+// ?tioDebug=1 (a Tio readout on bottom sheets, for checking on a phone), read before any redirect.
+initTioDebug()
 
 // Registers the service worker that receives push notifications (src/sw.ts).
 //

@@ -21,11 +21,50 @@ export const tioKey = (v: TioViewport) => `centium.tio.last.${v}`;
 
 type Store = { getItem(key: string): string | null; setItem(key: string, value: string): void };
 
-function storage(): Store | null {
+// The last state is kept in localStorage (shared by every popup, across
+// sessions). Where localStorage is unavailable (a private window that refuses
+// it, blocked storage), it is kept in memory for this tab instead, so the
+// rotation still works for the session rather than Tio being hidden.
+const memory = new Map<string, string>();
+const local = (): Store | null => {
   try {
     return (globalThis as { localStorage?: Store }).localStorage ?? null;
   } catch {
     return null;
+  }
+};
+const sessionStore: Store = {
+  getItem(key) {
+    try {
+      const v = local()?.getItem(key);
+      if (v !== null && v !== undefined) return v;
+    } catch {
+      // Unavailable: memory below.
+    }
+    return memory.get(key) ?? null;
+  },
+  setItem(key, value) {
+    memory.set(key, value);
+    try {
+      local()?.setItem(key, value);
+    } catch {
+      // Unavailable: memory keeps it for this tab.
+    }
+  },
+};
+function storage(): Store {
+  return sessionStore;
+}
+
+/** Where the rotation's last state lives on this device: "localStorage", or "memory" for this tab. */
+export function tioStorageKind(): "localStorage" | "memory" {
+  try {
+    const ls = local();
+    if (!ls) return "memory";
+    ls.setItem("centium.tio.probe", "1");
+    return "localStorage";
+  } catch {
+    return "memory";
   }
 }
 
@@ -39,6 +78,30 @@ export function pickTioState(v: TioViewport, random: () => number = Math.random,
   }
   const all: readonly TioState[] = TIO_STATES[v];
   const pool = all.filter((s) => s !== last);
+  return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
+}
+
+/**
+ * This open's state among those that fit (Safari fix): the last state left
+ * out, then only the states whose pose has room (`fits`; NONE always has),
+ * equally likely. null when none of them fits (the last state was NONE and
+ * no pose has room): no Tio on this open, and nothing is stored.
+ */
+export function pickFittingTioState(
+  v: TioViewport,
+  fits: (s: TioState) => boolean,
+  random: () => number = Math.random,
+  store: Store | null = storage()
+): TioState | null {
+  let last: string | null = null;
+  try {
+    last = store?.getItem(tioKey(v)) ?? null;
+  } catch {
+    last = null;
+  }
+  const all: readonly TioState[] = TIO_STATES[v];
+  const pool = all.filter((s) => s !== last && fits(s));
+  if (!pool.length) return null;
   return pool[Math.min(pool.length - 1, Math.floor(random() * pool.length))];
 }
 

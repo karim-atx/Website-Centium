@@ -76,3 +76,47 @@ test("pick then remember: a dropped pick leaves the stored state as it was", asy
   rememberTioState("mobile", s, store);
   assert.equal(store.m.get("centium.tio.last.mobile"), s);
 });
+
+test("Safari fix: the pick is among the states that fit, never the last; null only when none fits", async () => {
+  const { pickFittingTioState } = await import("./tioRotation.ts");
+  const store = memoryStore();
+  // Only PEEK has room (Safari, sheet top ~80): PEEK and NONE alternate, Tio never skipped for lack of a pick.
+  const onlyPeek = (s: string) => s === "peek" || s === "none";
+  const seq: (string | null)[] = [];
+  for (let i = 0; i < 40; i++) {
+    const s = pickFittingTioState("mobile", onlyPeek, Math.random, store);
+    seq.push(s);
+    if (s) store.setItem(tioKey("mobile"), s);
+  }
+  assert.ok(seq.every((s) => s === "peek" || s === "none"));
+  for (let i = 1; i < seq.length; i++) assert.notEqual(seq[i], seq[i - 1]);
+  assert.equal(seq.filter((s) => s === "peek").length, 20);
+  // No pose fits and NONE was last: nothing (no Tio, nothing stored).
+  store.setItem(tioKey("mobile"), "none");
+  assert.equal(pickFittingTioState("mobile", (s) => s === "none", Math.random, store), null);
+  // Everything fits: the plain rotation.
+  store.setItem(tioKey("mobile"), "wave");
+  assert.equal(pickFittingTioState("mobile", () => true, () => 0, store), "lie");
+});
+
+test("no localStorage (a private window that refuses it): the rotation still runs for the tab", async () => {
+  const { nextTioState, pickFittingTioState } = await import("./tioRotation.ts");
+  const g = globalThis as { localStorage?: unknown };
+  const had = Object.getOwnPropertyDescriptor(g, "localStorage");
+  const deny = () => {
+    throw new Error("QuotaExceededError");
+  };
+  Object.defineProperty(g, "localStorage", { configurable: true, get: () => ({ getItem: deny, setItem: deny }) });
+  try {
+    let prev: string | null = null;
+    for (let i = 0; i < 30; i++) {
+      const s = nextTioState("web");
+      assert.notEqual(s, prev, "no back-to-back repeat even without storage");
+      prev = s;
+    }
+    assert.notEqual(pickFittingTioState("web", () => true), prev);
+  } finally {
+    if (had) Object.defineProperty(g, "localStorage", had);
+    else delete g.localStorage;
+  }
+});
