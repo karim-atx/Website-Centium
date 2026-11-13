@@ -842,6 +842,13 @@ const landing: Catalogue = {
   'Windows may say it "protected your PC" because Centium isn\'t signed yet. Choose More info → Run anyway.':
     "قد يقول Windows إنه «حمى جهازك» لأن Centium غير موقَّع بعد. اختر المزيد من المعلومات ← تشغيل على أي حال.",
   "Why?": "لماذا؟",
+  // The desktop download panel (2026-11-13).
+  "Download for Windows": "تنزيل لنظام Windows",
+  "Windows 10 and 11 · Free · About 2 MB": "Windows 10 و11 · مجاني · نحو 2 ميغابايت",
+  "Windows 10 and 11 · Free · About 2 MB · Version {v}": "Windows 10 و11 · مجاني · نحو 2 ميغابايت · الإصدار {v}",
+  'Windows may show "Windows protected your PC". Choose More info, then Run anyway.':
+    "قد يعرض Windows الرسالة «حمى Windows جهازك». اختر «المزيد من المعلومات»، ثم «تشغيل على أي حال».",
+  "Your download has started": "بدأ التنزيل",
   "Install help": "مساعدة التثبيت",
   "Why Windows warns": "لماذا يحذّر Windows",
   "Centium's Windows app isn't signed with a code-signing certificate yet, so Windows doesn't know who published it and treats it as a new app.":
