@@ -36,6 +36,7 @@ import { workoutCard } from "../../components/share/client/clientCardModel";
 import { weightOn, workoutFacts } from "../../components/share/client/clientShareData";
 import { appLocale } from "../../i18n/format";
 import { t, tn } from "../../i18n/core";
+import { useExerciseName } from "../../components/workout/useExerciseName";
 
 // WO3.1 · History as a card stack: a hero summary for the chosen period
 // (Total volume, Time taken, the comparison phrase, workouts and sets), then
@@ -433,6 +434,8 @@ const SessionCard: React.FC<{
   /** Round D · TR22 (D-S5): the coaches' replies, oldest first. */
   replies?: WorkoutLogReply[];
 }> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete, onShare, sentLine: sentText, replies }) => {
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   const [showAll, setShowAll] = useState(false);
   // Mobile v5.1 R3: the folder's row tint and header shade for the current
   // mode (dark: hue tints on the dark card; headInk then picks white).
@@ -532,7 +535,7 @@ const SessionCard: React.FC<{
                   {/* Dark: the dot lifted to 3:1 on the dark row (only Black's bar is under it). */}
                   <span aria-hidden className="flex-none rounded-full" style={{ width: 6, height: 6, background: dark ? liftTo(family.bar, family.row, 3) : family.bar }} />
                   <span className="flex-1 min-w-0 truncate" style={{ fontSize: textPx(13), lineHeight: linePx(19), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
-                    {ex.name}
+                    {shownName(ex.name, !!ex.customExerciseId)}
                   </span>
                   <span className="flex-none" style={{ fontSize: textPx(12), lineHeight: linePx(19), color: "rgb(var(--c-charcoal-soft))", whiteSpace: "nowrap" }}>
                     {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? tn(done, "{n} set", "{n} sets") : ""}

@@ -1,5 +1,6 @@
 import type { LoggedExercise, WorkoutSession } from "../../types";
 import { isWorkingSet } from "./stats";
+import { plausibleSet } from "./setLimits";
 import { loadKg } from "./index";
 import { t, tk } from "../../i18n/core";
 
@@ -120,20 +121,23 @@ export interface ExerciseHistoryEntry {
  * The sessions that included an exercise, newest first: completed sets only,
  * the top set (heaviest working set), and weight × reps summed over them.
  * Matched by library row, else by name (legacy rows logged before ids).
+ * Batch D GH: not by name when a library and a custom movement share it
+ * (`nameShared`): such a row could be either, so it is in neither history.
  */
 export function exerciseHistory(
   sessions: WorkoutSession[],
-  match: { catalogId?: string; customId?: string; name: string }
+  match: { catalogId?: string; customId?: string; name: string; nameShared?: boolean }
 ): ExerciseHistoryEntry[] {
   const is = (ex: LoggedExercise) =>
     (match.catalogId && ex.catalogExerciseId === match.catalogId) ||
     (match.customId && ex.customExerciseId === match.customId) ||
-    (!ex.catalogExerciseId && !ex.customExerciseId && ex.name.trim().toLowerCase() === match.name.trim().toLowerCase());
+    (!match.nameShared && !ex.catalogExerciseId && !ex.customExerciseId && ex.name.trim().toLowerCase() === match.name.trim().toLowerCase());
   const out: ExerciseHistoryEntry[] = [];
   for (const s of [...sessions].sort(byNewest)) {
     const logged = s.exercises.filter(is);
     if (logged.length === 0) continue;
-    const done = logged.flatMap((ex) => ex.sets.filter((set) => set.completed));
+    // Batch D GH: a set over the server's ceilings is left out (old rows included).
+    const done = logged.flatMap((ex) => ex.sets.filter((set) => set.completed && plausibleSet(set)));
     if (done.length === 0) continue;
     const tops = logged.map(topSet).filter((t): t is { weightKg: number; reps: number } => !!t);
     const top = tops.reduce<{ weightKg: number; reps: number } | null>(

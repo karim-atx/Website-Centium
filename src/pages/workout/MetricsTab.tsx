@@ -43,6 +43,7 @@ import { prCard } from "../../components/share/client/clientCardModel";
 import { isNewPr, prFacts } from "../../components/share/client/clientShareData";
 import { appLocale } from "../../i18n/format";
 import { getLanguage, t, tn, tx } from "../../i18n/core";
+import { useExerciseName } from "../../components/workout/useExerciseName";
 
 // Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
 // the scrubbed point's stats), One-rep maxes (the six highest; All opens
@@ -106,6 +107,8 @@ export default function MetricsTab() {
     noteFeatureMilestone,
     refreshAchievements,
   } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   // Recovery-sensitive mode (AJ R2): body measurements are one of the
   // numbers the mode hides, so the card keeps its title and says why.
   const hideNumbers = useHideNumbers();
@@ -400,7 +403,7 @@ export default function MetricsTab() {
                 style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55, boxShadow: fresh ? `0 0 0 1.5px ${dark ? "#A991FE" : "#AEA1DC"}` : undefined }}
               >
                 <span className="block truncate" style={{ color: c("teal"), fontSize: textPx(11), fontWeight: 500 }}>
-                  {lift.name}
+                  {shownName(lift.name, !!lift.customId)}
                 </span>
                 <span className="block" style={{ color: c("teal"), fontSize: textPx(15), fontWeight: 800, marginTop: 2 }}>
                   {kgWhole(lift.oneRm)}

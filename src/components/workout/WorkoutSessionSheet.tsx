@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -43,7 +43,8 @@ import { countsTowardVolume, finalizeExercises, initLoggedExercises, isTouched, 
 import { formatClock, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
-import { exerciseKey, kindFields, lastSessionPrefill, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
+import { definitionOf, exerciseKey, kindFields, lastSessionPrefill, routineExerciseKey, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
+import { SET_REPS_MAX, SET_WEIGHT_MAX_KG, checkSet, plausibleOneRm, repsFromInput, setsOverCeiling, type SetCheck } from "../../services/workout/setLimits";
 import { DARK_SURFACE, liftTo, loggerShades, mixHex, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
 import { useIsDark } from "../../hooks/useIsDark";
 import { PR_BAR, typeStyles } from "./setTypeStyle";
@@ -57,6 +58,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet"
 import { CoachAvatar } from "./CoachAvatar";
 import { useClientShare } from "../share/client/useClientShare";
 import { ShareEntryButton } from "../share/client/ShareEntryButton";
+import { useExerciseName } from "./useExerciseName";
 import { workoutCard } from "../share/client/clientCardModel";
 import { workoutFacts } from "../share/client/clientShareData";
 import { fetchConnectedProfessional } from "../../services/connected-professional";
@@ -280,6 +282,11 @@ export const WorkoutSessionSheet: React.FC<{
   const setRest = (next: Rest | null | ((r: Rest | null) => Rest | null)) =>
     setTimers((t) => ({ ...t, rest: typeof next === "function" ? next(t.rest ?? null) : next }));
   const [needReps, setNeedReps] = useState<string | null>(null);
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
+  // Batch D GH: a set above the confirm figures asks "Is this right?" before
+  // it is logged; `run` logs it once the person says yes.
+  const [confirmSet, setConfirmSet] = useState<{ check: SetCheck; weightKg: number; reps: number; run: () => void } | null>(null);
   // --- Release 3 · W7 (CU1 v5): a routine a professional assigned --------
   const coachId = routineRow?.assignedByProfessionalId ?? null;
   const [coachName, setCoachName] = useState<string | null>(null);
@@ -386,7 +393,7 @@ export const WorkoutSessionSheet: React.FC<{
   useEffect(() => {
     if (!open || !coachId) return;
     const items = exercises
-      .map((ex) => ({ key: ex.id, oneRm: personalRecords[ex.name] ?? ex.estimatedOneRepMaxKg ?? 0, intensityPct: ex.intensityPct ?? 0 }))
+      .map((ex) => ({ key: ex.id, oneRm: personalRecords[routineExerciseKey(ex)] ?? ex.estimatedOneRepMaxKg ?? 0, intensityPct: ex.intensityPct ?? 0 }))
       .filter((x) => x.oneRm > 0 && x.intensityPct > 0);
     if (items.length === 0) return;
     let cancelled = false;
@@ -600,11 +607,13 @@ export const WorkoutSessionSheet: React.FC<{
     const ex = logged[exIdx];
     // QA 12.0: a PR on a barbell, dumbbell or weighted-bodyweight movement
     // updates the one-rep max immediately.
-    const libEntry = exerciseCatalog.find((l) => l.name === ex.name) ?? customExercises.find((l) => l.name === ex.name);
+    // Batch D GH: the definition and the record by id (never a name a library
+    // and a custom movement could share), and no record over 1,000 kg.
+    const libEntry = definitionOf(ex, exerciseCatalog, customExercises);
     if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && loadKg(s) > 0) {
       // No 1RM from a bodyweight set (0 kg of external load).
       const est = estimate1RM(loadKg(s), s.reps);
-      if (est > (personalRecords[ex.name] ?? 0)) {
+      if (plausibleOneRm(est) && est > (personalRecords[exerciseKey(ex)] ?? 0)) {
         setPersonalRecord(ex.name, est, { catalogExerciseId: ex.catalogExerciseId, customExerciseId: ex.customExerciseId });
       }
     }
@@ -629,8 +638,27 @@ export const WorkoutSessionSheet: React.FC<{
     return label ? t("{type} set options", { type: t(label) }) : t("Set options");
   };
 
-  /** Applies a set type; false when it could not be (reps must be typed first). */
-  const setType = (exIdx: number, setIdx: number, kind: HandoverSetType): boolean => {
+  /**
+   * Batch D GH: whether a set may be logged with these values now. Over a
+   * ceiling it can't (the row already says why, and the field takes focus);
+   * above a confirm figure it asks "Is this right?" first, and `run` logs it
+   * after a yes.
+   */
+  const limitsAllow = (exIdx: number, setIdx: number, v: { weightKg: number; reps: number }, run: () => void): boolean => {
+    const check = checkSet(v.weightKg, v.reps);
+    if (check.level === "refuse") {
+      rowRefs.current.get(`${exIdx}-${setIdx}`)?.querySelector<HTMLInputElement>(`input[data-field='${check.weight ? "weight" : "reps"}']`)?.focus();
+      return false;
+    }
+    if (check.level === "confirm") {
+      setConfirmSet({ check, weightKg: v.weightKg, reps: v.reps, run });
+      return false;
+    }
+    return true;
+  };
+
+  /** Applies a set type; false when it could not be (reps must be typed first, or the values are over a limit). */
+  const setType = (exIdx: number, setIdx: number, kind: HandoverSetType, confirmed = false): boolean => {
     const current = logged[exIdx].sets[setIdx];
     const fields = kindFields(kind, current);
     const logs = fields.outcome != null && fields.outcome !== "skipped";
@@ -643,8 +671,12 @@ export const WorkoutSessionSheet: React.FC<{
       askForReps(exIdx, setIdx);
       return false;
     }
-    const next: LoggedSet = { ...current, ...fields, completed: logs, ...(values ?? {}) };
-    updateSet(exIdx, setIdx, next);
+    if (values && !confirmed && !limitsAllow(exIdx, setIdx, values, () => setType(exIdx, setIdx, kind, true))) return false;
+    const patch: Partial<LoggedSet> = { ...fields, completed: logs, ...(values ?? {}) };
+    const next: LoggedSet = { ...current, ...patch };
+    // The patch, not the whole set: after a confirm, notes or RPE saved
+    // meanwhile (set options) must not be put back.
+    updateSet(exIdx, setIdx, patch);
     if (fields.outcome && !started) startClock();
     // Restore round 2 (user, 2026-10-07): a new PR rises a confetti burst
     // from its row (WO8), as on main; PrBurst draws nothing under reduced motion.
@@ -662,7 +694,7 @@ export const WorkoutSessionSheet: React.FC<{
     return true;
   };
 
-  const toggleCheck = (exIdx: number, setIdx: number) => {
+  const toggleCheck = (exIdx: number, setIdx: number, confirmed = false) => {
     const s = logged[exIdx].sets[setIdx];
     const kind = setKind(s);
     if (kind === "skipped") return;
@@ -679,6 +711,7 @@ export const WorkoutSessionSheet: React.FC<{
       askForReps(exIdx, setIdx);
       return;
     }
+    if (!confirmed && !limitsAllow(exIdx, setIdx, values, () => toggleCheck(exIdx, setIdx, true))) return;
     updateSet(exIdx, setIdx, {
       completed: true,
       outcome: kind === "failed" ? "failed" : "completed",
@@ -767,7 +800,7 @@ export const WorkoutSessionSheet: React.FC<{
       >
         <div className="flex items-center" style={{ gap: 6, padding: "13px 14px 8px" }}>
           <p className="whitespace-nowrap" style={{ margin: 0, fontSize: textPx(15), fontWeight: 700, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.01em" }}>
-            {ex.name}
+            {shownName(ex.name, !!ex.customExerciseId)}
           </p>
           {superset && (
             <span
@@ -933,6 +966,19 @@ export const WorkoutSessionSheet: React.FC<{
     logged.some((ex) => ex.sets.some((s) => s.completed) || ex.enduranceResult) ||
     Object.values(blockResults).some((r) => checkBlockResult(r) === null && blockScore(r) !== "");
 
+  /** Batch D GH: the sets over a ceiling, flagged (the first takes focus); false when there are none. */
+  const flagOverCeiling = (): boolean => {
+    const over = setsOverCeiling(logged);
+    if (over.length === 0) return false;
+    setSaveError(t("Some sets are over the limit. Fix the ones marked in red, then finish."));
+    const [exIdx, setIdx] = over[0].split("-").map(Number);
+    const s = logged[exIdx].sets[setIdx];
+    const row = rowRefs.current.get(over[0]);
+    row?.scrollIntoView({ block: "center" });
+    row?.querySelector<HTMLInputElement>(`input[data-field='${checkSet(s.weightKg, s.reps).weight ? "weight" : "reps"}']`)?.focus();
+    return true;
+  };
+
   const finishWorkout = async () => {
     // V10 (QA 10.0): nothing checked → prompt and exit without logging.
     if (!hasCompletedSet) {
@@ -944,6 +990,9 @@ export const WorkoutSessionSheet: React.FC<{
       setSaveError(`${problems[0].heading}: ${problems[0].message}`);
       return;
     }
+    // Batch D GH: a set over a ceiling (typed after it was checked) is never
+    // sent; the rows marked in red say what to fix.
+    if (flagOverCeiling()) return;
     const endedAt = new Date();
     setSaving(true);
     setSaveError(null);
@@ -967,6 +1016,11 @@ export const WorkoutSessionSheet: React.FC<{
     const result = await saveWorkoutSession(payload);
     setSaving(false);
     if (!result.ok) {
+      // Batch D GH: a refusal keeps the session open with every set as typed.
+      if (result.outOfRange) {
+        if (!flagOverCeiling()) setSaveError(t("Some numbers in this workout are out of range. Your sets are still here: check them and try again."));
+        return;
+      }
       setSaveError(result.message ?? t("Couldn't save this workout."));
       return;
     }
@@ -1537,6 +1591,45 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
       )}
 
+      {/* Batch D GH: above 300 kg or 100 reps, "Is this right?" before the set is logged. */}
+      {confirmSet && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6" onKeyDown={(e) => {
+          if (e.key !== "Escape") return;
+          // Handled here: the logger's own Escape must not close it too.
+          e.preventDefault();
+          e.stopPropagation();
+          setConfirmSet(null);
+        }}>
+          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setConfirmSet(null)} />
+          <div role="alertdialog" aria-modal="true" aria-labelledby="set-confirm-title" aria-describedby="set-confirm-body" className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+            <p id="set-confirm-title" className="font-display font-semibold text-lg text-charcoal mb-1.5">{t("Is this right?")}</p>
+            <p id="set-confirm-body" className="text-sm text-charcoal-soft mb-5">
+              {confirmSet.check.weight && confirmSet.check.reps
+                ? t("{weight} kg for {reps} reps is far more than most sets. Check the numbers before you log it.", { weight: confirmSet.weightKg.toLocaleString(appLocale()), reps: confirmSet.reps.toLocaleString(appLocale()) })
+                : confirmSet.check.weight
+                  ? t("{weight} kg is far heavier than most lifts. Check the weight before you log it.", { weight: confirmSet.weightKg.toLocaleString(appLocale()) })
+                  : t("{reps} reps is far more than most sets. Check the reps before you log it.", { reps: confirmSet.reps.toLocaleString(appLocale()) })}
+            </p>
+            <div className="flex flex-col" style={{ gap: 8 }}>
+              <Button
+                fullWidth
+                autoFocus
+                onClick={() => {
+                  const run = confirmSet.run;
+                  setConfirmSet(null);
+                  run();
+                }}
+              >
+                {t("Yes, log it")}
+              </Button>
+              <Button fullWidth variant="secondary" onClick={() => setConfirmSet(null)}>
+                {t("Change it")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* J7: pick what to do instead, then (optionally) why. */}
       <ExerciseLibrarySheet
         open={swapPick !== null}
@@ -1697,10 +1790,27 @@ const SetRow: React.FC<{
 
 type SetRowProps = React.ComponentProps<typeof SetRow>;
 
+/** Batch D GH: which of a set's typed values are over a ceiling (they can't be saved). */
+const refusedFields = (s: LoggedSet): { weight: boolean; reps: boolean } => {
+  const c = checkSet(s.weightKg, s.reps);
+  return c.level === "refuse" ? { weight: c.weight, reps: c.reps } : { weight: false, reps: false };
+};
+
+const overCeilingText = (over: { weight: boolean; reps: boolean }): string =>
+  [
+    over.weight ? t("Weights over {max} kg can't be saved.", { max: SET_WEIGHT_MAX_KG.toLocaleString(appLocale()) }) : null,
+    over.reps ? t("More than {max} reps can't be saved.", { max: SET_REPS_MAX.toLocaleString(appLocale()) }) : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
 const SetRowMobile: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions, target, setTarget, targetColor, offColor }) => {
   const dark = useIsDark();
   const kind = setKind(s);
   const ty = kind === "normal" ? null : typeStyles(dark)[kind];
+  // Batch D GH: a value over a ceiling is marked as typed, before the tick.
+  const over = refusedFields(s);
+  const overId = useId();
   const field = ty?.field ?? shades.field;
   const border = ty?.border ?? shades.fieldBorder;
   const ink = ty?.ink ?? shades.ink;
@@ -1765,19 +1875,21 @@ const SetRowMobile: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator
           onChange={(weightKg) => onChange({ weightKg })}
           placeholder={weightPlaceholder}
           ariaLabel={t("Set {label} weight", { label })}
-          style={inputStyle}
+          invalid={over.weight}
+          describedBy={over.weight ? overId : undefined}
+          style={over.weight ? { ...inputStyle, borderColor: sessionColor("danger", dark) } : inputStyle}
         />
         <input
           value={s.reps || ""}
-          onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
+          onChange={(e) => onChange({ reps: repsFromInput(e.target.value) })}
           placeholder={repsPlaceholder}
           inputMode="numeric"
           aria-label={t("Set {label} reps", { label })}
-          aria-invalid={needsReps || undefined}
-          aria-describedby={needsReps ? `need-reps-${label}` : undefined}
+          aria-invalid={needsReps || over.reps || undefined}
+          aria-describedby={needsReps ? `need-reps-${label}` : over.reps ? overId : undefined}
           data-field="reps"
           className="logger-field flex-1 focus:outline-none"
-          style={needsReps ? { ...inputStyle, borderColor: sessionColor("danger", dark) } : inputStyle}
+          style={needsReps || over.reps ? { ...inputStyle, borderColor: sessionColor("danger", dark) } : inputStyle}
         />
       </div>
       <button
@@ -1836,6 +1948,11 @@ const SetRowMobile: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator
           {t("Enter the reps you did to log this set.")}
         </p>
       )}
+      {(over.weight || over.reps) && (
+        <p id={overId} role="alert" className="basis-full" style={{ marginBlock: "4px 0", marginInline: "58px 0", fontSize: textPx(10.5), fontWeight: 600, color: sessionColor("danger", dark) }}>
+          {overCeilingText(over)}
+        </p>
+      )}
     </div>
   );
 };
@@ -1853,6 +1970,9 @@ const SetRowWeb: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, f
   const dark = useIsDark();
   const kind = setKind(s);
   const ty = kind === "normal" ? null : typeStyles(dark)[kind];
+  // Batch D GH: a value over a ceiling is marked as typed, before the tick.
+  const over = refusedFields(s);
+  const overId = useId();
   // A normal set's fields are the reference's neutral #F5F5F6 (the folder tint stays in dark mode).
   const field = ty?.field ?? (dark ? shades.field : "#F5F5F6");
   const ink = ty?.ink ?? shades.ink;
@@ -1906,19 +2026,21 @@ const SetRowWeb: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, f
           onChange={(weightKg) => onChange({ weightKg })}
           placeholder={weightPlaceholder}
           ariaLabel={t("Set {label} weight", { label })}
-          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined }}
+          invalid={over.weight}
+          describedBy={over.weight ? overId : undefined}
+          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined, ...(over.weight ? { borderColor: sessionColor("danger", dark) } : null) }}
         />
         <input
           value={s.reps || ""}
-          onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
+          onChange={(e) => onChange({ reps: repsFromInput(e.target.value) })}
           placeholder={repsPlaceholder}
           inputMode="numeric"
           aria-label={t("Set {label} reps", { label })}
-          aria-invalid={needsReps || undefined}
-          aria-describedby={needsReps ? `need-reps-${label}` : undefined}
+          aria-invalid={needsReps || over.reps || undefined}
+          aria-describedby={needsReps ? `need-reps-${label}` : over.reps ? overId : undefined}
           data-field="reps"
           className="logger-field flex-1 focus:outline-none"
-          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined, ...(needsReps ? { borderColor: sessionColor("danger", dark) } : null) }}
+          style={{ ...inputStyle, textDecoration: kind === "skipped" ? "line-through" : undefined, ...(needsReps || over.reps ? { borderColor: sessionColor("danger", dark) } : null) }}
         />
       </div>
       <span className="flex-none flex items-center justify-end" style={{ width: 84, gap: 10 }}>
@@ -1969,6 +2091,11 @@ const SetRowWeb: React.FC<SetRowProps> = ({ rowRef, set: s, number, separator, f
       {needsReps && (
         <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ ...under, fontWeight: 600, color: sessionColor("danger", dark) }}>
           {t("Enter the reps you did to log this set.")}
+        </p>
+      )}
+      {(over.weight || over.reps) && (
+        <p id={overId} role="alert" className="basis-full" style={{ ...under, fontWeight: 600, color: sessionColor("danger", dark) }}>
+          {overCeilingText(over)}
         </p>
       )}
     </div>

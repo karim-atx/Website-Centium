@@ -3,6 +3,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import { localDayOf } from "../../utils/date";
 import { t, tk } from "../../i18n/core";
 import { isAlreadySaved, requestColumn } from "../health-log/requestId";
+import { BODY_WEIGHT_MAX_KG, BODY_WEIGHT_MIN_KG, bodyWeightAllowed } from "../workout/setLimits";
 
 // A client's own body metrics, in public.health_metrics: weight and water
 // written from the manual-entry sheet, and heart rate, steps, sleep and
@@ -66,8 +67,9 @@ export type ReadMetricType = (typeof READ_METRIC_TYPES)[number];
 // a typo into a sentence the user can act on instead of a constraint
 // violation, and to keep water consistent with the 0-5000 clamp the local
 // setters have always applied.
+// Batch D GH: weight is health_metrics_weight_possible's 20–500 kg, inclusive.
 const LIMITS: Record<MetricKind, { min: number; max: number; unit: string }> = {
-  weight: { min: 1, max: 500, unit: "kg" },
+  weight: { min: BODY_WEIGHT_MIN_KG, max: BODY_WEIGHT_MAX_KG, unit: "kg" },
   water: { min: 0, max: 5000, unit: "ml" },
 };
 
@@ -292,6 +294,9 @@ export async function getHealthMetrics(
   for (const row of data ?? []) {
     if (!readable.has(row.metric_type)) continue;
     const type = row.metric_type as ReadMetricType;
+    // Batch D GH: a weight outside 20–500 kg (an old row) is no reading, as
+    // in the doctor summary; that day keeps an earlier possible one, if any.
+    if (type === "weight" && !bodyWeightAllowed(Number(row.value))) continue;
     const day = localDayOf(row.recorded_at);
     // Ascending order means the last row written into a day wins, which is
     // the "latest snapshot" reduction this table's shape requires.

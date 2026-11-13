@@ -105,6 +105,8 @@ import { cleanRoutineCopy } from "../services/routines/duplicate";
 import { displayedFolderColor, needsSavedColor, setFolderColorTheme } from "../data/folderColors";
 import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../services/routines/folderDepth";
 import { estimate1RM } from "../services/workout";
+import { definitionOf, exerciseKey, recordKey, refKey } from "../services/workout/stats";
+import { plausibleOneRm, plausibleSet } from "../services/workout/setLimits";
 import {
   clearPausedSession as clearPausedSessionRemote,
   getPausedSessions,
@@ -574,7 +576,13 @@ interface AppState {
   workoutSessions: WorkoutSession[];
   saveWorkoutSession: (
     session: Omit<WorkoutSession, "id">
-  ) => Promise<{ ok: boolean; message?: string; /** Kept on this device to save on reconnect (Round D). */ queued?: boolean }>;
+  ) => Promise<{
+    ok: boolean;
+    message?: string;
+    /** Kept on this device to save on reconnect (Round D). */ queued?: boolean;
+    /** Batch D GH: the server refused a value (23514); the logger keeps the session and flags the sets. */
+    outOfRange?: boolean;
+  }>;
 
   // V6 (QA 6.0): quitting a started routine (instead of finishing it)
   // preserves logged sets + elapsed time, keyed by routine, so reopening it
@@ -628,7 +636,12 @@ interface AppState {
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
-  /** Best estimated 1RM per movement, read from current_personal_records. */
+  /**
+   * Best estimated 1RM per movement, read from current_personal_records.
+   * Batch D GH: KEYED BY exerciseKey ("c:<library id>", "u:<custom id>",
+   * "n:<name>" only for a movement with no id), never by name, so same-named
+   * library and custom movements keep separate records.
+   */
   personalRecords: Record<string, number>;
   /**
    * Records the value and writes it to personal_records.
@@ -3749,23 +3762,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ([recordResult, pausedResult]) => {
         if (cancelled) return;
         if (recordResult.ok) {
-          const byName: Record<string, number> = {};
-          for (const r of recordResult.records) byName[r.name] = r.estimatedOneRepMaxKg;
+          const byKey: Record<string, number> = {};
+          for (const r of recordResult.records) byKey[recordKey(r)] = r.estimatedOneRepMaxKg;
 
           // WHAT THE SERVER DOES NOT HAVE IS WHAT THE REVIEW IS FOR, worked
           // out here because this is the last moment the local map still holds
           // it. Decided once per device: if there is nothing left over, the
           // review is finished before it is ever shown.
           if (!personalRecordsReviewDone) {
+            // Batch D GH: only the old name-keyed entries are leftovers; an
+            // id-keyed one ("c:" / "u:" / "n:") was written through
+            // setPersonalRecord, which saved or queued it already.
             const known = new Set(recordResult.records.map((r) => r.name.trim().toLowerCase()));
             const leftovers = Object.entries(personalRecords).filter(
-              ([name]) => !known.has(name.trim().toLowerCase())
+              ([name]) => !/^[cun]:/.test(name) && !known.has(name.trim().toLowerCase())
             );
             if (leftovers.length === 0) setPersonalRecordsReviewDone(true);
             else setPersonalRecordsReviewItems(Object.fromEntries(leftovers));
           }
 
-          setPersonalRecords(byName);
+          setPersonalRecords(byKey);
         }
         if (pausedResult.ok) {
           const next: Record<string, PausedWorkoutSession> = {};
@@ -3823,6 +3839,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void (async () => {
       const stillPending: typeof pendingPersonalRecords = [];
       for (const entry of pendingPersonalRecords) {
+        // Batch D GH: matched among the CUSTOM movements only (a pending record
+        // is always one), so it can never land on a same-named library one.
+        // By name because the local id is replaced when the movement uploads;
+        // custom names are unique (addCustomExercise refuses a duplicate).
         const match = customExercises.find(
           (e) => e.name.trim().toLowerCase() === entry.name.trim().toLowerCase()
         );
@@ -4701,9 +4721,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Records set by this session are gone; take the current best again.
         const records = await getPersonalRecords(authUserId);
         if (records.ok) {
-          const byName: Record<string, number> = {};
-          for (const r of records.records) byName[r.name] = r.estimatedOneRepMaxKg;
-          setPersonalRecords(byName);
+          const byKey: Record<string, number> = {};
+          for (const r of records.records) byKey[recordKey(r)] = r.estimatedOneRepMaxKg;
+          setPersonalRecords(byKey);
         }
         return undefined;
       },
@@ -4726,7 +4746,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWorkoutSessions((prev) => [...prev, { ...session, id: `queued:${qid}` }]);
         return { ok: true, queued: true };
       }
-      return { ok: false, message: result.message };
+      return { ok: false, message: result.message, ...(result.outOfRange ? { outOfRange: true } : {}) };
     }
     afterWorkoutSaved(session, result.id!);
     return { ok: true };
@@ -4751,14 +4771,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // one, so a custom barbell lift is now eligible on exactly the same test
     // the catalog has always been judged by.
     for (const ex of session.exercises) {
-      const definition =
-        exerciseCatalog.find((l) => l.name === ex.name) ??
-        customExercises.find((l) => l.name === ex.name);
+      // Batch D GH: the definition by id (definitionOf), never by a name a
+      // library and a custom movement could share; the record by exerciseKey;
+      // and no set over the ceilings, nor a 1RM over 1,000 kg.
+      const definition = definitionOf(ex, exerciseCatalog, customExercises);
       if (!definition || !ONE_RM_CLASSIFICATIONS.includes(definition.classification)) continue;
       const best = ex.sets
-        .filter((s) => s.completed && (s.weightKg ?? 0) > 0)
+        .filter((s) => s.completed && (s.weightKg ?? 0) > 0 && plausibleSet(s))
         .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg ?? 0, s.reps)), 0);
-      if (best > 0 && best > (personalRecords[ex.name] ?? 0)) {
+      if (best > 0 && plausibleOneRm(best) && best > (personalRecords[exerciseKey(ex)] ?? 0)) {
         // Through the one write path, so the queueing of an unsynced custom
         // movement happens here too rather than only on the live-set path.
         setPersonalRecord(ex.name, best, {
@@ -4819,15 +4840,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
   /**
-   * WHICH MOVEMENT A RECORD BELONGS TO, resolved in the one order that is
-   * safe: the explicit reference the caller already holds, then the catalog by
-   * name, then the user's own movements by name.
+   * WHICH MOVEMENT A RECORD BELONGS TO: the explicit reference the caller
+   * already holds, and only without one, the name.
    *
-   * The name lookups exist for the callers that have nothing else — the 1RM
-   * field in ExerciseSettingsSheet, and the one-time review of PRs that were
-   * only ever name-keyed. Explicit ids come first because a custom
-   * movement may legitimately share a name with a catalog one, and guessing
-   * that wrong is the mistake custom meals already paid for.
+   * Batch D GH: THE NAME NEVER CROSSES BETWEEN THE LIBRARY AND THE USER'S OWN
+   * MOVEMENTS. A custom id (even a local one, not yet uploaded) means that
+   * custom movement; a name is used only when exactly one movement across
+   * both lists has it (the one-time review of PRs that were only ever
+   * name-keyed, a legacy row with no id). A custom movement may share a name
+   * with a library one, and guessing that wrong is the mistake custom meals
+   * already paid for: an ambiguous name resolves to nothing.
    *
    * `null` means the name resolves to nothing at all; `"pending"` means it
    * resolves to one of the user's own movements that has not been uploaded
@@ -4843,24 +4865,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (ref?.customExerciseId && isUuid(ref.customExerciseId)) {
       return { exercise_id: null, custom_exercise_id: ref.customExerciseId };
     }
+    // A local custom id: that movement, not uploaded yet.
+    if (ref?.customExerciseId) return "pending";
     const wanted = exerciseName.trim().toLowerCase();
-    const catalogMatch = exerciseCatalog.find((e) => e.name.trim().toLowerCase() === wanted);
-    if (catalogMatch) return { exercise_id: catalogMatch.id, custom_exercise_id: null };
-
-    const customMatch = customExercises.find((e) => e.name.trim().toLowerCase() === wanted);
-    if (customMatch) {
-      return customMatch.id && isUuid(customMatch.id)
-        ? { exercise_id: null, custom_exercise_id: customMatch.id }
-        : "pending";
-    }
-    return null;
+    const catalogMatches = exerciseCatalog.filter((e) => e.name.trim().toLowerCase() === wanted);
+    const customMatches = customExercises.filter((e) => e.name.trim().toLowerCase() === wanted);
+    if (catalogMatches.length + customMatches.length !== 1) return null;
+    if (catalogMatches.length === 1) return { exercise_id: catalogMatches[0].id, custom_exercise_id: null };
+    const customMatch = customMatches[0];
+    return customMatch.id && isUuid(customMatch.id)
+      ? { exercise_id: null, custom_exercise_id: customMatch.id }
+      : "pending";
   };
 
+  /** Batch D GH: the personalRecords key for a record, from what it resolved to (refKey), else what the caller holds. */
+  const recordKeyFor = (
+    exerciseName: string,
+    resolved: RecordRef | "pending" | null,
+    ref?: { catalogExerciseId?: string; customExerciseId?: string }
+  ): string =>
+    resolved && resolved !== "pending"
+      ? refKey(resolved, exerciseName)
+      : exerciseKey({ catalogExerciseId: ref?.catalogExerciseId, customExerciseId: ref?.customExerciseId, name: exerciseName });
+
   const setPersonalRecord: AppState["setPersonalRecord"] = (exerciseName, kg, ref) => {
-    setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
+    // Batch D GH: no record over 1,000 kg (the records ignore one).
+    if (!plausibleOneRm(kg)) return;
+    const resolved = resolveRecordRef(exerciseName, ref);
+    const key = recordKeyFor(exerciseName, resolved, ref);
+    setPersonalRecords((prev) => ({ ...prev, [key]: kg }));
     if (!authUserId) return;
 
-    const resolved = resolveRecordRef(exerciseName, ref);
     const achievedAt = new Date().toISOString();
 
     // QUEUED, NOT DROPPED. The movement exists, it simply has no row yet; the
@@ -4899,10 +4934,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unresolved: string[] = [];
     const achievedAt = new Date().toISOString();
     const stillPending: typeof pendingPersonalRecords = [];
+    const keyed: Record<string, number> = {};
 
     if (authUserId) {
       for (const entry of confirmed) {
         const resolved = resolveRecordRef(entry.name);
+        if (!plausibleOneRm(entry.kg)) {
+          unresolved.push(entry.name);
+          continue;
+        }
+        keyed[recordKeyFor(entry.name, resolved)] = entry.kg;
         if (resolved === "pending") {
           // Same rule as a live PR for an unsynced movement, and the screen
           // says so rather than implying it was saved.
@@ -4922,11 +4963,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // The confirmed values are kept on screen either way: they are what the
     // user just told us their records are.
-    setPersonalRecords((prev) => {
-      const next = { ...prev };
-      for (const entry of confirmed) next[entry.name] = entry.kg;
-      return next;
-    });
+    if (!authUserId) for (const entry of confirmed) if (plausibleOneRm(entry.kg)) keyed[recordKeyFor(entry.name, resolveRecordRef(entry.name))] = entry.kg;
+    setPersonalRecords((prev) => ({ ...prev, ...keyed }));
     if (stillPending.length > 0) {
       setPendingPersonalRecords((prev) => [...prev, ...stillPending]);
     }

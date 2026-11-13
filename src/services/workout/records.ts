@@ -3,6 +3,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Json } from "../../../lib/supabase/database.types";
 import { t } from "../../i18n/core";
+import { plausibleOneRm } from "./setLimits";
 
 // Personal records, and the paused sessions that are not records of anything.
 //
@@ -104,6 +105,9 @@ export async function getPersonalRecords(userId: string): Promise<PersonalRecord
     // delete and custom_exercise_id does too, so this should be unreachable;
     // dropping it beats rendering a nameless number.
     if (!def) continue;
+    // Batch D GH: a record over 1,000 kg is skipped, as the view now does
+    // (a cached answer from before it did, or an old row).
+    if (!plausibleOneRm(Number(row.estimated_one_rep_max_kg))) continue;
     records.push({
       id: row.id,
       name: def.name,
@@ -130,6 +134,9 @@ export async function recordPersonalRecord(
   achievedAt: string,
   sourceLoggedSetId?: string | null
 ): Promise<WriteResult> {
+  // Batch D GH: the server never computes a 1RM, so the client never writes
+  // one the records would ignore (current_personal_records skips > 1,000 kg).
+  if (!plausibleOneRm(estimatedOneRepMaxKg)) return { ok: false, message: t("That number is outside the range this can store.") };
   const { error } = await supabase.from("personal_records").insert({
     user_id: userId,
     ...ref,

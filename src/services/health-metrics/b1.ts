@@ -7,6 +7,7 @@ import { t, tk } from "../../i18n/core";
 import { appLocale } from "../../i18n/format";
 import { readActivityDays, readActivityHours, readSleepNights, removeSyncedReading } from "./readers";
 import type { ReaderDay, ReaderHour, ReaderSource } from "./readersModel";
+import { bodyWeightAllowed } from "../workout/setLimits";
 
 // Database stage B1 "Health data model" (HANDOVER_API.md "## B1"), read for
 // the Health A pages: raw health_metrics rows (note, context, device_name,
@@ -85,7 +86,10 @@ export function useMetricRows(dbType: "weight" | "heart_rate" | "steps" | "sleep
         .then(({ data, error }) =>
           error
             ? []
-            : (data ?? []).map((r: Record<string, unknown>) => ({
+            : (data ?? [])
+                // Batch D GH: a weight outside 20–500 kg (an old row) is not charted.
+                .filter((r: Record<string, unknown>) => dbType !== "weight" || bodyWeightAllowed(Number(r.value)))
+                .map((r: Record<string, unknown>) => ({
                 id: r.id as string,
                 value: Number(r.value),
                 recordedAt: r.recorded_at as string,

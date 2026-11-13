@@ -15,7 +15,10 @@ export const WeightField: React.FC<{
   placeholder: string;
   ariaLabel: string;
   style: React.CSSProperties;
-}> = ({ value, onChange, placeholder, ariaLabel, style }) => {
+  /** Batch D GH: the value is over the ceiling (the row's note says so; describedBy is its id). */
+  invalid?: boolean;
+  describedBy?: string;
+}> = ({ value, onChange, placeholder, ariaLabel, style, invalid, describedBy }) => {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (value === null ? "" : value === 0 ? "BW" : String(value));
 
@@ -40,6 +43,9 @@ export const WeightField: React.FC<{
       placeholder={placeholder === "0" ? "BW" : placeholder}
       inputMode="decimal"
       aria-label={ariaLabel}
+      aria-invalid={invalid || undefined}
+      aria-describedby={describedBy}
+      data-field="weight"
       className="logger-field flex-1 focus:outline-none"
       style={style}
     />

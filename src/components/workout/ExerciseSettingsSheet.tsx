@@ -18,6 +18,9 @@ import { setTargetText, setTargetsColumn, withSetTarget } from "../../services/w
 import { t, tk, tx } from "../../i18n/core";
 import { WebCopy } from "../web/WebCopy";
 import { muscleLabel } from "./muscleLabel";
+import { routineExerciseKey } from "../../services/workout/stats";
+import { ONE_RM_MAX_KG } from "../../services/workout/setLimits";
+import { appLocale } from "../../i18n/format";
 
 /**
  * Release 3 · W5 (TR4 v3, HANDOVER g): the professional's mode. Present (even
@@ -108,7 +111,8 @@ export const ExerciseSettingsSheet: React.FC<{
   React.useEffect(() => {
     if (exercise) {
       setDraft(exercise);
-      setOneRmDraft(String(personalRecords[exercise.name] ?? ""));
+      // Batch D GH: this movement's record by id, never by its name.
+      setOneRmDraft(String(personalRecords[routineExerciseKey(exercise)] ?? ""));
       setConfirmDelete(false);
       setPlanProblem(null);
     }
@@ -159,8 +163,12 @@ export const ExerciseSettingsSheet: React.FC<{
     onClose();
   };
 
+  // Batch D GH: no record over 1,000 kg (the records ignore one).
+  const oneRmOver = !!oneRmDraft && Number(oneRmDraft) > ONE_RM_MAX_KG;
+
   const save = () => {
     const finalName = exercise.name;
+    if (!pro && isOneRmEligible && oneRmOver) return;
 
     // THE PLAN IS CHECKED AND CLEANED BEFORE IT LEAVES. checkPlan mirrors the
     // database validator so a mistake is named beside the field rather than
@@ -183,7 +191,8 @@ export const ExerciseSettingsSheet: React.FC<{
     setPlanProblem(null);
 
     onSave(next);
-    if (!pro && isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
+    if (!pro && isOneRmEligible && oneRmDraft)
+      setPersonalRecord(finalName, Number(oneRmDraft), { catalogExerciseId: exercise.exerciseId, customExerciseId: exercise.customExerciseId });
 
     // V6 (QA 6.0): editing Min/Max sets should change an already-started
     // routine — resize the live/paused session's logged sets for this
@@ -286,8 +295,14 @@ export const ExerciseSettingsSheet: React.FC<{
                 value={oneRmDraft}
                 onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
                 inputMode="decimal"
+                aria-invalid={oneRmOver || undefined}
                 className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
+              {oneRmOver && (
+                <span role="alert" className="block text-xs font-semibold text-status-high" style={{ marginTop: 6 }}>
+                  {t("A one-rep max over {max} kg can't be saved.", { max: ONE_RM_MAX_KG.toLocaleString(appLocale()) })}
+                </span>
+              )}
             </label>
           )}
 

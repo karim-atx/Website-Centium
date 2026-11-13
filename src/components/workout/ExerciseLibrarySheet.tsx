@@ -15,6 +15,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { isUuid } from "../../services/food";
 import { isCustomExerciseRule } from "../../services/exercises";
+import { useExerciseName } from "./useExerciseName";
 import { linePx, textPx } from "../../theme/textSize";
 import type { ExerciseClassification, ExerciseTag, MuscleGroup } from "../../types";
 import { t, tk } from "../../i18n/core";
@@ -87,6 +88,8 @@ export const ExerciseLibrarySheet: React.FC<{
     addCustomExercise,
     updateCustomExercise,
   } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   const dark = useIsDark();
   const ink = useLibraryInk();
   const online = useOnline();
@@ -256,10 +259,10 @@ export const ExerciseLibrarySheet: React.FC<{
                   onClick={() => setDetail(r)}
                   className="tap flex-1 min-w-0 flex items-center text-start"
                   style={{ gap: 6 }}
-                  aria-label={t("{name}, details", { name: r.name })}
+                  aria-label={t("{name}, details", { name: shownName(r.name, r.isCustom) })}
                 >
                   <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(21), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
-                    {r.name}
+                    {shownName(r.name, r.isCustom)}
                   </span>
                   {r.isCustom && <YoursTag />}
                 </button>
