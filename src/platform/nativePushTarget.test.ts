@@ -42,6 +42,7 @@ test("anything else opens its url, as before", () => {
 // also holds it until sign-in: decideHeldPath keeps the path as given), and on
 // the web through the service worker's notificationTarget.
 const ORDER = "9d3c2b1a-0f9e-4d8c-b7a6-5f4e3d2c1b0a";
+const REMINDER = "7e6d5c4b-3a29-4180-9f7e-6d5c4b3a2918";
 const DESTINATIONS: [kind: string, url: string][] = [
   ["calendar_event", "/app/calendar?day=2026-11-20"],
   ["class_booked", "/app/calendar?day=2026-11-20"],
@@ -55,14 +56,20 @@ const DESTINATIONS: [kind: string, url: string][] = [
   ["pro_booking", "/app/pro/calendar?day=2026-11-20"],
   ["order_update (customer)", `/app/store/orders/${ORDER}`],
   ["order_placed (store)", `/app/business/orders/${ORDER}`],
-  ["pill", "/app/contraception"],
-  ["ring_removal", "/app/contraception"],
-  ["ring_insertion", "/app/contraception"],
-  ["patch_change", "/app/contraception"],
-  ["injection_due", "/app/contraception"],
-  ["device_replacement", "/app/contraception"],
+  // Neutral health links: the push's own reminder id only; the page comes
+  // from push_destination after sign-in (services/push/pushReminder.ts).
+  ["pill", `/app?reminder=${REMINDER}`],
+  ["ring_removal", `/app?reminder=${REMINDER}`],
+  ["ring_insertion", `/app?reminder=${REMINDER}`],
+  ["patch_change", `/app?reminder=${REMINDER}`],
+  ["injection_due", `/app?reminder=${REMINDER}`],
+  ["device_replacement", `/app?reminder=${REMINDER}`],
+  ["medication", `/app?reminder=${REMINDER}`],
+  ["a health push without a valid id", "/app"],
+  // What push_destination answers, landed on directly.
+  ["push_destination: contraception", "/app/contraception"],
+  ["push_destination: medications", "/app/health/medications"],
   ["period_due", "/app/cycle"],
-  ["medication", "/app/health/medications"],
   ["habit", "/app/mind"],
   ["weekly_summary (Premium on)", "/app/weekly-review"],
   ["weekly_summary (off) and everything else", "/app"],

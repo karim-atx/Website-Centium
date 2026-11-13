@@ -8,6 +8,7 @@ import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { AccountLoadError } from "./components/auth/AccountLoadError";
 import { NativeAppGate } from "./components/native/NativeAppGate";
 import { NativeOpenPath } from "./components/native/NativeOpenPath";
+import { PushReminderLink } from "./components/push/PushReminderLink";
 import { PushAskCard } from "./components/native/PushAskCard";
 import { PushBanner } from "./components/native/PushBanner";
 import { WidgetSnapshotSync } from "./components/native/WidgetSnapshotSync";
@@ -507,8 +508,9 @@ function AppRoutes() {
           </RequireOnboarded>
         }
       >
-        {/* Release 3 J1: a professional's Home is /app/pro. */}
-        <Route path="/app" element={<ProHomeRedirect otherwise={<Home />} />} />
+        {/* Release 3 J1: a professional's Home is /app/pro. Batch D GA: a
+            neutral health push (/app?reminder=<id>) is resolved first. */}
+        <Route path="/app" element={<PushReminderLink><ProHomeRedirect otherwise={<Home />} /></PushReminderLink>} />
         {/* Release 3 · Professional UI: every professional screen (pages/pro). */}
         <Route path="/app/pro/*" element={<ProRoutes />} />
         <Route path="/app/food" element={<Food />} />
