@@ -21,10 +21,11 @@ import { t } from "../../i18n/core";
  *
  * FX-02: `variant` "row" draws it as the last item of the mobile Safety &
  * content card (behind the card's 1px charcoal 6% divider, 16 above and
- * below); "pane" as the last row of the web More › Safety & content group.
- * "card" (default) is its own card, as before.
+ * below); "webRow" the same in the web Profile's card (its divider: 12 above
+ * from the card's gap, 12 below, as Cycle tracking's); "pane" as the last row
+ * of the web More › Safety & content group. "card" (default) is its own card.
  */
-export function HealthChecksSetting({ variant = "card" }: { variant?: "card" | "row" | "pane" }) {
+export function HealthChecksSetting({ variant = "card" }: { variant?: "card" | "row" | "webRow" | "pane" }) {
   const navigate = useNavigate();
   const { user } = useApp();
   const checks = useHealthChecks();
@@ -130,7 +131,7 @@ export function HealthChecksSetting({ variant = "card" }: { variant?: "card" | "
       disabled={disabled}
       label={t(COPY.switchLabel)}
       describedBy={descId}
-      className={variant === "row" ? undefined : "rounded-[17px] pt-4 px-4 pb-[18px]"}
+      className={variant === "row" ? undefined : variant === "webRow" ? "pt-3" : "rounded-[17px] pt-4 px-4 pb-[18px]"}
     >
       {/* MO1.5 anatomy row 9 (2x frame): 36 #F0EDF9 tile (new, decision
           22), the description under the title's x, 10 below the tile, 12/400
@@ -155,6 +156,8 @@ export function HealthChecksSetting({ variant = "card" }: { variant?: "card" | "
   // tracking, behind the same divider as Cycle tracking (1px charcoal 6%, 16
   // above and below).
   if (variant === "row") return <div className="mt-4 pt-4 border-t border-charcoal/[0.06]">{box}</div>;
+  // The 12 under the rule is the switch box's own padding, so a tap there toggles (as Cycle tracking above).
+  if (variant === "webRow") return <div style={{ borderTop: "1px solid rgba(36,31,27,0.06)" }}>{box}</div>;
 
   return (
     // MO1.5 / MO1.5.1.1: drawn like the Recovery card above it (radius 18,

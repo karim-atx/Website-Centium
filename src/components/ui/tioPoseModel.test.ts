@@ -58,3 +58,16 @@ test("TioStateIcon composition: the A spec's worked values for 44 / 56 / 72", ()
 test("assets: 1x / 2x / 3x per density", () => {
   assert.deepEqual(tioSrc("tio-lie"), { src: "/tio/tio-lie.png", srcSet: "/tio/tio-lie.png 1x, /tio/tio-lie@2x.png 2x, /tio/tio-lie@3x.png 3x" });
 });
+
+test("decision 5: a pose fits only below the safe-area top", async () => {
+  const { mobilePoseFits } = await import("./tioPoseModel.ts");
+  // 932 phone: Add Food's top at 264, every pose fits.
+  for (const s of ["lie", "wave", "peek", "none"] as const) assert.equal(mobilePoseFits(s, 264, 59), true);
+  // 375 × 667: the sheet capped at 88dvh (587) rests at 80. WAVE (108.71 above) does not fit; LIE (79.88) and PEEK (70.72) fit only with no inset.
+  assert.equal(mobilePoseFits("wave", 80, 0), false);
+  assert.equal(mobilePoseFits("lie", 80, 0), true);
+  assert.equal(mobilePoseFits("lie", 80, 20), false);
+  assert.equal(mobilePoseFits("peek", 80, 0), true);
+  assert.equal(mobilePoseFits("peek", 80, 20), false);
+  assert.equal(mobilePoseFits("none", 0, 47), true);
+});

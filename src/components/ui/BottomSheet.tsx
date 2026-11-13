@@ -8,9 +8,9 @@ import { t } from "../../i18n/core";
 import { trapTab } from "./focusTrap";
 import { useIsWeb } from "../web/useWebLayout";
 import { WEB_SHEET_CSS, webSheetPanelStyle } from "../web/webSheet";
-import { nextTioState, type TioState, type TioViewport } from "./tioRotation";
+import { pickTioState, rememberTioState, type TioState, type TioViewport } from "./tioRotation";
 import { cachedTioEligibility, measureMobileSheet, rememberTioEligibility, type MobileChrome } from "./tioEligibility";
-import { tioEligible } from "./tioPoseModel";
+import { mobilePoseFits, tioEligible } from "./tioPoseModel";
 import { MobileTioPose, WebTioPose } from "./TioPose";
 
 type ToneColours = { band: string; border: string; title: string; body: string };
@@ -224,7 +224,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
     }
     if (!eligible) return;
     const viewport: TioViewport = web ? "web" : "mobile";
-    setTio({ viewport, state: nextTioState(viewport) });
+    const state = pickTioState(viewport);
+    // Decision 5 (#142): on a short phone a pose that would reach above the
+    // safe-area top (under the status bar) is not shown, and the rotation is
+    // not advanced. The resting top is the wrapper's offsetTop, which ignores
+    // the opening slide's transform.
+    if (!web) {
+      const wrap = panel.parentElement;
+      if (wrap && !mobilePoseFits(state, wrap.offsetTop, safeAreaTop())) return;
+    }
+    rememberTioState(viewport, state);
+    setTio({ viewport, state });
   }, [open, web]);
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -283,6 +293,16 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   const tioState = tio && tio.viewport === (web ? "web" : "mobile") ? tio.state : null;
   return <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} tioState={tioState} />;
 };
+
+/** env(safe-area-inset-top) in px (0 in a browser; the notch / Dynamic Island in the app). */
+function safeAreaTop(): number {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top, 0px)";
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
+}
 
 /** The mobile sheet chrome a popup's content sits in below 1024 (RULE B3's web measurement), as SheetFrame draws it. */
 function mobileChromeOf(p: BottomSheetProps): MobileChrome {

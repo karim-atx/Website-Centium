@@ -65,3 +65,14 @@ test("no storage (private mode) still picks a state", () => {
   assert.ok((TIO_STATES.web as readonly string[]).includes(nextTioState("web", Math.random, broken)));
   assert.ok((TIO_STATES.mobile as readonly string[]).includes(nextTioState("mobile", Math.random, null)));
 });
+
+test("pick then remember: a dropped pick leaves the stored state as it was", async () => {
+  const { pickTioState, rememberTioState } = await import("./tioRotation.ts");
+  const store = memoryStore();
+  store.setItem(tioKey("mobile"), "lie");
+  const s = pickTioState("mobile", () => 0.5, store);
+  assert.notEqual(s, "lie");
+  assert.equal(store.m.get("centium.tio.last.mobile"), "lie");
+  rememberTioState("mobile", s, store);
+  assert.equal(store.m.get("centium.tio.last.mobile"), s);
+});

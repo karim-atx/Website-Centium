@@ -74,6 +74,16 @@ export interface MobilePose {
   left430: number;
 }
 
+/**
+ * Decision 5 on #142: a mobile pose fits only if its top stays at or below the
+ * screen's safe-area top (never under the status bar). `sheetTop` is the
+ * sheet's resting top edge in the viewport.
+ */
+export function mobilePoseFits(state: TioState, sheetTop: number, safeTop: number): boolean {
+  const p = mobilePose(state);
+  return !p || sheetTop + p.top >= safeTop;
+}
+
 export function mobilePose(state: TioState): MobilePose | null {
   const src = state === "lie" ? LIE : state === "wave" ? WAVE : state === "peek" ? PEEK : null;
   if (!src) return null;
