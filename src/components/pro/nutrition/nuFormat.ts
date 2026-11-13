@@ -21,6 +21,9 @@ export const severityLabel = (s: string): string => (SEVERITY_LABEL[s] ? t(SEVER
 /** NU11 / NU12 titles (FINAL_PLAN 3 templates: "{food_name} contains {allergen}", "… may contain … Check this.", "{food_name} isn't {restriction}"). */
 export function conflictTitle(name: string, row: ConflictRow): string {
   if (row.kind === "allergy_confirmed") return t("{food} contains {allergen}", { food: name, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  // Batch D GI: a "may contain" trace, and an online food with no allergen data (the client's own titles).
+  if (row.kind === "may_contain") return t("{food} may contain {allergen}", { food: name, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  if (row.kind === "food_allergens_unknown") return t("Allergens unknown");
   // FQ: an "Other" allergy (allergen null) is named by the client's own label, as written.
   const custom = row.kind === "allergy_check" && !row.allergen ? customLabel(row) : null;
   if (custom) return t("{food} may contain {allergen}. Check this.", { food: name, allergen: isolateLabel(custom) });
@@ -34,6 +37,12 @@ export function conflictBody(first: string, row: ConflictRow): string {
     return row.severity
       ? t("{name} is allergic to {allergen} ({severity}). Foods with an allergen are blocked by default.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase(), severity: severityLabel(row.severity) })
       : t("{name} is allergic to {allergen}. Foods with an allergen are blocked by default.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  // Batch D GI: neither blocks; the severity is the client's own, as on a confirmed allergy.
+  if (row.kind === "may_contain")
+    return row.severity && SEVERITY_LABEL[row.severity]
+      ? t("{name} is allergic to {allergen} ({severity}). The label says it may contain traces. Check it with {name}.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase(), severity: severityLabel(row.severity) })
+      : t("{name} is allergic to {allergen}. The label says it may contain traces. Check it with {name}.", { name: first, allergen: allergenLabel(row.allergen ?? "").toLowerCase() });
+  if (row.kind === "food_allergens_unknown") return t("There's no allergen information for this food. Check the label with {name}.", { name: first });
   // FQ: an "Other" allergy carries the client's own severity (never confirmed: a name match only).
   const custom = row.kind === "allergy_check" && !row.allergen ? customLabel(row) : null;
   if (custom)

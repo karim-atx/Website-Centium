@@ -224,9 +224,14 @@ export const isolateLabel = (text: string): string => `⁨${text}⁩`;
  */
 export const ownWords = (label: string): string => t("“{label}”", { label: isolateLabel(label) });
 
-/** The strongest conflict decides the row's flag: confirmed allergy, then the rest in order. */
+/**
+ * The strongest conflict decides the row's flag. Batch D GI: the client's own
+ * order (clientNutritionModel badgesFor), so both sides flag a food the same
+ * way: a confirmed allergy, may contain, check this, a restriction, allergens
+ * unknown, a preference.
+ */
 export function worstConflict(rows: ConflictRow[]): ConflictRow | null {
-  const order: ConflictKind[] = ["allergy_confirmed", "restriction", "allergy_check", "preference"];
+  const order: ConflictKind[] = ["allergy_confirmed", "may_contain", "allergy_check", "restriction", "food_allergens_unknown", "preference"];
   for (const k of order) {
     const hit = rows.find((r) => r.kind === k);
     if (hit) return hit;
@@ -273,6 +278,13 @@ export function clientConflictLine(
       if (r.kind === "allergy_confirmed" && r.allergen) {
         blocked = true;
         parts.push(t("{food} ({allergen} allergy, blocked)", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
+      } else if (r.kind === "may_contain" && r.allergen) {
+        // GI: a "may contain" trace: amber, never blocks.
+        amber = true;
+        parts.push(t("{food} (may contain {allergen})", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
+      } else if (r.kind === "food_allergens_unknown") {
+        // GI: nobody knows what it contains; said, but neither amber nor blocking.
+        parts.push(t("{food} (allergens unknown)", { food: it.name }));
       } else if (r.kind === "allergy_check" && r.allergen) {
         amber = true;
         parts.push(t("{food} (check for {allergen})", { food: it.name, allergen: label.allergen(r.allergen).toLowerCase() }));
