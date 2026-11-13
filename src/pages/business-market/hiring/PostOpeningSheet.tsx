@@ -7,6 +7,7 @@ import { marketPalette } from "../../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../../components/pro/proInk";
 import { PopupMenu } from "../../../components/ui/PopupMenu";
 import { todayLocal } from "../../../utils/date";
+import { localiseSavedClock } from "../../../utils/time12";
 import { MasterSheet, PrimaryButton } from "../listingParts";
 import { createOpening, editOpening, type Opening, type ProCard } from "../../../services/hiring";
 import { ChipSet, FeeNoticeRow, FieldBox, FieldGrid, FieldInput, PersonRow, PickerField, ToggleBox, feeNoticeText, useFeeRules } from "./hiringParts";
@@ -169,7 +170,7 @@ export function OpeningFormFields({
             <FieldBox label={t("Classes")} labelId={ids.classes} half={mode === "post"}>
               <PickerField
                 ref={classesRef}
-                value={chosen.length ? chosen.map((s) => s.label).join(", ") : null}
+                value={chosen.length ? chosen.map((s) => localiseSavedClock(s.label)).join(", ") : null}
                 placeholder={t("Choose")}
                 labelledBy={ids.classes}
                 open={menu?.kind === "classes"}
@@ -234,7 +235,7 @@ export function OpeningFormFields({
             <FieldBox label={t("Linked class")} labelId={ids.linked}>
               <PickerField
                 ref={linkedRef}
-                value={session?.label ?? null}
+                value={session ? localiseSavedClock(session.label) : null}
                 placeholder={t("Choose")}
                 labelledBy={ids.linked}
                 open={menu?.kind === "linked"}
@@ -269,7 +270,7 @@ export function OpeningFormFields({
         variant="field"
         multiSelect
         selected={form.seriesIds}
-        options={series.map((s) => ({ value: s.id, label: s.label }))}
+        options={series.map((s) => ({ value: s.id, label: localiseSavedClock(s.label) }))}
         onSelect={toggleSeries}
         onDone={() => undefined}
         emptyNote={series.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>{t("No repeating classes yet.")}</p>}
@@ -281,7 +282,7 @@ export function OpeningFormFields({
         matchWidth={grid}
         variant="field"
         selected={form.sessionId}
-        options={sessions.map((s) => ({ value: s.id, label: s.label }))}
+        options={sessions.map((s) => ({ value: s.id, label: localiseSavedClock(s.label) }))}
         onSelect={(id) => set({ sessionId: id })}
         emptyNote={sessions.length ? undefined : <p style={{ margin: "6px 4px", fontSize: textPx(12.5), color: m.faint }}>{t("No upcoming classes.")}</p>}
         onClose={() => setMenu(null)}

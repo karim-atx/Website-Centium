@@ -69,11 +69,11 @@ const weekdayShort = (iso: string) => (getLanguage() === "ar" ? parseDay(iso).to
 
 const firstName = (name: string | undefined) => (name ? name.trim().split(/\s+/)[0] : "");
 
-/** "7a", "12p", "6p": the bars' short 12-hour labels (DA1-003 #6a). */
+/** "7a", "12p", "6p": the bars' short 12-hour labels (DA1-003 #6a); «7ص», «6م» in Arabic (Batch D FY). */
 export function shortHour(hhmm: string): string {
   const m = minutesOfDay(hhmm) ?? 0;
   const h = Math.floor(m / 60);
-  return `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? "a" : "p"}`;
+  return `${h % 12 === 0 ? 12 : h % 12}${h < 12 ? tx("a", "hour short") : tx("p", "hour short")}`;
 }
 
 // ---- shared counts ----------------------------------------------------------

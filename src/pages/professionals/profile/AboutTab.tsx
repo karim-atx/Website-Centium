@@ -249,7 +249,7 @@ export const AboutTab: React.FC<{
                 <>
                   <span style={{ width: 52, flexShrink: 0, textAlign: "center", borderRadius: 10, background: m.pale, padding: "6px 0" }}>
                     <span style={{ display: "block", fontSize: textPx(13), fontWeight: 800, color: m.ink, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? ""}</span>
-                    <span style={{ display: "block", fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{[tm?.meridiem, weekdayCaps(c.weekday)].filter(Boolean).join(" ")}</span>
+                    <span style={{ display: "block", fontSize: textPx(9.5), fontWeight: 700, color: m.faint }}>{[tm ? t(tm.meridiem) : null, weekdayCaps(c.weekday)].filter(Boolean).join(" ")}</span>
                   </span>
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: textPx(13.5), fontWeight: 700, overflowWrap: "anywhere" }}>{teachesTitle(c, today)}</span>

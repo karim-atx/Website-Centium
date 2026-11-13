@@ -6,6 +6,7 @@ import { MetricHero, HeroPill, hairline, mc, metricIconInk, metricTextInk, useHe
 import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { HR_ALERT_COPY } from "../../../services/health-metrics/clinicalCopy";
 import { isRtl, t, tk } from "../../../i18n/core";
+import { hourTick12 } from "../../../utils/time12";
 import { useIsWeb } from "../../web/useWebLayout";
 import { HeartRateChartWeb } from "./MetricCharts.web";
 import { HeartRateHeroWeb } from "./MetricHeroes.web";
@@ -347,9 +348,10 @@ const HeartRateChartMobile: React.FC<HrChartProps> = ({ range, units, average, a
             <circle cx={mx(Math.max(6, xEnd - 6))} cy={hrY(v)} r={4} fill={mc(K, "main")} stroke={ring} strokeWidth={1.5} />
           </>
         )}
-        {["12am", "6am", "12pm", "6pm"].map((t, i) => (
-          <text key={t} x={mx(i * 81.5)} y={LABEL_Y} textAnchor="start" style={labelStyle(false)}>
-            {t}
+        {/* Batch D FY: "12am" … "6pm" in English, «12 ص» … «6 م» in Arabic. */}
+        {[0, 6, 12, 18].map((h, i) => (
+          <text key={h} x={mx(i * 81.5)} y={LABEL_Y} textAnchor="start" style={labelStyle(false)}>
+            {hourTick12(h)}
           </text>
         ))}
       </svg>

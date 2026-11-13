@@ -73,7 +73,7 @@ export interface WorkItem {
 }
 import { payMoney, payText } from "../../../../services/hiring/fee.ts";
 import { formatShortDate } from "../../../../utils/date.ts";
-import { formatMinutes12 } from "../../../../utils/time12.ts";
+import { formatMinutes12, localiseSavedClock } from "../../../../utils/time12.ts";
 import { t, tk, tn, tx } from "../../../../i18n/core.ts";
 import { weekdayLong, weekdayShort as dayShort } from "../../../../components/pro/proDates.ts";
 
@@ -204,11 +204,12 @@ const classesAMonth = (n: number | null) => (n != null && n > 0 ? tn(n, "{n} cla
  * Oct 24 · 9:00 AM". A role's days and time are its series' (opportunities
  * weekdays / start_time, Database #38); without them the gym's own
  * schedule_label stands in ("Spin 45 · Sun 10:00 AM · 4 classes a month");
- * null when the opening names neither.
+ * null when the opening names neither. The label was saved in English: its
+ * clock times show in the app's language (Batch D FY, localiseSavedClock).
  */
 export function scheduleLine(o: Pick<Opportunity, "type" | "weekdays" | "startsAt" | "classesPerMonth" | "scheduleLabel" | "startTime">): string | null {
   const at = toDate(o.startsAt);
-  if (!at && !o.weekdays.length && o.scheduleLabel) return [o.scheduleLabel, o.type === "role" ? classesAMonth(o.classesPerMonth) : null].filter(Boolean).join(" · ");
+  if (!at && !o.weekdays.length && o.scheduleLabel) return [localiseSavedClock(o.scheduleLabel), o.type === "role" ? classesAMonth(o.classesPerMonth) : null].filter(Boolean).join(" · ");
   if (o.type === "class_slot") return at ? `${dayDate(at)} · ${clockOf(at)}` : null;
   const days = dayList(o.weekdays);
   const when = [days, at ? clockOf(at) : clockOfTime(o.startTime)].filter(Boolean).join(" ");

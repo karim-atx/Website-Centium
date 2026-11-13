@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { addCatalogue, setActiveLanguage } from "../../i18n/core.ts";
 import { classGlance, dateKicker, gaugeModels, greeting, kindOf, setupSteps, shortHour, toGlance, todayBlock } from "./dashboardModel";
 import type { DashRaw } from "./dashboardTypes";
 
@@ -42,6 +43,15 @@ describe("business dashboard model", () => {
     assert.equal(greeting(d), "Good evening");
     assert.equal(greeting(new Date(2026, 9, 5, 9)), "Good morning");
     assert.equal(shortHour("18:00"), "6p");
+    // Batch D FY: no English meridiem in Arabic.
+    addCatalogue("ar", { "a|hour short": "ص", "p|hour short": "م" });
+    setActiveLanguage("ar");
+    try {
+      assert.equal(shortHour("18:00"), "6م");
+      assert.equal(shortHour("07:00"), "7ص");
+    } finally {
+      setActiveLanguage("en");
+    }
   });
 
   it("shows unlit gauges with no data, never zeros as data", () => {

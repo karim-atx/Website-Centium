@@ -36,6 +36,7 @@ import {
   workSub,
 } from "./opportunitiesModel.ts";
 import type { MyApplication, Opportunity, OpportunityExtras } from "./opportunitiesModel.ts";
+import { addCatalogue, setActiveLanguage } from "../../../../i18n/core.ts";
 
 // Local wall-clock instants, so the tests read the same in any time zone.
 const at = (y: number, mo: number, d: number, h = 12, mi = 0) => new Date(y, mo - 1, d, h, mi).toISOString();
@@ -248,4 +249,17 @@ test("existing-team invite: rows, expiry, expired copy", () => {
     expiredBody(inv),
     "Gym A's free window to add their existing team closed on Nov 14, 2026. You can still work with them through an opening or a direct offer."
   );
+});
+
+test("Batch D FY: a saved English schedule_label shows its clock times in Arabic, stored text untouched", () => {
+  const o = opp({ weekdays: [], startsAt: null, startTime: null, scheduleLabel: "Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 PM", classesPerMonth: null });
+  assert.equal(scheduleLine(o), "Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 PM");
+  addCatalogue("ar", { AM: "ص", PM: "م" });
+  setActiveLanguage("ar");
+  try {
+    assert.equal(scheduleLine(o), "Spin 45 · Sun ⁧10:00 ص⁩ and HIIT 30 · Mon ⁧7:00 م⁩");
+    assert.equal(o.scheduleLabel, "Spin 45 · Sun 10:00 AM and HIIT 30 · Mon 7:00 PM");
+  } finally {
+    setActiveLanguage("en");
+  }
 });

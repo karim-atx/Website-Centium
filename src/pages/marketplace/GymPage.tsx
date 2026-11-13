@@ -682,7 +682,7 @@ export function GymPage({ gymId }: { gymId: string }) {
                     <span aria-hidden style={{ width: 39, height: 36, borderRadius: 10, background: m.pale, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, lineHeight: 1 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: m.pdark }}>{new Date(`${c.date}T00:00:00`).toLocaleDateString(appLocale("en-US"), { weekday: "short" })}</span>
                       <span style={{ marginTop: 2, fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{tm?.time ?? c.startTime}</span>
-                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{tm?.meridiem}</span>
+                      <span style={{ marginTop: 1, fontSize: 8.5, fontWeight: 800, color: m.ink2 }}>{tm ? t(tm.meridiem) : ""}</span>
                     </span>
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span className="truncate" style={{ display: "block", fontSize: textPx(14), fontWeight: 700 }}>

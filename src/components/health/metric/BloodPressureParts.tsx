@@ -5,6 +5,7 @@ import { useLoopWhileVisible } from "../useLoopWhileVisible";
 import { MetricHero, hairline, mc, metricIconInk, metricTextInk, useHealthMode } from "./MetricKit";
 import { daysOf, dowLetter, monthLetter, type MetricRange, type Period } from "./periods";
 import { isRtl, t, tk, tn } from "../../../i18n/core";
+import { hourTick12 } from "../../../utils/time12";
 import { BP_CATEGORIES, type BpCategory } from "../../../services/blood-pressure/classify";
 import { bpCategoryWord, bpCategoryRange, BP_DETAIL_FOOTER, SEVERE_READING_MESSAGE } from "../../../services/blood-pressure/guidance";
 import { PREGNANCY_FLAG_COPY, type PregnancyFlag } from "../../../services/pregnancy/checks";
@@ -310,7 +311,7 @@ const BloodPressureChartMobile: React.FC<BpChartProps> = ({ range, period, readi
     );
     labels = [6, 10, 14, 18, 22].map((h) => (
       <text key={h} x={mx(((h - HOUR0) / HOURS) * 326)} y={139} textAnchor="middle" style={label(false)}>
-        {h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`}
+        {hourTick12(h)}
       </text>
     ));
   } else if (range === "week") {
