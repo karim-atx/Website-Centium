@@ -1365,6 +1365,8 @@ export interface HabitItem {
   icon: HabitIconKey;
   /** B3 habit_items.colour; absent only on a row made before the read carried it (treat as lavender). */
   colour?: HabitColour;
+  /** Batch D FZ habit_items.reminder_time, "HH:MM" local; null or absent = no reminder. */
+  reminderTime?: string | null;
   done: boolean;
   streakDays: number;
   /** yyyy-mm-dd days with a completion, within the loaded window (MO1.1.1 week grid). */

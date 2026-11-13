@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { Apple, Archive, Check, ClipboardList, Dumbbell, EllipsisVertical, Flame, Footprints, Leaf, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Apple, Archive, Bell, Check, ClipboardList, Dumbbell, EllipsisVertical, Flame, Footprints, Leaf, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { HabitReminderField } from "../../../components/mind/HabitReminderField";
+import { useHabitRemindersOff } from "../../../components/mind/useHabitRemindersOff";
+import { time12 } from "../../../utils/time12";
 import { useApp } from "../../../context/AppContext";
 import { useIsDark } from "../../../hooks/useIsDark";
 import { useHideNumbers } from "../../../hooks/useHideNumbers";
@@ -76,6 +79,7 @@ export default function HabitsWeb() {
     reloadHabits,
     accessibility,
     authUserId,
+    habitRemindersAvailable,
   } = useApp();
   const dark = useIsDark();
   const hideNumbers = useHideNumbers();
@@ -98,6 +102,9 @@ export default function HabitsWeb() {
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
   const [newColour, setNewColour] = useState<HabitColour>("lavender");
+  // Batch D FZ: the card's reminder ("HH:MM" or null), shown once the column exists.
+  const [newReminder, setNewReminder] = useState<string | null>(null);
+  const remindersOff = useHabitRemindersOff(!!panel && habitRemindersAvailable);
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<HabitItem | null>(null);
@@ -122,6 +129,7 @@ export default function HabitsWeb() {
     setNewLabel("");
     setNewIcon(habitIconOptions[0].key);
     setNewColour("lavender");
+    setNewReminder(null);
     setPanelError(null);
     setPanel({ mode: "add" });
   };
@@ -130,6 +138,7 @@ export default function HabitsWeb() {
     setNewLabel(h.label);
     setNewIcon(h.icon);
     setNewColour(h.colour ?? "lavender");
+    setNewReminder(h.reminderTime ?? null);
     setPanelError(null);
     setPanel({ mode: "edit", habit: h });
   };
@@ -165,7 +174,11 @@ export default function HabitsWeb() {
     if (panel.mode === "add" && habits.length >= HABIT_LIMITS.maxHabits) return setPanelError(TOO_MANY_HABITS);
     setSaving(true);
     setPanelError(null);
-    const error = panel.mode === "edit" ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon, colour: newColour }) : await addHabit(trimmed, newIcon, newColour);
+    const reminderTime = habitRemindersAvailable ? newReminder : null;
+    const error =
+      panel.mode === "edit"
+        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon, colour: newColour, reminderTime: habitRemindersAvailable ? newReminder : undefined })
+        : await addHabit(trimmed, newIcon, newColour, reminderTime);
     setSaving(false);
     if (error) setPanelError(PANEL_RULE(error) ? error : SAVE_FAILED);
     else {
@@ -222,9 +235,25 @@ export default function HabitsWeb() {
           <span title={h.label} className="block truncate" style={{ fontSize: 17, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
             {h.label}
           </span>
-          {!hideNumbers && (
+          {/* Batch D FZ: a reminder adds "· bell time" to this line (or is
+              the line alone under Recovery-sensitive mode); without one the
+              row is exactly as before. */}
+          {(!hideNumbers || h.reminderTime) && (
             <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
-              {tn(h.streakDays, "{n} day streak", "{n} day streak")} · {t("best {n}", { n: best })}
+              {!hideNumbers && (
+                <>
+                  {tn(h.streakDays, "{n} day streak", "{n} day streak")} · {t("best {n}", { n: best })}
+                </>
+              )}
+              {h.reminderTime && (
+                <>
+                  {!hideNumbers && " · "}
+                  <span data-habit-reminder-time role="img" aria-label={t("Reminder at {time}", { time: time12(h.reminderTime) })} className="tabular-nums" style={{ whiteSpace: "nowrap" }}>
+                    <Bell size={12} strokeWidth={2} aria-hidden style={{ display: "inline", verticalAlign: "-1px", marginInlineEnd: 3 }} />
+                    {time12(h.reminderTime)}
+                  </span>
+                </>
+              )}
             </span>
           )}
         </span>
@@ -368,6 +397,9 @@ export default function HabitsWeb() {
                   })}
                 </div>
               )}
+              {/* Batch D FZ: the habit's daily reminder, once habit_items has
+                  reminder_time (hidden before the Database migration). */}
+              {habitRemindersAvailable && <HabitReminderField variant="web" value={newReminder} onChange={setNewReminder} off={remindersOff} />}
               <div className="flex items-center" style={{ gap: 10 }}>
                 {HABIT_COLOURS.map((c) => {
                   const sel = newColour === c;

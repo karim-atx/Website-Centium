@@ -9,7 +9,10 @@ import { CentiumMark, EntiumWordmark } from "../../components/icons/CentiumMark"
 import { useApp } from "../../context/AppContext";
 import { useFreeLimit } from "../../components/premium/useFreeLimit";
 import { limitReachedText, ownHabitCount } from "../../services/premium/g2";
-import { Archive, Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Archive, Bell, Check, EllipsisVertical, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { HabitReminderField } from "../../components/mind/HabitReminderField";
+import { useHabitRemindersOff } from "../../components/mind/useHabitRemindersOff";
+import { time12 } from "../../utils/time12";
 import { StreakLeaf } from "../../components/icons/StreakLeaf";
 import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
@@ -115,6 +118,7 @@ export default function HabitsTab() {
     reloadHabits,
     accessibility,
     authUserId,
+    habitRemindersAvailable,
   } = useApp();
   const dark = useIsDark();
   // Recovery-sensitive mode (AJ R7): no streak counts; each habit keeps its
@@ -141,6 +145,9 @@ export default function HabitsTab() {
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
   const [newColour, setNewColour] = useState<HabitColour>("lavender");
+  // Batch D FZ: the panel's reminder ("HH:MM" or null), shown once the column exists.
+  const [newReminder, setNewReminder] = useState<string | null>(null);
+  const remindersOff = useHabitRemindersOff(!!panel && habitRemindersAvailable);
   const [saving, setSaving] = useState(false);
   const [panelError, setPanelError] = useState<string | null>(null);
   // Deleting a habit erases its history and streak, so it asks first.
@@ -169,6 +176,7 @@ export default function HabitsTab() {
     setNewLabel("");
     setNewIcon(habitIconOptions[0].key);
     setNewColour("lavender");
+    setNewReminder(null);
     setPanelError(null);
     setPanel({ mode: "add" });
   };
@@ -176,6 +184,7 @@ export default function HabitsTab() {
     setNewLabel(h.label);
     setNewIcon(h.icon);
     setNewColour(h.colour ?? "lavender");
+    setNewReminder(h.reminderTime ?? null);
     setPanelError(null);
     setPanel({ mode: "edit", habit: h });
   };
@@ -226,8 +235,8 @@ export default function HabitsTab() {
     setPanelError(null);
     const error =
       panel.mode === "edit"
-        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon, colour: newColour })
-        : await addHabit(trimmed, newIcon, newColour);
+        ? await updateHabit(panel.habit.id, { label: trimmed, icon: newIcon, colour: newColour, reminderTime: habitRemindersAvailable ? newReminder : undefined })
+        : await addHabit(trimmed, newIcon, newColour, habitRemindersAvailable ? newReminder : null);
     setSaving(false);
     // S5 / O5: the panel closes only once the write landed; a failure keeps
     // it open with what was typed, the reason under the field (the B3
@@ -348,10 +357,33 @@ export default function HabitsTab() {
               {/* #16 / #17: a 16 pt chip 3 under the name, pad 1 6, 10/14
                   700, #5B5349 / #B8B3C7 on #EAF4F2 / #293339, after the
                   outlined lavender leaf 11 tall (decision 24). */}
-              {!hideNumbers && h.streakDays > 0 && (
-                <span className="mt-[3px] min-h-4 w-fit flex items-center gap-0.5 text-[10px] leading-[14px] font-bold text-charcoal-soft bg-teal-pale rounded-full px-1.5 py-px">
-                  <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
+              {/* Batch D FZ: a habit with a reminder shows its time beside the
+                  streak chip (a bell and the time, 10/14 600 muted); without
+                  one the row is exactly as before. */}
+              {h.reminderTime ? (
+                <span className="mt-[3px] flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                  {!hideNumbers && h.streakDays > 0 && (
+                    <span className="min-h-4 w-fit flex items-center gap-0.5 text-[10px] leading-[14px] font-bold text-charcoal-soft bg-teal-pale rounded-full px-1.5 py-px">
+                      <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
+                    </span>
+                  )}
+                  <span
+                    data-habit-reminder-time
+                    role="img"
+                    aria-label={t("Reminder at {time}", { time: time12(h.reminderTime) })}
+                    className="min-h-4 flex items-center gap-0.5 text-[10px] leading-[14px] font-semibold text-charcoal-faint tabular-nums whitespace-nowrap"
+                  >
+                    <Bell size={10} strokeWidth={2} aria-hidden />
+                    {time12(h.reminderTime)}
+                  </span>
                 </span>
+              ) : (
+                !hideNumbers &&
+                h.streakDays > 0 && (
+                  <span className="mt-[3px] min-h-4 w-fit flex items-center gap-0.5 text-[10px] leading-[14px] font-bold text-charcoal-soft bg-teal-pale rounded-full px-1.5 py-px">
+                    <StreakLeaf variant="outline" height={11} className="text-primary-dark dark:text-primary-deep-text" /> {h.streakDays}
+                  </span>
+                )
               )}
             </span>
           </div>
@@ -636,6 +668,10 @@ export default function HabitsTab() {
                 </div>
               </>
             )}
+
+            {/* Batch D FZ: the habit's daily reminder, once habit_items has
+                reminder_time (hidden before the Database migration). */}
+            {habitRemindersAvailable && <HabitReminderField variant="mobile" value={newReminder} onChange={setNewReminder} off={remindersOff} />}
 
             <div className="flex items-center gap-2 mt-2.5 pe-3.5">
               {/* #82: 36 tall, r12, surface.soft, 1 px 10% border; up to 40

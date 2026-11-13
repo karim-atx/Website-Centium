@@ -7,7 +7,9 @@ export * from "./streak";
 export * from "./icons";
 export * from "./colours";
 export * from "./coachGroups";
+export * from "./reminder";
 import { toHabitIcon, validateHabitIcon } from "./icons";
+import { isMissingReminderColumn, parseReminderTime } from "./reminder";
 import { toHabitColour } from "./colours";
 import { requestColumn } from "../health-log/requestId";
 import { tk } from "../../i18n/core";
@@ -15,7 +17,8 @@ import { tk } from "../../i18n/core";
 // Habits, in public.habit_items and public.habit_completions.
 //
 // NO UPSERTS, and the grants are why rather than taste. habit_items grants
-// UPDATE on (label, icon, position, colour, archived_at) ONLY — `owner_id`, `id` and `created_at`
+// UPDATE on (label, icon, position, colour, archived_at, and Batch D FZ's reminder_time)
+// ONLY — `owner_id`, `id` and `created_at`
 // are INSERT-only, because they identify the row. `.upsert()` compiles to
 // INSERT … ON CONFLICT DO UPDATE and its UPDATE branch writes every column in
 // the payload, so it asks for a privilege that does not exist and comes back
@@ -40,13 +43,29 @@ export interface HabitRow {
   /** B3 habit_items.colour, default lavender. */
   colour: HabitColour;
   position: number;
+  /** Batch D FZ habit_items.reminder_time as "HH:MM" (the member's local time); null = no reminder. */
+  reminderTime: string | null;
 }
 
 export interface HabitsSnapshot {
   items: HabitRow[];
   /** Completion dates per habit id, within the window that was read. */
   completions: Record<string, string[]>;
+  /**
+   * Batch D FZ: habit_items has reminder_time (Database migration
+   * 20261227120000 is live). False until a read proves it, so the reminder
+   * field stays hidden rather than offering a time that can't be saved.
+   */
+  remindersAvailable?: boolean;
 }
+
+// Batch D FZ: whether habit_items.reminder_time exists. Unknown until the
+// first read; a read that fails ONLY because the column is missing marks it
+// absent and reads again without it, so the app works before the migration
+// and the field appears once the column exists (a reload asks again).
+let reminderColumn: "unknown" | "yes" | "no" = "unknown";
+const HABIT_SELECT = "id, label, icon, colour, position";
+const habitSelect = () => (reminderColumn === "no" ? HABIT_SELECT : `${HABIT_SELECT}, reminder_time`);
 
 // v6 MO1.1.1.1 / V6-143: a habit name is 1 to 40 characters and an account
 // keeps up to 30 ACTIVE habits. Database B3 enforces the 30 (ATXA8, archived
@@ -115,6 +134,7 @@ interface RawHabit {
   icon: string;
   colour?: string | null;
   position: number;
+  reminder_time?: string | null;
 }
 const fromRaw = (r: RawHabit): HabitRow => ({
   id: r.id,
@@ -122,6 +142,7 @@ const fromRaw = (r: RawHabit): HabitRow => ({
   icon: toHabitIcon(r.icon),
   colour: toHabitColour(r.colour),
   position: r.position,
+  reminderTime: parseReminderTime(r.reminder_time),
 });
 
 /** Mirrors habit_items' CHECK. Returns a sentence, or null. */
@@ -149,12 +170,21 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
   // ARCHIVED HABITS ARE NOT ON THE LIST (B3): archived_at keeps the row and
   // its history, takes it off every screen, and frees its name and its place
   // in the thirty. Their completions are not read either.
-  const { data: items, error: itemsError } = await supabase
-    .from("habit_items")
-    .select("id, label, icon, colour, position")
-    .eq("owner_id", userId)
-    .is("archived_at", null)
-    .order("position", { ascending: true });
+  const readItems = () =>
+    supabase
+      .from("habit_items")
+      .select(habitSelect())
+      .eq("owner_id", userId)
+      .is("archived_at", null)
+      .order("position", { ascending: true });
+  let { data: items, error: itemsError } = await readItems();
+  // Batch D FZ: before the reminder_time migration, the same read without it.
+  if (itemsError && reminderColumn !== "no" && isMissingReminderColumn(itemsError)) {
+    reminderColumn = "no";
+    ({ data: items, error: itemsError } = await readItems());
+  } else if (!itemsError) {
+    reminderColumn = reminderColumn === "no" ? "no" : "yes";
+  }
 
   if (itemsError) {
     console.error("[habits] Could not load habits:", itemsError.message);
@@ -166,7 +196,8 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
   const completions: Record<string, string[]> = {};
   for (const r of rows) completions[r.id] = [];
 
-  if (rows.length === 0) return { ok: true, value: { items: rows, completions } };
+  const remindersAvailable = reminderColumn === "yes";
+  if (rows.length === 0) return { ok: true, value: { items: rows, completions, remindersAvailable } };
 
   // RLS on habit_completions derives from the parent habit, so this needs no
   // owner filter of its own — it could not return somebody else's rows.
@@ -184,16 +215,19 @@ export async function getHabits(userId: string, sinceDay: string): Promise<Resul
     (completions[c.habit_item_id] ??= []).push(c.completed_date);
   }
 
-  return { ok: true, value: { items: rows, completions } };
+  return { ok: true, value: { items: rows, completions, remindersAvailable } };
 }
 
 /** Adds a habit at the end of the list. */
 export async function createHabit(
   userId: string,
-  habit: { label: string; icon: HabitIconKey; position: number; colour?: HabitColour }
+  habit: { label: string; icon: HabitIconKey; position: number; colour?: HabitColour; reminderTime?: string | null }
 ): Promise<Result<HabitRow>> {
   const invalid = validateLabel(habit.label) ?? validateHabitIcon(habit.icon);
   if (invalid) return { ok: false, message: invalid };
+  // Batch D FZ: sent only when there is one and the column exists (the
+  // screen offers no time before then; null is the column's default).
+  const reminder = reminderColumn === "yes" ? parseReminderTime(habit.reminderTime) : null;
 
   const { data, error } = await supabase
     .from("habit_items")
@@ -205,9 +239,11 @@ export async function createHabit(
       icon: habit.icon,
       colour: habit.colour ?? "lavender",
       position: habit.position,
+      ...(reminder ? { reminder_time: reminder } : {}),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-    .select("id, label, icon, colour, position")
+    // Only a column a read has proved: a missing one would fail the insert too.
+    .select(reminderColumn === "yes" ? `${HABIT_SELECT}, reminder_time` : HABIT_SELECT)
     .maybeSingle();
 
   if (error || !data) {
@@ -218,18 +254,23 @@ export async function createHabit(
 }
 
 /** Saves a habit's name, icon and colour (MO1.1.1 S5 Edit). UPDATE, never
- *  upsert: label, icon and colour are all in the UPDATE grant (B3). */
+ *  upsert: label, icon and colour are all in the UPDATE grant (B3).
+ *  Batch D FZ: `reminderTime` ("HH:MM", or null to clear) is sent only when
+ *  given (the caller passes it only when it changed: a same-day change
+ *  reminds again) and the column exists. */
 export async function updateHabitRemote(
   id: string,
-  patch: { label: string; icon: HabitIconKey; colour: HabitColour }
+  patch: { label: string; icon: HabitIconKey; colour: HabitColour; reminderTime?: string | null }
 ): Promise<WriteResult> {
   const invalid = validateLabel(patch.label) ?? validateHabitIcon(patch.icon);
   if (invalid) return { ok: false, message: invalid };
+  const reminder =
+    patch.reminderTime !== undefined && reminderColumn === "yes" ? { reminder_time: parseReminderTime(patch.reminderTime) } : {};
 
   const { error } = await supabase
     .from("habit_items")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({ label: patch.label.trim(), icon: patch.icon, colour: patch.colour } as any)
+    .update({ label: patch.label.trim(), icon: patch.icon, colour: patch.colour, ...reminder } as any)
     .eq("id", id);
 
   if (error) {
