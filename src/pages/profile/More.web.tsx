@@ -115,7 +115,7 @@ const ActivityPane: React.FC = () => {
   );
 };
 
-/** The mobile Profile's Safety & content card, as a pane: the switch and its lines, Cycle tracking and Health checks. */
+/** The mobile Profile's Safety & content card, as a pane: FX-02, one group of Recovery, Cycle tracking and Advanced health monitoring, then the lines. */
 const RecoveryPane: React.FC = () => {
   const { recoverySensitive, setRecoverySensitive, setRecoverySensitiveIntroSeen } = useApp();
   const navigate = useNavigate();
@@ -145,6 +145,8 @@ const RecoveryPane: React.FC = () => {
             },
           }}
         />
+        <CycleTrackingRow pane />
+        <HealthChecksSetting variant="pane" />
       </BizSection>
       {justOn && (
         <p role="status" style={{ margin: 0, maxWidth: 640, borderRadius: 16, background: "#F0EDF9", padding: "12px 16px", fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#5F5093" }}>
@@ -159,12 +161,6 @@ const RecoveryPane: React.FC = () => {
         </button>
         .
       </p>
-      <div style={{ maxWidth: 640 }}>
-        <CycleTrackingRow />
-        <div style={{ marginTop: 16 }}>
-          <HealthChecksSetting />
-        </div>
-      </div>
     </>
   );
 };

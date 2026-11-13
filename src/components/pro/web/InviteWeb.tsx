@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Copy, Download, Info, Maximize2, QrCode, Share, Tag, UserCheck, UserRound } from "lucide-react";
 import { PassQr } from "../../marketplace/PassQr";
+import { TioStateIcon } from "../../ui/TioStateIcon";
 import { ProCardSkeleton, ProError, OfflineLine } from "../states";
 import { useWebLayout, WEB_READING_MAX } from "../../web/useWebLayout";
 import { inviteHref, inviteUrl, type InviteJoin } from "../../../services/pro/invites";
@@ -92,9 +93,8 @@ export const InviteWeb: React.FC<{
         className="flex flex-col items-center justify-center text-center"
         style={{ gridColumn: "1 / -1", minHeight: 480, boxSizing: "border-box", borderRadius: 24, border: "1px solid rgba(36,31,27,0.08)", gap: 20, padding: 32 }}
       >
-        <span className="flex items-center justify-center" style={{ width: 72, height: 72, borderRadius: 20, background: "#F0EDF9" }}>
-          <QrCode size={28} strokeWidth={1.5} aria-hidden style={{ color: "#7D67D9" }} />
-        </span>
+        {/* Handover A3 (WP-HO.1-EM1): Tio HAPPY with the QR glyph, same 72 r20 tile. */}
+        <TioStateIcon variant="glyph" head="happy" icon={QrCode} strokeWidth={1.5} tile={72} radius={20} className="" style={{ background: "#F0EDF9", color: "#7D67D9" }} />
         <p style={{ margin: 0, maxWidth: 480, fontSize: 17, lineHeight: "24px", color: "#5B5349", textWrap: "pretty" }}>{t("Create your invite link. Anyone who opens it can see your page and ask to work with you.")}</p>
         {p.createError && (
           <p role="alert" style={{ margin: 0, fontSize: 13, lineHeight: "20px", fontWeight: 600, color: "#B3261E" }}>

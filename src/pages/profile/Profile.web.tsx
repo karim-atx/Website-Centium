@@ -536,8 +536,9 @@ function ClientProfileWeb() {
                 <div style={{ borderTop: "1px solid rgba(36,31,27,0.06)" }}>
                   <CycleTrackingRow className="pt-3" />
                 </div>
+                {/* FX-02 (decision 3 on #142): Advanced health monitoring in the same card, behind the same rule. */}
+                <HealthChecksSetting variant="webRow" />
               </div>
-              <HealthChecksSetting />
             </section>
           )}
         </div>

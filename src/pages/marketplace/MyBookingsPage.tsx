@@ -9,6 +9,7 @@ import { useApp } from "../../context/AppContext";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useOnline } from "../../hooks/useOnline";
 import { textPx, linePx } from "../../theme/textSize";
+import { TioStateIcon } from "../../components/ui/TioStateIcon";
 import { marketPalette } from "../../theme/marketTokens";
 import { NO_ICON_SCALE } from "../../components/pro/proInk";
 import { TicketStub } from "../../components/market/TicketStub";
@@ -251,9 +252,14 @@ export default function MyBookingsPage() {
             !online || state.offline ? <MarketOffline loaded={false} force onRetry={retry} /> : <MarketError thing={tk("your bookings")} onRetry={retry} />
           ) : list.length === 0 ? (
             <div style={{ borderRadius: 20, border: `0.5px solid ${WEB_HAIR}`, padding: "48px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
-              <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", color: "#7D67D9" }}>
-                <CalendarDays size={24} strokeWidth={1.75} />
-              </span>
+              {tab === "upcoming" ? (
+                // Handover A3 (WC-EX.3-EM6): Tio HAPPY with the calendar, same 56 r18 tile.
+                <TioStateIcon variant="glyph" head="happy" icon={CalendarDays} strokeWidth={1.75} tile={56} radius={18} className="" style={{ background: "#F0EDF9", color: "#7D67D9" }} />
+              ) : (
+                <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: "#F0EDF9", display: "flex", alignItems: "center", justifyContent: "center", color: "#7D67D9" }}>
+                  <CalendarDays size={24} strokeWidth={1.75} />
+                </span>
+              )}
               <h2 style={{ margin: 0, fontSize: 17, lineHeight: "24px", fontWeight: 800 }}>{t(empty.title)}</h2>
               <p style={{ margin: 0, fontSize: 15, lineHeight: "24px", color: WEB_FAINT }}>{t(empty.body)}</p>
               <button
@@ -600,6 +606,13 @@ const BookingsEmpty: React.FC<{ tab: BookingsTab }> = ({ tab }) => {
   const e = BOOKINGS_EMPTY[tab];
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: 10, padding: "56px 24px 0" }}>
+      {tab === "upcoming" ? (
+        // Handover A3 (C-EX.3-EM6, README ANSWERS 5): the upcoming empty pushes
+        // one next step (Browse classes), so Tio HAPPY with the calendarDays
+        // glyph the board draws, same 56 r18 tile. Memberships and Past keep
+        // their calendar.
+        <TioStateIcon variant="glyph" head="happy" icon={CalendarDays} strokeWidth={1.75} tile={56} radius={18} className="" style={{ background: m.pale, color: m.accent }} />
+      ) : (
       <span aria-hidden style={{ width: 56, height: 56, borderRadius: 18, background: m.pale, display: "flex", alignItems: "center", justifyContent: "center", color: m.accent }}>
         <svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" style={NO_ICON_SCALE}>
           <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -608,6 +621,7 @@ const BookingsEmpty: React.FC<{ tab: BookingsTab }> = ({ tab }) => {
           <path d="M3 10h18" />
         </svg>
       </span>
+      )}
       <h2 style={{ margin: 0, fontSize: textPx(16), fontWeight: 800, color: m.ink }}>{t(e.title)}</h2>
       <p style={{ margin: 0, fontSize: textPx(13), lineHeight: 1.55, color: m.faint }}>{t(e.body)}</p>
       <button

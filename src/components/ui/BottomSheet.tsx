@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
@@ -8,6 +8,10 @@ import { t } from "../../i18n/core";
 import { trapTab } from "./focusTrap";
 import { useIsWeb } from "../web/useWebLayout";
 import { WEB_SHEET_CSS, webSheetPanelStyle } from "../web/webSheet";
+import { pickTioState, rememberTioState, type TioState, type TioViewport } from "./tioRotation";
+import { cachedTioEligibility, measureMobileSheet, rememberTioEligibility, type MobileChrome } from "./tioEligibility";
+import { mobilePoseFits, tioEligible } from "./tioPoseModel";
+import { MobileTioPose, WebTioPose } from "./TioPose";
 
 type ToneColours = { band: string; border: string; title: string; body: string };
 
@@ -115,7 +119,17 @@ interface BottomSheetProps {
   titleWrap?: boolean;
   /** Website viewport: from 1024px open as a centred 440 popup instead of the right side sheet (Addendum A WC-EX.7.4, the two-step redeem). */
   webCentred?: boolean;
+  /**
+   * Handover "Tio + Centium Fixes" B: Tio on the sheet (default on). Off for
+   * a sheet that is a centred dialog (README ANSWERS 7: *Dialog). From 1024
+   * a `webCentred` sheet is a centred popup and never shows Tio.
+   */
+  tio?: boolean;
+  /** The popup's id for RULE B3's per-session height result (default: its title). */
+  tioId?: string;
 }
+
+type TioShown = { viewport: TioViewport; state: TioState };
 
 const EXIT_MS = 350;
 
@@ -158,9 +172,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   // Exit: keep rendering the last open content while it slides away.
   const [prevOpen, setPrevOpen] = useState(open);
   const [closing, setClosing] = useState(false);
+  // Tio (handover B): the state picked for this open; kept while the sheet
+  // leaves, so Tio goes with it.
+  const [tio, setTio] = useState<TioShown | null>(null);
   if (open !== prevOpen) {
     setPrevOpen(open);
     setClosing(!open && !!animateExit && !reduced);
+    if (open) setTio(null);
   }
   useEffect(() => {
     if (!closing) return;
@@ -172,6 +190,52 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
 
   const sheetId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const web = useIsWeb();
+
+  // RULE B2 / B3: once per open (false → true), after the first layout and
+  // before the first paint, so Tio arrives with the sheet. An ineligible
+  // popup shows no Tio and does not advance the rotation.
+  const picked = useRef(false);
+  useLayoutEffect(() => {
+    if (!open) {
+      picked.current = false;
+      return;
+    }
+    if (picked.current) return;
+    picked.current = true;
+    const p = last.current;
+    if (p.tio === false || (web && p.webCentred)) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const id = p.tioId ?? p.title;
+    let eligible: boolean;
+    if (!web) {
+      eligible = tioEligible(panel.getBoundingClientRect().height, p.fillHeight);
+      rememberTioEligibility(id, eligible);
+    } else {
+      const known = cachedTioEligibility(id);
+      if (known !== undefined) eligible = known;
+      else {
+        const body = panel.querySelector<HTMLElement>(":scope > [data-sheet-body]");
+        const foot = panel.querySelector<HTMLElement>(":scope > [data-sheet-footer]");
+        eligible = tioEligible(measureMobileSheet(body, foot, mobileChromeOf(p)), p.fillHeight);
+        rememberTioEligibility(id, eligible);
+      }
+    }
+    if (!eligible) return;
+    const viewport: TioViewport = web ? "web" : "mobile";
+    const state = pickTioState(viewport);
+    // Decision 5 (#142): on a short phone a pose that would reach above the
+    // safe-area top (under the status bar) is not shown, and the rotation is
+    // not advanced. The resting top is the wrapper's offsetTop, which ignores
+    // the opening slide's transform.
+    if (!web) {
+      const wrap = panel.parentElement;
+      if (wrap && !mobilePoseFits(state, wrap.offsetTop, safeAreaTop())) return;
+    }
+    rememberTioState(viewport, state);
+    setTio({ viewport, state });
+  }, [open, web]);
   const closeRef = useRef(onClose);
   useEffect(() => {
     closeRef.current = onClose;
@@ -225,10 +289,48 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   }, [open]);
 
   if (!open && !closing) return null;
-  return <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} />;
+  // A Tio picked for the other viewport (the window crossed 1024 while open) is not shown.
+  const tioState = tio && tio.viewport === (web ? "web" : "mobile") ? tio.state : null;
+  return <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} tioState={tioState} />;
 };
 
-const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: React.MutableRefObject<HTMLDivElement | null> }> = ({
+/** env(safe-area-inset-top) in px (0 in a browser; the notch / Dynamic Island in the app). */
+function safeAreaTop(): number {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:fixed;top:0;left:0;visibility:hidden;pointer-events:none;height:env(safe-area-inset-top, 0px)";
+  document.body.appendChild(probe);
+  const h = probe.getBoundingClientRect().height;
+  probe.remove();
+  return h;
+}
+
+/** The mobile sheet chrome a popup's content sits in below 1024 (RULE B3's web measurement), as SheetFrame draws it. */
+function mobileChromeOf(p: BottomSheetProps): MobileChrome {
+  const market = p.chrome === "market";
+  const bottomPad = 34;
+  const body: MobileChrome["body"] = p.bodyPadding
+    ? [p.bodyPadding.top, p.bodyPadding.right, p.bodyPadding.bottom, p.bodyPadding.left]
+    : market
+      ? [16, 16, p.footer ? 16 : 28, 16]
+      : [20, 20, p.footer ? 20 : bottomPad, 20];
+  const footerBottom = p.footerBottom ?? bottomPad;
+  const padX = p.footerPadX ?? (market ? 16 : 20);
+  const footer: MobileChrome["footer"] = !p.footer
+    ? undefined
+    : p.hideHeader
+      ? { pad: [12, 20, footerBottom, 20], rule: false }
+      : { pad: [p.footerRule ? 8 : 12, padX, footerBottom, padX], rule: !!p.footerRule };
+  return {
+    hideHeader: p.hideHeader,
+    handle: p.handle,
+    headerHeight: p.handle ? 46 : (p.headerHeight ?? 53),
+    borderWidth: p.chrome === "partB" ? 0.5 : 1,
+    body,
+    footer,
+  };
+}
+
+const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: React.MutableRefObject<HTMLDivElement | null>; tioState: TioState | null }> = ({
   onClose,
   title,
   children,
@@ -258,6 +360,7 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
   titleWrap,
   webCentred,
   panelRef,
+  tioState,
 }) => {
   const titleId = useId();
   const web = useIsWeb();
@@ -339,18 +442,11 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
   // same header band, title, close button, body and pinned footer. Below 1024
   // nothing here changes.
   if (web) {
-    return createPortal(
-      <div className={`fixed inset-0 z-50 flex ${webCentred ? "items-center justify-center" : "items-stretch justify-end"}`} style={{ pointerEvents: leaving ? "none" : undefined }} aria-hidden={leaving || undefined}>
-        <style>{WEB_SHEET_CSS}</style>
-        <div
-          className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
-          style={{ background: scrimColour, animation: scrimAnim }}
-          onClick={closeOnScrim ? onClose : undefined}
-        />
+    const webPanel = (
         <div
           {...dialogProps}
           data-web-sheet
-          className={webCentred ? `relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "" : "animate-fade-in"}` : `web-sheet relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "web-sheet-leaving" : ""}`}
+          className={webCentred ? `relative flex flex-col overflow-hidden outline-none shadow-lift ${leaving ? "" : "animate-fade-in"}` : "relative flex flex-col overflow-hidden outline-none shadow-lift"}
           style={
             webCentred
               ? { width: 440, maxWidth: "calc(100vw - 48px)", maxHeight: "calc(100dvh - 48px)", background: hideHeader ? body : band, borderRadius: hideHeader ? 24 : 32, border: hideHeader ? undefined : `${borderWidth}px solid ${border}`, boxShadow: hideHeader ? "0 24px 60px rgba(36,31,27,0.2)" : undefined }
@@ -397,17 +493,40 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
             </div>
           )}
           <div
+            data-sheet-body
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
             style={{ background: body, borderRadius: hideHeader ? undefined : "22px 22px 0 0", ...bodyPadding, paddingTop: 24, paddingInline: 24, paddingBottom: footer ? 20 : 24 }}
           >
             {children}
           </div>
           {footer && (
-            <div className="shrink-0" style={{ background: body, padding: `16px ${footerPadX ?? 24}px 24px`, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
+            <div data-sheet-footer className="shrink-0" style={{ background: body, padding: `16px ${footerPadX ?? 24}px 24px`, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
               {footer}
             </div>
           )}
         </div>
+    );
+    return createPortal(
+      <div className={`fixed inset-0 z-50 flex ${webCentred ? "items-center justify-center" : "items-stretch justify-end"}`} style={{ pointerEvents: leaving ? "none" : undefined }} aria-hidden={leaving || undefined}>
+        <style>{WEB_SHEET_CSS}</style>
+        <div
+          className={`absolute inset-0 ${scrimBlur ? "backdrop-blur-[2px]" : ""} ${leaving ? "" : "animate-fade-in"}`}
+          style={{ background: scrimColour, animation: scrimAnim }}
+          onClick={closeOnScrim ? onClose : undefined}
+        />
+        {webCentred ? (
+          webPanel
+        ) : (
+          // Handover B: the slide-in moves this wrapper (it was on the panel),
+          // so Tio, outside the panel against its page-facing edge, arrives
+          // and leaves with it. LEAN is under the panel and over the scrim,
+          // SIDEPEEK over the panel.
+          <div className={`web-sheet relative flex ${leaving ? "web-sheet-leaving" : ""}`}>
+            {tioState === "lean" && <WebTioPose state={tioState} />}
+            {webPanel}
+            {tioState === "sidepeek" && <WebTioPose state={tioState} />}
+          </div>
+        )}
       </div>,
       document.body
     );
@@ -434,11 +553,18 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
         style={{ background: scrimColour, animation: scrimAnim }}
         onClick={closeOnScrim ? onClose : undefined}
       />
+      {/* Handover B: the sheet's slide (and its drag) moves this wrapper (they
+          were on the panel), so Tio, a sibling of the panel standing on its
+          top edge, arrives, follows and leaves with it. Nothing clips it. */}
+      <div
+        className={`relative w-full max-w-[430px] ${leaving ? "" : "animate-sheet-up"}`}
+        style={{ animation: sheetAnim, ...(dragY ? { transform: `translateY(${dragY}px)` } : null) }}
+      >
       {hideHeader ? (
         <div
           {...dialogProps}
-          className={`relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none ${leaving ? "" : "animate-sheet-up"}`}
-          style={{ maxHeight, animation: sheetAnim }}
+          className="relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none"
+          style={{ maxHeight }}
         >
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain" style={bodyPadding}>
             {children}
@@ -452,15 +578,13 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
       ) : (
         <div
           {...dialogProps}
-          className={`relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none ${leaving ? "" : "animate-sheet-up"}`}
+          className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden outline-none"
           style={{
             maxHeight,
             ...(fillHeight ? { height: maxHeight } : null),
             background: band,
             border: `${borderWidth}px solid ${border}`,
             borderBottom: "none",
-            animation: sheetAnim,
-            ...(dragY ? { transform: `translateY(${dragY}px)` } : null),
           }}
         >
           {handle && (
@@ -532,6 +656,8 @@ const SheetFrame: React.FC<BottomSheetProps & { leaving: boolean; panelRef: Reac
           )}
         </div>
       )}
+      {tioState && <MobileTioPose state={tioState} />}
+      </div>
     </div>,
     document.body
   );

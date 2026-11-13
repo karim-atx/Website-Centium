@@ -1,6 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import type { ColorTheme } from "../../types";
 import { ReferralPopup } from "../../components/profile/ReferralPopup";
 import { useUnread } from "../../context/UnreadContext";
 import { forumAccess } from "../../services/forum/rules";
@@ -60,7 +61,8 @@ export default function More() {
 /** A client account's More (professionals: pages/pro/more/ProfessionalMore). */
 function PersonalMore() {
   const navigate = useNavigate();
-  const { user } = useApp();
+  const { user, colorTheme } = useApp();
+  const brain = mindBrainImage(colorTheme);
   const unread = useUnread();
   const { premium } = usePremium();
   const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
@@ -100,13 +102,14 @@ function PersonalMore() {
       <p className="mb-[13px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">{t("More")}</p>
 
       <>
-          {/* THE BRAIN IN DARK MODE. The asset is drawn for the light card: its
-              leaves are dark teal at ~28% alpha, and its transparent area
-              carries ~3,000 faint near-white specks. On a dark card the leaves
-              sink and the specks show as grain. This matrix drops the alpha of
-              anything with red in it (the specks; the leaves have none) and
-              brightens the leaves 1.9x. A dark variant of the asset would
-              still be cleaner; reported. */}
+          {/* THE BRAIN IN DARK MODE (Centium only). The asset is drawn for the
+              light card: its leaves are dark teal at ~28% alpha, and its
+              transparent area carries ~3,000 faint near-white specks. On a dark
+              card the leaves sink and the specks show as grain. This matrix
+              drops the alpha of anything with red in it (the specks; the leaves
+              have none) and brightens the leaves 1.9x. FX-03 (README ANSWERS
+              10): the themed variants never take it (it erases Rose, Gold and
+              Coral); they show the same image as in light mode. */}
           <svg width="0" height="0" aria-hidden className="absolute">
             <filter id="more-brain-dark" colorInterpolationFilters="sRGB">
               <feColorMatrix type="matrix" values="1.9 0 0 0 0  0 1.9 0 0 0  0 0 1.9 0 0  -0.6 0 0 1 0" />
@@ -119,11 +122,12 @@ function PersonalMore() {
             style={{ minHeight: 169, borderRadius: 18, marginBottom: 7 }}
           >
             <img
-              src="/more-mind-brain.png"
+              src={brain.src}
+              srcSet={brain.srcSet}
               alt=""
               aria-hidden
               draggable={false}
-              className="absolute pointer-events-none select-none dark:[filter:url(#more-brain-dark)]"
+              className={`absolute pointer-events-none select-none ${brain.srcSet ? "" : "dark:[filter:url(#more-brain-dark)]"}`}
               style={{ top: 0, insetInlineEnd: 0, width: 214, height: 169 }}
             />
             <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
@@ -236,4 +240,16 @@ function PersonalMore() {
       <ReferralPopup open={referralOpen} onClose={() => setReferralOpen(false)} />
     </div>
   );
+}
+
+/**
+ * FX-03: the Mind card's leaf-brain in the colour theme's secondary. Centium
+ * keeps today's /more-mind-brain.png; every other theme (the Premium three
+ * included) has its own tinted PNG at 1x / 2x / 3x, the same image in light
+ * and dark mode.
+ */
+function mindBrainImage(theme: ColorTheme): { src: string; srcSet?: string } {
+  if (theme === "centium") return { src: "/more-mind-brain.png" };
+  const base = `/more-mind-brain-${theme}`;
+  return { src: `${base}.png`, srcSet: `${base}.png 1x, ${base}@2x.png 2x, ${base}@3x.png 3x` };
 }

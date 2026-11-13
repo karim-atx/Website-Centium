@@ -26,7 +26,6 @@ import {
   Phone,
   QrCode,
   Receipt,
-  ScrollText,
   Send,
   ShieldCheck,
   Star,
@@ -46,7 +45,7 @@ import { PRO_ROUTES } from "../pro/subtypeLanes";
 import { ReferralPopup } from "../profile/ReferralPopup";
 import { ReferralLeafIcon } from "../icons/MoreLeafIcons";
 import { useSignOutAllDevices } from "../profile/SignOutAllDevices";
-import { REFUND_POLICY_HREF, BILLING_HELP_PATH } from "../../marketing/legal/refund";
+import { BILLING_HELP_PATH } from "../../marketing/legal/refund";
 import { tk, tn } from "../../i18n/core";
 import { Column, Pane, PlanCard, SecondaryGroups, type SecondaryGroup, type SecondaryItem } from "./WebSecondaryLayout";
 import { appSettingsSection } from "./webNav";
@@ -220,8 +219,8 @@ export const ProMoreLayout: React.FC<{ secW: number; banners: React.ReactNode; c
  * Permissions · Connected devices (clients) · Security · Practice
  * (professionals, between Security and Data & account as in the repo) · Data
  * & account · General · Legal. Sub-pages open in the pane with their section
- * lit; Contact us, Report a bug and Rate this app are centred popups; the
- * refund policy is a link to the Legal page's refund section in a new tab.
+ * lit; Contact us, Report a bug and Rate this app are centred popups. FX-01:
+ * Legal has no refund policy row; it is under Billing and refunds › READ MORE.
  */
 /** Settings › Practice › Calls with hired clients, switched from the Settings column (the PracticeSection switch, the same reader and writer). */
 function useCallsSetting(on: boolean): { on: boolean | null; error: string | null; toggle: () => void } {
@@ -319,13 +318,6 @@ function useSettingsGroups(onSignOutAll: () => void): SecondaryGroup[] {
       items: [
         { key: "terms", label: tk("Terms of Service"), desc: legal, icon: FileText, to: "/app/settings/terms" },
         { key: "privacy", label: tk("Privacy"), desc: legal, icon: Lock, to: "/app/settings/privacy" },
-        {
-          key: "refund",
-          label: tk("Refund and cancellation policy"),
-          icon: ScrollText,
-          ext: true,
-          onClick: () => window.open(REFUND_POLICY_HREF, "_blank", "noopener"),
-        },
         { key: "guidelines", label: tk("Community guidelines"), desc: t("Last updated {date}", { date: legalDate(GUIDELINES_UPDATED) }), icon: Users, to: sec("guidelines") },
       ],
     },
