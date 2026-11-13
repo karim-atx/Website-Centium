@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { COMING_SOON, DOWNLOAD_LINKS, WINDOWS_SUMS_URL, WINDOWS_VERSIONS_URL, detectPlatform, detectWindowsArch, downloadOption, parseSums, parseVersion, pickArch, platformList, type DownloadLinks, type LinkedPlatform, type NavLike, type Platform, type WindowsArch } from "./platforms";
+import { COMING_SOON, DOWNLOAD_LINKS, WINDOWS_SUMS_URL, WINDOWS_VERSIONS_URL, desktopLayout, detectPlatform, detectWindowsArch, downloadOption, parseSums, parseVersion, pickArch, platformList, type DownloadLinks, type LinkedPlatform, type NavLike, type Platform, type WindowsArch } from "./platforms";
 
 // Task O, FM: the download button's detection and options, with real user-agent
 // strings (each browser's own UA, platform and maxTouchPoints).
@@ -243,5 +243,20 @@ describe("SHA256SUMS.txt", () => {
     ].join("\n");
     assert.deepEqual(parseSums(bad, "1.0.0"), []);
     assert.deepEqual(parseSums("", null), []);
+  });
+});
+
+describe("desktopLayout (the landing's download panel)", () => {
+  it("is on from 1024px wide on any system, as before", () => {
+    for (const p of ["windows", "mac", "linux", "chromeos", "ios", "android", "unknown"] as Platform[]) assert.equal(desktopLayout(true, false, p), true, p);
+  });
+  it("is on below 1024px on a computer with a hovering mouse or trackpad (zoom, display scaling, a smaller window)", () => {
+    for (const p of ["windows", "mac", "linux", "chromeos"] as Platform[]) assert.equal(desktopLayout(false, true, p), true, p);
+  });
+  it("is off below 1024px on phones and tablets, even with a fine pointer (an iPad with a trackpad)", () => {
+    for (const p of ["ios", "android", "unknown"] as Platform[]) assert.equal(desktopLayout(false, true, p), false, p);
+  });
+  it("is off below 1024px with a touch screen as the main pointer, on any system", () => {
+    for (const p of ["windows", "mac", "linux", "chromeos", "ios", "android", "unknown"] as Platform[]) assert.equal(desktopLayout(false, false, p), false, p);
   });
 });

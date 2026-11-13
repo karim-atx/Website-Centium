@@ -32,13 +32,14 @@
 // z-index 5): in the hero, #intro-track (z-index 2) sits under the phone
 // layer (fixed, z-index 4), which would cover them; the navbar (60) stays
 // above. Placement, closing and keyboard: anchoredPanel.ts.
-// DESKTOP (1024px and wider, Karim 2026-11-13): the hero row and the CTA
+// DESKTOP (1024px and wider, or a computer at any width: desktopLayout in
+// platforms.ts; Karim 2026-11-13): the hero row and the CTA
 // show only the two buttons. "Download the app" is a toggle (with a chevron
 // that turns) opening one panel under it (DesktopDownload below): "Download
 // for Windows", the size and version line, the short unsigned-app note with
 // "Why?", then "Other download", "Other platforms" and "Install help", which
 // open their existing content inside the panel. After a download starts the
-// panel stays open and says so. Below 1024px nothing changes.
+// panel stays open and says so. Phones and tablets below 1024px: unchanged.
 // Styles reused from the site: the small links are the footer's small text
 // link (FT1: 13px / 500 / #5B5349, the 1px underline that grows on hover,
 // hover #6A54C4, 44px tall); the panels are the navbar's mobile menu card
@@ -55,6 +56,7 @@ import {
   COMING_SOON,
   DOWNLOAD_LINKS,
   DOWNLOAD_THE_APP,
+  desktopLayout,
   detectPlatform,
   detectWindowsArch,
   downloadOption,
@@ -141,15 +143,20 @@ const helpText = (version: string | null) =>
 
 const HELP: React.CSSProperties = { margin: 0, fontSize: "12px", lineHeight: "18px", fontWeight: 500, color: "#5B5349", whiteSpace: "normal" };
 
-/** The desktop layout (the popover) from this width; below it, the page as before. */
-const DESKTOP_QUERY = "(min-width: 1024px)";
+/** The desktop layout (the popover): from this width, or on a computer (a
+ *  hovering mouse or trackpad on a desktop system) at any width, so browser
+ *  zoom, display scaling or a smaller window never bring back the old line
+ *  and links (desktopLayout). Phones and tablets below it: the page as before. */
+const WIDE_QUERY = "(min-width: 1024px)";
+const FINE_QUERY = "(hover: hover) and (pointer: fine)";
 const subscribeDesktop = (cb: () => void) => {
-  const mq = window.matchMedia?.(DESKTOP_QUERY);
-  mq?.addEventListener?.("change", cb);
-  return () => mq?.removeEventListener?.("change", cb);
+  const mqs = [WIDE_QUERY, FINE_QUERY].map((q) => window.matchMedia?.(q));
+  mqs.forEach((mq) => mq?.addEventListener?.("change", cb));
+  return () => mqs.forEach((mq) => mq?.removeEventListener?.("change", cb));
 };
-const isDesktopWidth = () => !!window.matchMedia?.(DESKTOP_QUERY).matches;
-const useDesktopWidth = () => useSyncExternalStore(subscribeDesktop, isDesktopWidth, () => false);
+const matches = (q: string) => !!window.matchMedia?.(q).matches;
+const isDesktopLayout = () => desktopLayout(matches(WIDE_QUERY), matches(FINE_QUERY), clientPlatform());
+const useDesktopLayout = () => useSyncExternalStore(subscribeDesktop, isDesktopLayout, () => false);
 
 interface Props {
   /** The replaced button's style, without a width (the grid sets it). */
@@ -183,7 +190,7 @@ export const DownloadButton: React.FC<Props> = ({ btnStyle, stack, compact = fal
   const listId = useId();
   const whyId = useId();
   const helpId = useId();
-  const desktop = useDesktopWidth();
+  const desktop = useDesktopLayout();
   const option = downloadOption(platform, DOWNLOAD_LINKS, arch);
   const rows = platformList(DOWNLOAD_LINKS, arch);
   const win = option?.id === "windows";
@@ -424,7 +431,7 @@ const PANEL_ITEM = {
 } as React.CSSProperties;
 
 /**
- * Desktop (1024px and wider): "Download the app" opens one panel under it,
+ * Desktop (1024px and wider, or a computer at any width): "Download the app" opens one panel under it,
  * anchored, centred on the button and kept on screen (anchoredPanel.ts), in
  * the panels' card with the button's hairline lavender border. It closes on
  * Escape (focus back on the button), a click outside or on the button, with a

@@ -66,6 +66,17 @@ export function detectPlatform(nav: NavLike): Platform {
   return "unknown";
 }
 
+/** The landing's desktop download layout (the two buttons, everything else
+ *  in the panel): 1024px and wider, as before, or a computer at any width.
+ *  The width alone missed computers whose CSS width is under 1024px: browser
+ *  zoom (1024px at 110% is 931px), Windows display scaling (1366px at 150%
+ *  is 910px) or a window that is not maximised. A computer here is a desktop
+ *  system (not iPhone, iPad or Android) whose main pointer is a mouse or
+ *  trackpad that can hover; phones and tablets keep the layout below 1024px. */
+export function desktopLayout(wide: boolean, finePointer: boolean, platform: Platform): boolean {
+  return wide || (finePointer && (platform === "windows" || platform === "mac" || platform === "linux" || platform === "chromeos"));
+}
+
 /** ARM64 when the browser reports an ARM CPU, x64 otherwise (D8). */
 export function pickArch(architecture: string | null | undefined): WindowsArch {
   return architecture === "arm" ? "arm64" : "x64";
