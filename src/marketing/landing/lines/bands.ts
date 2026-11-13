@@ -9,6 +9,11 @@
 // 2.6x), then 1.45x, body 1x, travelling dash 0.5x, filament 0.16x, dashed
 // filament 0.08x on lines over 14px. Pulse 28.5 s, flow loop 18 s. Backing
 // store = size x devicePixelRatio (max 2; 1 on low).
+//
+// Performance (2026-11-13): each line's path is built once (Path2D) and
+// stroked by every pass, instead of point by point for each of its ~10
+// passes. A Band can draw a share of its lines (setShare, adaptive quality in
+// motion/bands.ts). Nothing drawn changes.
 
 const TAU = Math.PI * 2,
   LOOP = 18,
@@ -74,12 +79,18 @@ class Base<O extends BandLineOptions, Ln extends BaseLine> {
   }
 
   protected line(l: BaseLine, pts: Pt[], t: number) {
-    const c = this.ctx,
-      C = COL[l.hue],
+    const C = COL[l.hue],
       low = this.o.q === "low",
       p0 = pts[0],
       p1 = pts[pts.length - 1];
-    const pass = (wm: number, am: number, dash: boolean) => {
+    // The line's path, built once and stroked by every pass (2026-11-13:
+    // it was rebuilt point by point for each of the ~10 passes).
+    let path: Path2D | null = null;
+    if (typeof Path2D === "function") {
+      path = new Path2D();
+      pts.forEach((p, i) => (i ? path!.lineTo(p[0], p[1]) : path!.moveTo(p[0], p[1])));
+    }
+    const stroke = (c: CanvasRenderingContext2D, wm: number, am: number, dash: boolean) => {
       const a = Math.min(1, l.a * am * this.pulse(l, t) * this.o.alpha),
         g = c.createLinearGradient(p0[0], p0[1], p1[0], p1[1]);
       g.addColorStop(0, "rgba(" + C[2] + ",0)");
@@ -95,10 +106,15 @@ class Base<O extends BandLineOptions, Ln extends BaseLine> {
         c.setLineDash([L, this.w * 0.14]);
         c.lineDashOffset = -(((t / LOOP) * this.w * 3.4 * l.sp) % (this.w * 0.24));
       } else c.setLineDash([]);
-      c.beginPath();
-      pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])));
-      c.stroke();
+      if (path) c.stroke(path);
+      else {
+        c.beginPath();
+        pts.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1])));
+        c.stroke();
+      }
     };
+    const c = this.ctx,
+      pass = (wm: number, am: number, dash: boolean) => stroke(c, wm, am, dash);
     if (!low) {
       pass(9, 0.028, false);
       pass(6.6, 0.045, false);
@@ -165,6 +181,9 @@ const FADE = 0.3;
 
 export class Band extends Base<BandOptions, BandLine> {
   private dprMq: MediaQueryList | null = null;
+  /** Lines drawn, in order (adaptive quality may draw fewer; see setShare). */
+  private order: number[] = [];
+  private share = 1;
   private onDpr = () => {
     this.armDpr();
     this.resize();
@@ -216,6 +235,15 @@ export class Band extends Base<BandOptions, BandLine> {
     c.restore();
   }
 
+  /**
+   * Adaptive quality: draw this share of the lines (1 = all). A device that
+   * can't keep up draws fewer, dropping them in a fixed, spread-out order so
+   * the band keeps its shape, colours, glow and Tio; never below half.
+   */
+  setShare(share: number) {
+    this.share = Math.max(0.5, Math.min(1, share));
+  }
+
   resize() {
     if (!this.size()) return;
     const r = rng(this.o.seed),
@@ -236,6 +264,11 @@ export class Band extends Base<BandOptions, BandLine> {
         lag: r() * 0.2,
       };
     });
+    // Which lines go first when fewer are drawn: a fixed stride through them,
+    // so the ones that stay are spread over the band's height.
+    const n = this.L.length;
+    this.order = Array.from({ length: n }, (_, i) => (i * 7) % n);
+    if (new Set(this.order).size !== n) this.order = Array.from({ length: n }, (_, i) => i);
   }
 
   draw(p: number, t: number) {
@@ -257,7 +290,11 @@ export class Band extends Base<BandOptions, BandLine> {
     c.lineJoin = "round";
     const maxW = Math.max(...this.L.map((q) => q.w)),
       amp = Math.min(maxW * (W < 640 ? 2 : 2.6), H * 0.16);
-    for (const l of this.L) {
+    // Adaptive quality: the lines left out, if any (the original order is kept for the rest).
+    const skip = this.share < 1 ? new Set(this.order.slice(Math.round(this.L.length * this.share))) : null;
+    for (let li = 0; li < this.L.length; li++) {
+      if (skip?.has(li)) continue;
+      const l = this.L[li];
       const r = ss((p - l.lag * 0.6) / (1 - l.lag * 0.6));
       if (r <= 0.003) continue;
       const pts: Pt[] = [],
