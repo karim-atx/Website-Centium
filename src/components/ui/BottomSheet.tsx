@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronLeft } from "lucide-react";
 import { linePx, textPx } from "../../theme/textSize";
@@ -8,7 +8,8 @@ import { t } from "../../i18n/core";
 import { trapTab } from "./focusTrap";
 import { useIsWeb } from "../web/useWebLayout";
 import { WEB_SHEET_CSS, webSheetPanelStyle } from "../web/webSheet";
-import { pickTioState, rememberTioState, type TioState, type TioViewport } from "./tioRotation";
+import { pickFittingTioState, rememberTioState, tioStorageKind, TIO_STATES, type TioState, type TioViewport } from "./tioRotation";
+import { publishTioDebug, subscribeTioDebug, tioDebugFor, tioDebugOn, tioDebugText, type TioDebugInfo } from "./tioDebug";
 import { cachedTioEligibility, measureMobileSheet, rememberTioEligibility, type MobileChrome } from "./tioEligibility";
 import { mobilePoseFits, tioEligible } from "./tioPoseModel";
 import { MobileTioPose, WebTioPose } from "./TioPose";
@@ -204,38 +205,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
     if (picked.current) return;
     picked.current = true;
     const p = last.current;
-    if (p.tio === false || (web && p.webCentred)) return;
-    const panel = panelRef.current;
-    if (!panel) return;
-    const id = p.tioId ?? p.title;
-    let eligible: boolean;
-    if (!web) {
-      eligible = tioEligible(panel.getBoundingClientRect().height, p.fillHeight);
-      rememberTioEligibility(id, eligible);
-    } else {
-      const known = cachedTioEligibility(id);
-      if (known !== undefined) eligible = known;
-      else {
-        const body = panel.querySelector<HTMLElement>(":scope > [data-sheet-body]");
-        const foot = panel.querySelector<HTMLElement>(":scope > [data-sheet-footer]");
-        eligible = tioEligible(measureMobileSheet(body, foot, mobileChromeOf(p)), p.fillHeight);
-        rememberTioEligibility(id, eligible);
-      }
-    }
-    if (!eligible) return;
     const viewport: TioViewport = web ? "web" : "mobile";
-    const state = pickTioState(viewport);
-    // Decision 5 (#142): on a short phone a pose that would reach above the
-    // safe-area top (under the status bar) is not shown, and the rotation is
-    // not advanced. The resting top is the wrapper's offsetTop, which ignores
-    // the opening slide's transform.
-    if (!web) {
-      const wrap = panel.parentElement;
-      if (wrap && !mobilePoseFits(state, wrap.offsetTop, safeAreaTop())) return;
-    }
-    rememberTioState(viewport, state);
-    setTio({ viewport, state });
-  }, [open, web]);
+    const debug = tioDebugOn();
+    const decision = decideTio(p, viewport, panelRef.current);
+    if (debug) publishTioDebug(sheetId, { ...decision.info, storage: tioStorageKind() });
+    if (decision.state === null) return;
+    rememberTioState(viewport, decision.state);
+    setTio({ viewport, state: decision.state });
+  }, [open, web, sheetId]);
+  // ?tioDebug=1: what this open decided, shown as a small readout.
+  const tioDbg = useSyncExternalStore(subscribeTioDebug, () => tioDebugFor(sheetId), () => null);
+  useEffect(() => () => publishTioDebug(sheetId, null), [sheetId]);
   const closeRef = useRef(onClose);
   useEffect(() => {
     closeRef.current = onClose;
@@ -291,8 +271,93 @@ export const BottomSheet: React.FC<BottomSheetProps> = (props) => {
   if (!open && !closing) return null;
   // A Tio picked for the other viewport (the window crossed 1024 while open) is not shown.
   const tioState = tio && tio.viewport === (web ? "web" : "mobile") ? tio.state : null;
-  return <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} tioState={tioState} />;
+  return (
+    <>
+      <SheetFrame {...(open ? props : last.current)} leaving={!open} panelRef={panelRef} tioState={tioState} />
+      {open && tioDbg && tioDebugOn() && createPortal(<TioDebugReadout info={tioDbg} />, document.body)}
+    </>
+  );
 };
+
+/** ?tioDebug=1 only: the open's Tio decision, top left, above everything, never taking a tap. */
+const TioDebugReadout: React.FC<{ info: TioDebugInfo }> = ({ info }) => (
+  <pre
+    data-tio-debug=""
+    aria-hidden
+    style={{
+      position: "fixed",
+      top: "calc(env(safe-area-inset-top, 0px) + 4px)",
+      left: 4,
+      zIndex: 2147483647,
+      margin: 0,
+      maxWidth: "calc(100vw - 8px)",
+      padding: "4px 6px",
+      borderRadius: 6,
+      background: "rgba(0,0,0,0.78)",
+      color: "#fff",
+      font: "10px/1.35 ui-monospace, Menlo, monospace",
+      whiteSpace: "pre-wrap",
+      pointerEvents: "none",
+    }}
+  >
+    {tioDebugText(info)}
+  </pre>
+);
+
+/**
+ * RULE B2 / B3 and decision 5 for one open: whether Tio shows, and which state.
+ * Eligibility: the mobile sheet's height (the rendered panel on a phone; on
+ * the website the phone's result, or the content measured offscreen at 430).
+ * Decision 5 (#142): never under the status bar. Only the states whose pose
+ * has room above the sheet's resting top (the wrapper's offsetTop, which
+ * ignores the opening slide) and below the safe-area top are in the pool, and
+ * the pick is among those. Safari fix: before, a random pose that didn't fit
+ * hid Tio on that open, and on Safari's shorter page most poses never fit.
+ * When none fits, no Tio and the rotation does not advance (state null).
+ */
+function decideTio(p: BottomSheetProps, viewport: TioViewport, panel: HTMLDivElement | null): { state: TioState | null; info: TioDebugInfo } {
+  const info: TioDebugInfo = { viewport, height: null, measured: "-", eligible: null, safeTop: null, sheetTop: null, fitting: [], pose: null, storage: "localStorage", reason: "" };
+  const no = (reason: string) => ({ state: null, info: { ...info, reason } });
+  if (p.tio === false) return no("this popup has Tio off (a dialog)");
+  if (viewport === "web" && p.webCentred) return no("a centred popup on the website");
+  if (!panel) return no("no sheet panel");
+  const id = p.tioId ?? p.title;
+  let eligible: boolean;
+  if (viewport === "mobile") {
+    info.height = panel.getBoundingClientRect().height;
+    info.measured = "panel";
+    eligible = tioEligible(info.height, p.fillHeight);
+    rememberTioEligibility(id, eligible);
+  } else {
+    const known = cachedTioEligibility(id);
+    if (known !== undefined) {
+      eligible = known;
+      info.measured = "cached";
+    } else {
+      const body = panel.querySelector<HTMLElement>(":scope > [data-sheet-body]");
+      const foot = panel.querySelector<HTMLElement>(":scope > [data-sheet-footer]");
+      info.height = measureMobileSheet(body, foot, mobileChromeOf(p));
+      info.measured = "offscreen";
+      eligible = tioEligible(info.height, p.fillHeight);
+      rememberTioEligibility(id, eligible);
+    }
+  }
+  info.eligible = eligible;
+  if (!eligible) return no(p.fillHeight ? "a full-height sheet (RULE B3)" : "taller than 668 on the phone (RULE B3)");
+  let fits: (s: TioState) => boolean = () => true;
+  if (viewport === "mobile") {
+    const wrap = panel.parentElement;
+    const sheetTop = wrap ? wrap.offsetTop : panel.getBoundingClientRect().top;
+    const safeTop = safeAreaTop();
+    info.sheetTop = sheetTop;
+    info.safeTop = safeTop;
+    fits = (s) => mobilePoseFits(s, sheetTop, safeTop);
+  }
+  info.fitting = TIO_STATES[viewport].filter((s) => fits(s));
+  const state = pickFittingTioState(viewport, fits);
+  if (state === null) return no("no pose has room above the sheet (under the status bar); rotation not advanced");
+  return { state, info: { ...info, pose: state, reason: state === "none" ? "NONE picked (the rotation's empty turn)" : "shown" } };
+}
 
 /** env(safe-area-inset-top) in px (0 in a browser; the notch / Dynamic Island in the app). */
 function safeAreaTop(): number {
