@@ -135,6 +135,9 @@ export class Tio implements BandHooks {
       });
       const png = url(name, "png");
       if (png) img.src = png;
+      // Decoded ahead (2026-11-13): the band is still 1.2 to 2.2 screens away,
+      // so the first frame that shows him never waits on a decode mid-scroll.
+      img.decode?.().catch(() => {});
     });
   }
 

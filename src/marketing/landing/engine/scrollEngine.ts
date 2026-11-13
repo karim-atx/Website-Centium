@@ -11,7 +11,8 @@
 //   whenever the document changes size (a ResizeObserver on <body>, 90 ms
 //   debounce) and 250 ms after resize and pageshow, so no section keeps
 //   geometry from before late layout. The exceptions are the chapter marks
-//   and the bands, which read their live position every pass (F6, F8).
+//   and the bands, which read their live position every pass (F6, F8); the
+//   bands read theirs in read(), once per frame before any section writes.
 // - Every story state is a pure function of scroll progress; sections write
 //   transforms and opacity only (plus canvases).
 // - Reduced motion: no loop. A scroll schedules one frame that runs the
@@ -35,6 +36,9 @@ export interface EngineCtx {
 export interface EngineSection {
   /** Read layout. Runs on start, on fonts ready and on every engine.measure(). */
   measure?(ctx: EngineCtx): void;
+  /** Read live positions (2026-11-13): once per frame, before any section
+   *  writes, so the reads never force a layout (the bands, F6). */
+  read?(ctx: EngineCtx): void;
   /** Apply the state for scroll position y. Pure function of y; writes only. */
   scroll?(y: number, ctx: EngineCtx): void;
   /** Time-based drawing (line flow), t in seconds; 0 for the reduced-motion still. */
@@ -148,6 +152,7 @@ export class ScrollEngine {
     if (this.raf || this.dead) return;
     this.raf = requestAnimationFrame(() => {
       this.raf = 0;
+      this.read();
       this.runScroll();
       this.redraw();
     });
@@ -165,11 +170,17 @@ export class ScrollEngine {
     for (const s of this.sections) s.tick?.(0, this.ctx);
   }
 
+  /** Every section's per-frame read, before any of this frame's writes. */
+  private read() {
+    for (const s of this.sections) s.read?.(this.ctx);
+  }
+
   private loop() {
     const frame = () => {
       if (this.dead) return;
       const t = (performance.now() - this.ctx.t0) / 1000;
       if (!document.hidden) {
+        this.read();
         const y = window.scrollY;
         if (y !== this.lastY || this.dirty) this.runScroll();
         for (const s of this.sections) s.tick?.(t, this.ctx);
