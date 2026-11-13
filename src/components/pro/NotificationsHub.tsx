@@ -460,7 +460,7 @@ export const NotificationsHub: React.FC<{
               </button>
             </div>
           ) : (
-          <div className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
+          <div data-tz-wrap="" className="flex items-center shrink-0" style={{ gap: 6, marginBlock: "-4px 6px", marginInline: "-10px 0" }}>
             <button type="button" onClick={p.onClose} aria-label={t("Back")} className="market-focus" style={{ width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", flex: "none", background: "none", border: 0, padding: 0, borderRadius: 12, color: m.ink, cursor: "pointer" }}>
               <ChevronLeft size={22} strokeWidth={2.2} aria-hidden />
             </button>

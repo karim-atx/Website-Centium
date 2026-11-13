@@ -143,7 +143,7 @@ function PersonalMore() {
             </span>
           </button>
 
-          <div className={tiles.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 7 }}>
+          <div data-tz-stack="" className={tiles.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 7 }}>
             {tiles.map((tile) => (
               <button
                 key={tile.label}

@@ -34,7 +34,7 @@ export const ColorThemePicker: React.FC = () => {
   // Round G4: the Premium row follows (nothing while the switch is off).
   return (
     <>
-      <div role="radiogroup" aria-label={t("Color theme")} className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
+      <div role="radiogroup" data-tz-fixed="" aria-label={t("Color theme")} className="flex" style={{ columnGap: "clamp(4px, calc((100% - 230px) / 4), 15px)" }}>
         {COLOR_THEMES.map((theme) => {
           const selected = colorTheme === theme.value;
           const [left, right] = theme.value === "centium" ? CENTIUM_SWATCH[dark ? "dark" : "light"] : [theme.primary, theme.secondary];
@@ -97,7 +97,7 @@ const PremiumThemes: React.FC<{ halves: string }> = ({ halves }) => {
         {t("Premium themes")}
         {anyLocked && <PremiumLabel />}
       </p>
-      <div role="radiogroup" aria-label={t("Premium themes")} className="flex gap-2">
+      <div role="radiogroup" data-tz-fixed="" aria-label={t("Premium themes")} className="flex gap-2">
         {shown.map(({ th, access }) => {
           const selected = colorTheme === th.value;
           const locked = access === "locked";

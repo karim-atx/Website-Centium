@@ -120,7 +120,7 @@ export function Overview() {
   if (m.loading) {
     return (
       <div role="status" aria-busy="true" aria-label={t("Loading your marketplace")} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
+        <div data-tz-fixed="" style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
           <MarketSkeleton radius={20} rows={2} height={96} label={t("Loading")} />
           <MarketSkeleton radius={20} rows={1} height={96} label={t("Loading")} />
         </div>
@@ -153,7 +153,7 @@ export function Overview() {
       <style>{FOCUS_CSS}</style>
       <MarketOffline loaded />
       <div>
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
+        <div data-tz-fixed="" style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
           <RedeemVoucherTile onPress={() => navigate("/app/business/redeem")} />
           <ListingToggleTile variant="biz" on={business.active} disabled={!canSwitch} onChange={(on) => (on ? void sw.turnOn() : sw.requestOff())} />
         </div>

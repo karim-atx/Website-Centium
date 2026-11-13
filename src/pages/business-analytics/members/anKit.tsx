@@ -130,7 +130,7 @@ export const AnLead: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 /** AN4-025 L2 · count + order line. */
 export const AnCountLine: React.FC<{ count: string; order: string }> = ({ count, order }) => (
-  <div className="flex items-baseline justify-between gap-[8px] pt-[6px]">
+  <div data-tz-wrap="" className="flex items-baseline justify-between gap-[8px] pt-[6px]">
     <span className="text-[12px] leading-[16px] font-extrabold text-charcoal">{count}</span>
     <span className="text-[10.5px] leading-[14px] text-charcoal-faint whitespace-nowrap">{order}</span>
   </div>

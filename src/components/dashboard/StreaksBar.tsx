@@ -201,7 +201,7 @@ export const StreaksBar: React.FC<{ web?: { zoom: number } }> = ({ web }) => {
             </span>
           </div>
 
-          <div className="flex items-start gap-px mt-[11px] pt-[11px] border-t border-white/[0.24]">
+          <div data-tz-fixed="" className="flex items-start gap-px mt-[11px] pt-[11px] border-t border-white/[0.24]">
             {days.map((d, i) => (
               <div key={d.date} className="flex flex-col items-center gap-1.5 flex-1">
                 <span className={`text-[8px] tracking-[.1em] ${d.isToday ? "font-extrabold text-white" : "font-bold text-white/[0.62] dark:text-white"}`}>

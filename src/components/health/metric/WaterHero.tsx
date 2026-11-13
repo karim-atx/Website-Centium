@@ -214,7 +214,7 @@ export const WaterHero: React.FC<{
     <div ref={ref}>
       <MetricHero metric="water" pattern={0} padding="16px" loading={loading} ariaLabel={ariaLabel} style={{ marginTop: 0 }}>
         <div className="flex justify-center" style={{ gap: 16 }}>
-          <div className="relative shrink-0" style={{ width: 92, height: 161 }}>
+          <div data-tz-fixed="" className="relative shrink-0" style={{ width: 92, height: 161 }}>
             <span
               className="absolute whitespace-nowrap"
               style={{ insetInlineEnd: "calc(100% + 2px)", top: 43.5, fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, color: ink }}

@@ -493,7 +493,7 @@ function ViewToggle({ m, view, onChange }: { m: MarketPalette; view: "list" | "w
 /** bizWeek (lines 385–391): 7 tiles, flex 1, gap 6, 62 tall, radius 12; selected --segactive with --onfill ink, the fill lifted to 4.5:1 under white (lead decision, R1 polish). */
 function WeekStrip({ m, days, selected, today, onPick }: { m: MarketPalette; days: ReturnType<typeof weekStrip>; selected: string | null; today: string; onPick: (day: string) => void }) {
   return (
-    <div role="group" aria-label={t("Days of the week")} className="flex" style={{ gap: 6 }}>
+    <div role="group" data-tz-fixed="" aria-label={t("Days of the week")} className="flex" style={{ gap: 6 }}>
       {days.map((d) => {
         const on = d.day === selected;
         const ink = on ? m.onfill : m.ink;
