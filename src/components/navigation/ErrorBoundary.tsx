@@ -1,8 +1,8 @@
 import React from "react";
-import { AlertCircle, CloudOff } from "lucide-react";
 import { textPx } from "../../theme/textSize";
 import { ERROR_PANEL_COPY, errorPanelKind, isChunkLoadError } from "./errorPanel";
 import { t } from "../../i18n/core";
+import { TioStateIcon } from "../ui/TioStateIcon";
 
 /**
  * Round D O1: a render error used to blank the whole app, and offline the
@@ -10,8 +10,9 @@ import { t } from "../../i18n/core";
  * screen, the app pages). main.tsx wraps the app in one (`fullScreen`) and
  * Layout wraps each route area in another, so a broken page keeps the navs.
  *
- * The panel is D-S19, in the empty-state card style: CloudOff, "This needs a
- * connection", Retry; a real crash while online says "Something went wrong".
+ * The panel is D-S19, in the empty-state card style: Tio offline (A1, was
+ * CloudOff), "This needs a connection", Retry; a real crash while online says
+ * "Something went wrong" with Tio error (A2, was AlertCircle).
  * Theme token classes only, because the root one sits outside AppContext.
  *
  * RETRY re-mounts the children. The app pages loader clears its failed
@@ -100,12 +101,9 @@ const ErrorPanel: React.FC<{ error: unknown; onRetry: () => void; fullScreen?: b
   const online = useOnlineFlag();
   const kind = errorPanelKind(error, online);
   const copy = ERROR_PANEL_COPY[kind];
-  const Icon = kind === "connection" ? CloudOff : AlertCircle;
   const card = (
     <div role="alert" className="rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-6 flex flex-col items-center text-center">
-      <span className="flex items-center justify-center bg-primary-pale text-primary" style={{ width: 56, height: 56, borderRadius: 16 }}>
-        <Icon size={26} strokeWidth={1.5} aria-hidden />
-      </span>
+      <TioStateIcon variant={kind === "connection" ? "offline" : "error"} tile={56} radius={16} className="bg-primary-pale text-primary" />
       <p className="text-charcoal" style={{ fontSize: textPx(15), fontWeight: 700, marginTop: 12 }}>{t(copy.title)}</p>
       {copy.line && (
         <p className="text-charcoal-soft" style={{ fontSize: textPx(12.5), fontWeight: 500, marginTop: 4, lineHeight: 1.6, maxWidth: 260 }}>{t(copy.line)}</p>

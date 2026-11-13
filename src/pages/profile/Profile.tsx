@@ -633,8 +633,8 @@ function ClientProfile() {
 
       {/* QA 12.0 Safety & content (Recovery-sensitive experience, copy as
           given), now collapsible and collapsed by default (C5), holding one
-          Recovery card with Cycle tracking (moved from Settings, C6), then
-          Advanced health monitoring. Customers only. */}
+          card: Recovery, Cycle tracking (moved from Settings, C6) and, FX-02,
+          Advanced health monitoring behind the same divider. Customers only. */}
       {user.accountType === "customer" && (
         <section ref={safetyRef} className="mb-6">
           <button
@@ -723,8 +723,8 @@ function ClientProfile() {
                 <div className="mt-4">
                   <CycleTrackingRow />
                 </div>
+                <HealthChecksSetting variant="row" />
               </Card>
-              <HealthChecksSetting />
             </div>
           )}
         </section>

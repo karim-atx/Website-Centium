@@ -1358,8 +1358,10 @@ export const AddFoodSheet: React.FC<{
           </div>
 
           {/* The list's own scroll region, starting under the filter chips,
-              so rows never travel up behind the pinned block or the band. */}
-          <div className="flex flex-col no-scrollbar" style={web ? { gap: 6, margin: "0 -20px", padding: "12px 20px 0" } : { gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
+              so rows never travel up behind the pinned block or the band.
+              data-mobile-max-height: the mobile cap, so the website's RULE B3
+              measurement lays this list out as the phone does (Tio handover). */}
+          <div data-mobile-max-height="424" className="flex flex-col no-scrollbar" style={web ? { gap: 6, margin: "0 -20px", padding: "12px 20px 0" } : { gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
             {!query.trim() &&
               (suggestions.length === 0 ? (
                 <p className={web ? "text-center text-charcoal-faint py-8" : "text-center text-sm text-charcoal-faint py-8"} style={web ? { fontSize: 15, lineHeight: "24px" } : undefined}>{t("Start typing to search foods")}</p>

@@ -2,6 +2,7 @@ import React, { useId, useState } from "react";
 import { HealthScanIcon } from "./HealthScanIcon";
 import { Toggle } from "../ui/Toggle";
 import { SelectableBox } from "../ui/SelectableBox";
+import { BizRow } from "../business-more/kit";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { TurnOffTrackingPopup } from "../cycle/TurnOffTrackingPopup";
@@ -20,7 +21,11 @@ import { t } from "../../i18n/core";
 //
 // className goes on the switch box, so a caller's spacing above the row (the
 // web Profile's 12 above its divider) is part of what a tap reaches.
-export const CycleTrackingRow: React.FC<{ className?: string }> = ({ className }) => {
+//
+// FX-02: `pane` draws it as a row of the web More › Safety & content group
+// (between Recovery and Advanced health monitoring); the error line sits under
+// the row, never inside the switch.
+export const CycleTrackingRow: React.FC<{ className?: string; pane?: boolean }> = ({ className, pane }) => {
   const { cycleSettings, cycleSettingsLoaded, cycleOffered, setCycleTracking } = useApp();
   const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
   const [busy, setBusy] = useState(false);
@@ -42,6 +47,26 @@ export const CycleTrackingRow: React.FC<{ className?: string }> = ({ className }
     setBusy(false);
     if (!r.ok) setError(r.message ?? "Couldn't save that. Try again.");
   };
+
+  const errorLine = error && (
+    <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{t(error)}</p>
+  );
+  const popup = <TurnOffTrackingPopup open={confirmOff} onClose={() => setConfirmOff(false)} onError={(m) => setError(m)} />;
+
+  if (pane) {
+    return (
+      <>
+        <BizRow
+          icon={ScanIcon}
+          title={t("Cycle tracking")}
+          desc={cycleOn ? t(TRACKER_OFF_KEEPS_DATA) : t("Switch it on to start tracking.")}
+          toggle={{ checked: cycleOn, onChange: (v) => void toggle(v), disabled: busy || !cycleSettingsLoaded, label: t("Cycle tracking") }}
+        />
+        {errorLine && <div style={{ paddingInlineStart: 50, paddingBottom: 8 }}>{errorLine}</div>}
+        {popup}
+      </>
+    );
+  }
 
   return (
     <div>
@@ -75,10 +100,11 @@ export const CycleTrackingRow: React.FC<{ className?: string }> = ({ className }
           {cycleOn ? t(TRACKER_OFF_KEEPS_DATA) : t("Switch it on to start tracking.")}
         </p>
       </SelectableBox>
-      {error && (
-        <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{t(error)}</p>
-      )}
-      <TurnOffTrackingPopup open={confirmOff} onClose={() => setConfirmOff(false)} onError={(m) => setError(m)} />
+      {errorLine}
+      {popup}
     </div>
   );
 };
+
+/** The pane row's glyph: HealthScanIcon at its own 20 (the icon is unchanged). */
+const ScanIcon: React.FC<{ className?: string }> = ({ className }) => <HealthScanIcon className={className} />;

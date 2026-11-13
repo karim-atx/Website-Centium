@@ -4,6 +4,7 @@ import { ChevronRight, Minus, Plus, type LucideIcon } from "lucide-react";
 import { DetailLabel } from "../marketplace/venueParts";
 import { CentredPopup } from "../../components/ui/CentredPopup";
 import { PopupButtons } from "../../components/cycle/cycleUi";
+import { TioStateIcon, type TioHead } from "../../components/ui/TioStateIcon";
 import { t, tx } from "../../i18n/core";
 
 // V6-49 · "Designed by us": the customer side of stores and appointments, in
@@ -103,9 +104,20 @@ export const ClientRow: React.FC<ClientRowProps> = ({ icon, title, sub, value, p
 };
 
 /** Foundations › Empty state, as Explore draws it (MO1.4.3). */
-export const ClientEmpty: React.FC<{ icon: LucideIcon; title: string; line: string; children?: React.ReactNode }> = ({ icon, title, line, children }) => (
+export const ClientEmpty: React.FC<{
+  icon: LucideIcon;
+  title: string;
+  line: string;
+  children?: React.ReactNode;
+  /** Handover A3: Tio's head beside the glyph in the same 56 r18 tile, on an action state only (C-AP.2-EM2: SAD). */
+  tio?: TioHead;
+}> = ({ icon, title, line, children, tio }) => (
   <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-10 pb-4">
-    <Tile icon={icon} size={56} />
+    {tio ? (
+      <TioStateIcon variant="glyph" head={tio} icon={icon} strokeWidth={1.75} tile={56} radius={18} className="bg-primary-pale text-th-7d67d9 dark:text-primary-accent" />
+    ) : (
+      <Tile icon={icon} size={56} />
+    )}
     <p className="m-0 text-[15px] font-bold text-charcoal">{title}</p>
     <p className="m-0 text-[12.5px] font-medium text-charcoal-faint leading-[1.55] max-w-[280px]">{line}</p>
     {children}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Award, CircleAlert, CircleCheck, Clock, Copy, Check, Gift, Share, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CentredPopup } from "../ui/CentredPopup";
+import { TioStateIcon } from "../ui/TioStateIcon";
 import { useIsWeb } from "../web/useWebLayout";
 import { useApp } from "../../context/AppContext";
 import {
@@ -259,7 +260,10 @@ export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void; colle
       titleSize={19}
       maxWidth={web ? 480 : undefined}
       className={web ? "!px-[22px] !pt-[22px] !pb-[20px]" : "!px-[18px] !pt-[22px] !pb-[18px]"}
-      icon={<Gift size={23} strokeWidth={1.75} />}
+      // Handover A3 (C-MO.5-EM5, README ANSWERS 3): Tio HAPPY with the gift
+      // in a 44 r14 tile (the CentredPopup tile's own fill and ink).
+      iconBare
+      icon={<TioStateIcon variant="glyph" head="happy" icon={Gift} strokeWidth={1.75} tile={44} radius={14} className="bg-primary-pale text-primary-accent" />}
     >
       <div className="text-start">
         {summary?.isAmbassador ? (

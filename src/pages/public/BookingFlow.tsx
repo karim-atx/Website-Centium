@@ -5,6 +5,8 @@ import { priceLabel, sessionLine } from "../../components/pro/profile/profileMod
 import { CtaButton } from "../../components/pro/profile/kit";
 import { clock12 } from "../../utils/time12";
 import { textPx } from "../../theme/textSize";
+import { TioStateIcon, type TioHead } from "../../components/ui/TioStateIcon";
+import type { LucideIcon } from "lucide-react";
 import {
   NOT_TAKING_BOOKINGS,
   WEEKDAY_LETTERS,
@@ -181,6 +183,7 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
     return (
       <StateBlock
         icon={<CalendarCheck size={26} strokeWidth={1.5} />}
+        tio={done.status === "booked" ? { head: "happy", icon: CalendarCheck, strokeWidth: 1.5 } : undefined}
         title={done.status === "booked" ? t("You're booked") : t("Request sent")}
         line={
           done.status === "booked"
@@ -384,13 +387,20 @@ export function BookingFlow({ professionalId, firstName, signedIn, returnPathFor
   );
 }
 
-/** Foundations › Empty state: 56 tile, 26 icon, 15 / 700, one line 12.5 / 500 faint, max 260. */
-function StateBlock({ icon, title, line }: { icon: React.ReactNode; title: string; line: string }) {
+/**
+ * Foundations › Empty state: 56 tile, 26 icon, 15 / 700, one line 12.5 / 500 faint, max 260.
+ * `tio` (handover A3, C-PU.3-SU1 "You're booked"): Tio's head with the glyph, in the same tile.
+ */
+function StateBlock({ icon, title, line, tio }: { icon: React.ReactNode; title: string; line: string; tio?: { head: TioHead; icon: LucideIcon; strokeWidth: number } }) {
   return (
     <div className="flex flex-col items-center text-center gap-2 px-4 py-8" role="status">
-      <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent" aria-hidden>
-        {icon}
-      </span>
+      {tio ? (
+        <TioStateIcon variant="glyph" head={tio.head} icon={tio.icon} strokeWidth={tio.strokeWidth} tile={56} radius={16} />
+      ) : (
+        <span className="w-14 h-14 rounded-2xl bg-th-f0edf9 dark:bg-primary/15 flex items-center justify-center text-th-7d67d9 dark:text-primary-accent" aria-hidden>
+          {icon}
+        </span>
+      )}
       <p className="text-[15px] font-bold text-charcoal">{title}</p>
       <p className="text-[12.5px] font-medium text-charcoal-faint leading-[1.55] max-w-[260px]">{line}</p>
     </div>

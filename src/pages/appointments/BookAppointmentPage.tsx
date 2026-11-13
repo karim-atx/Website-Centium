@@ -168,7 +168,7 @@ export default function BookAppointmentPage() {
 
       {d.pending || d.services.length === 0 ? (
         <>
-          <ClientEmpty icon={CalendarClock} title={t("No services to book yet")} line={t("When this place adds its services and free times, you can book them here.")} />
+          <ClientEmpty icon={CalendarClock} tio="sad" title={t("No services to book yet")} line={t("When this place adds its services and free times, you can book them here.")} />
           {d.pending && <InfoNote>{t("Booking appointments is coming soon.")}</InfoNote>}
         </>
       ) : (
