@@ -113,6 +113,21 @@ export default function HealthRecords() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Batch D GA: /app/health/medications (a medication reminder push) lands
+  // here on History with { focus: "medications" }; once the history has read
+  // (so the sections above it have their height), Medications is scrolled to
+  // the top, under the fixed header (its scroll margin). The state is then
+  // dropped so Back or a reload doesn't scroll again.
+  const focus = (location.state as { focus?: unknown } | null)?.focus;
+  useEffect(() => {
+    if (focus !== "medications" || tab !== "history" || !fresh) return;
+    const raf = requestAnimationFrame(() => {
+      document.getElementById("history-medications")?.scrollIntoView({ block: "start" });
+      navigate({ hash: "history" }, { replace: true, state: null });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [focus, tab, fresh, navigate]);
+
   const [query, setQuery] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [popupKey, setPopupKey] = useState<string | null>(null);

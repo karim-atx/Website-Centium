@@ -27,6 +27,7 @@ import { featureAvailable } from "./features";
 import { isNative, platform } from "./index";
 import { CentiumNative } from "./native";
 import type { ReceivedPush } from "./pushBannerModel";
+import { nativePushTarget } from "./nativePushTarget";
 import {
   failedStep,
   SAVE_TIMEOUT_MS,
@@ -157,11 +158,14 @@ function listen(): Promise<void> {
       failure = "refused";
       settle(null);
     });
-    // A tapped notification: its `url` (/app/calls/{id}, /app/messages?push=…,
-    // a reminder's link) goes to NativeOpenPath, which follows only /app paths.
+    // A tapped notification: its link goes to NativeOpenPath, which follows
+    // only /app paths. Batch D GA: chosen as the web service worker chooses it
+    // (nativePushTarget → notificationTarget): a message's messagePushId opens
+    // /app/messages?push=<id>, a call's callId /app/calls/<id>, anything else
+    // its `url` (a reminder's link).
     await PushNotifications.addListener("pushNotificationActionPerformed", ({ notification }) => {
-      const url = (notification.data as { url?: unknown } | undefined)?.url;
-      if (typeof url === "string") openPushLink(url);
+      const url = nativePushTarget(notification.data);
+      if (url) openPushLink(url);
     });
     // A push while Centium is open: the phone shows nothing (no
     // presentationOptions), so PushBanner does (pushBannerModel.ts).

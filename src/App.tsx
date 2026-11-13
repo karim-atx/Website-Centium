@@ -525,6 +525,8 @@ function AppRoutes() {
         <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/health/sources" element={<HealthSources />} />
         <Route path="/app/health/records" element={<HealthRecords />} />
+        {/* Batch D GA: a medication reminder push opens Health records on History, scrolled to Medications. */}
+        <Route path="/app/health/medications" element={<Navigate to="/app/health/records#history" replace state={{ focus: "medications" }} />} />
         <Route path="/app/health/care-plan" element={<CarePlan />} />
         {/* Round G3: the doctor summary (back to Health records while the Premium switch is off). */}
         <Route path="/app/health/doctor-summary" element={<DoctorSummaryPage />} />
