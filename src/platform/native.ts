@@ -104,6 +104,13 @@ export interface CentiumNativePlugin {
    */
   hapticsAllowed(): Promise<{ allowed: boolean; reduced: boolean }>;
 
+  /**
+   * The app icon's badge (App-Centium #43): iOS sets it (0–99; missing or
+   * negative clears it); Android resolves and does nothing. Missing on builds
+   * before #43 (rejects "not implemented").
+   */
+  setBadge(options: { count: number }): Promise<void>;
+
   /** The phone's notification settings for Centium (its channels, and the switch the person turned off). */
   openNotificationSettings(): Promise<void>;
 

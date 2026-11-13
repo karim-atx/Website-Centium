@@ -66,6 +66,23 @@ export async function nativeHapticsAllowed(): Promise<{ allowed: boolean; reduce
   }
 }
 
+/**
+ * The app icon's badge: the same number a push sets (push_badge_count, see
+ * badgeModel). A build without setBadge (before App #43) rejects "not
+ * implemented", which is ignored, as is any other failure: the badge is
+ * cosmetic and the next push resets it anyway. `force` re-sends an unchanged
+ * value (on resume a push may have set the badge since).
+ */
+let badgeShown: number | null = null;
+export function setAppBadge(count: number, force = false): void {
+  if (!isNative()) return;
+  if (!force && badgeShown === count) return;
+  badgeShown = count;
+  CentiumNative.setBadge({ count }).catch(() => {
+    badgeShown = null;
+  });
+}
+
 const SIGN_OUT_WAIT_MS = 2000;
 
 /**
@@ -75,6 +92,8 @@ const SIGN_OUT_WAIT_MS = 2000;
  */
 export async function nativeSignedOut(): Promise<void> {
   if (!isNative()) return;
+  // Nobody's unread count stays on the icon after sign-out.
+  setAppBadge(0, true);
   await Promise.race([
     CentiumNative.signedOut().catch((e: unknown) => {
       console.error("[native] Sign-out on the phone's side failed:", e);
