@@ -15,6 +15,7 @@ import { AgendaCardWeb, AgendaEmptyWeb, CalendarBodyWeb, CalendarTopBarWeb, Eyeb
 import { ClientTabsWeb } from "../../components/pro/web/ClientPageWeb";
 import { dayBefore } from "../../components/calendar/occurrences";
 import { saveRepeating } from "../../components/calendar/saveRepeating";
+import { alertRetryDraft, alertRetryTarget } from "../../components/calendar/repeatAlertRetry";
 import { normaliseLink } from "../../components/calendar/calendarTime";
 import { EVENT_SWATCHES } from "../../components/calendar/eventColour";
 import { useApp } from "../../context/AppContext";
@@ -368,12 +369,23 @@ export default function Calendar() {
     setSaving(true);
     setSaveError(null);
     if (series && repeats && scope) {
-      const r = await saveRepeating(me, series, editingOcc ?? series.date, scope, payload);
+      const occurrence = editingOcc ?? series.date;
+      const r = await saveRepeating(me, series, occurrence, scope, payload);
       const c = r.ok && placesChanged && scope === "all" ? await saveEventCapacity(series.id, places.value) : null;
       setSaving(false);
       if (!r.ok) return setSaveError(r.message ?? t("Couldn't save your changes. Try again."));
       if (c && !c.ok) return setSaveError(c.message);
       await data.reload();
+      if (r.alertMessage && r.event) {
+        // As the one-off path: the event saved and its alert didn't. The sheet
+        // stays open on the row that was saved, so Save retries the alert there.
+        const at = alertRetryTarget(series.id, occurrence, r.event);
+        setEditingId(at.id);
+        setEditingOcc(at.occurrence);
+        const saved = r.event;
+        setDraft((d) => alertRetryDraft(d, saved));
+        return setSaveError(r.alertMessage);
+      }
       return setComposeOpen(false);
     }
     const r = editingId ? await updateEvent(me, editingId, payload) : await createEvent(me, payload);

@@ -9,6 +9,7 @@ import {
 import { addDays, dayBefore, daysBetween } from "./occurrences";
 import type { RepeatScope } from "./RepeatScopePopup";
 import { EVENT_SWATCHES } from "./eventColour";
+import { keepAlertResult, type RepeatingSaveResult } from "./repeatAlertRetry";
 
 /**
  * Saves an edit to one occurrence of a repeating event, in the scope the
@@ -24,6 +25,10 @@ import { EVENT_SWATCHES } from "./eventColour";
  *   location, notes and all day, and never a new date; any other change
  *   (date, colour, link, alert, repeat) cancels that day and adds the edited
  *   event as a one-off instead, so nothing the person typed is dropped.
+ *
+ * When the event saved but its alert did not (writeAlert), the result carries
+ * `alertMessage` and the row that was saved, in every scope, so the sheet
+ * can say so and stay open on that row (repeatAlertRetry).
  */
 export async function saveRepeating(
   userId: string,
@@ -31,18 +36,18 @@ export async function saveRepeating(
   occurrence: string,
   scope: RepeatScope,
   draft: CalendarEventDraft
-): Promise<{ ok: boolean; message?: string }> {
+): Promise<RepeatingSaveResult<ClientCalendarEvent>> {
   if (scope === "all" || (scope === "following" && occurrence <= series.date)) {
     const date = addDays(series.date, daysBetween(occurrence, draft.date));
     const r = await updateEvent(userId, series.id, { ...draft, date });
-    return r.ok ? { ok: true } : r;
+    return keepAlertResult(r);
   }
 
   if (scope === "following") {
     const ended = await endSeries(userId, series.id, dayBefore(occurrence));
     if (!ended.ok) return ended;
     const r = await createEvent(userId, draft);
-    return r.ok ? { ok: true } : r;
+    return keepAlertResult(r);
   }
 
   const sameUrl = (series.url ?? "") === (draft.url ?? "");
@@ -74,5 +79,5 @@ export async function saveRepeating(
   const cancelled = await setOccurrence(series.id, occurrence, { cancelled: true });
   if (!cancelled.ok) return cancelled;
   const r = await createEvent(userId, { ...draft, repeat: "none", repeatUntil: null });
-  return r.ok ? { ok: true } : r;
+  return keepAlertResult(r);
 }
