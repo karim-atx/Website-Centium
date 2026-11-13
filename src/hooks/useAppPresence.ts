@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+import { App } from "@capacitor/app";
 import { supabase } from "../../lib/supabase/client";
-import { PRESENCE_INTERVAL_MS, presenceWanted } from "./presenceRule";
+import { isNative } from "../platform";
+import { PRESENCE_INTERVAL_MS, presenceErrorIgnorable, presenceSignal, presenceStep, type PresenceSignal, type PresenceState } from "./presenceRule";
 
 /**
  * "I'm looking at the app" (Round C Release 2, Database 20261221100000
@@ -10,47 +12,73 @@ import { PRESENCE_INTERVAL_MS, presenceWanted } from "./presenceRule";
  * That is how the duplicate system notification is avoided in every browser:
  * the service worker still shows every push it receives, as browsers require.
  *
- * NEVER IN THE BACKGROUND: hidden, blurred or closed stops the timer, and
- * the last stamp lapses on its own after 60 seconds. The server writes at
- * most once per 15 seconds per account, so the extra call on refocus is free.
- * Nothing is read back; a failed call only means a push may arrive as before.
+ * AWAY AT ONCE (Database 20261227080000 report_app_away()): hidden, blurred,
+ * closed (pagehide) or, in the phone app, paused stops the timer and tells
+ * the server straight away, which deletes the stamp, so a message sent next is
+ * pushed instead of being skipped for up to 60 seconds. Back in front
+ * (visible and focused, or the phone's resume) reports active at once and
+ * restarts the timer. Both calls are fire and forget (iOS suspends the web
+ * view within seconds of a pause), and their failures are silent: nothing is
+ * read back, and before the migration is live report_app_away answers
+ * PGRST202, which only means the stamp lapses after 60 s as before.
  */
-type Rpc = { rpc: (fn: string) => PromiseLike<{ error: { message: string } | null }> };
+type RpcError = { code?: string; message: string };
+type Rpc = { rpc: (fn: string) => PromiseLike<{ error: RpcError | null; status?: number }> };
+type PresenceFn = "report_app_active" | "report_app_away";
+
+function call(fn: PresenceFn): Promise<void> {
+  return Promise.resolve((supabase as unknown as Rpc).rpc(fn)).then(
+    ({ error, status }) => {
+      if (error && !presenceErrorIgnorable({ ...error, status })) console.warn(`[presence] ${fn}:`, error.message);
+    },
+    () => undefined
+  );
+}
+
+/**
+ * Sign-out: away before the session ends, so the account's stamp doesn't keep
+ * this person's message pushes quiet for a minute. Best effort, capped.
+ */
+export function reportAppAway(capMs = 1500): Promise<void> {
+  return Promise.race([call("report_app_away"), new Promise<void>((resolve) => setTimeout(resolve, capMs))]);
+}
 
 export function useAppPresence(userId: string | null): void {
   useEffect(() => {
     if (!userId) return;
     let timer: number | undefined;
+    let state: PresenceState = "unknown";
 
-    const report = () => {
-      void (supabase as unknown as Rpc).rpc("report_app_active").then(({ error }) => {
-        if (error) console.warn("[presence] report_app_active:", error.message);
-      });
-    };
     const stop = () => {
       if (timer !== undefined) window.clearInterval(timer);
       timer = undefined;
     };
-    const sync = () => {
-      if (presenceWanted(document.visibilityState, document.hasFocus())) {
-        if (timer === undefined) {
-          report();
-          timer = window.setInterval(report, PRESENCE_INTERVAL_MS);
-        }
-      } else stop();
+    const apply = (signal: PresenceSignal) => {
+      const step = presenceStep(state, signal);
+      state = step.next;
+      if (signal === "front" && timer === undefined) timer = window.setInterval(() => void call("report_app_active"), PRESENCE_INTERVAL_MS);
+      if (signal === "left") stop();
+      if (step.action === "active") void call("report_app_active");
+      else if (step.action === "away") void call("report_app_away");
     };
+    const sync = () => apply(presenceSignal(document.visibilityState, document.hasFocus()));
+    const left = () => apply("left");
 
     sync();
     document.addEventListener("visibilitychange", sync);
     window.addEventListener("focus", sync);
     window.addEventListener("blur", sync);
-    window.addEventListener("pagehide", stop);
+    window.addEventListener("pagehide", left);
+    // The phone app: pause and resume come first and surely (visibilitychange
+    // may arrive late, or not at all, once iOS suspends the web view).
+    const native = isNative() ? [App.addListener("pause", left), App.addListener("resume", () => apply("front"))] : [];
     return () => {
       stop();
       document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("focus", sync);
       window.removeEventListener("blur", sync);
-      window.removeEventListener("pagehide", stop);
+      window.removeEventListener("pagehide", left);
+      for (const h of native) void h.then((x) => x.remove());
     };
   }, [userId]);
 }

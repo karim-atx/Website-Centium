@@ -131,6 +131,7 @@ import { reportInstallOnce } from "../platform/installReport";
 import { sendPendingAppleLink } from "../services/auth/applePending";
 import { getSupabaseConfig } from "../../lib/supabase/config";
 import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
+import { reportAppAway } from "../hooks/useAppPresence";
 import { revokeThisPhoneOnSignOut, unlockFolderWithDevice } from "../services/journal/deviceUnlock";
 import type { DeviceOutcome } from "../services/journal/deviceUnlockModel";
 import type { UnlockPurpose } from "../platform/biometricsModel";
@@ -6921,6 +6922,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // The phone app's side (ROUND_J.md §1.4): widgets, shortcuts, a running
     // session. Best effort and capped at two seconds, like the line above.
     await nativeSignedOut();
+    // Away before the session ends (report_app_away), so this account's
+    // presence stamp doesn't keep its message pushes quiet for a minute.
+    // Best effort, capped; a missing function is ignored.
+    await reportAppAway();
 
     await signOutRemote(scope);
     // Cleared again, last: a writer outside the persisted cache (a loader
