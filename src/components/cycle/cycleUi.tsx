@@ -262,7 +262,7 @@ export const CycleFooter: React.FC<{ privacy?: boolean; className?: string }> = 
       {t(DISCLAIMER)}
     </p>
     <p className="text-center text-charcoal-faint" style={type(10, 14.5, 400, { marginTop: 4, padding: "0 8px" })}>
-      {DISCLAIMER_LONG}
+      {t(DISCLAIMER_LONG)}
     </p>
     <p className="text-center text-charcoal-soft" style={type(10.5, 15.8, 400, { marginTop: 10 })}>
       {t(HEALTH_DISCLAIMER)}

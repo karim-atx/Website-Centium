@@ -504,6 +504,12 @@ const cycle: Catalogue = {
   "Notifications are blocked for Centium in this browser. You can allow them again in your browser's site settings.": "الإشعارات محظورة لـ Centium في هذا المتصفح. يمكنك السماح بها مجددًا من إعدادات الموقع في متصفحك.", // note: health wording (contraception reminders)
   "Hides the reason on your lock screen. It just says you have a reminder.": "يخفي السبب على شاشة القفل. يقول فقط إن لديك تذكيرًا.", // note: health wording (neutral reminder detail: privacy)
   "Says what the reminder is for, so it's readable to anyone who sees your screen.": "يذكر الغرض من التذكير، فيمكن لأي شخص يرى شاشتك قراءته.", // note: health wording (detailed reminder detail: privacy)
+  // == Batch D GQ · the footer note, the empty states and the BBT help (app text, not clinical guidance) ==
+  "These dates are estimates based on what you've logged. Cycles vary, and a prediction is not a method of contraception or a pregnancy test.": "هذه التواريخ تقديرات مبنية على ما سجّلته. تختلف الدورات، والتوقّع ليس وسيلة لمنع الحمل ولا اختبار حمل.", // note: health wording (the long disclaimer under every cycle tab)
+  "There isn't enough logged yet to estimate your cycle. Log a period and the estimates will start.": "لا يوجد ما يكفي من التسجيلات بعد لتقدير دورتك. سجّل دورة شهرية وستبدأ التقديرات.", // note: health wording (overview empty state)
+  "Not enough cycles logged yet to show patterns. Insights appear once you've logged a couple of periods.": "لم تُسجَّل دورات كافية بعد لعرض الأنماط. تظهر الرؤى بعد أن تسجّل دورتين شهريتين.", // note: health wording (Insights empty state)
+  "No symptoms logged yet. Anything you log will show up here, grouped by the phase it happened in.": "لم تُسجَّل أعراض بعد. سيظهر هنا كل ما تسجّله، مجمّعًا حسب المرحلة التي حدث فيها.", // note: health wording (symptoms-by-phase empty state)
+  "Basal body temperature: taken at the same time each morning, before getting up.": "درجة حرارة الجسم القاعدية: تُقاس في الوقت نفسه كل صباح، قبل النهوض من السرير.", // note: health wording (the BBT field help in Log this day)
 };
 
 export default cycle;

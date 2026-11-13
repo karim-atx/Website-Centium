@@ -43,9 +43,12 @@ import { t, tk, tn } from "../../i18n/core";
 export const DISCLAIMER = tk("Estimates · Not a method of contraception");
 
 /** Under the overview, once, in full. */
-export const DISCLAIMER_LONG =
-  "These dates are estimates based on what you've logged. Cycles vary, and a " +
-  "prediction is not a method of contraception or a pregnancy test.";
+// Batch D GQ: this line (and the three empty states and the BBT help below)
+// is app text around the guidance, not clinical guidance, so it is marked
+// with tk() and shown in Arabic like DISCLAIMER and the privacy line.
+export const DISCLAIMER_LONG = tk(
+  "These dates are estimates based on what you've logged. Cycles vary, and a prediction is not a method of contraception or a pregnancy test.",
+);
 
 // ---------------------------------------------------------------------------
 // Phases
@@ -253,17 +256,17 @@ export const SETUP_BODY = tk(
 );
 export const SETUP_CTA = tk("Log my last period");
 
-export const NO_PREDICTION =
-  "There isn't enough logged yet to estimate your cycle. Log a period and the " +
-  "estimates will start.";
+export const NO_PREDICTION = tk(
+  "There isn't enough logged yet to estimate your cycle. Log a period and the estimates will start.",
+);
 
-export const INSIGHTS_TOO_LITTLE =
-  "Not enough cycles logged yet to show patterns. Insights appear once you've " +
-  "logged a couple of periods.";
+export const INSIGHTS_TOO_LITTLE = tk(
+  "Not enough cycles logged yet to show patterns. Insights appear once you've logged a couple of periods.",
+);
 
-export const SYMPTOM_GRID_TOO_LITTLE =
-  "No symptoms logged yet. Anything you log will show up here, grouped by the phase " +
-  "it happened in.";
+export const SYMPTOM_GRID_TOO_LITTLE = tk(
+  "No symptoms logged yet. Anything you log will show up here, grouped by the phase it happened in.",
+);
 
 // ---------------------------------------------------------------------------
 // Logging a day
@@ -345,8 +348,7 @@ export const ENERGY_LABEL: Record<number, string> = {
   5: "Very high",
 };
 
-export const BBT_HELP =
-  "Basal body temperature: taken at the same time each morning, before getting up.";
+export const BBT_HELP = tk("Basal body temperature: taken at the same time each morning, before getting up.");
 
 /**
  * Shown when a positive pregnancy test is logged.

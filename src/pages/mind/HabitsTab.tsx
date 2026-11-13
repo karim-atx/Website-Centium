@@ -333,7 +333,7 @@ export default function HabitsTab() {
               onClick={() => cycleColour(h)}
               aria-label={t("{habit} colour: {colour}. Tap to change", { habit: h.label, colour: t(COLOUR_NAME[h.colour ?? "lavender"]) })}
               className={clsx(
-                "tap relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0 after:absolute after:-inset-2 after:content-['']",
+                "tap relative w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
                 !shade && "bg-primary-pale"
               )}
               style={shade ? { background: shade.tile } : undefined}
@@ -431,7 +431,7 @@ export default function HabitsTab() {
             type="button"
             onClick={() => void retry()}
             disabled={retrying}
-            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
+            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high"
           >
             {retrying ? <Loader2 size={14} className="animate-spin" aria-label={t("Retrying")} /> : t("Retry")}
           </button>
