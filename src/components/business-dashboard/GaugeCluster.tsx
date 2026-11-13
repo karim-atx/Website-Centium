@@ -113,7 +113,7 @@ export function GaugeCluster({
   const tipFor = tip ?? focus ?? (web ? hover : null);
 
   return (
-    <div role="group" aria-label={t("At a glance")} style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: web ? 0 : 28 }}>
+    <div role="group" data-tz-fixed="" aria-label={t("At a glance")} style={{ position: "relative", width: "100%", aspectRatio: `${VW} / ${VH}`, containerType: "inline-size", marginBottom: web ? 0 : 28 }}>
       <svg width="100%" height="100%" viewBox={`0 0 ${VW} ${VH}`} preserveAspectRatio="xMidYMid meet" className="qa-shape" style={{ position: "absolute", inset: 0, display: "block", overflow: "visible" }} aria-hidden>
         <defs>
           <radialGradient id={glowId} cx="0.5" cy="0.5" r="0.5">

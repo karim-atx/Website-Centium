@@ -942,9 +942,60 @@ html.larger-text {
     textarea,
     select,
     [contenteditable]:where(:not([contenteditable="false"])) {
-      --field-min: 16px;
-      font-size: max(16px, 100%);
+      --field-min: var(--native-field-min, 16px);
+      font-size: max(var(--native-field-min, 16px), 100%);
     }
+  }
+}
+
+/* iPhone Dynamic Type (src/platform/textZoom.ts): in the iOS app the phone's
+   text size scales every font size and fixed line height. Phone and tablet
+   layouts only: the web layouts (1024px and wider) and the landing pages
+   keep 100%. html.native-text-zoom is set in the iOS app only, so browsers
+   keep their own text-size-adjust. --native-field-min (set below 100%)
+   keeps a field's scaled text at 16px or more (the rule above). */
+@media (max-width: 1023px) {
+  html.native-text-zoom {
+    -webkit-text-size-adjust: var(--native-text-zoom, 100%);
+    text-size-adjust: var(--native-text-zoom, 100%);
+  }
+  html.native-text-zoom .centium-site,
+  /* Controls keep their size, as iOS's own tab bars and segmented controls
+     do at the larger sizes: the tab bar (five fixed slots, an icon over a
+     one-word label) and every tab strip (fixed segments across the row). */
+  html.native-text-zoom [data-bottom-nav],
+  html.native-text-zoom [role="tablist"],
+  /* Drawings with their labels at fixed places, and fixed pickers: the Home
+     water card, the Water bottle, the business At a glance dials, the
+     voucher ticket row, the week's day strips and the colour swatches. */
+  html.native-text-zoom [data-tz-fixed] {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  /* Cards drawn at a fixed height grow with their text (their own height
+     stays the minimum); rows that would squeeze wrap instead. */
+  html.native-text-zoom [data-metric-widget],
+  html.native-text-zoom [data-tz-grow] {
+    height: auto !important;
+  }
+  html.native-text-zoom [data-tz-wrap] {
+    flex-wrap: wrap !important;
+  }
+  html.native-text-zoom [data-tz-wrap] > * {
+    min-width: auto !important;
+  }
+  /* A row of side-by-side tiles becomes one column. */
+  html.native-text-zoom [data-tz-stack] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* Three columns with the main one in the middle (Profile's header): the
+     main one takes the first row, the two others share the second. */
+  html.native-text-zoom [data-tz-split] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+  html.native-text-zoom [data-tz-split] > [data-tz-split-main] {
+    grid-column: 1 / -1;
+    grid-row: 1;
   }
 }
 

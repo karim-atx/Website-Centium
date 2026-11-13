@@ -338,7 +338,7 @@ function ClientProfile() {
     // Decision 23 (items 16–18): the frame's colours in light and dark, as
     // theme tokens: a 1px #6F9993 border and divider (teal-dark), values
     // #5F5093 (primary-deep-text) and units #AEA1DC (primary).
-    <div className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
+    <div data-tz-grow="" className="h-[143px] rounded-2xl bg-cream-card border border-teal-dark flex flex-col overflow-hidden min-w-0">
       {(top ? [top, bottom] : [bottom]).map((part, i) => (
         <button
           key={part.unit}
@@ -374,6 +374,7 @@ function ClientProfile() {
       <PageHeader title={t("My Profile")} showBack />
 
       <div
+        data-tz-split={hidesClientFields ? undefined : ""}
         className={clsx(
           "mb-6 animate-fade-slide-up",
           hidesClientFields
@@ -402,7 +403,7 @@ function ClientProfile() {
             }
           )}
 
-        <div className="flex flex-col items-center text-center min-w-0">
+        <div data-tz-split-main="" className="flex flex-col items-center text-center min-w-0">
           <button
             type="button"
             onClick={(e) => setAvatarAnchor(e.currentTarget)}

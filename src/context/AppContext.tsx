@@ -131,6 +131,7 @@ import { reportInstallOnce } from "../platform/installReport";
 import { sendPendingAppleLink } from "../services/auth/applePending";
 import { getSupabaseConfig } from "../../lib/supabase/config";
 import { mirrorLanguage, mirrorReducedMotion, nativeSignedOut } from "../platform/nativeShell";
+import { followNativeTextZoom } from "../platform/textZoom";
 import { reportAppAway } from "../hooks/useAppPresence";
 import { revokeThisPhoneOnSignOut, unlockFolderWithDevice } from "../services/journal/deviceUnlock";
 import type { DeviceOutcome } from "../services/journal/deviceUnlockModel";
@@ -2554,6 +2555,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.classList.toggle("big-targets", !!accessibility.biggerTargets);
     // The phone's own surfaces (widgets, the session notification) follow it too.
     mirrorReducedMotion(accessibility.reduceMotion);
+    // iPhone: the phone's text size (Dynamic Type), with Larger text on top.
+    followNativeTextZoom(accessibility.largerText);
   }, [accessibility]);
 
   // Starts empty. The seeded demo meals are gone — see services/food, which

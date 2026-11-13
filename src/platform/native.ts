@@ -116,6 +116,12 @@ export interface CentiumNativePlugin {
 
   /** A widget, shortcut or notification opened a path while the app was already running. */
   addListener(eventName: "openPath", listener: (event: { path: string }) => void): Promise<PluginListenerHandle>;
+
+  /**
+   * The phone's text size changed while the app was open (iOS, App-Centium
+   * iPhone Round 1 PR 1); ask textZoom() again. Rejects on builds without it.
+   */
+  addListener(eventName: "textZoom", listener: () => void): Promise<PluginListenerHandle>;
 }
 
 export const CentiumNative = registerPlugin<CentiumNativePlugin>("CentiumNative");

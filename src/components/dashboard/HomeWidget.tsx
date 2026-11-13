@@ -164,6 +164,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
 
   return (
     <div
+      data-tz-fixed=""
       className="relative w-full h-[131px] rounded-[15px] overflow-hidden box-border"
       style={{ background: dark ? WATER_DARK.ground : "linear-gradient(180deg, #F4F8FE, #ECF4FE)", ...(webH ? { height: webH } : null) }}
     >
@@ -364,11 +365,11 @@ export const HomeWidget: React.FC<{
   const webH = useWebTileHeight();
   const shell = (bg: string, content: React.ReactNode) =>
     isLarge ? (
-      <div className="w-full h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg, ...(webH ? { height: webH } : null) }}>
+      <div data-tz-grow="" className="w-full h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg, ...(webH ? { height: webH } : { minHeight: 150 }) }}>
         {content}
       </div>
     ) : (
-      <div className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg, ...(webH ? { height: webH } : null) }}>
+      <div data-tz-grow="" className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg, ...(webH ? { height: webH } : { minHeight: 114 }) }}>
         {content}
       </div>
     );
@@ -561,9 +562,9 @@ export const HomeWidget: React.FC<{
         shell(
           "rgb(var(--th-aea1dc) / .16)",
           <>
-            <div className="flex items-center justify-between gap-2.5">
+            <div data-tz-wrap="" className="flex items-center justify-between gap-2.5">
               <p className={`${capsLabel} text-primary-deep-text/[0.88] dark:text-primary-deep-text`}>{t("Food")}</p>
-              <span className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
+              <span data-tz-wrap="" className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
                 <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {Math.round(totals.calories)}
                 </span>

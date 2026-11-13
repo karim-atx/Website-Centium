@@ -150,7 +150,7 @@ export function OverviewTab() {
     <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 32, color: c.ink, lineHeight: "normal" }}>
       <style>{FOCUS_CSS}</style>
       <MarketOffline loaded />
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
+      <div data-tz-fixed="" style={{ display: "grid", gridTemplateColumns: "minmax(0,4fr) minmax(0,1fr)", gap: 12 }}>
         <RedeemVoucherTile onPress={() => navigate(`${HOME}/redeem`)} />
         <ListingToggleTile variant="pro" on={on} disabled={!online || busy || !visibleKnown} onChange={request} />
       </div>

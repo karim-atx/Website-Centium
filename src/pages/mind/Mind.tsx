@@ -310,7 +310,7 @@ export default function Mind() {
             5.6% / 20.6%), Achievements #FCF9F2 / #F6EBD6 / #A67C2E. The
             lavender and teal follow the colour theme. Dark keeps the tints the
             tiles had. */}
-        <div className="grid grid-cols-3 gap-2 mb-5">
+        <div data-tz-stack="" className="grid grid-cols-3 gap-2 mb-5">
           <Tile
             onClick={() => navigate("/app/mind/journal")}
             fill={dark ? "rgb(var(--th-aea1dc) / .14)" : "rgb(var(--th-aea1dc) / .06)"}
@@ -573,7 +573,8 @@ function Tile({
       // 56 pt well r16 starting 19 pt from the tile's top, the title's cap
       // height 14 pt under the well and the line's baseline 19 pt under the
       // title's.
-      className="tap min-w-0 h-[137px] rounded-[18px] border border-charcoal/[0.08] flex flex-col items-center justify-start pt-[18px] px-1.5 text-center"
+      data-tz-grow=""
+      className="tap min-w-0 h-[137px] min-h-[137px] rounded-[18px] border border-charcoal/[0.08] flex flex-col items-center justify-start pt-[18px] px-1.5 text-center"
       style={{ background: fill }}
     >
       <span className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ background: well }}>
