@@ -7,6 +7,8 @@ import {
   allergyLine,
   assignmentIsCurrent,
   badgeFor,
+  badgesFor,
+  conflictRowsFrom,
   feedbackText,
   mealPlanLines,
   planDay,
@@ -167,4 +169,70 @@ test("FQ: the allergy line lists the member's own after the 14", () => {
   );
   assert.equal(allergyLine([], [], [{ label: "كيوي", severity: "moderate" }]), `Allergy: ${FSI}كيوي${PDI} (moderate).`);
   assert.equal(allergyLine([], []), null);
+});
+
+// ---- Batch D GI: may_contain and food_allergens_unknown ----
+
+test("GI: may contain is amber, names the allergen, carries the member's severity, never blocks", () => {
+  const b = badgeFor(row("may_contain", { allergen: "peanuts", severity: "severe" }))!;
+  assert.deepEqual([b.kind, b.tone, b.text, b.blocks, b.severity, b.allergen], ["may_contain", "amber", "May contain peanuts", false, "severe", "peanuts"]);
+  const n = addNotice("Choc bar", [row("may_contain", { allergen: "peanuts", severity: "severe" })])!;
+  assert.deepEqual([n.tone, n.blocks, n.addAnyway, n.title], ["amber", false, false, "Choc bar may contain peanuts"]);
+  assert.equal(n.body, "You're allergic to peanuts (severe). The label says it may contain traces. Check before you eat it.");
+  assert.equal(addNotice("x", [row("may_contain", { allergen: "milk" })])!.body, "You're allergic to milk. The label says it may contain traces. Check before you eat it.");
+  assert.equal(badgeFor(row("may_contain", { allergen: "milk", severity: "bogus" }))!.severity, null);
+});
+
+test("GI: allergens unknown is a grey neutral badge and notice that never blocks", () => {
+  const b = badgeFor(row("food_allergens_unknown", { detail: "Allergens unknown: there is no allergen information for this food." }))!;
+  assert.deepEqual([b.tone, b.text, b.blocks, b.severity], ["grey", "Allergens unknown", false, null]);
+  const n = addNotice("Apple", [row("food_allergens_unknown")])!;
+  assert.deepEqual([n.tone, n.blocks, n.addAnyway, n.title], ["grey", false, false, "Allergens unknown"]);
+  assert.equal(n.body, "There's no allergen information for Apple. Check the label before you eat it.");
+});
+
+test("GI: precedence is confirmed, may contain, check this, restriction, allergens unknown, preference", () => {
+  const all = [
+    row("preference", { restriction: "vegan" }),
+    row("food_allergens_unknown"),
+    row("restriction", { restriction: "halal" }),
+    row("allergy_check", { allergen: "milk" }),
+    row("may_contain", { allergen: "peanuts", severity: "mild" }),
+    row("allergy_confirmed", { allergen: "milk", severity: "severe" }),
+    row("allergies_unknown"),
+  ];
+  assert.deepEqual(
+    badgesFor(all).map((b) => b.kind),
+    ["allergy_confirmed", "may_contain", "allergy_check", "restriction", "food_allergens_unknown", "preference"]
+  );
+  assert.equal(addNotice("x", all)!.blocks, true);
+  assert.equal(worstBadge(all.slice(0, 5))!.kind, "may_contain");
+  assert.equal(worstBadge(all.slice(0, 3))!.kind, "restriction");
+  assert.equal(worstBadge(all.slice(0, 2))!.kind, "food_allergens_unknown");
+  // A restriction still offers Add anyway over unknown allergens.
+  assert.equal(addNotice("x", all.slice(0, 3))!.addAnyway, true);
+});
+
+test("GI: halal and kosher are word matches, so a restriction (amber, Add anyway), never an allergy", () => {
+  const n = addNotice("Pork ribs", [row("restriction", { restriction: "halal" })], () => "Halal")!;
+  assert.deepEqual([n.tone, n.blocks, n.addAnyway, n.title], ["amber", false, true, "Pork ribs isn't halal"]);
+});
+
+test("GI: an online food's check-this line says name or ingredients", () => {
+  assert.equal(
+    addNotice("Fruit mix", [row("allergy_check", { customAllergy: "kiwi" })], undefined, "ingredients")!.body,
+    `The name or ingredients suggest Fruit mix may contain ${FSI}kiwi${PDI}. Check the label before you eat it.`
+  );
+  assert.equal(
+    addNotice("Fruit mix", [row("allergy_check", { allergen: "milk" })], undefined, "ingredients")!.body,
+    "The name or ingredients suggest Fruit mix may contain something you're allergic to. Check the label before you eat it."
+  );
+});
+
+test("GI: rows read from either function, custom_allergy mapped, anything else an empty list", () => {
+  assert.deepEqual(
+    conflictRowsFrom([{ kind: "may_contain", allergen: "peanuts", severity: "mild", restriction: null, detail: "May contain an allergen", custom_allergy: null }]),
+    [{ kind: "may_contain", allergen: "peanuts", severity: "mild", restriction: null, detail: "May contain an allergen", customAllergy: null }]
+  );
+  assert.deepEqual(conflictRowsFrom(null), []);
 });

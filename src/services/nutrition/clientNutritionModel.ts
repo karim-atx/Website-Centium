@@ -115,7 +115,20 @@ const listSep = () => (getLanguage() === "ar" ? "، " : ", ");
 // food_conflicts -> what the client sees
 // ---------------------------------------------------------------------------
 
-export type ConflictKind = "allergy_confirmed" | "allergy_check" | "restriction" | "preference" | "allergies_unknown";
+/**
+ * Batch D GI (20261227110000) adds two: `may_contain` (one of the member's
+ * allergens is a "may contain" trace on the label, with their severity) and
+ * `food_allergens_unknown` (an online food with no allergen data, said once to
+ * someone with allergies). Neither blocks.
+ */
+export type ConflictKind =
+  | "allergy_confirmed"
+  | "may_contain"
+  | "allergy_check"
+  | "restriction"
+  | "preference"
+  | "food_allergens_unknown"
+  | "allergies_unknown";
 
 export interface ConflictRow {
   kind: ConflictKind | string;
@@ -133,18 +146,31 @@ export interface ConflictRow {
 
 export interface FoodBadge {
   kind: ConflictKind;
-  /** red: a confirmed allergy (structured data). amber: check this / a restriction. soft: a preference. */
-  tone: "red" | "amber" | "soft";
+  /**
+   * red: a confirmed allergy (structured data). amber: may contain / check
+   * this / a restriction. soft: a preference. grey: allergens unknown (GI).
+   */
+  tone: "red" | "amber" | "soft" | "grey";
   text: string;
   /** Only a confirmed allergy blocks adding the food. */
   blocks: boolean;
-  /** Only a confirmed allergy carries a severity, and only from the client's own row. */
+  /** Only a confirmed allergy or a "may contain" trace (GI) carries a severity, and only from the client's own row. */
   severity: AllergySeverity | null;
-  /** The allergen, for a confirmed allergy (never named for a keyword match's severity). */
+  /** The allergen, for a confirmed allergy or a "may contain" trace (never named for a keyword match). */
   allergen: Allergen | null;
   restriction: string | null;
   /** FQ: an "Other" allergy's label (the member's own words, never translated), on a check-this row. */
   customAllergy: string | null;
+}
+
+/**
+ * food_conflicts / found_food_conflicts (GI) rows as the app reads them.
+ * custom_allergy (FQ, 20261227020000): an "Other" allergy's label on its
+ * allergy_check rows; absent on today's database.
+ */
+export function conflictRowsFrom(data: unknown): ConflictRow[] {
+  type R = { kind: string; allergen: string | null; severity: string | null; restriction: string | null; detail: string | null; custom_allergy?: string | null };
+  return (Array.isArray(data) ? (data as R[]) : []).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail, customAllergy: r.custom_allergy ?? null }));
 }
 
 /** The member's own label on a conflict row, trimmed, or null (a standard row, or today's database). */
@@ -153,7 +179,20 @@ export const customLabelOf = (row: Pick<ConflictRow, "customAllergy">): string |
   return l ? l : null;
 };
 
-const RANK: Record<ConflictKind, number> = { allergy_confirmed: 0, allergy_check: 1, restriction: 2, preference: 3, allergies_unknown: 9 };
+// GI: a listed allergen, then a "may contain" trace, then a word match (the
+// server's own order for one allergy); "allergens unknown" sits after a
+// restriction (it never blocks or asks to add anyway) and before a preference.
+const RANK: Record<ConflictKind, number> = {
+  allergy_confirmed: 0,
+  may_contain: 1,
+  allergy_check: 2,
+  restriction: 3,
+  food_allergens_unknown: 4,
+  preference: 5,
+  allergies_unknown: 9,
+};
+
+const severityOf = (s: string | null): AllergySeverity | null => (["mild", "moderate", "severe"] as const).find((x) => x === s) ?? null;
 
 /**
  * One food_conflicts row as a badge. The safety rule (DECISIONS DB-5,
@@ -166,7 +205,7 @@ const RANK: Record<ConflictKind, number> = { allergy_confirmed: 0, allergy_check
 export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => string = (r) => r): FoodBadge | null {
   switch (row.kind) {
     case "allergy_confirmed": {
-      const sev = (["mild", "moderate", "severe"] as const).find((s) => s === row.severity) ?? null;
+      const sev = severityOf(row.severity);
       return {
         kind: "allergy_confirmed",
         tone: "red",
@@ -178,6 +217,24 @@ export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => stri
         customAllergy: null,
       };
     }
+    case "may_contain": {
+      // GI: the label's "may contain" trace of an allergen the member has.
+      // Amber (never blocks); like a confirmed allergy it names the allergen
+      // and carries the member's own severity (read out, not printed).
+      return {
+        kind: "may_contain",
+        tone: "amber",
+        text: t("May contain {name}", { name: t(allergenLabel(row.allergen)).toLowerCase() }),
+        blocks: false,
+        severity: severityOf(row.severity),
+        allergen: (row.allergen as Allergen) ?? null,
+        restriction: null,
+        customAllergy: null,
+      };
+    }
+    case "food_allergens_unknown":
+      // GI: an online food nobody knows the allergens of. Grey, never blocks.
+      return { kind: "food_allergens_unknown", tone: "grey", text: t("Allergens unknown"), blocks: false, severity: null, allergen: null, restriction: null, customAllergy: null };
     case "allergy_check": {
       // FQ (decision 20): an "Other" allergy is amber "check this" only, named
       // with the member's own label (isolated, never translated).
@@ -197,7 +254,7 @@ export function badgeFor(row: ConflictRow, restrictionLabel: (r: string) => stri
   }
 }
 
-/** Every row's badge, most serious first (a confirmed allergy, then check this, a restriction, a preference). */
+/** Every row's badge, most serious first (a confirmed allergy, may contain, check this, a restriction, allergens unknown, a preference). */
 export function badgesFor(rows: ConflictRow[], restrictionLabel?: (r: string) => string): FoodBadge[] {
   return rows
     .map((r) => badgeFor(r, restrictionLabel))
@@ -213,13 +270,17 @@ export function worstBadge(rows: ConflictRow[], restrictionLabel?: (r: string) =
 /**
  * The Add Food notice for a picked food (null when nothing applies).
  * A confirmed allergy blocks; a restriction lets the client "Add anyway";
- * a keyword match only asks them to check.
+ * a keyword match only asks them to check. GI: "may contain" asks them to
+ * check, with their severity; "allergens unknown" says so, grey. `words`
+ * "ingredients" is for an online food, whose ingredients are matched too, so
+ * the check-this line doesn't say it was the name alone.
  */
 export function addNotice(
   foodName: string,
   rows: ConflictRow[],
-  restrictionLabel?: (r: string) => string
-): { tone: "red" | "amber" | "soft"; title: string; body: string; blocks: boolean; addAnyway: boolean } | null {
+  restrictionLabel?: (r: string) => string,
+  words: "name" | "ingredients" = "name"
+): { tone: FoodBadge["tone"]; title: string; body: string; blocks: boolean; addAnyway: boolean } | null {
   const all = badgesFor(rows, restrictionLabel);
   const nameOf = restrictionLabel ?? ((r: string) => r);
   const b = all[0];
@@ -236,21 +297,38 @@ export function addNotice(
       addAnyway: false,
     };
   }
-  if (b.kind === "allergy_check") {
+  if (b.kind === "may_contain") {
+    const what = t(allergenLabel(b.allergen)).toLowerCase();
     return {
       tone: "amber",
-      title: t("Check this"),
-      body: b.customAllergy
-        ? t("The name suggests {food} may contain {label}. Check the ingredients before you eat it.", { food: foodName, label: isolate(b.customAllergy) })
-        : t("The name suggests {food} may contain something you're allergic to. Check the ingredients before you eat it.", { food: foodName }),
+      title: t("{food} may contain {allergen}", { food: foodName, allergen: what }),
+      body: b.severity
+        ? t("You're allergic to {allergen} ({severity}). The label says it may contain traces. Check before you eat it.", { allergen: what, severity: t(severityLabel(b.severity)).toLowerCase() })
+        : t("You're allergic to {allergen}. The label says it may contain traces. Check before you eat it.", { allergen: what }),
       blocks: false,
       addAnyway: false,
     };
+  }
+  if (b.kind === "allergy_check") {
+    const label = b.customAllergy ? isolate(b.customAllergy) : null;
+    let body: string;
+    if (words === "ingredients")
+      body = label
+        ? t("The name or ingredients suggest {food} may contain {label}. Check the label before you eat it.", { food: foodName, label })
+        : t("The name or ingredients suggest {food} may contain something you're allergic to. Check the label before you eat it.", { food: foodName });
+    else
+      body = label
+        ? t("The name suggests {food} may contain {label}. Check the ingredients before you eat it.", { food: foodName, label })
+        : t("The name suggests {food} may contain something you're allergic to. Check the ingredients before you eat it.", { food: foodName });
+    return { tone: "amber", title: t("Check this"), body, blocks: false, addAnyway: false };
   }
   if (b.kind === "restriction") {
     const label = b.restriction ? t(nameOf(b.restriction)) : "";
     const title = label ? t("{food} isn't {restriction}", { food: foodName, restriction: label.toLowerCase() }) : t("{food} isn't compatible", { food: foodName });
     return { tone: "amber", title, body: t("You can still add it."), blocks: false, addAnyway: true };
+  }
+  if (b.kind === "food_allergens_unknown") {
+    return { tone: "grey", title: t("Allergens unknown"), body: t("There's no allergen information for {food}. Check the label before you eat it.", { food: foodName }), blocks: false, addAnyway: false };
   }
   return { tone: "soft", title: b.text, body: t("{food} isn't in line with a dietary preference you set.", { food: foodName }), blocks: false, addAnyway: false };
 }

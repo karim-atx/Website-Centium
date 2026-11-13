@@ -7,6 +7,8 @@ const TONE = {
   red: { bg: "rgb(var(--c-status-high-bg))", ink: "rgb(var(--c-status-high))" },
   amber: { bg: "rgb(var(--c-gold-pale))", ink: "rgb(var(--c-team-gold-ink))" },
   soft: { bg: "rgb(var(--c-cream-soft))", ink: "rgb(var(--c-charcoal-soft))" },
+  // Batch D GI: "Allergens unknown", neutral (never a warning colour: it never blocks).
+  grey: { bg: "rgb(var(--c-border-option))", ink: "rgb(var(--c-charcoal-soft))" },
 } as const;
 
 /**
@@ -15,7 +17,8 @@ const TONE = {
  * food_conflicts kind: a confirmed allergy red ("Allergy: peanuts", its
  * severity in the label for assistive tech), "Check this" and a restriction
  * amber, a preference soft. A keyword match never gets a severity
- * (clientNutritionModel.badgeFor).
+ * (clientNutritionModel.badgeFor). Batch D GI: "May contain peanuts" amber,
+ * its severity read out like a confirmed allergy's; "Allergens unknown" grey.
  */
 export function FoodConflictBadge({ badge }: { badge: FoodBadge }) {
   const tone = TONE[badge.tone];
@@ -23,7 +26,7 @@ export function FoodConflictBadge({ badge }: { badge: FoodBadge }) {
     <span
       // The same classes as the client's own "Not compatible" badge (so Larger text treats both alike).
       className="text-[9px] font-bold uppercase rounded-full px-1.5 py-0.5 shrink-0 whitespace-nowrap"
-      aria-label={badge.kind === "allergy_confirmed" && badge.severity ? t("{allergy}, {severity}", { allergy: badge.text, severity: t(severityLabel(badge.severity)).toLowerCase() }) : undefined}
+      aria-label={(badge.kind === "allergy_confirmed" || badge.kind === "may_contain") && badge.severity ? t("{allergy}, {severity}", { allergy: badge.text, severity: t(severityLabel(badge.severity)).toLowerCase() }) : undefined}
       // FQ: an "Other" allergy's label is the member's own (up to 60 characters): the badge
       // stops at 14em with an ellipsis, the full text in its title. Standard badges are unchanged.
       title={badge.customAllergy ? badge.text : undefined}
@@ -40,7 +43,7 @@ export function FoodConflictNotice({ notice }: { notice: NonNullable<ReturnType<
   const Icon = notice.tone === "red" ? TriangleAlert : CircleAlert;
   return (
     <div role={notice.blocks ? "alert" : "status"} className="flex items-start" style={{ gap: 8, borderRadius: 12, padding: "10px 12px", marginBottom: 10, background: t.bg, color: t.ink }}>
-      {notice.tone !== "soft" && <Icon size={14} strokeWidth={notice.tone === "red" ? 2.4 : 2.2} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />}
+      {notice.tone !== "soft" && notice.tone !== "grey" && <Icon size={14} strokeWidth={notice.tone === "red" ? 2.4 : 2.2} className="shrink-0" style={{ marginTop: 2 }} aria-hidden />}
       <div className="min-w-0">
         <p style={{ margin: 0, fontSize: textPx(13), fontWeight: 800 }}>{notice.title}</p>
         <p style={{ margin: "2px 0 0", fontSize: textPx(12), lineHeight: 1.45, fontWeight: 500 }}>{notice.body}</p>

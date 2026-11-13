@@ -6,6 +6,7 @@ import { t } from "../../i18n/core";
 import { claimBarcodeScan } from "../premium/g2Calls";
 import { askPremium } from "../premium/asks";
 import { edgeRefusalOf, limitReachedText } from "../premium/g2";
+import { parseAllergenData, type FoundAllergenData } from "../food/onlineSearchModel";
 
 // What a scanned or typed barcode turns into, in the order the handover sets
 // (FO3.2 / HO2.1):
@@ -19,7 +20,8 @@ import { edgeRefusalOf, limitReachedText } from "../premium/g2";
 //      would inherit that licence.
 //   3. Nothing: the manual form, which the user fills in themselves.
 
-export interface OffProduct {
+/** Batch D GI: with what it contains, when lookup-barcode says (absent before it does). */
+export interface OffProduct extends FoundAllergenData {
   barcode: string;
   name: string;
   brand: string | null;
@@ -83,6 +85,7 @@ export function toOffProduct(b: FnProduct): OffProduct {
     carbs: b.carbs_g,
     fat: b.fat_g,
     attribution: b.attribution,
+    ...parseAllergenData(b as unknown as Record<string, unknown>),
   };
 }
 

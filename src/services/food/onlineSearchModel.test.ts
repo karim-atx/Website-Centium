@@ -17,6 +17,11 @@ import {
   parseOnlineFood,
   parseOnlineResults,
   saveFoundFoodArgs,
+  saveFoundFoodWithAllergensArgs,
+  parseAllergenData,
+  foundFoodConflictArgs,
+  conflictWords,
+  isMissingFunction,
   saveFoundFoodMessage,
   sourcesNote,
   suggestFoodMessage,
@@ -196,4 +201,53 @@ test("my food suggestions: parsed newest first, the latest per food, and its lin
   assert.equal(refused.canSuggest, true);
   assert.match(refused.line ?? "", /^Not added to the catalogue\. The catalogue already has it\.$/);
   assert.deepEqual(parseFoodSubmissions(null), []);
+});
+
+// ---- Batch D GI: what a found food contains ----
+
+test("GI: a result without the four fields (before the Edge Functions deploy) has none of them, so they read as unknown", () => {
+  const f = parseOnlineFood(raw())!;
+  assert.equal("allergens" in f, false);
+  assert.equal("mayContain" in f, false);
+  assert.equal("ingredients" in f, false);
+  assert.equal("dietFlags" in f, false);
+  const a = saveFoundFoodWithAllergensArgs(f);
+  assert.deepEqual([a.p_allergens, a.p_may_contain, a.p_ingredients, a.p_diet_flags], [null, null, null, null]);
+});
+
+test("GI: allergens [] (none listed), null (unknown) and names; unknown names and diet flags are dropped", () => {
+  assert.deepEqual(parseOnlineFood(raw({ allergens: [] }))!.allergens, []);
+  assert.equal(parseOnlineFood(raw({ allergens: null }))!.allergens, null);
+  const f = parseOnlineFood(raw({ allergens: ["milk", "milk", "gluten", 3], mayContain: ["peanuts"], ingredients: "  milk, kiwi  ", dietFlags: ["halal", "organic"] }))!;
+  assert.deepEqual(f.allergens, ["milk"]);
+  assert.deepEqual(f.mayContain, ["peanuts"]);
+  assert.equal(f.ingredients, "milk, kiwi");
+  assert.deepEqual(f.dietFlags, ["halal"]);
+  assert.equal(parseOnlineFood(raw({ ingredients: "  " }))!.ingredients, null);
+  assert.equal(parseAllergenData({ ingredients: "x".repeat(2500) }).ingredients!.length, 2000);
+});
+
+test("GI: save_found_food_with_allergens takes save_found_food's arguments plus the four", () => {
+  const f = parseOnlineFood(raw({ allergens: ["eggs"], mayContain: [], ingredients: "egg", dietFlags: [] }))!;
+  const { p_allergens, p_may_contain, p_ingredients, p_diet_flags, ...rest } = saveFoundFoodWithAllergensArgs(f);
+  assert.deepEqual(rest, saveFoundFoodArgs(f));
+  assert.deepEqual([p_allergens, p_may_contain, p_ingredients, p_diet_flags], [["eggs"], [], "egg", null]);
+});
+
+test("GI: found_food_conflicts' arguments, name and brand cut to 200", () => {
+  const a = foundFoodConflictArgs("u1", { name: "n".repeat(250), brand: "Acme", allergens: null, mayContain: ["peanuts"], ingredients: "kiwi", dietFlags: ["halal"] });
+  assert.equal((a.p_name as string).length, 200);
+  assert.deepEqual([a.p_client_id, a.p_brand, a.p_allergens, a.p_may_contain, a.p_ingredients, a.p_diet_flags], ["u1", "Acme", null, ["peanuts"], "kiwi", ["halal"]]);
+  assert.equal(foundFoodConflictArgs("u1", { name: "x", brand: null }).p_allergens, null);
+});
+
+test("GI: check-this wording, and a function the database doesn't have yet", () => {
+  assert.equal(conflictWords({ ingredients: "milk" }), "ingredients");
+  assert.equal(conflictWords({ ingredients: null }), "name");
+  assert.equal(conflictWords({}), "name");
+  assert.equal(isMissingFunction({ code: "PGRST202" }), true);
+  assert.equal(isMissingFunction({ code: "42883" }), true);
+  assert.equal(isMissingFunction({}, 404), true);
+  assert.equal(isMissingFunction({ code: "22023" }, 400), false);
+  assert.equal(isMissingFunction(null, 404), false);
 });

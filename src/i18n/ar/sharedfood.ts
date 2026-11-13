@@ -317,6 +317,15 @@ const sharedfood: Catalogue = {
   "Keep the note to 200 characters.": "اجعل الملاحظة 200 حرف أو أقل.", // note: 23514, the note's check
   "Check: {label}": "تحقّق: {label}", // note: health-related; amber, a name match only; {label} is the member's own words
   "The name suggests {food} may contain {label}. Check the ingredients before you eat it.": "يوحي الاسم بأن {food} قد يحتوي على {label}. تحقّق من المكوّنات قبل أن تأكله.", // note: health-related; {label} is the member's own words
+  // == Batch D GI: online and barcode foods (clientNutritionModel) ==
+  "May contain {name}": "قد يحتوي على {name}", // note: health-related badge; amber, a "may contain" trace on the label of an allergen the member has
+  "Allergens unknown": "مسبّبات الحساسية غير معروفة", // note: health-related; grey, the source gives no allergen information
+  "{food} may contain {allergen}": "قد يحتوي {food} على {allergen}", // note: health-related; a "may contain" trace, never blocks
+  "You're allergic to {allergen} ({severity}). The label says it may contain traces. Check before you eat it.": "لديك حساسية تجاه {allergen} ({severity}). يذكر الملصق أنه قد يحتوي على آثار منه. تحقّق قبل أن تأكله.", // note: health-related; the member's own severity
+  "You're allergic to {allergen}. The label says it may contain traces. Check before you eat it.": "لديك حساسية تجاه {allergen}. يذكر الملصق أنه قد يحتوي على آثار منه. تحقّق قبل أن تأكله.", // note: health-related
+  "The name or ingredients suggest {food} may contain {label}. Check the label before you eat it.": "يوحي الاسم أو المكوّنات بأن {food} قد يحتوي على {label}. تحقّق من الملصق قبل أن تأكله.", // note: health-related; {label} is the member's own words
+  "The name or ingredients suggest {food} may contain something you're allergic to. Check the label before you eat it.": "يوحي الاسم أو المكوّنات بأن {food} قد يحتوي على شيء لديك حساسية تجاهه. تحقّق من الملصق قبل أن تأكله.", // note: health-related; a word match only
+  "There's no allergen information for {food}. Check the label before you eat it.": "لا تتوفّر معلومات عن مسبّبات الحساسية في {food}. تحقّق من الملصق قبل أن تأكله.", // note: health-related; never blocks adding
 };
 
 export default sharedfood;

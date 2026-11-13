@@ -9,7 +9,9 @@ import {
   onlineFailureMessage,
   onlineQuery,
   parseOnlineResults,
+  isMissingFunction,
   saveFoundFoodArgs,
+  saveFoundFoodWithAllergensArgs,
   saveFoundFoodMessage,
   suggestFoodMessage,
   latestSubmissionFor,
@@ -26,7 +28,7 @@ import {
 // result; it is then their own custom food, logged the way any custom food is.
 
 type PgError = { code?: string; message?: string } | null;
-type Rpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PgError }> };
+type Rpc = { rpc: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: unknown; error: PgError; status?: number }> };
 const rpc = (): Rpc => supabase as unknown as Rpc;
 
 const browserOffline = () => typeof navigator !== "undefined" && navigator.onLine === false;
@@ -96,14 +98,28 @@ function savedLocally(id: string, f: OnlineFood): FoodSearchResult {
   };
 }
 
+// Batch D GI: set once the database says save_found_food_with_allergens isn't
+// there yet (before 20261227110000), so later saves go straight to the old call.
+let withAllergensMissing = false;
+
 /**
- * Saves a CONFIRMED result as the user's own custom food (save_found_food),
- * then reads it back. Saving the same result again returns the same food, so
- * the row read back is whatever the user already has, edits included.
+ * Saves a CONFIRMED result as the user's own custom food, then reads it back.
+ * Saving the same result again returns the same food, so the row read back is
+ * whatever the user already has, edits included. Batch D GI: through
+ * save_found_food_with_allergens, with what the result contains (a second save
+ * refreshes that); on a database without it yet, save_found_food as before.
  */
 export async function saveFoundFood(f: OnlineFood): Promise<{ ok: true; food: FoodSearchResult } | { ok: false; message: string }> {
   try {
-    const { data, error } = await rpc().rpc("save_found_food", saveFoundFoodArgs(f));
+    let answer: { data: unknown; error: PgError; status?: number } | null = null;
+    if (!withAllergensMissing) {
+      answer = await rpc().rpc("save_found_food_with_allergens", saveFoundFoodWithAllergensArgs(f));
+      if (isMissingFunction(answer.error, answer.status)) {
+        withAllergensMissing = true;
+        answer = null;
+      }
+    }
+    const { data, error } = answer ?? (await rpc().rpc("save_found_food", saveFoundFoodArgs(f)));
     if (error || typeof data !== "string") {
       const offline = !!error && isOffline(error);
       if (!offline) console.error("[food] save_found_food failed:", error?.code, error?.message);
