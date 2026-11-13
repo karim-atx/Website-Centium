@@ -8,6 +8,7 @@ import { findReviewTarget, type ReviewTarget } from "../../../services/instructo
 import { useStrip } from "../../business-market/listingParts";
 import { type RepeatScope } from "../../../components/calendar/RepeatScopePopup";
 import { dayBefore, expandOccurrences, occurrenceKey, type ExceptionMap } from "../../../components/calendar/occurrences";
+import { alertRetryDraft, alertRetryTarget } from "../../../components/calendar/repeatAlertRetry";
 import { saveRepeating } from "../../../components/calendar/saveRepeating";
 import type { EventAlert } from "../../../components/calendar/eventAlert";
 import { fetchInviteExtras, type InviteExtra } from "../../../components/calendar/inviteExtras";
@@ -516,13 +517,26 @@ export function useClientCalendar() {
     }
     setScopeAsk(null);
     if (editingSeries && editingRepeats && scope) {
-      const r = await saveRepeating(authUserId, editingSeries, editingOccurrence ?? editingSeries.date, scope, payload);
+      const occurrence = editingOccurrence ?? editingSeries.date;
+      const r = await saveRepeating(authUserId, editingSeries, occurrence, scope, payload);
       setSaving(false);
       if (!r.ok) {
         setSaveError(r.message ?? t("Couldn't save your changes. Try again."));
         return;
       }
       await load();
+      if (r.alertMessage && r.event) {
+        // As the one-off path: the event saved and its alert didn't. The sheet
+        // stays open on the row that was saved (the series, the new series or
+        // the new one-off), so "Save changes" retries the alert there.
+        const at = alertRetryTarget(editingSeries.id, occurrence, r.event);
+        setEditingId(at.id);
+        setEditingOccurrence(at.occurrence);
+        const saved = r.event;
+        setDraft((d) => alertRetryDraft(d, saved));
+        setSaveError(r.alertMessage);
+        return;
+      }
       setComposeOpen(false);
       return;
     }
