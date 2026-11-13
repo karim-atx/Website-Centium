@@ -12,8 +12,14 @@ import type { FreeLimits, MyPremium, ProPlanInApp, Switches } from "./model";
 // WHILE LOADING, AND AFTER A FAILED READ, THE ANSWER IS "OFF" (null here):
 // the decisions in ./model read null as today's experience. A failed read is
 // not cached, so the next screen asks again.
+//
+// Batch D GB · a failed read still reads as off, but says it FAILED
+// (`failed`: the call errored or was offline; a Database without the function
+// is an answer, not a failure), so a G3 route can offer Retry instead of
+// treating a bad connection as "the switch is off".
 
-type Entry<T> = { value: T | null; promise: Promise<T | null> | null };
+type Outcome<T> = { value: T | null; failed: boolean };
+type Entry<T> = { value: T | null; promise: Promise<Outcome<T>> | null };
 const caches = {
   switches: new Map<string, Entry<Switches>>(),
   premium: new Map<string, Entry<MyPremium>>(),
@@ -22,13 +28,14 @@ const caches = {
 };
 const listeners = new Set<() => void>();
 
-function load<T>(cache: Map<string, Entry<T>>, userId: string, fetcher: () => Promise<Read<T | null>>): Promise<T | null> {
+function load<T>(cache: Map<string, Entry<T>>, userId: string, fetcher: () => Promise<Read<T | null>>): Promise<Outcome<T>> {
   const hit = cache.get(userId);
   if (hit?.promise) return hit.promise;
-  const promise = fetcher().then((r) => {
-    if (r.ok) cache.set(userId, { value: r.value, promise: Promise.resolve(r.value) });
+  const promise = fetcher().then((r): Outcome<T> => {
+    const out: Outcome<T> = r.ok ? { value: r.value, failed: false } : { value: null, failed: !r.missing };
+    if (r.ok) cache.set(userId, { value: r.value, promise: Promise.resolve(out) });
     else cache.delete(userId);
-    return r.ok ? r.value : null;
+    return out;
   });
   cache.set(userId, { value: hit?.value ?? null, promise });
   return promise;
@@ -43,11 +50,11 @@ export function invalidatePremium(): void {
   listeners.forEach((l) => l());
 }
 
-function useCached<T>(cache: Map<string, Entry<T>>, fetcher: () => Promise<Read<T | null>>): { value: T | null; loading: boolean; reload: () => void } {
+function useCached<T>(cache: Map<string, Entry<T>>, fetcher: () => Promise<Read<T | null>>): { value: T | null; loading: boolean; failed: boolean; reload: () => void } {
   const { authUserId } = useApp();
-  const [state, setState] = useState<{ userId: string; value: T | null; done: boolean } | null>(() => {
+  const [state, setState] = useState<{ userId: string; value: T | null; done: boolean; failed: boolean } | null>(() => {
     const hit = authUserId ? cache.get(authUserId) : undefined;
-    return authUserId && hit && hit.value !== null ? { userId: authUserId, value: hit.value, done: true } : null;
+    return authUserId && hit && hit.value !== null ? { userId: authUserId, value: hit.value, done: true, failed: false } : null;
   });
   const [epoch, setEpoch] = useState(0);
 
@@ -62,8 +69,8 @@ function useCached<T>(cache: Map<string, Entry<T>>, fetcher: () => Promise<Read<
   useEffect(() => {
     if (!authUserId) return;
     let live = true;
-    void load(cache, authUserId, fetcher).then((value) => {
-      if (live) setState({ userId: authUserId, value, done: true });
+    void load(cache, authUserId, fetcher).then(({ value, failed }) => {
+      if (live) setState({ userId: authUserId, value, done: true, failed });
     });
     return () => {
       live = false;
@@ -73,9 +80,9 @@ function useCached<T>(cache: Map<string, Entry<T>>, fetcher: () => Promise<Read<
   }, [authUserId, epoch, cache]);
 
   const reload = useCallback(() => invalidatePremium(), []);
-  if (!authUserId) return { value: null, loading: false, reload };
+  if (!authUserId) return { value: null, loading: false, failed: false, reload };
   const mine = state?.userId === authUserId ? state : null;
-  return { value: mine?.value ?? null, loading: !mine?.done, reload };
+  return { value: mine?.value ?? null, loading: !mine?.done, failed: !!mine?.failed, reload };
 }
 
 export interface SwitchesState {
@@ -95,13 +102,15 @@ export interface PremiumState {
   /** Null while loading or unknown: read as "off". */
   premium: MyPremium | null;
   loading: boolean;
+  /** Batch D GB · the read failed (errored or offline), as opposed to answering off. */
+  failed: boolean;
   reload: () => void;
 }
 
 /** my_premium(): the member's Premium, the prices and may_prompt_upgrade. */
 export function usePremium(): PremiumState {
   const r = useCached(caches.premium, fetchMyPremium);
-  return { premium: r.value, loading: r.loading, reload: r.reload };
+  return { premium: r.value, loading: r.loading, failed: r.failed, reload: r.reload };
 }
 
 /** free_limits(): the free tier's numbers (G5). Null while unknown. */

@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import type { G3State } from "../../../services/premium/g3";
 import type { PremiumFeature } from "../../../services/premium/features";
 import { PremiumLabel } from "../PremiumAskHost";
-import { askLocked, useG3Probe } from "./useG3";
+import { askLocked, useG3ProbeState } from "./useG3";
 import { t } from "../../../i18n/core";
 
 // undrawn (Round G, no handover)
@@ -13,13 +13,24 @@ import { t } from "../../../i18n/core";
 
 /**
  * A G3 route: while the switch (and the Database's G3) loads, a loading
- * line; with the switch off, a Database without G3, or unknown, the route
- * doesn't exist and sends the member back where it came from.
+ * line; with the switch off or a Database without G3, the route doesn't
+ * exist and sends the member back where it came from. Batch D GB: a failed
+ * or offline read is not a "no": the member stays on the page with the calm
+ * error line and Retry (as G3Body), and Retry asks again. Never redirect on a
+ * failure.
  */
 export function G3Route({ fallback, children }: { fallback: string; children: React.ReactNode }) {
-  const probe = useG3Probe();
+  const { probe, message, retry } = useG3ProbeState();
   if (probe === "loading") return <p className="py-10 text-center text-[13px] text-charcoal-faint">{t("Loading…")}</p>;
   if (probe === "no") return <Navigate to={fallback} replace />;
+  if (probe === "error")
+    return (
+      <div className="px-5 py-10 text-center" data-g3-route-error>
+        <G3Body state={{ kind: "error", message }} onRetry={retry}>
+          {() => null}
+        </G3Body>
+      </div>
+    );
   return <>{children}</>;
 }
 
