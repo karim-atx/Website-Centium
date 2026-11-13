@@ -44,3 +44,46 @@ test("a missing report_app_away (before the migration) is ignored silently", asy
   assert.equal(presenceErrorIgnorable(null), true);
   assert.equal(presenceErrorIgnorable({ code: "42501", message: "permission denied" }), false);
 });
+
+test("an active still in flight when the app leaves reaches the server before the away (the queue)", async () => {
+  const { presenceQueue } = await import("./presenceRule.ts");
+  const arrived: string[] = [];
+  const pending: (() => void)[] = [];
+  // A request that answers only when released, as on a slow network.
+  const send = (fn: string) => new Promise<void>((resolve) => pending.push(() => (arrived.push(fn), resolve())));
+  const call = presenceQueue(send, 3000);
+  const tick = call("report_app_active"); // a timer tick, in flight
+  const away = call("report_app_away"); // the app leaves meanwhile
+  await new Promise((r) => setTimeout(r, 10));
+  assert.equal(pending.length, 1, "the away waits for the active to answer");
+  pending.shift()!();
+  await tick;
+  await new Promise((r) => setTimeout(r, 10));
+  pending.shift()!();
+  await away;
+  assert.deepEqual(arrived, ["report_app_active", "report_app_away"]);
+});
+
+test("a stuck active never holds the away for more than the cap", async () => {
+  const { presenceQueue } = await import("./presenceRule.ts");
+  const sent: string[] = [];
+  const send = (fn: string) => {
+    sent.push(fn);
+    return fn === "report_app_active" ? new Promise<void>(() => {}) : Promise.resolve();
+  };
+  const call = presenceQueue(send, 50);
+  void call("report_app_active");
+  const t0 = Date.now();
+  await call("report_app_away");
+  assert.deepEqual(sent, ["report_app_active", "report_app_away"]);
+  assert.ok(Date.now() - t0 < 1000);
+});
+
+test("leave then come back quickly: away, then active, in that order", async () => {
+  const { presenceQueue } = await import("./presenceRule.ts");
+  const order: string[] = [];
+  const send = (fn: string) => new Promise<void>((r) => setTimeout(() => (order.push(fn), r()), fn === "report_app_away" ? 30 : 5));
+  const call = presenceQueue(send, 3000);
+  await Promise.all([call("report_app_away"), call("report_app_active")]);
+  assert.deepEqual(order, ["report_app_away", "report_app_active"]);
+});

@@ -38,5 +38,27 @@ export const presenceSignal = (visibility: string, focused: boolean): PresenceSi
  * migration is live the call answers PGRST202 (or 404), and the stamp then
  * lapses after 60 s as before. Deploy order doesn't matter.
  */
+/**
+ * #145 follow-up: presence calls reach the server in the order they were made.
+ * An "I'm active" report still in flight when the app leaves (a timer tick)
+ * could otherwise land after report_app_away and recreate the stamp, which
+ * brings back up to 60 s of skipped pushes. Each call starts when the one
+ * before it has answered, or after `capMs` at most, so a stuck request never
+ * holds up the next one for long. `send` never rejects (failures are its own
+ * business); the queue survives one anyway.
+ */
+export function presenceQueue(send: (fn: string) => Promise<void>, capMs = 3000, wait: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))) {
+  let tail: Promise<void> = Promise.resolve();
+  return (fn: string): Promise<void> => {
+    const prev = tail;
+    const mine = Promise.race([prev, wait(capMs)]).then(
+      () => send(fn),
+      () => send(fn)
+    );
+    tail = mine.catch(() => undefined);
+    return mine;
+  };
+}
+
 export const presenceErrorIgnorable = (e: { code?: string; status?: number; message?: string } | null): boolean =>
   !e || e.code === "PGRST202" || e.status === 404 || /could not find the function/i.test(e.message ?? "");

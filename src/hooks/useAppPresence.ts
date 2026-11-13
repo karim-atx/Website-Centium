@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { App } from "@capacitor/app";
 import { supabase } from "../../lib/supabase/client";
 import { isNative } from "../platform";
-import { PRESENCE_INTERVAL_MS, presenceErrorIgnorable, presenceSignal, presenceStep, type PresenceSignal, type PresenceState } from "./presenceRule";
+import { PRESENCE_INTERVAL_MS, presenceErrorIgnorable, presenceQueue, presenceSignal, presenceStep, type PresenceSignal, type PresenceState } from "./presenceRule";
 
 /**
  * "I'm looking at the app" (Round C Release 2, Database 20261221100000
@@ -26,7 +26,7 @@ type RpcError = { code?: string; message: string };
 type Rpc = { rpc: (fn: string) => PromiseLike<{ error: RpcError | null; status?: number }> };
 type PresenceFn = "report_app_active" | "report_app_away";
 
-function call(fn: PresenceFn): Promise<void> {
+function send(fn: PresenceFn): Promise<void> {
   return Promise.resolve((supabase as unknown as Rpc).rpc(fn)).then(
     ({ error, status }) => {
       if (error && !presenceErrorIgnorable({ ...error, status })) console.warn(`[presence] ${fn}:`, error.message);
@@ -34,6 +34,13 @@ function call(fn: PresenceFn): Promise<void> {
     () => undefined
   );
 }
+
+// Every presence call goes through one queue, in order (#145 follow-up): an
+// "away" is sent once any "active" still in flight has answered (3 s at most),
+// so the active can't land after it and recreate the stamp; an "active" after
+// coming back likewise follows the away.
+const enqueue = presenceQueue((fn) => send(fn as PresenceFn));
+const call = (fn: PresenceFn): Promise<void> => enqueue(fn);
 
 /**
  * Sign-out: away before the session ends, so the account's stamp doesn't keep
