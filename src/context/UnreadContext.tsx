@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { isNative } from "../platform";
+import { AppBadgeSync } from "./AppBadgeSync";
 import { useLocation } from "react-router-dom";
 import { useApp } from "./AppContext";
 import { usePoll } from "../hooks/usePoll";
@@ -147,6 +149,8 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   return (
     <UnreadCtx.Provider value={{ ...counts, refresh: () => void load() }}>
       <PopupCtx.Provider value={{ current: popups[0] ?? null, dismiss: dismissPopup }}>{children}</PopupCtx.Provider>
+      {/* The app icon's badge follows these counts (App-Centium #43); nothing in a browser. */}
+      {isNative() && <AppBadgeSync />}
     </UnreadCtx.Provider>
   );
 };
