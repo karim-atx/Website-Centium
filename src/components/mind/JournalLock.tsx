@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type Ref } from "react";
 import { Eye, EyeOff, Fingerprint, KeyRound, Lock } from "lucide-react";
 import { CentredPopup } from "../ui/CentredPopup";
 import { CodeBoxes } from "../ui/CodeBoxes";
@@ -199,6 +199,64 @@ function DeviceUnlockButton({ option, disabled }: { option: DeviceUnlockOption; 
   );
 }
 
+/**
+ * Foundations › Inputs, the password kind (44, r12, surface.soft, 14/600,
+ * focused border primary.accent, error border in danger), with its own show /
+ * hide eye. Shared by the unlock prompt and the first lock's two fields
+ * (Batch D GD).
+ */
+export function PasswordField({
+  value,
+  onChange,
+  onEnter,
+  invalid,
+  inputRef,
+  label = tk("Password"),
+  autoComplete = "current-password",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onEnter: () => void;
+  invalid: boolean;
+  inputRef?: Ref<HTMLInputElement>;
+  /** The placeholder, and the field's name for a screen reader (an English key). */
+  label?: string;
+  autoComplete?: string;
+}) {
+  const visibility = usePasswordVisibility();
+  return (
+    <label className="block relative">
+      <span className="sr-only">{t(label)}</span>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onEnter();
+          }
+        }}
+        type={visibility.shown ? "text" : "password"}
+        autoComplete={autoComplete}
+        placeholder={t(label)}
+        aria-invalid={invalid || undefined}
+        className={`w-full h-11 rounded-xl bg-cream-soft border border-charcoal/10 ps-3.5 pe-11 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))] ${
+          invalid ? "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-status-high))]" : ""
+        }`}
+      />
+      <button
+        type="button"
+        onClick={visibility.toggle}
+        className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
+        aria-label={visibility.shown ? t("Hide password") : t("Show password")}
+      >
+        {visibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </label>
+  );
+}
+
 function PasswordPopup({
   purpose,
   folderName,
@@ -219,7 +277,6 @@ function PasswordPopup({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(notice ?? null);
   const [busy, setBusy] = useState(false);
-  const visibility = usePasswordVisibility();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // The caller mounts this only while asking, so every ask starts empty and
@@ -256,38 +313,16 @@ function PasswordPopup({
       cta={{ label: custom ? custom.cta : t(copy.cta), onClick: () => void submit(), loading: busy }}
     >
       {device && <DeviceUnlockButton option={device} disabled={busy} />}
-      <label className="block relative">
-        <span className="sr-only">{t("Password")}</span>
-        <input
-          ref={inputRef}
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            if (error) setError(null);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void submit();
-            }
-          }}
-          type={visibility.shown ? "text" : "password"}
-          autoComplete="current-password"
-          placeholder={t("Password")}
-          aria-invalid={!!error || undefined}
-          className={`w-full h-11 rounded-xl bg-cream-soft border border-charcoal/10 ps-3.5 pe-11 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary-accent focus:shadow-[0_0_0_0.5px_rgb(var(--c-primary-accent))] ${
-            error ? "!border-status-high focus:!shadow-[0_0_0_0.5px_rgb(var(--c-status-high))]" : ""
-          }`}
-        />
-        <button
-          type="button"
-          onClick={visibility.toggle}
-          className="tap absolute end-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
-          aria-label={visibility.shown ? t("Hide password") : t("Show password")}
-        >
-          {visibility.shown ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
-      </label>
+      <PasswordField
+        inputRef={inputRef}
+        value={password}
+        onChange={(v) => {
+          setPassword(v);
+          if (error) setError(null);
+        }}
+        onEnter={() => void submit()}
+        invalid={!!error}
+      />
       {error && (
         <p role="alert" className="mt-1.5 text-[11.5px] leading-4 font-medium text-status-high">
           {t(error)}

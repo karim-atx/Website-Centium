@@ -371,6 +371,18 @@ export function disableJournalFolderLockWithCodeRemote(folderId: string, code: s
   return codeCall("disable_journal_folder_lock_with_code", folderId, code);
 }
 
+/**
+ * Batch D GD: the first lock checks the account password (or the emailed
+ * code) with the server BEFORE the folder locks, through the unlock call that
+ * already checks it: unlock_journal_folder needs only that the folder is the
+ * caller's, not that it is locked, and it spends one of the shared ten tries
+ * like any unlock. The window it opens on the still-open folder is closed by
+ * lock_journal_folder right after ("also closes any open unlock window").
+ */
+export function verifyFolderLockSecret(folderId: string, secret: string, via: UnlockMethod): Promise<LockOutcome> {
+  return via === "code" ? unlockJournalFolderWithCodeRemote(folderId, secret) : unlockJournalFolderRemote(folderId, secret);
+}
+
 /** How this account opens a locked folder, and the address a code goes to. */
 export interface FolderLockAuth {
   method: UnlockMethod;

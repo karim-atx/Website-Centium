@@ -10,6 +10,8 @@ import { Toast } from "../../../components/ui/Toast";
 import { MusicSection } from "../../../components/music/MusicSection";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../../components/mind/JournalLock";
 import { useJournalDeviceUnlock } from "../../../components/mind/useJournalDeviceUnlock";
+import { FirstJournalLock } from "../../../components/mind/FirstJournalLock";
+import { firstLockSeen, isFirstLock } from "../../../services/journal/firstLockModel";
 import { entryMenuTarget } from "../../../components/mind/entryMenu";
 import { JOURNAL_LIMITS, folderLockAuth, type FolderLockAuth } from "../../../services/journal";
 import { isFolderOpen, type UnlockWindows } from "../../../services/journal/lockLogic";
@@ -101,6 +103,7 @@ export default function JournalWeb() {
     lockJournalFolder,
     unlockJournalFolder,
     disableJournalFolderLock,
+    authUserId,
   } = useApp();
   const { blocked } = useFreeLimit();
   const { rail } = useWebLayout();
@@ -127,6 +130,8 @@ export default function JournalWeb() {
   const [lockNotice, setLockNotice] = useState<string | undefined>(undefined);
   const [asking, setAsking] = useState<{ purpose: PasswordPurpose; folder: JournalFolder; then?: () => void } | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
+  // Batch D GD: the folder going through the first lock's steps.
+  const [firstLock, setFirstLock] = useState<JournalFolder | null>(null);
   // Where focus goes back when a confirmation closes: the ⋮ (or the folder options) that led to it.
   const returnEl = useRef<HTMLElement | null>(null);
   useEscCancel(!!confirmDelete, () => setConfirmDelete(null), () => returnEl.current);
@@ -265,6 +270,12 @@ export default function JournalWeb() {
     } else if (opt === "lock" && selectedFolder) {
       if (blocked("locked_journal_folders", lockedFolderCount(journalFolders))) return;
       setLockError(null);
+      // Batch D GD: the first lock asks for the password twice and explains
+      // unlocking; later ones lock at once, as before.
+      if (lockAuth && isFirstLock(lockedFolderCount(journalFolders), firstLockSeen(globalThis.localStorage, authUserId))) {
+        setFirstLock(selectedFolder);
+        return;
+      }
       void lockJournalFolder(selectedFolder.id).then(setLockError);
     } else if (opt === "unlock" && selectedFolder) {
       askPassword("remove", selectedFolder);
@@ -648,6 +659,14 @@ export default function JournalWeb() {
           email={lockAuth?.email}
           notice={lockNotice}
           device={deviceUnlock}
+        />
+      )}
+      {firstLock && lockAuth && (
+        <FirstJournalLock
+          folder={firstLock}
+          auth={lockAuth}
+          onMethodChange={(method) => setLockAuth({ ...lockAuth, method })}
+          onClose={() => setFirstLock(null)}
         />
       )}
     </MindSectionWeb>
