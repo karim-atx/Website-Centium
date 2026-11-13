@@ -9,6 +9,8 @@
 import type { Exercise, LoggedExercise, WorkoutSession, WorkoutTemplate, WorkoutTemplateAssignment } from "../../../types";
 import { signedNum } from "../proRules";
 import { t, tn } from "../../../i18n/core";
+import { plausibleSet } from "../../../services/workout/setLimits";
+import { exerciseKey } from "../../../services/workout/stats";
 
 const DAY = 86400000;
 const toDate = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -173,7 +175,8 @@ export interface LogRow {
   status: LogStatus;
 }
 
-const doneSets = (ex: LoggedExercise) => ex.sets.filter((s) => (s.outcome ?? (s.completed ? "completed" : "skipped")) !== "skipped");
+// Batch D GH: a set over the ceilings (an old row) counts toward no summary.
+const doneSets = (ex: LoggedExercise) => ex.sets.filter((s) => (s.outcome ?? (s.completed ? "completed" : "skipped")) !== "skipped" && plausibleSet(s));
 
 const kgText = (kg: number | null | undefined) => (kg == null ? null : kg === 0 ? null : t("{n} kg", { n: fmtKg(kg) }));
 
@@ -254,19 +257,25 @@ export interface TopLift {
  */
 export function topLift(sessions: Pick<WorkoutSession, "startedAt" | "exercises">[]): TopLift | null {
   const ordered = [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  // Batch D GH: by exercise id (exerciseKey), so a custom "Bench Press" and
+  // the library's are two lifts; the latest name is the one shown.
   const series = new Map<string, { kg: number; reps: number }[]>();
+  const names = new Map<string, string>();
   for (const s of ordered) {
     for (const ex of s.exercises) {
       const sets = doneSets(ex).filter((x) => (x.weightKg ?? 0) > 0);
       if (!sets.length) continue;
       const best = sets.reduce((a, b) => ((b.weightKg ?? 0) > (a.weightKg ?? 0) ? b : a));
-      const list = series.get(ex.name) ?? [];
+      const key = exerciseKey(ex);
+      const list = series.get(key) ?? [];
       list.push({ kg: best.weightKg ?? 0, reps: best.reps ?? 0 });
-      series.set(ex.name, list);
+      series.set(key, list);
+      names.set(key, ex.name);
     }
   }
   let best: TopLift | null = null;
-  for (const [exercise, list] of series) {
+  for (const [key, list] of series) {
+    const exercise = names.get(key) ?? key;
     if (list.length < 2) continue;
     const first = list[0];
     const last = list[list.length - 1];

@@ -32,6 +32,7 @@ import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { playlistSaveError } from "../music/playlistLink";
 import { t, tk } from "../../i18n/core";
 import { rpc } from "./rpc";
+import { bodyWeightAllowed } from "../workout/setLimits";
 import type { Read, Write } from "./clients";
 import { shiftIso } from "./home";
 import type { ConflictRow, ItemKind, MealSlot, ServingFacts } from "../../components/pro/nutrition/nutritionModel";
@@ -595,7 +596,8 @@ export async function fetchWeightSeries(clientId: string, since: string): Promis
     const p = (n: number) => String(n).padStart(2, "0");
     const day = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
     const v = num(r.value);
-    if (v !== null) out[day] = v;
+    // Batch D GH: a weight outside 20–500 kg (an old row) is no weigh-in.
+    if (v !== null && bodyWeightAllowed(v)) out[day] = v;
   }
   return { ok: true, data: out };
 }

@@ -104,3 +104,27 @@ export function setsOverCeiling(exercises: readonly Pick<LoggedExercise, "sets">
 
 /** A body-weight entry: inside 20–500 kg inclusive, or refused. */
 export const bodyWeightAllowed = (kg: number): boolean => Number.isFinite(kg) && kg >= BODY_WEIGHT_MIN_KG && kg <= BODY_WEIGHT_MAX_KG;
+
+// ---------------------------------------------------------------------------
+// Batch D GH follow-up (Karim): the professional's reads of a client's
+// lifts and weight skip the same impossible values.
+
+/** A set read as kg and reps (the professional's insights shape) the records and charts may use. */
+export const plausibleLift = (kg: number | null, reps: number | null): boolean => plausibleSet({ weightKg: kg, reps: reps ?? 0 });
+
+/**
+ * A professional's read of a session's sets, without the impossible ones, and
+ * the volume they had added (completed sets only, as the stored total counts).
+ */
+export function withoutImplausibleSets<S extends { kg: number | null; reps: number | null; completed?: boolean }>(sets: readonly S[]): { sets: S[]; droppedVolumeKg: number } {
+  const kept: S[] = [];
+  let dropped = 0;
+  for (const s of sets) {
+    if (plausibleLift(s.kg, s.reps)) kept.push(s);
+    else if (s.completed !== false) dropped += (s.kg ?? 0) * (s.reps ?? 0);
+  }
+  return { sets: kept, droppedVolumeKg: dropped };
+}
+
+/** A health reading charts may show: a weight only inside 20–500 kg; any other type as it is. */
+export const plausibleReading = (type: string, value: number): boolean => type !== "weight" || bodyWeightAllowed(value);

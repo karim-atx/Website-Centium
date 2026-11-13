@@ -26,6 +26,7 @@ import { t } from "../../i18n/core";
 import type { Read, Write } from "./clients";
 import { readActivityDays, readActivityHours, readSleepNights } from "../health-metrics/readers";
 import type { SleepNight, SleepStage } from "../../components/pro/insights/sleepModel";
+import { plausibleReading, withoutImplausibleSets } from "../workout/setLimits";
 
 const readFail = (error: unknown) => ({ ok: false as const, offline: isOffline(error) });
 const from = (table: string) => supabase.from(table as never);
@@ -106,7 +107,8 @@ export async function fetchMetricRows(clientId: string, types: MetricType[], sin
     from("health_metrics").select("metric_type, value, recorded_at, context").eq("user_id", clientId).in("metric_type", types).gte("recorded_at", `${since}T00:00:00`).order("recorded_at").range(a, b)
   );
   if (!r.ok) return readFail(r.error);
-  return { ok: true, data: r.rows.map((x) => ({ type: x.metric_type, value: Number(x.value), at: x.recorded_at, day: localDay(x.recorded_at), rest: x.context === "rest" })) };
+  // Batch D GH: a weight outside 20–500 kg (an old row) is no reading here either.
+  return { ok: true, data: r.rows.filter((x) => plausibleReading(x.metric_type, Number(x.value))).map((x) => ({ type: x.metric_type, value: Number(x.value), at: x.recorded_at, day: localDay(x.recorded_at), rest: x.context === "rest" })) };
 }
 
 // ---------------------------------------------------------------------------
@@ -197,22 +199,32 @@ export async function fetchWorkouts(clientId: string, since: string): Promise<Re
   if (!r.ok) return readFail(r.error);
   return {
     ok: true,
-    data: r.rows.map((w) => ({
-      id: w.id,
-      name: w.routine_name ?? t("Workout"),
-      day: w.activity_date ?? localDay(w.started_at),
-      startedAt: w.started_at,
-      durationMin: num(w.duration_sec) != null ? Math.round((num(w.duration_sec) as number) / 60) : null,
-      volumeKg: num(w.total_volume_kg),
-      exercises: [...(w.logged_exercises ?? [])]
+    data: r.rows.map((w) => {
+      // Batch D GH: a set over the ceilings (an old row) is left out of the
+      // charts, and the volume it added comes off the session's total.
+      let dropped = 0;
+      const exercises = [...(w.logged_exercises ?? [])]
         .sort((a, b) => a.position - b.position)
-        .map((e) => ({
-          name: e.name,
-          sets: [...(e.logged_sets ?? [])]
-            .sort((a, b) => a.set_number - b.set_number)
-            .map((s) => ({ reps: num(s.reps), kg: num(s.weight_kg), completed: s.completed !== false, type: s.set_type, rpe: num(s.rpe), pr: !!s.is_pr })),
-        })),
-    })),
+        .map((e) => {
+          const clean = withoutImplausibleSets(
+            [...(e.logged_sets ?? [])]
+              .sort((a, b) => a.set_number - b.set_number)
+              .map((s) => ({ reps: num(s.reps), kg: num(s.weight_kg), completed: s.completed !== false, type: s.set_type, rpe: num(s.rpe), pr: !!s.is_pr }))
+          );
+          dropped += clean.droppedVolumeKg;
+          return { name: e.name, sets: clean.sets };
+        });
+      const volume = num(w.total_volume_kg);
+      return {
+        id: w.id,
+        name: w.routine_name ?? t("Workout"),
+        day: w.activity_date ?? localDay(w.started_at),
+        startedAt: w.started_at,
+        durationMin: num(w.duration_sec) != null ? Math.round((num(w.duration_sec) as number) / 60) : null,
+        volumeKg: volume != null && dropped > 0 ? Math.max(0, Math.round((volume - dropped) * 100) / 100) : volume,
+        exercises,
+      };
+    }),
   };
 }
 

@@ -124,3 +124,23 @@ test("the sets the server would refuse, in the logger's indexes", () => {
   assert.deepEqual(setsOverCeiling(ex), ["0-1", "1-0"]);
   assert.deepEqual(setsOverCeiling([{ sets: [set(1000, 1000)] }]), []);
 });
+
+test("professional reads: impossible sets and weights are skipped", async () => {
+  const { plausibleLift, plausibleReading, withoutImplausibleSets } = await import("./setLimits");
+  assert.equal(plausibleLift(1000, 1), true);
+  assert.equal(plausibleLift(1000.5, 1), false);
+  assert.equal(plausibleLift(20, 1001), false);
+  assert.equal(plausibleLift(null, 10), true);
+  const r = withoutImplausibleSets([
+    { kg: 100, reps: 5, completed: true },
+    { kg: 5000, reps: 3, completed: true },
+    { kg: 2000, reps: 1, completed: false },
+  ]);
+  assert.deepEqual(r.sets.map((s) => s.kg), [100]);
+  assert.equal(r.droppedVolumeKg, 15000);
+  assert.equal(plausibleReading("weight", 19.9), false);
+  assert.equal(plausibleReading("weight", 20), true);
+  assert.equal(plausibleReading("weight", 500), true);
+  assert.equal(plausibleReading("weight", 500.1), false);
+  assert.equal(plausibleReading("steps", 90000), true);
+});
