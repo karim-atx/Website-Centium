@@ -15,7 +15,20 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 /** The site's 16px side gutter: a panel never comes closer to the screen's edge. */
 export const GUTTER = 16;
 
-export function useAnchoredPanel<P extends HTMLElement>(open: boolean, setOpen: (v: boolean) => void) {
+/**
+ * Options (the desktop download panel; the other panels pass none and behave
+ * as before): `relayout` places the panel again whenever it changes (a
+ * section inside it opened or closed); `below` keeps it under the toggle,
+ * scrolling inside itself when it is taller than the room there, instead of
+ * moving above.
+ */
+export interface AnchoredOptions {
+  relayout?: unknown;
+  below?: boolean;
+}
+
+export function useAnchoredPanel<P extends HTMLElement>(open: boolean, setOpen: (v: boolean) => void, opts: AnchoredOptions = {}) {
+  const { relayout, below: keepBelow = false } = opts;
   const toggle = useRef<HTMLButtonElement>(null);
   const panel = useRef<P>(null);
 
@@ -30,7 +43,7 @@ export function useAnchoredPanel<P extends HTMLElement>(open: boolean, setOpen: 
     // Never under the fixed navbar (#site-nav, z-index 60) while it shows.
     const top = Math.max(GUTTER, (document.getElementById("site-nav")?.getBoundingClientRect().bottom ?? 0) + 8);
     const below = vh - GUTTER - k.bottom, above = k.top - top;
-    const up = h > below && above > below;
+    const up = !keepBelow && h > below && above > below;
     const room = up ? above : below;
     if (h > room) {
       el.style.maxHeight = `${room}px`;
@@ -38,7 +51,7 @@ export function useAnchoredPanel<P extends HTMLElement>(open: boolean, setOpen: 
     }
     el.style.top = `${up ? k.top - Math.min(h, room) : k.bottom}px`;
     el.style.left = `${Math.max(GUTTER, Math.min(vw - GUTTER - w, k.left + k.width / 2 - w / 2))}px`;
-  }, [open]);
+  }, [open, relayout, keepBelow]);
 
   useEffect(() => {
     if (!open) return;

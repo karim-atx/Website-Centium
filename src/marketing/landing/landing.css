@@ -80,6 +80,18 @@ html.larger-icons .centium-site svg {
   background-size: 100% 1px !important;
 }
 
+/* The desktop download panel's exit (DownloadButton.tsx), the entrance below reversed. */
+@keyframes centium-menu-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
 /* The mobile menu's entrance (the prototype's fade-slide-up, renamed: the
    app owns a different fade-slide-up keyframe). */
 @keyframes centium-menu-in {

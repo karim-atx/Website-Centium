@@ -32,6 +32,13 @@
 // z-index 5): in the hero, #intro-track (z-index 2) sits under the phone
 // layer (fixed, z-index 4), which would cover them; the navbar (60) stays
 // above. Placement, closing and keyboard: anchoredPanel.ts.
+// DESKTOP (1024px and wider, Karim 2026-11-13): the hero row and the CTA
+// show only the two buttons. "Download the app" is a toggle (with a chevron
+// that turns) opening one panel under it (DesktopDownload below): "Download
+// for Windows", the size and version line, the short unsigned-app note with
+// "Why?", then "Other download", "Other platforms" and "Install help", which
+// open their existing content inside the panel. After a download starts the
+// panel stays open and says so. Below 1024px nothing changes.
 // Styles reused from the site: the small links are the footer's small text
 // link (FT1: 13px / 500 / #5B5349, the 1px underline that grows on hover,
 // hover #6A54C4, 44px tall); the panels are the navbar's mobile menu card
@@ -39,7 +46,7 @@
 // centium-menu-in entrance; rows 10px 12px / 12px radius / 14px / 600), on
 // the landing's opaque card surface #FFFFFF.
 
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { t } from "../../i18n/core";
 import { reducedMotion } from "../landing/engine/env";
@@ -134,6 +141,16 @@ const helpText = (version: string | null) =>
 
 const HELP: React.CSSProperties = { margin: 0, fontSize: "12px", lineHeight: "18px", fontWeight: 500, color: "#5B5349", whiteSpace: "normal" };
 
+/** The desktop layout (the popover) from this width; below it, the page as before. */
+const DESKTOP_QUERY = "(min-width: 1024px)";
+const subscribeDesktop = (cb: () => void) => {
+  const mq = window.matchMedia?.(DESKTOP_QUERY);
+  mq?.addEventListener?.("change", cb);
+  return () => mq?.removeEventListener?.("change", cb);
+};
+const isDesktopWidth = () => !!window.matchMedia?.(DESKTOP_QUERY).matches;
+const useDesktopWidth = () => useSyncExternalStore(subscribeDesktop, isDesktopWidth, () => false);
+
 interface Props {
   /** The replaced button's style, without a width (the grid sets it). */
   btnStyle: React.CSSProperties;
@@ -166,6 +183,7 @@ export const DownloadButton: React.FC<Props> = ({ btnStyle, stack, compact = fal
   const listId = useId();
   const whyId = useId();
   const helpId = useId();
+  const desktop = useDesktopWidth();
   const option = downloadOption(platform, DOWNLOAD_LINKS, arch);
   const rows = platformList(DOWNLOAD_LINKS, arch);
   const win = option?.id === "windows";
@@ -194,6 +212,9 @@ export const DownloadButton: React.FC<Props> = ({ btnStyle, stack, compact = fal
   }, [room]);
 
   const openFrom = (el: HTMLElement | null) => setHost(el?.closest<HTMLElement>(".centium-site") ?? document.body);
+
+  // Desktop with a download: the two buttons only, and the panel (no hanging line, no links under the row).
+  if (desktop && option) return <DesktopDownload option={option} rows={rows} version={version} btnStyle={btnStyle} stack={stack} />;
   const enter = reducedMotion() ? "none" : "centium-menu-in .45s cubic-bezier(.22,1,.36,1) both";
   const whyProps = {
     ref: whyToggle,
@@ -354,6 +375,227 @@ export const DownloadButton: React.FC<Props> = ({ btnStyle, stack, compact = fal
             style={{ ...CARD, width: "360px", padding: "16px", fontSize: "13px", lineHeight: "20px", fontWeight: 500, color: "#5B5349", outline: "none", animation: enter }}
           >
             <WhyBody id={`${whyId}-h`} lead={compact ? helpText(version) : null} sums={sums} />
+          </div>,
+          host,
+        )}
+    </>
+  );
+};
+
+/** The desktop panel's caption: what the download is, with the version when versions.json answered. */
+const desktopCaption = (version: string | null) =>
+  version ? t("Windows 10 and 11 · Free · About 2 MB · Version {v}", { v: version }) : t("Windows 10 and 11 · Free · About 2 MB");
+
+const CLOSE_MS = 160;
+
+/** The chevron on the desktop toggle: turns when the panel is open. */
+const Chevron: React.FC<{ open: boolean }> = ({ open }) => (
+  <svg
+    aria-hidden
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: reducedMotion() ? "none" : "transform .2s cubic-bezier(.22,1,.36,1)" }}
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+/** A link-styled row in the desktop panel's list (the platform list's rows, smaller). */
+const PANEL_ITEM = {
+  ...LINK_ROW,
+  width: "100%",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: "8px",
+  padding: "8px 10px",
+  fontSize: "13px",
+  lineHeight: "20px",
+  fontWeight: 600,
+  font: "inherit",
+  textAlign: "start",
+  cursor: "pointer",
+} as React.CSSProperties;
+
+/**
+ * Desktop (1024px and wider): "Download the app" opens one panel under it,
+ * anchored, centred on the button and kept on screen (anchoredPanel.ts), in
+ * the panels' card with the button's hairline lavender border. It closes on
+ * Escape (focus back on the button), a click outside or on the button, with a
+ * short fade and slide (none with reduced motion).
+ */
+const DesktopDownload: React.FC<{
+  option: NonNullable<ReturnType<typeof downloadOption>>;
+  rows: ReturnType<typeof platformList>;
+  version: string | null;
+  btnStyle: React.CSSProperties;
+  stack: boolean;
+}> = ({ option, rows, version, btnStyle, stack }) => {
+  const [open, setOpenState] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  const [sums, setSums] = useState<Checksum[]>([]);
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const timer = useRef<number | undefined>(undefined);
+  const setOpen = (v: boolean) => {
+    window.clearTimeout(timer.current);
+    if (v) {
+      setClosing(false);
+      setOpenState(true);
+      return;
+    }
+    setOpenState(false);
+    if (reducedMotion()) return;
+    setClosing(true);
+    timer.current = window.setTimeout(() => setClosing(false), CLOSE_MS);
+  };
+  const { toggle, panel, onToggleKey, onPanelKey } = useAnchoredPanel<HTMLDivElement>(open, setOpen, { relayout: `${helpOpen}${listOpen}${started}${sums.length}${version}`, below: true });
+  const panelId = useId();
+  const titleId = useId();
+  const helpId = useId();
+  const listId = useId();
+  const win = option.id === "windows";
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  useEffect(() => {
+    if (helpOpen) void readWindowsSums(version).then(setSums);
+  }, [helpOpen, version]);
+  // A fresh panel each time it opens: no confirmation, sections folded.
+  const onToggle = () => {
+    if (!open) {
+      setHost(toggle.current?.closest<HTMLElement>(".centium-site") ?? document.body);
+      setStarted(false);
+      setHelpOpen(false);
+      setListOpen(false);
+    }
+    setOpen(!open);
+  };
+  const start = () => setStarted(true);
+  const anim = reducedMotion() ? "none" : open ? "centium-menu-in .2s cubic-bezier(.22,1,.36,1) both" : "centium-menu-out .16s ease both";
+  const shown = open || closing;
+  const linkBtn = { display: "inline", padding: 0, font: "inherit", fontWeight: 600, color: "#5B5349", textDecoration: "underline", textUnderlineOffset: "2px", cursor: "pointer", "--hc": "#6A54C4" } as React.CSSProperties;
+
+  return (
+    <>
+      <button
+        ref={toggle}
+        type="button"
+        data-download=""
+        data-download-desktop=""
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-haspopup="dialog"
+        onClick={onToggle}
+        onKeyDown={onToggleKey}
+        className="cl-lift"
+        style={{ ...btnStyle, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", font: "inherit", fontWeight: btnStyle.fontWeight, fontSize: btnStyle.fontSize, cursor: "pointer", ...(stack ? { gridColumn: 1, gridRow: 2 } : { gridRow: 1, gridColumn: 2 }) }}
+      >
+        {t(option.label)}
+        <Chevron open={open} />
+      </button>
+      {host &&
+        createPortal(
+          <div
+            ref={panel}
+            id={panelId}
+            role="dialog"
+            aria-labelledby={titleId}
+            data-download-panel=""
+            hidden={!shown}
+            onKeyDown={onPanelKey}
+            style={{ ...CARD, width: "340px", padding: "16px", border: "1px solid rgba(125,103,217,.22)", boxShadow: "0 12px 32px rgba(72,58,130,.14)", fontSize: "13px", lineHeight: "20px", fontWeight: 500, color: "#5B5349", animation: anim, pointerEvents: open ? undefined : "none" }}
+          >
+            <h2 id={titleId} className="sr-only">
+              {t(option.label)}
+            </h2>
+            <p role="status" data-download-started="" style={{ margin: started ? "0 0 10px" : 0, display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", lineHeight: "20px", fontWeight: 600, color: "#1D744A" }}>
+              {started && (
+                <>
+                  <svg aria-hidden width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  {t("Your download has started")}
+                </>
+              )}
+            </p>
+            <a
+              href={option.href}
+              onClick={start}
+              data-download-primary=""
+              className="cl-lift"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "44px", padding: "0 16px", borderRadius: "999px", background: "#775FD7", color: "#fff", fontWeight: 600, fontSize: "14px", transition: "transform .25s cubic-bezier(.22,1,.36,1)" }}
+            >
+              {win ? t("Download for Windows") : t(option.label)}
+            </a>
+            {win && (
+              <>
+                <p data-download-caption="" style={{ margin: "10px 0 0", fontSize: "12px", lineHeight: "18px", color: "#71685E", textAlign: "center" }}>
+                  {desktopCaption(version)}
+                </p>
+                <p data-download-note="" style={{ margin: "8px 0 0", fontSize: "12px", lineHeight: "18px", color: "#5B5349" }}>
+                  {t('Windows may show "Windows protected your PC". Choose More info, then Run anyway.')}{" "}
+                  <button type="button" aria-expanded={helpOpen} aria-controls={helpId} data-download-why="" onClick={() => setHelpOpen(!helpOpen)} className="cl-hc" style={linkBtn}>
+                    {t("Why?")}
+                  </button>
+                </p>
+              </>
+            )}
+            <hr aria-hidden style={{ margin: "12px 0 6px", border: 0, borderTop: "1px solid rgba(125,103,217,.16)" }} />
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {win && option.other && (
+                <li>
+                  <a href={option.other.href} onClick={start} data-download-other="" className="cl-hbg cl-hc" style={PANEL_ITEM}>
+                    {t("Other download ({arch})", { arch: ARCH[option.other.arch] })}
+                  </a>
+                </li>
+              )}
+              <li>
+                <button type="button" aria-expanded={listOpen} aria-controls={listId} data-download-platforms="" onClick={() => setListOpen(!listOpen)} className="cl-hbg cl-hc" style={PANEL_ITEM}>
+                  {t("Other platforms")}
+                  <Chevron open={listOpen} />
+                </button>
+                <ul id={listId} hidden={!listOpen} data-download-list="" style={{ listStyle: "none", margin: "2px 0 4px", padding: 0, paddingInlineStart: "8px" }}>
+                  {rows.map((p) => (
+                    <li key={p.id}>
+                      {p.option ? (
+                        <a href={p.option.href} onClick={start} className="cl-hbg cl-hc" style={{ ...LINK_ROW, padding: "6px 10px", fontSize: "13px" }}>
+                          <span style={{ color: "#221E1A" }}>{t(p.name)}</span>
+                          <span className="sr-only">, </span>
+                          <span style={{ fontSize: "12px", fontWeight: 500 }}>{t(p.option.label)}</span>
+                        </a>
+                      ) : (
+                        <div style={{ ...ROW, padding: "6px 10px", fontSize: "13px" }}>
+                          <span style={{ color: "#221E1A" }}>{t(p.name)}</span>
+                          <span className="sr-only">, </span>
+                          <span style={{ fontSize: "12px", fontWeight: 500 }}>{t(COMING_SOON)}</span>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+              {win && (
+                <li>
+                  <button type="button" aria-expanded={helpOpen} aria-controls={helpId} data-download-install-help="" onClick={() => setHelpOpen(!helpOpen)} className="cl-hbg cl-hc" style={PANEL_ITEM}>
+                    {t("Install help")}
+                    <Chevron open={helpOpen} />
+                  </button>
+                </li>
+              )}
+            </ul>
+            {win && (
+              <div id={helpId} hidden={!helpOpen} data-download-help-panel="" style={{ margin: "8px 0 0", padding: "12px", borderRadius: "12px", background: "#F7F5FC" }}>
+                <WhyBody id={`${helpId}-h`} lead={null} sums={sums} />
+              </div>
+            )}
           </div>,
           host,
         )}
