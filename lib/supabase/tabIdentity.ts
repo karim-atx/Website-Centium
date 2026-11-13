@@ -208,6 +208,27 @@ export const DEVICE_KEYS: ReadonlySet<string> = new Set([
   "presentationOwner",
 ]);
 
+/**
+ * Batch D GE (Karim, 13 November 2026): the device's look and language stay on
+ * this device through an explicit Sign out (light / dark / auto, the colour
+ * theme, the language, and the accessibility switches: larger text, reduce
+ * motion, high contrast, bigger targets). Everything else goes as before.
+ * presentationOwner is not kept: it names the account that signed out, so it
+ * becomes SIGNED_OUT_OWNER instead (see there).
+ */
+export const KEPT_ON_SIGN_OUT: ReadonlySet<string> = new Set(["theme", "colorTheme", "language", "accessibility"]);
+
+/**
+ * presentationOwner once a sign-out (or an ended session) left the device's
+ * look behind: it belongs to NO account. usePresentationSync then lets the
+ * next account's saved row win, and with no row keeps the look on screen
+ * WITHOUT saving it to that account or claiming it (services/presentation/
+ * ownership). Never an account id, so it names no one to clear on load.
+ */
+export const SIGNED_OUT_OWNER = "signed-out";
+
+const PRESENTATION_OWNER_KEY = `${STORAGE_PREFIX}:presentationOwner`;
+
 export function storageNamespace(userId: string | null): string {
   return userId ? `u:${userId}` : "anon";
 }
@@ -256,8 +277,8 @@ export function writeAccountValue(storage: Pick<Storage, "setItem">, key: string
 
 /**
  * Prefixes whose every key is account data. `centium-state` is the app's whole
- * persisted cache, the device's own preferences included, exactly as sign-out
- * has always cleared it; `centium-onboarding:` is the onboarding draft, which
+ * persisted cache, the device's own preferences included (an explicit Sign
+ * out then spares those through signOutStorageKeys, Batch D GE); `centium-onboarding:` is the onboarding draft, which
  * belongs to the account that wrote it (pages/onboarding/draftOwner);
  * `hiring-hired-seen:` is keyed by a business's application ids.
  */
@@ -312,7 +333,17 @@ export function accountStorageKeys(entries: Iterable<[string, string | null]>, u
   return out;
 }
 
-function clearAccountKeys(storage: Storage | undefined, userId: string | null): void {
+/**
+ * What an explicit Sign out removes (Batch D GE): the account's keys, less
+ * the device's look and language (KEPT_ON_SIGN_OUT). presentationOwner still
+ * goes; the caller marks the kept copy as no one's (SIGNED_OUT_OWNER).
+ */
+export function signOutStorageKeys(entries: Iterable<[string, string | null]>, userId: string | null): string[] {
+  const kept = new Set([...KEPT_ON_SIGN_OUT].map((k) => `${STORAGE_PREFIX}:${k}`));
+  return accountStorageKeys(entries, userId).filter((key) => !kept.has(key));
+}
+
+function clearAccountKeys(storage: Storage | undefined, userId: string | null, keepDevicePreferences: boolean): void {
   if (!storage) return;
   try {
     const entries: [string, string | null][] = [];
@@ -320,29 +351,45 @@ function clearAccountKeys(storage: Storage | undefined, userId: string | null): 
       const key = storage.key(i);
       if (key !== null) entries.push([key, storage.getItem(key)]);
     }
-    for (const key of accountStorageKeys(entries, userId)) storage.removeItem(key);
+    const keys = keepDevicePreferences ? signOutStorageKeys(entries, userId) : accountStorageKeys(entries, userId);
+    for (const key of keys) storage.removeItem(key);
   } catch {
     // Storage refused outright (private mode): nothing could have been kept.
   }
 }
 
-/** Removes this account's data from local and session storage, now. */
-export function clearAccountStorage(userId: string | null): void {
+/** Marks the device's kept look as no account's (SIGNED_OUT_OWNER). */
+function disownPresentation(storage: Storage | undefined): void {
+  try {
+    storage?.setItem(PRESENTATION_OWNER_KEY, JSON.stringify(SIGNED_OUT_OWNER));
+  } catch {
+    // Refused storage: nothing was kept to be claimed either.
+  }
+}
+
+/**
+ * Removes this account's data from local and session storage, now.
+ * `keepDevicePreferences`: an explicit Sign out (Batch D GE) keeps the
+ * device's look and language, owned by no account from here on.
+ */
+export function clearAccountStorage(userId: string | null, keepDevicePreferences = false): void {
   const g = globalThis as { localStorage?: Storage; sessionStorage?: Storage };
-  clearAccountKeys(g.localStorage, userId);
-  clearAccountKeys(g.sessionStorage, userId);
+  clearAccountKeys(g.localStorage, userId, keepDevicePreferences);
+  clearAccountKeys(g.sessionStorage, userId, keepDevicePreferences);
+  if (keepDevicePreferences) disownPresentation(g.localStorage);
 }
 
 /**
  * The account is leaving this page: no persisted write from here on, and its
  * data removed now and again as the page goes. Every way a session ends calls
- * it (AppContext: endSession, a session ended elsewhere, a suspension).
+ * it (AppContext: endSession, a session ended elsewhere, a suspension); only
+ * an explicit Sign out keeps the device's look and language (Batch D GE).
  */
-export function endAccountStorage(userId: string | null): void {
+export function endAccountStorage(userId: string | null, keepDevicePreferences = false): void {
   accountStorageClosed = true;
-  clearAccountStorage(userId);
+  clearAccountStorage(userId, keepDevicePreferences);
   const w = globalThis as { addEventListener?: (type: string, fn: () => void, opts?: { once?: boolean }) => void };
-  w.addEventListener?.("pagehide", () => clearAccountStorage(userId), { once: true });
+  w.addEventListener?.("pagehide", () => clearAccountStorage(userId, keepDevicePreferences), { once: true });
 }
 
 // --- the end of an account on this device: a session gone by the next load --
@@ -374,10 +421,11 @@ export function storedAccountIds(entries: Iterable<[string, string | null]>): st
   for (const [key, value] of entries) {
     const m = new RegExp(`^${STORAGE_PREFIX}:u:([^:]+):`).exec(key);
     if (m) ids.add(m[1]);
-    if (key === `${STORAGE_PREFIX}:presentationOwner`) {
+    if (key === PRESENTATION_OWNER_KEY) {
       try {
         const owner = JSON.parse(value ?? "null") as unknown;
-        if (typeof owner === "string" && owner) ids.add(owner);
+        // SIGNED_OUT_OWNER names no account (Batch D GE).
+        if (typeof owner === "string" && owner && owner !== SIGNED_OUT_OWNER) ids.add(owner);
       } catch {
         /* unreadable: names no one */
       }
@@ -419,10 +467,15 @@ export function clearEndedAccounts(signedInUserId: string | null): void {
   try {
     if (!g.localStorage) return;
     const ended = storedAccountIds(entriesOf(g.localStorage)).filter((id) => accountSessionEnded(id, signedInUserId, null));
+    const owned = g.localStorage.getItem(PRESENTATION_OWNER_KEY) !== null;
     for (const storage of [g.localStorage, g.sessionStorage]) {
       if (!storage) continue;
       for (const id of ended) for (const key of endedAccountKeys(entriesOf(storage), id, signedInUserId !== null)) storage.removeItem(key);
     }
+    // The device's look stays (endedAccountKeys) but is now no account's, as
+    // after a Sign out (Batch D GE): an empty owner would read as "predates
+    // the marker", and the next account would save it as its own.
+    if (owned && g.localStorage.getItem(PRESENTATION_OWNER_KEY) === null) disownPresentation(g.localStorage);
   } catch {
     // Storage refused outright (private mode): nothing could have been kept.
   }

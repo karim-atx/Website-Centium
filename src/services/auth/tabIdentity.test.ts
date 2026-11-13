@@ -20,6 +20,10 @@ import {
   storedAccountIds,
   endedAccountKeys,
   clearEndedAccounts,
+  clearAccountStorage,
+  signOutStorageKeys,
+  KEPT_ON_SIGN_OUT,
+  SIGNED_OUT_OWNER,
 } from "../../../lib/supabase/tabIdentity";
 
 const A = "11111111-1111-4111-8111-111111111111";
@@ -150,6 +154,81 @@ test("sign-out: the account's keys go, the device's stay", () => {
   assert.deepEqual(accountStorageKeys([[`centium-business-nav-kind:${A}`, "gym"], ["centium.pushToken", "t"]], null), ["centium.pushToken"]);
 });
 
+test("Batch D GE: Sign out keeps the four device preferences and nothing else", () => {
+  assert.deepEqual([...KEPT_ON_SIGN_OUT].sort(), ["accessibility", "colorTheme", "language", "theme"]);
+  const entries: [string, string | null][] = [
+    ["centium-state:theme", '"dark"'],
+    ["centium-state:colorTheme", '"ocean"'],
+    ["centium-state:language", '"ar"'],
+    ["centium-state:accessibility", '{"largerText":true,"reduceMotion":true,"highContrast":true,"biggerTargets":true}'],
+    ["centium-state:presentationOwner", JSON.stringify(A)],
+    [`centium-state:u:${A}:user`, "{}"],
+    [`centium-state:u:${A}:presentationPending`, "true"],
+    ["centium-state:anon:user", "{}"],
+    ["centium-onboarding:state", '{"owner":null}'],
+    [`centium-business-nav-kind:${A}`, "gym"],
+    ["centium.pushToken", "tok"],
+    ["centium-cookie-consent", "declined"],
+  ];
+  // Account data still goes, and the owner marker with it (it names A).
+  assert.deepEqual(signOutStorageKeys(entries, A), [
+    "centium-state:presentationOwner",
+    `centium-state:u:${A}:user`,
+    `centium-state:u:${A}:presentationPending`,
+    "centium-state:anon:user",
+    "centium-onboarding:state",
+    `centium-business-nav-kind:${A}`,
+    "centium.pushToken",
+  ]);
+  // Every other way out (deleting the account, a session ended elsewhere) still clears them.
+  for (const k of KEPT_ON_SIGN_OUT) assert.ok(accountStorageKeys(entries, A).includes(`centium-state:${k}`));
+});
+
+test("Batch D GE: clearing with the device preferences kept marks them as no one's", () => {
+  const fake = (store: Map<string, string>) =>
+    ({
+      get length() {
+        return store.size;
+      },
+      key: (i: number) => [...store.keys()][i] ?? null,
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => store.clear(),
+    }) as Storage;
+  const local = new Map<string, string>([
+    ["centium-state:theme", '"dark"'],
+    ["centium-state:language", '"ar"'],
+    ["centium-state:accessibility", '{"largerText":true,"reduceMotion":false}'],
+    ["centium-state:presentationOwner", JSON.stringify(A)],
+    [`centium-state:u:${A}:user`, "{}"],
+    [`centium-state:u:${A}:presentationPending`, "true"],
+    ["centium-cookie-consent", "declined"],
+  ]);
+  const session = new Map<string, string>([["centium-mfa-recovery-pass", A]]);
+  const g = globalThis as Record<string, unknown>;
+  const saved = { localStorage: g.localStorage, sessionStorage: g.sessionStorage };
+  Object.defineProperty(globalThis, "localStorage", { value: fake(local), configurable: true, writable: true });
+  Object.defineProperty(globalThis, "sessionStorage", { value: fake(session), configurable: true, writable: true });
+  try {
+    clearAccountStorage(A, true);
+    const kept = ["centium-state:theme", "centium-state:language", "centium-state:accessibility", "centium-cookie-consent", "centium-state:presentationOwner"];
+    assert.deepEqual([...local.keys()], kept);
+    assert.equal(local.get("centium-state:language"), '"ar"');
+    assert.equal(local.get("centium-state:presentationOwner"), JSON.stringify(SIGNED_OUT_OWNER));
+    assert.deepEqual([...session.keys()], []);
+    // Again (the second clear, and pagehide): the same, and the owner stays no one's.
+    clearAccountStorage(A, true);
+    assert.deepEqual([...local.keys()].sort(), [...kept].sort());
+    assert.equal(local.get("centium-state:presentationOwner"), JSON.stringify(SIGNED_OUT_OWNER));
+    // Without the flag (deleting the account): everything under the prefix goes, as before.
+    clearAccountStorage(A);
+    assert.deepEqual([...local.keys()], ["centium-cookie-consent"]);
+  } finally {
+    for (const [k, v] of Object.entries(saved)) Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
+  }
+});
+
 test("a session gone by the next load: clear or keep", () => {
   // No session at all: the cookie died with the browser ("Remember me" off).
   // A refused refresh (refresh_token_not_found, invalid_grant, revoked) is the
@@ -178,6 +257,8 @@ test("stored accounts: each namespace, and the presentation owner", () => {
   ]);
   assert.deepEqual(ids, [A, B]);
   assert.deepEqual(storedAccountIds([["centium-state:presentationOwner", "null"]]), []);
+  // Batch D GE: the signed-out owner is no account.
+  assert.deepEqual(storedAccountIds([["centium-state:presentationOwner", JSON.stringify(SIGNED_OUT_OWNER)]]), []);
   assert.deepEqual(storedAccountIds([["centium-state:presentationOwner", "{broken"]]), []);
 });
 
@@ -236,7 +317,9 @@ test("on load: every stored account but the cookie's is cleared", () => {
     const session = new Map([["centium.reputation.messaged", "[]"]]);
     use(local, session);
     clearEndedAccounts(null);
-    assert.deepEqual([...local.keys()], ["centium-state:language", "centium-cookie-consent"]);
+    // Batch D GE: the kept look is no account's now, never "predates the marker".
+    assert.deepEqual([...local.keys()], ["centium-state:language", "centium-cookie-consent", "centium-state:presentationOwner"]);
+    assert.equal(local.get("centium-state:presentationOwner"), JSON.stringify(SIGNED_OUT_OWNER));
     assert.deepEqual([...session.keys()], []);
 
     // A's session is still stored (valid, offline, or a sibling tab's): nothing goes.
@@ -250,7 +333,18 @@ test("on load: every stored account but the cookie's is cleared", () => {
     local.set(`centium-state:u:${B}:user`, "{}");
     use(local, new Map());
     clearEndedAccounts(B);
-    assert.deepEqual([...local.keys()], ["centium-state:language", "centium-cookie-consent", `centium-state:u:${B}:user`]);
+    assert.deepEqual([...local.keys()], ["centium-state:language", "centium-cookie-consent", `centium-state:u:${B}:user`, "centium-state:presentationOwner"]);
+    assert.equal(local.get("centium-state:presentationOwner"), JSON.stringify(SIGNED_OUT_OWNER));
+
+    // After a Sign out the owner names no one, so the next load clears nothing.
+    local = new Map([
+      ["centium-state:theme", '"dark"'],
+      ["centium-state:presentationOwner", JSON.stringify(SIGNED_OUT_OWNER)],
+      ["centium-cookie-consent", "declined"],
+    ]);
+    use(local, new Map());
+    clearEndedAccounts(null);
+    assert.deepEqual([...local.keys()], ["centium-state:theme", "centium-state:presentationOwner", "centium-cookie-consent"]);
   } finally {
     for (const [k, v] of Object.entries(saved)) Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
   }

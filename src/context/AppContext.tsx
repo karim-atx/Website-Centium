@@ -6861,8 +6861,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Round K: Sign out ends THIS DEVICE's session only; deleting the account
   // still ends every one (services/auth/signOutScope SIGN_OUT_SCOPE). The
-  // local cleanup is the same for both.
-  const endSession = async (scope: "local" | "global") => {
+  // local cleanup is the same for both, except Batch D GE: Sign out keeps the
+  // device's look and language (theme, colour theme, language, accessibility;
+  // lib/supabase/tabIdentity KEPT_ON_SIGN_OUT), owned by no account, so the
+  // sign-in page shows them. Deleting the account still clears them.
+  const endSession = async (scope: "local" | "global", keepDevicePreferences = false) => {
     signingOutHere = true;
     // Round D (D23): anything kept to save later is health data on a shared
     // device. The person was warned before getting here (SignOutGuard).
@@ -6880,7 +6883,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // React time to re-render, and it used to write the reset profile straight
     // back (lib/supabase/tabIdentity.ts, endAccountStorage).
     const owner = authUserId ?? TAB_USER_ID;
-    endAccountStorage(owner);
+    endAccountStorage(owner, keepDevicePreferences);
 
     // The administrator escape hatch goes with it, and the boundary is the
     // sign-out rather than the tab. Keyed by account id, it was never
@@ -6934,13 +6937,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Cleared again, last: a writer outside the persisted cache (a loader
     // that finished during the awaits) may have written since. pagehide
     // clears it once more as this page goes.
-    clearAccountStorage(owner);
+    clearAccountStorage(owner, keepDevicePreferences);
     // A fresh page, bound to "signed out": no in-memory state of this account
     // survives into the next sign-in on this tab.
     window.location.reload();
   };
 
-  const signOut = () => endSession(SIGN_OUT_SCOPE.signOut);
+  const signOut = () => endSession(SIGN_OUT_SCOPE.signOut, true);
 
   // Round K (Settings › Security): every OTHER session first, while this one
   // is still good; then the other devices' push rows; then the ordinary
