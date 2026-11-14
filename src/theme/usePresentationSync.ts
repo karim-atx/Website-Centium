@@ -9,6 +9,7 @@ import {
   type Presentation,
 } from "../services/presentation";
 import { afterFailure, afterOnline, canSave, RETRY_START, type RetryState } from "../services/presentation/retry";
+import { afterRead } from "../services/presentation/ownership";
 import { t } from "../i18n/core";
 import { askPremium } from "../services/premium/asks";
 
@@ -32,6 +33,12 @@ import { askPremium } from "../services/premium/asks";
 // is this account's own (or predates the marker, the one-time upgrade path).
 // Another account's copy is never saved here; with no row of its own the
 // account starts from the app default instead.
+//
+// KEPT THROUGH A SIGN OUT (Batch D GE). Sign out leaves the device's look
+// behind, owned by no account (SIGNED_OUT_OWNER). The next account's row wins
+// as always; with no row the look stays on screen but is neither saved to that
+// account nor claimed for it, until the person changes a setting while signed
+// in (services/presentation/ownership).
 //
 // A FAILED SAVE KEEPS THE CHOICE. The setting stays applied on this device,
 // `pending` is kept (persisted, so it survives a reload), the error is shown
@@ -182,18 +189,22 @@ export function usePresentationSync({
         return;
       }
       server.current = read.settings;
-      // The device copy is this account's own (or predates the marker).
-      const mine = deviceOwnerRef.current === null || deviceOwnerRef.current === id;
-      if (read.settings && !(pendingRef.current && mine)) {
+      const next = afterRead(!!read.settings, pendingRef.current, deviceOwnerRef.current, id);
+      if (next === "server" && read.settings) {
         applyQuietly(read.settings);
         claim(id);
         if (pendingRef.current) setPending(false);
         return;
       }
-      if (!read.settings && !mine) {
+      if (next === "default") {
         // Another account's choices: never saved here. Start from the default.
         applyQuietly(APP_DEFAULT);
         claim(id);
+        if (pendingRef.current) setPending(false);
+        return;
+      }
+      if (next === "keep") {
+        // What a Sign out left: shown, not saved, not claimed (Batch D GE).
         if (pendingRef.current) setPending(false);
         return;
       }
