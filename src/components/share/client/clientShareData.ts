@@ -45,7 +45,7 @@ export function prFacts(
   };
 }
 
-/** A personal best is "new" (it gets the share icon, C-SH.1 e3PR) when it was set in the last 14 days. */
+/** A personal best is "new" (its Metrics tile keeps the C-SH.1 e3PR ring) when it was set in the last 14 days. Batch D GG: sharing is not limited to these. */
 export const NEW_PR_DAYS = 14;
 export const isNewPr = (bestDate: string, today: string) => bestDate >= daysBefore(today, NEW_PR_DAYS) && bestDate <= today;
 

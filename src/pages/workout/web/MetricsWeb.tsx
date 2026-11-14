@@ -26,7 +26,6 @@ import { MEASUREMENT_SITES, type MeasurementType } from "../../../services/measu
 import { todayLocal } from "../../../utils/date";
 import { ProgressPhotosEntry } from "../photos/ProgressPhotosEntry";
 import { useClientShare } from "../../../components/share/client/useClientShare";
-import { ShareEntryButton } from "../../../components/share/client/ShareEntryButton";
 import { prCard } from "../../../components/share/client/clientCardModel";
 import { isNewPr, prFacts } from "../../../components/share/client/clientShareData";
 import { appLocale } from "../../../i18n/format";
@@ -174,7 +173,9 @@ export default function MetricsWeb() {
   const heroSel = heroPick !== null && heroPick < hero.length ? heroPick : hero.length - 1;
   const stats = hero.length ? pointStats(hero[heroSel].sessions) : null;
   const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, today), "highest"), [workoutSessions, today]);
+  // Batch D GG: shared from "All" and the lift's detail, not from the tiles.
   const share = useClientShare();
+  const shareLift = (lift: LiftMax) => share.open(prCard(prFacts(lift, today)));
   const frequency = useMemo(() => trainingFrequency(workoutSessions, today), [workoutSessions, today]);
   const freqMax = Math.max(3, ...frequency.weeks);
   const dominant = topGroup && dominantShare > 0.45 ? topGroup[0] : null;
@@ -263,33 +264,24 @@ export default function MetricsWeb() {
           {lifts.length > 0 && (
             <div className="grid" style={{ flex: 1, minHeight: 0, gridTemplateColumns: "repeat(2,minmax(0,1fr))", gridAutoRows: "minmax(0,1fr)", gap: 8 }}>
               {lifts.slice(0, 6).map((lift) => {
+                // C-SH.1 e3PR: a best from the last 14 days keeps its ring.
                 const fresh = isNewPr(lift.best.date, today);
                 return (
-                  <span key={lift.key} className="relative min-w-0 flex">
-                    <button
-                      type="button"
-                      onClick={() => setLiftDetail(lift)}
-                      className="flex-1 min-w-0 text-start flex flex-col justify-center hover:!bg-[#EAF2F0]"
-                      style={{ borderRadius: 12, background: "#F2F7F6", padding: "10px 14px", minHeight: 64, boxShadow: fresh ? "0 0 0 1.5px #AEA1DC" : undefined }}
-                    >
-                      <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#3B7570", paddingInlineEnd: fresh ? 28 : 0 }}>
-                        {lift.name}
-                      </span>
-                      <span style={{ fontSize: 22, lineHeight: "28px", fontWeight: 800, color: "#3B7570" }}>
-                        {kgWhole(lift.oneRm)}
-                        <span style={{ fontSize: 13, fontWeight: 600, color: "#86B3AD", marginInlineStart: 2 }}>kg</span>
-                      </span>
-                    </button>
-                    {fresh && (
-                      <ShareEntryButton
-                        size={28}
-                        ring={false}
-                        label={t("Share your {name} personal best", { name: lift.name })}
-                        onPress={() => share.open(prCard(prFacts(lift, today)))}
-                        style={{ position: "absolute", insetInlineEnd: 4, top: 4 }}
-                      />
-                    )}
-                  </span>
+                  <button
+                    key={lift.key}
+                    type="button"
+                    onClick={() => setLiftDetail(lift)}
+                    className="min-w-0 text-start flex flex-col justify-center hover:!bg-[#EAF2F0]"
+                    style={{ borderRadius: 12, background: "#F2F7F6", padding: "10px 14px", minHeight: 64, boxShadow: fresh ? "0 0 0 1.5px #AEA1DC" : undefined }}
+                  >
+                    <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#3B7570" }}>
+                      {lift.name}
+                    </span>
+                    <span style={{ fontSize: 22, lineHeight: "28px", fontWeight: 800, color: "#3B7570" }}>
+                      {kgWhole(lift.oneRm)}
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#86B3AD", marginInlineStart: 2 }}>kg</span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -436,9 +428,10 @@ export default function MetricsWeb() {
         <ProgressPhotosEntry />
       </div>
 
+      <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} onShare={shareLift} />
+      <LiftDetailSheet key={liftDetail?.key} lift={liftDetail} onClose={() => setLiftDetail(null)} onShare={shareLift} />
+      {/* After the lift sheets: the share sheet opens over them. */}
       {share.sheet}
-      <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} />
-      <LiftDetailSheet key={liftDetail?.key} lift={liftDetail} onClose={() => setLiftDetail(null)} />
       <AddMeasurementsSheet
         key={addMeasurementsOpen ? "open" : "closed"}
         open={addMeasurementsOpen && !hideNumbers}
