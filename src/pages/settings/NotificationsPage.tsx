@@ -157,7 +157,9 @@ const GROUPS: Group[] = [
       { key: "mealReminders", label: tk("Food logging"), sub: tk("One reminder at 8 PM if no food is logged today"), icon: UtensilsCrossed },
       { key: "workoutReminders", label: tk("Workouts"), sub: tk("One reminder at 8 PM if no workout is logged today"), icon: Dumbbell },
       { key: "water", label: tk("Water"), sub: tk("One reminder at 8 PM if no water is logged today"), icon: GlassWater },
-      { key: "habits", label: tk("Habits"), sub: tk("One reminder at 8 PM if none of your habits are ticked today"), icon: ListChecks },
+      // Batch D FZ: a habit with its own reminder time is pushed then; the 8 PM
+      // nudge now counts only the habits without one (never archived ones).
+      { key: "habits", label: tk("Habits"), sub: tk("Habits with a reminder time remind you then. One reminder at 8 PM if none of the others are ticked today"), icon: ListChecks },
       { key: "journal", label: tk("Journal"), sub: tk("One reminder at 8 PM if you haven't written in your journal today"), icon: NotebookPen },
       // FW (G6): reminders_paused (notification_decision drops the reminder
       // family while it is on: these rows, the Health group and health

@@ -14,6 +14,7 @@ export const FILES: string[] = [
   "components/mind/entryMenu.ts",
   "components/mind/BreathingRunner.tsx",
   "components/mind/PoseSequence.tsx",
+  "components/mind/HabitReminderField.tsx",
   "pages/mind/Mind.tsx",
   "pages/mind/MeditationPage.tsx",
   "pages/mind/HabitsTab.tsx",
@@ -88,6 +89,13 @@ const mind: Catalogue = {
   // == Habits ==
   "Loading your habits…": "جارٍ تحميل عاداتك…",
   "Habit archived. Its history is kept.": "أُرشفت العادة. يبقى سجلها محفوظًا.",
+  // Batch D FZ: a reminder time per habit
+  Reminder: "التذكير",
+  "No reminder": "بلا تذكير",
+  "Remind me every day": "ذكّرني كل يوم",
+  "Reminder at {time}. Change the time": "تذكير الساعة {time}. غيّر الوقت",
+  "Reminders are paused.": "التذكيرات متوقفة مؤقتًا.",
+  "Habit reminders are off.": "تذكيرات العادات متوقفة.",
   Lavender: "خزامي",
   Teal: "تركوازي",
   "{habit}. Arrow left for Archive": "{habit}. السهم الأيسر للأرشفة",

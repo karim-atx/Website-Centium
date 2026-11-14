@@ -202,7 +202,8 @@ const settings: Catalogue = {
   Water: "الماء",
   "One reminder at 8 PM if no water is logged today": "تذكير واحد الساعة 8 مساءً إن لم يُسجَّل شرب الماء اليوم",
   Habits: "العادات",
-  "One reminder at 8 PM if none of your habits are ticked today": "تذكير واحد الساعة 8 مساءً إن لم تُنجز أيًّا من عاداتك اليوم",
+  "Habits with a reminder time remind you then. One reminder at 8 PM if none of the others are ticked today":
+    "العادات التي لها وقت تذكير تذكّرك في وقتها. وتذكير واحد الساعة 8 مساءً إن لم تُنجز أيًّا من العادات الأخرى اليوم",
   Journal: "اليوميات",
   "One reminder at 8 PM if you haven't written in your journal today": "تذكير واحد الساعة 8 مساءً إن لم تكتب في يومياتك اليوم",
   // FW (G6): reminders_paused.

@@ -170,6 +170,8 @@ import {
   getHabits,
   habitStreak,
   isDoneOn,
+  parseReminderTime,
+  sameReminder,
   updateHabitRemote,
   setCompletion,
   setHabitColourRemote,
@@ -762,10 +764,13 @@ interface AppState {
   /** v6 MO1.1.1 / MO1.1.1.1: every habit write resolves to null once saved, or
    *  the reason it failed. A failed write no longer sets `habitsError` (that is
    *  the read's error, shown as the Retry banner); the screen shows a toast. */
-  addHabit: (label: string, icon: HabitIconKey, colour?: HabitColour) => Promise<string | null>;
+  addHabit: (label: string, icon: HabitIconKey, colour?: HabitColour, reminderTime?: string | null) => Promise<string | null>;
   removeHabit: (id: string) => Promise<string | null>;
-  /** MO1.1.1 S5: Edit saves the name, the icon and (B3) the colour from the prefilled panel. */
-  updateHabit: (id: string, patch: { label: string; icon: HabitIconKey; colour?: HabitColour }) => Promise<string | null>;
+  /** MO1.1.1 S5: Edit saves the name, the icon and (B3) the colour from the prefilled panel;
+   *  Batch D FZ: and the reminder time when `reminderTime` is given ("HH:MM", or null to clear). */
+  updateHabit: (id: string, patch: { label: string; icon: HabitIconKey; colour?: HabitColour; reminderTime?: string | null }) => Promise<string | null>;
+  /** Batch D FZ: habit_items.reminder_time exists (the Database migration is live); until then the field is hidden. */
+  habitRemindersAvailable: boolean;
   /** MO1.1.1 S3 (B3): the tile's colour, saved at once; reverts on a failed write. */
   setHabitColour: (id: string, colour: HabitColour) => Promise<string | null>;
   /** B3 archived_at: off the list with its history kept; `false` brings it back. */
@@ -2731,6 +2736,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           label: h.label,
           icon: h.icon,
           colour: h.colour,
+          reminderTime: h.reminderTime,
           done: isDoneOn(dates, today),
           streakDays: habitStreak(dates, today),
           doneDates: dates,
@@ -5425,11 +5431,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const addHabit = (label: string, icon: HabitIconKey, colour?: HabitColour): Promise<string | null> => {
+  const addHabit = (label: string, icon: HabitIconKey, colour?: HabitColour, reminderTime?: string | null): Promise<string | null> => {
     if (!authUserId) return Promise.resolve("Your session expired. Sign in again to save this.");
-    return createHabit(authUserId, { label, icon, colour, position: habitSnapshot.items.length }).then((result) => {
+    return createHabit(authUserId, { label, icon, colour, reminderTime, position: habitSnapshot.items.length }).then((result) => {
       if (!result.ok) return result.message;
       setHabitSnapshot((prev) => ({
+        ...prev,
         items: [...prev.items, result.value],
         completions: { ...prev.completions, [result.value.id]: [] },
       }));
@@ -5443,20 +5450,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setHabitSnapshot((prev) => {
         const completions = { ...prev.completions };
         delete completions[id];
-        return { items: prev.items.filter((h) => h.id !== id), completions };
+        return { ...prev, items: prev.items.filter((h) => h.id !== id), completions };
       });
       return null;
     });
 
   // MO1.1.1 S5: Edit saves the name, the icon and the colour (all three
   // UPDATE-granted since B3). A caller that sends no colour keeps the saved one.
-  const updateHabit = (id: string, patch: { label: string; icon: HabitIconKey; colour?: HabitColour }): Promise<string | null> => {
-    const colour = patch.colour ?? habitSnapshot.items.find((h) => h.id === id)?.colour ?? "lavender";
-    return updateHabitRemote(id, { label: patch.label, icon: patch.icon, colour }).then((result) => {
+  const updateHabit = (
+    id: string,
+    patch: { label: string; icon: HabitIconKey; colour?: HabitColour; reminderTime?: string | null }
+  ): Promise<string | null> => {
+    const saved = habitSnapshot.items.find((h) => h.id === id);
+    const colour = patch.colour ?? saved?.colour ?? "lavender";
+    // Batch D FZ: the time goes out only when it changed (and the column
+    // exists), so saving a rename never re-arms today's reminder.
+    const reminderTime =
+      habitSnapshot.remindersAvailable && patch.reminderTime !== undefined && !sameReminder(patch.reminderTime, saved?.reminderTime ?? null)
+        ? parseReminderTime(patch.reminderTime)
+        : undefined;
+    return updateHabitRemote(id, { label: patch.label, icon: patch.icon, colour, reminderTime }).then((result) => {
       if (!result.ok) return result.message;
       setHabitSnapshot((prev) => ({
         ...prev,
-        items: prev.items.map((h) => (h.id === id ? { ...h, label: patch.label.trim(), icon: patch.icon, colour } : h)),
+        items: prev.items.map((h) =>
+          h.id === id
+            ? { ...h, label: patch.label.trim(), icon: patch.icon, colour, ...(reminderTime !== undefined ? { reminderTime } : {}) }
+            : h
+        ),
       }));
       return null;
     });
@@ -5485,7 +5506,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setHabitSnapshot((prev) => {
           const completions = { ...prev.completions };
           delete completions[id];
-          return { items: prev.items.filter((h) => h.id !== id), completions };
+          return { ...prev, items: prev.items.filter((h) => h.id !== id), completions };
         });
       } else {
         await reloadHabits();
@@ -7129,6 +7150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addHabit,
       removeHabit,
       updateHabit,
+      habitRemindersAvailable: !!habitSnapshot.remindersAvailable,
       setHabitColour,
       archiveHabit,
       reloadHabits,
@@ -7362,6 +7384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       habits,
       habitsLoading,
       habitsError,
+      habitSnapshot.remindersAvailable,
       streaks,
       plantStage,
       plantSpecies,
