@@ -96,7 +96,7 @@ export const CycleInsightsTab: React.FC<{
         // K2 / OURS-cycle-empty-states #6: repo copy, centred 12/18 #5B5349.
         <CycleCard style={{ marginTop: 4 }}>
           <p className="text-center text-charcoal-soft" style={type(12, 18, 400)}>
-            {G.INSIGHTS_TOO_LITTLE}
+            {t(G.INSIGHTS_TOO_LITTLE)}
           </p>
         </CycleCard>
       ) : (
@@ -230,7 +230,7 @@ export const CycleInsightsTab: React.FC<{
             <CapsLabel style={{ marginBottom: 12 }}>{t(G.SYMPTOMS_BY_PHASE)}</CapsLabel>
             {grid.symptoms.length === 0 ? (
               <p className="text-charcoal-soft" style={type(12, 18, 400)}>
-                {G.SYMPTOM_GRID_TOO_LITTLE}
+                {t(G.SYMPTOM_GRID_TOO_LITTLE)}
               </p>
             ) : (
               <>

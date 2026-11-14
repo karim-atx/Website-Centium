@@ -14,7 +14,8 @@ import { respondToInvite } from "../../services/calendar";
 import { OFFLINE_MESSAGE } from "../../services/network-error";
 import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
-import { DAY_LETTERS, monthLeadingBlanks, mondayIndex } from "../../utils/week";
+import { monthLeadingBlanks, mondayIndex } from "../../utils/week";
+import { weekLetters } from "../../components/dashboard/widgets/weekLetters";
 import { range12 } from "../../utils/time12";
 import { appLocale } from "../../i18n/format";
 import { t, tk, tn } from "../../i18n/core";
@@ -248,7 +249,9 @@ export default function BusinessCalendarTab() {
             </button>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
-            {DAY_LETTERS.map((d, i) => (
+            {/* Batch D GP: the app's weekday letters (Monday first, Arabic
+                narrow names in Arabic), as the client calendar's month grid. */}
+            {weekLetters().map((d, i) => (
               <div key={i} className="text-center text-[10px] font-semibold text-charcoal-faint py-1">
                 {d}
               </div>

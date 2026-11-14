@@ -701,7 +701,7 @@ export default function Cycle() {
               <HormoneGraph cycleLength={cycleLength} ovulationDay={ovulationDay} selectedDay={selectedDay} hideDayLabel={recovery} />
             ) : (
               <p className="text-charcoal-soft" style={type(12, 18, 400)}>
-                {G.NO_PREDICTION}
+                {t(G.NO_PREDICTION)}
               </p>
             )}
           </CycleCard>

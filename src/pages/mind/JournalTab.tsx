@@ -552,7 +552,7 @@ export default function JournalTab() {
             type="button"
             onClick={() => void retry()}
             disabled={retrying}
-            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high after:absolute after:-inset-3 after:content-['']"
+            className="tap relative shrink-0 text-[12px] leading-4 font-bold text-status-high"
           >
             {retrying ? <Loader2 size={14} className="animate-spin" aria-label={t("Retrying")} /> : t("Retry")}
           </button>
@@ -591,7 +591,12 @@ export default function JournalTab() {
       {/* #8 / #9: FolderPlus 18 in a 30 r9 box (m -4 -6 -4 0, so the row is
           22 tall), 16 under the tab track (the fixed area's own 16), cards 10
           below; #6B41EF / #C3B3FB. During a Move the row's left side says
-          what to do (K5). */}
+          what to do (K5). Batch D GO: the 44x44 hit box is the global .tap
+          one (index.css). An own after:-inset here set left/right on top of
+          that rule's width and translate(-50%); in Arabic the browser keeps
+          `right`, so the box landed 19px past the left edge and the whole
+          page scrolled sideways. The same fix on this tab's other small
+          controls (Retry, an entry's more-options dot). */}
       <div className="flex items-center justify-end gap-2 h-[22px] mb-2.5">
         {moving && selectedFolder && (
           <p role="status" className="flex-1 min-w-0 truncate text-[11.5px] leading-4 font-medium text-charcoal-muted">
@@ -605,7 +610,7 @@ export default function JournalTab() {
           }}
           aria-label={t("New folder")}
           aria-expanded={naming === "new"}
-          className="tap relative w-[30px] h-[30px] -my-1 -me-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark after:absolute after:-inset-[7px] after:content-['']"
+          className="tap relative w-[30px] h-[30px] -my-1 -me-1.5 rounded-[9px] flex items-center justify-center text-th-6b41ef dark:text-primary-dark"
         >
           <FolderPlus size={18} />
         </button>
@@ -698,7 +703,7 @@ export default function JournalTab() {
                       aria-label={t("{title}, more options", { title: e.title })}
                       aria-haspopup="menu"
                       aria-expanded={entryMenu?.entry.id === e.id}
-                      className="tap relative -me-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent after:absolute after:-inset-2.5 after:content-['']"
+                      className="tap relative -me-1.5 w-6 h-6 rounded-md flex items-center justify-center shrink-0 text-charcoal-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-accent"
                     >
                       <EllipsisVertical size={16} aria-hidden />
                     </button>

@@ -271,7 +271,7 @@ export const LogDaySheet: React.FC<{
             style={{ ...fieldStyle, height: 44 }}
           />
           <p className="text-charcoal-faint" style={type(11, 16, 400, { marginTop: 4 })}>
-            {BBT_HELP}
+            {t(BBT_HELP)}
           </p>
         </Section>
 
