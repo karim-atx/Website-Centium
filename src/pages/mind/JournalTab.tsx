@@ -33,6 +33,8 @@ import { JOURNAL_LIMITS, folderLockAuth, type FolderLockAuth } from "../../servi
 import { isFolderOpen, type UnlockWindows } from "../../services/journal/lockLogic";
 import { JournalPasswordPopup, LockedFolderView, type PasswordPurpose } from "../../components/mind/JournalLock";
 import { useJournalDeviceUnlock } from "../../components/mind/useJournalDeviceUnlock";
+import { FirstJournalLock } from "../../components/mind/FirstJournalLock";
+import { firstLockSeen, isFirstLock } from "../../services/journal/firstLockModel";
 import { entryMenuTarget } from "../../components/mind/entryMenu";
 import { MusicSection } from "../../components/music/MusicSection";
 import { appLocale } from "../../i18n/format";
@@ -82,7 +84,10 @@ const rowIsShifted = (el: HTMLElement) => {
 // MO1.1.2.2 (locked folder) and MO1.1.2.3 (new entry).
 //
 // THE FOLDER LOCK (backend stage 3, Database docs/HANDOVER_API.md). Lock
-// needs no password. While a folder is locked the server hides its entries
+// needs no password, except the first time (Batch D GD, FirstJournalLock):
+// the account password twice, checked by the server before the lock, then how
+// unlocking works, then this phone's fingerprint or face where it can be set
+// up. While a folder is locked the server hides its entries
 // and refuses writes to them; on the web its Face ID is the ACCOUNT PASSWORD,
 // checked server-side, which opens a five-minute window (AppContext re-locks
 // the screen when it lapses). Writing into, deleting, or removing the lock of
@@ -130,6 +135,7 @@ export default function JournalTab() {
     lockJournalFolder,
     unlockJournalFolder,
     disableJournalFolderLock,
+    authUserId,
   } = useApp();
   const { blocked } = useFreeLimit();
   const [activeFolder, setActiveFolder] = useState("");
@@ -176,6 +182,8 @@ export default function JournalTab() {
   const [lockNotice, setLockNotice] = useState<string | undefined>(undefined);
   const [asking, setAsking] = useState<{ purpose: PasswordPurpose; folder: JournalFolder; then?: () => void } | null>(null);
   const [lockError, setLockError] = useState<string | null>(null);
+  // Batch D GD: the folder going through the first lock's steps.
+  const [firstLock, setFirstLock] = useState<JournalFolder | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -391,6 +399,12 @@ export default function JournalTab() {
       // Round G2: past the free plan's locked folders, the prompt first.
       if (blocked("locked_journal_folders", lockedFolderCount(journalFolders))) return;
       setLockError(null);
+      // Batch D GD: the first lock asks for the password twice and explains
+      // unlocking; later ones lock at once, as before.
+      if (lockAuth && isFirstLock(lockedFolderCount(journalFolders), firstLockSeen(globalThis.localStorage, authUserId))) {
+        setFirstLock(selectedFolder);
+        return;
+      }
       void lockJournalFolder(selectedFolder.id).then(setLockError);
     } else if (opt === "unlock" && selectedFolder) {
       // The second tap on Lock: off for good, behind the password.
@@ -978,6 +992,15 @@ export default function JournalTab() {
           email={lockAuth?.email}
           notice={lockNotice}
           device={deviceUnlock}
+        />
+      )}
+
+      {firstLock && lockAuth && (
+        <FirstJournalLock
+          folder={firstLock}
+          auth={lockAuth}
+          onMethodChange={(method) => setLockAuth({ ...lockAuth, method })}
+          onClose={() => setFirstLock(null)}
         />
       )}
 

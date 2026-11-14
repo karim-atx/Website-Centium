@@ -5,6 +5,13 @@ import { fetchDeviceKeys, type DeviceKey } from "../services/journal";
 import { thisInstallId } from "../services/journal/deviceUnlock";
 import { deviceUnlockStatus, type DeviceUnlockStatus } from "../services/journal/deviceUnlockModel";
 
+/** Batch D GD: a sheet that set this phone up tells every useDeviceUnlock to read it again. */
+const CHANGED = "centium-device-unlock-changed";
+
+export function announceDeviceUnlockChanged(): void {
+  window.dispatchEvent(new Event(CHANGED));
+}
+
 export interface DeviceUnlock {
   status: DeviceUnlockStatus;
   kind?: BiometricKind;
@@ -26,6 +33,15 @@ export function useDeviceUnlock(): DeviceUnlock {
   const [state, setState] = useState<Omit<DeviceUnlock, "reload">>({ status: "off", installId: null, keys: null });
   const [nonce, setNonce] = useState(0);
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+
+  // The first lock's set-up (Batch D GD) happens in its own sheet; the
+  // Journal's unlock prompt, mounted all along, reads the phone again so
+  // "Unlock with fingerprint" is there on the very next unlock.
+  useEffect(() => {
+    if (!native) return;
+    window.addEventListener(CHANGED, reload);
+    return () => window.removeEventListener(CHANGED, reload);
+  }, [native, reload]);
 
   useEffect(() => {
     if (!native) return;
