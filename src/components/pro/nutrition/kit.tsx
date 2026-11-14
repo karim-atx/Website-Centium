@@ -1,9 +1,9 @@
 import React from "react";
-import { AlertCircle, AlertTriangle, ChevronLeft, Plus, Search, X, type LucideIcon } from "lucide-react";
+import { AlertCircle, AlertTriangle, ChevronLeft, HelpCircle, Plus, Search, X, type LucideIcon } from "lucide-react";
 import { textPx } from "../../../theme/textSize";
 import { INK, NO_ICON_SCALE } from "../proInk";
 import type { DietaryNeeds } from "../../../services/pro/clientPage";
-import { allergenLabel, restrictionLabel } from "./nuFormat";
+import { allergenLabel, restrictionLabel, severityLabel } from "./nuFormat";
 import { customLabel, isolateLabel, ownWords, type ConflictRow } from "./nutritionModel";
 import { t } from "../../../i18n/core";
 
@@ -101,9 +101,15 @@ export const PreferenceTag: React.FC<{ label: string }> = ({ label }) => (
 export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> = ({ row, onClick }) => {
   if (!row || row.kind === "allergies_unknown") return null;
   const red = row.kind === "allergy_confirmed";
+  // Batch D GI: "Allergens unknown" is grey (never a warning colour: it never blocks).
+  const grey = row.kind === "food_allergens_unknown";
   const text =
     row.kind === "allergy_confirmed"
       ? t("{allergen} allergy", { allergen: allergenLabel(row.allergen ?? "") })
+      : row.kind === "may_contain"
+        ? t("May contain {name}", { name: allergenLabel(row.allergen ?? "").toLowerCase() })
+      : grey
+        ? t("Allergens unknown")
       : row.kind === "allergy_check"
         ? // FQ: an "Other" allergy names the client's own label (isolated, as written).
           !row.allergen && customLabel(row)
@@ -112,8 +118,10 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
         : row.kind === "restriction"
           ? t("Not {restriction}", { restriction: restrictionLabel(row.restriction ?? "").toLowerCase() })
           : restrictionLabel(row.restriction ?? "");
-  const Icon = red ? AlertTriangle : AlertCircle;
-  const style: React.CSSProperties = { gap: 3, marginInlineStart: 6, fontSize: textPx(10.5), fontWeight: red ? 800 : 700, color: red ? INK.hi : row.kind === "preference" ? INK.chF : INK.goldInk, whiteSpace: "nowrap" };
+  const Icon = red ? AlertTriangle : grey ? HelpCircle : AlertCircle;
+  const style: React.CSSProperties = { gap: 3, marginInlineStart: 6, fontSize: textPx(10.5), fontWeight: red ? 800 : 700, color: red ? INK.hi : grey ? INK.chS : row.kind === "preference" ? INK.chF : INK.goldInk, whiteSpace: "nowrap" };
+  // GI: a "may contain" trace's severity (the client's own) is read out, as the client's badge does.
+  const label = row.kind === "may_contain" && row.severity ? t("{allergy}, {severity}", { allergy: text, severity: severityLabel(row.severity) }) : undefined;
   const inner = (
     <>
       {row.kind !== "preference" && <Icon size={11} strokeWidth={red ? 2.4 : 2.2} aria-hidden style={NO_ICON_SCALE} />}
@@ -121,11 +129,11 @@ export const Flag: React.FC<{ row: ConflictRow | null; onClick?: () => void }> =
     </>
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className="tap inline-flex items-center align-middle relative before:absolute before:-inset-2 before:content-['']" style={style}>
+    <button type="button" onClick={onClick} aria-label={label} className="tap inline-flex items-center align-middle relative before:absolute before:-inset-2 before:content-['']" style={style}>
       {inner}
     </button>
   ) : (
-    <span className="inline-flex items-center align-middle" style={style}>
+    <span aria-label={label} className="inline-flex items-center align-middle" style={style}>
       {inner}
     </span>
   );

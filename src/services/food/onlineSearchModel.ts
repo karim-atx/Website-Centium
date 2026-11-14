@@ -2,6 +2,7 @@ import { ALL_NUTRIENT_ROWS } from "../../data/nutrientSchema";
 import { OFFLINE_MESSAGE } from "../network-error";
 import { appLocale } from "../../i18n/format";
 import { t, tk } from "../../i18n/core";
+import { ALLERGENS, type Allergen } from "../nutrition/clientNutritionModel";
 
 // Round D · DP, looking foods up online (search-foods-online, save_found_food,
 // submit_food_to_catalogue): the pure half. Parsing the function's answer,
@@ -12,8 +13,11 @@ import { t, tk } from "../../i18n/core";
 export type OnlineSource = "usda_fdc" | "open_food_facts";
 export type OnlineSourceStatus = "ok" | "cached" | "unavailable" | "not_configured";
 
-/** One search-foods-online result. Every number is PER SERVING (`servingLabel`). */
-export interface OnlineFood {
+/**
+ * One search-foods-online result. Every number is PER SERVING (`servingLabel`).
+ * Batch D GI: with what it contains, when the function says (FoundAllergenData).
+ */
+export interface OnlineFood extends FoundAllergenData {
   source: OnlineSource;
   ref: string;
   name: string;
@@ -28,6 +32,73 @@ export interface OnlineFood {
   dataKind: "general" | "branded";
   attribution: { source: OnlineSource; ref: string; url: string | null; notice: string | null; fetchedAt: string | null };
 }
+
+// ---- Batch D GI: what a found food contains (20261227110000) ----
+
+export type DietFlag = "vegan" | "vegetarian" | "halal" | "kosher" | "gluten_free" | "non_vegan" | "non_vegetarian";
+const DIET_FLAGS: readonly DietFlag[] = ["vegan", "vegetarian", "halal", "kosher", "gluten_free", "non_vegan", "non_vegetarian"];
+const ALLERGEN_NAMES = new Set<string>(ALLERGENS.map((a) => a.value));
+
+/**
+ * What search-foods-online and lookup-barcode say a food contains. Every field
+ * is optional: absent (undefined) until those Edge Functions are deployed,
+ * which the app reads as unknown, exactly like `allergens: null`.
+ */
+export interface FoundAllergenData {
+  /** The 14 allergen names; [] none listed; null unknown. */
+  allergens?: Allergen[] | null;
+  /** "May contain" traces; null unknown. */
+  mayContain?: Allergen[] | null;
+  /** The ingredients text (at most 2,000 characters), or null. */
+  ingredients?: string | null;
+  dietFlags?: DietFlag[];
+}
+
+const allergenList = (v: unknown): Allergen[] | null | undefined => {
+  if (v === undefined) return undefined;
+  if (!Array.isArray(v)) return null;
+  // Only the enum's names: anything else would be refused (22023) by the server.
+  return [...new Set(v.filter((x): x is Allergen => typeof x === "string" && ALLERGEN_NAMES.has(x)))];
+};
+
+/** The four GI fields from a result or barcode body; a field the body doesn't have stays absent. */
+export function parseAllergenData(r: Record<string, unknown>): FoundAllergenData {
+  const out: FoundAllergenData = {};
+  const allergens = allergenList(r.allergens);
+  if (allergens !== undefined) out.allergens = allergens;
+  const mayContain = allergenList(r.mayContain);
+  if (mayContain !== undefined) out.mayContain = mayContain;
+  if (r.ingredients !== undefined) out.ingredients = typeof r.ingredients === "string" && r.ingredients.trim() !== "" ? r.ingredients.trim().slice(0, 2000) : null;
+  if (Array.isArray(r.dietFlags)) out.dietFlags = [...new Set(r.dietFlags.filter((x): x is DietFlag => DIET_FLAGS.includes(x as DietFlag)))];
+  return out;
+}
+
+/** The GI fields as save_found_food_with_allergens and found_food_conflicts take them (absent = null, unknown). */
+const allergenArgs = (f: FoundAllergenData) => ({
+  p_allergens: f.allergens ?? null,
+  p_may_contain: f.mayContain ?? null,
+  p_ingredients: f.ingredients ?? null,
+  p_diet_flags: f.dietFlags && f.dietFlags.length > 0 ? f.dietFlags : null,
+});
+
+/**
+ * found_food_conflicts' arguments for a result not saved yet: the member's own
+ * id, or a connected professional's client's. Name and brand are cut to the
+ * server's 200 characters so a long one can't make the check fail.
+ */
+export function foundFoodConflictArgs(clientId: string, f: FoundAllergenData & { name: string; brand: string | null }): Record<string, unknown> {
+  return { p_client_id: clientId, p_name: f.name.slice(0, 200), p_brand: f.brand ? f.brand.slice(0, 200) : null, ...allergenArgs(f) };
+}
+
+/** Whether an online food's ingredients were matched too (the check-this line then says "name or ingredients"). */
+export const conflictWords = (f: FoundAllergenData): "name" | "ingredients" => (f.ingredients ? "ingredients" : "name");
+
+/**
+ * Whether an RPC isn't on this database yet (GI's two before 20261227110000
+ * is live): PostgREST's PGRST202, Postgres' 42883, or a bare 404.
+ */
+export const isMissingFunction = (error: { code?: string } | null | undefined, status?: number): boolean =>
+  !!error && (error.code === "PGRST202" || error.code === "42883" || status === 404);
 
 export type OnlineSources = Partial<Record<OnlineSource, OnlineSourceStatus>>;
 
@@ -83,6 +154,7 @@ export function parseOnlineFood(x: unknown): OnlineFood | null {
     nutrients,
     dataKind: r.dataKind === "branded" ? "branded" : "general",
     attribution: { source: r.source, ref, url: text(a.url), notice: text(a.notice), fetchedAt: text(a.fetchedAt) },
+    ...parseAllergenData(r),
   };
 }
 
@@ -222,6 +294,11 @@ export function saveFoundFoodArgs(f: OnlineFood): Record<string, unknown> {
     p_nutrients: Object.keys(f.nutrients).length > 0 ? f.nutrients : null,
     p_fetched_at: f.attribution.fetchedAt,
   };
+}
+
+/** Batch D GI: save_found_food_with_allergens' arguments, save_found_food's plus what the result contains. */
+export function saveFoundFoodWithAllergensArgs(f: OnlineFood): Record<string, unknown> {
+  return { ...saveFoundFoodArgs(f), ...allergenArgs(f) };
 }
 
 export function saveFoundFoodMessage(code: string | undefined, offline: boolean): string {

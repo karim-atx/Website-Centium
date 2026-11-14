@@ -7,12 +7,19 @@ import { FOOD_DARK } from "./foodDark";
 import { textPx } from "../../theme/textSize";
 import { t } from "../../i18n/core";
 import { safeHref } from "../../utils/safeHref";
+import { addNotice } from "../../services/nutrition/clientNutritionModel";
+import { conflictWords } from "../../services/food/onlineSearchModel";
+import { dietLabel } from "../../utils/dietaryRestrictions";
+import { FoodConflictNotice } from "./FoodConflictBadge";
+import { useFoundFoodConflicts } from "./useFoundFoodConflicts";
 
 /**
  * A product found on Open Food Facts (step 2 of the barcode lookup order),
  * shown with its licence notice and a link to its page, for the user to
  * confirm before anything is logged. What they confirm lands only on their
  * own diary row, with its attribution; nothing goes into the shared catalogue.
+ * Batch D GI: with the allergy and diet warnings a catalogue food gets, from
+ * the product's own allergen data; the add step checks the same answer.
  */
 export const OffProductCard: React.FC<{
   product: OffProduct;
@@ -22,6 +29,8 @@ export const OffProductCard: React.FC<{
   const dark = useIsDark();
   // Round D (R3): name and serving only in recovery-sensitive mode.
   const hide = useHideNumbers();
+  const conflicts = useFoundFoodConflicts(`off:${product.barcode}`, product);
+  const notice = conflicts ? addNotice(product.name, conflicts, dietLabel, conflictWords(product)) : null;
   const macro = (v: number | null) => (v === null ? "–" : t("{n}g", { n: v }));
   return (
     <div>
@@ -47,6 +56,11 @@ export const OffProductCard: React.FC<{
         </div>
         )}
       </div>
+      {notice && (
+        <div style={{ marginTop: 10 }}>
+          <FoodConflictNotice notice={notice} />
+        </div>
+      )}
       <p style={{ margin: "10px 2px 0", fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))", lineHeight: 1.45 }}>
         {product.attribution.notice}{" "}
         <a

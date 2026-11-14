@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, ExternalLink, Globe } from "lucide-react";
 import { useIsDark } from "../../hooks/useIsDark";
 import { useHideNumbers } from "../../hooks/useHideNumbers";
@@ -9,6 +9,7 @@ import { saveFoundFood } from "../../services/food/onlineSearch";
 import {
   SOURCE_NAME,
   brandServing,
+  conflictWords,
   formatNutrientAmount,
   foundNutrientLines,
   macroLine,
@@ -21,10 +22,18 @@ import {
 import type { FoodSearchResult } from "../../services/food";
 import { t } from "../../i18n/core";
 import { safeHref } from "../../utils/safeHref";
+import { addNotice, worstBadge } from "../../services/nutrition/clientNutritionModel";
+import { dietLabel } from "../../utils/dietaryRestrictions";
+import { FoodConflictBadge, FoodConflictNotice } from "./FoodConflictBadge";
+import { useFoundFoodConflicts, useVisibleFoundConflicts, type FoundFood } from "./useFoundFoodConflicts";
 
 // Round D · DP (PLAN D-S17 / D-S18): the online results inside Add Food, and
 // the card a result is checked on before anything is saved. In
 // recovery-sensitive mode both show the name, brand, serving and source only.
+// Batch D GI: both also show the allergy and diet warnings a catalogue food
+// gets (found_food_conflicts), the list its worst badge, the card its notice.
+
+const keyOf = (f: OnlineFood) => `${f.source}:${f.ref}`;
 
 /** "USDA" teal, "Open Food Facts" amber (the MemberTag pill tokens, light and dark). */
 export const SourceBadge: React.FC<{ source: OnlineSource }> = ({ source }) => (
@@ -104,6 +113,9 @@ export const OnlineResults: React.FC<{
   const muted = { fontSize: textPx(12), color: "rgb(var(--c-charcoal-muted))" } as const;
   const offNotice = result?.ok ? result.results.find((f) => f.source === "open_food_facts")?.attribution.notice ?? null : null;
   const note = result?.ok ? sourcesNote(result.sources) : null;
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const foods = useMemo(() => new Map<string, FoundFood>(result?.ok ? result.results.map((f) => [keyOf(f), f]) : []), [result]);
+  const { rows: conflicts, observe } = useVisibleFoundConflicts(foods, listRef);
 
   return (
     <div className="animate-fade-slide-up flex flex-col" style={{ gap: 6 }}>
@@ -155,10 +167,13 @@ export const OnlineResults: React.FC<{
       {result?.ok && result.results.length > 0 && (
         <>
           {note && <p style={{ ...muted, margin: "0 0 4px" }}>{note}</p>}
-          <div className="flex flex-col no-scrollbar" style={{ gap: 2, maxHeight: 420, overflowY: "auto", margin: "0 -20px", padding: "0 20px" }}>
-            {result.results.map((f) => (
+          <div ref={listRef} className="flex flex-col no-scrollbar" style={{ gap: 2, maxHeight: 420, overflowY: "auto", margin: "0 -20px", padding: "0 20px" }}>
+            {result.results.map((f) => {
+              const badge = worstBadge(conflicts.get(keyOf(f)) ?? [], dietLabel);
+              return (
               <button
-                key={`${f.source}:${f.ref}`}
+                key={keyOf(f)}
+                ref={observe(keyOf(f))}
                 type="button"
                 onClick={() => onPick(f)}
                 className="tap w-full flex items-center text-start shrink-0"
@@ -176,6 +191,11 @@ export const OnlineResults: React.FC<{
                       {macroLine(f)}
                     </span>
                   )}
+                  {badge && (
+                    <span className="flex" style={{ marginTop: 3 }}>
+                      <FoodConflictBadge badge={badge} />
+                    </span>
+                  )}
                 </span>
                 <span className="flex flex-col items-end shrink-0" style={{ gap: 4 }}>
                   <SourceBadge source={f.source} />
@@ -184,7 +204,8 @@ export const OnlineResults: React.FC<{
                   )}
                 </span>
               </button>
-            ))}
+              );
+            })}
           </div>
           {!hide && <p style={{ ...muted, fontSize: textPx(10.5), margin: "6px 0 0" }}>{t("Values are per serving.")}</p>}
           {offNotice && <p style={{ ...muted, fontSize: textPx(10.5), margin: "4px 0 0", lineHeight: 1.45 }}>{offNotice}</p>}
@@ -212,12 +233,17 @@ export const FoundFoodCard: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const [nutrientsOpen, setNutrientsOpen] = useState(false);
   const lines = foundNutrientLines(food.nutrients);
+  // GI: the warnings before saving (the add step reads the saved food's own).
+  // A confirmed allergy can't go to the diary from here, as at the add step.
+  const conflicts = useFoundFoodConflicts(keyOf(food), food);
+  const notice = conflicts ? addNotice(food.name, conflicts, dietLabel, conflictWords(food)) : null;
+  const blocked = !!notice?.blocks;
   const link = dark ? FOOD_DARK.lavInk : "rgb(var(--thi-7d67d9))";
 
   const save = async (then: "log" | "save") => {
     if (saving) return;
     if (saved) {
-      if (then === "log") onLog(saved);
+      if (then === "log" && !blocked) onLog(saved);
       return;
     }
     setSaving(then);
@@ -229,7 +255,7 @@ export const FoundFoodCard: React.FC<{
       return;
     }
     setSaved(r.food);
-    if (then === "log") onLog(r.food);
+    if (then === "log" && !blocked) onLog(r.food);
   };
 
   return (
@@ -258,6 +284,12 @@ export const FoundFoodCard: React.FC<{
           </div>
         )}
       </div>
+
+      {notice && (
+        <div style={{ marginTop: 10 }}>
+          <FoodConflictNotice notice={notice} />
+        </div>
+      )}
 
       {!hide && (
         <div style={{ marginTop: 10 }}>
@@ -327,7 +359,7 @@ export const FoundFoodCard: React.FC<{
             <button type="button" onClick={onDone} className="tap flex-1" style={secondaryButton(dark)}>
               {t("Done")}
             </button>
-            <button type="button" onClick={() => onLog(saved)} className="tap flex-1" style={primaryButton}>
+            <button type="button" onClick={() => onLog(saved)} disabled={blocked} className="tap flex-1 disabled:opacity-60" style={primaryButton}>
               {t("Add to diary too")}
             </button>
           </div>
@@ -337,7 +369,7 @@ export const FoundFoodCard: React.FC<{
           <button type="button" onClick={() => void save("save")} disabled={!!saving} className="tap flex-1 disabled:opacity-60" style={secondaryButton(dark)}>
             {saving === "save" ? t("Saving…") : t("Save to my foods")}
           </button>
-          <button type="button" onClick={() => void save("log")} disabled={!!saving} className="tap flex-1 disabled:opacity-60" style={primaryButton}>
+          <button type="button" onClick={() => void save("log")} disabled={!!saving || blocked} className="tap flex-1 disabled:opacity-60" style={primaryButton}>
             {saving === "log" ? t("Saving…") : t("Add to diary")}
           </button>
         </div>

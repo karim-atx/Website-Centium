@@ -185,7 +185,9 @@ export const AddItemSheet: React.FC<{
   const q = Number(qty) > 0 ? Number(qty) : 0;
   const shown = picked ? scaleMacros(picked.per, unit === "g" && isFood ? portionMultiplier({ servingLabel: picked.servingLabel ?? "", per: picked.per }, q, null) : q) : null;
   const pickedConflict = picked ? conflictOf(picked) : null;
-  const warn = pickedConflict && (pickedConflict.kind === "restriction" || pickedConflict.kind === "allergy_check") ? pickedConflict : null;
+  // Batch D GI: a "may contain" trace (amber) and unknown allergens (grey) are said too; neither blocks.
+  const warn = pickedConflict && (["restriction", "allergy_check", "may_contain", "food_allergens_unknown"] as const).some((k) => k === pickedConflict.kind) ? pickedConflict : null;
+  const warnGrey = warn?.kind === "food_allergens_unknown";
   const first = ctx.firstName ?? "";
 
   const submit = async () => {
@@ -303,14 +305,18 @@ export const AddItemSheet: React.FC<{
               </span>
             </div>
             {warn && (
-              <div role="alert" className="flex" style={{ gap: 10, borderRadius: 14, background: INK.goldPale, padding: "10px 12px", marginBottom: 10 }}>
-                <AlertCircle size={16} strokeWidth={2.2} aria-hidden style={{ color: INK.goldInk, flexShrink: 0, marginTop: 1 }} />
+              <div role={warnGrey ? "status" : "alert"} className="flex" style={{ gap: 10, borderRadius: 14, background: warnGrey ? INK.soft : INK.goldPale, padding: "10px 12px", marginBottom: 10 }}>
+                <AlertCircle size={16} strokeWidth={2.2} aria-hidden style={{ color: warnGrey ? INK.chS : INK.goldInk, flexShrink: 0, marginTop: 1 }} />
                 <span>
-                  <span className="block" style={{ fontSize: textPx(13), fontWeight: 800, color: INK.goldInk }}>
+                  <span className="block" style={{ fontSize: textPx(13), fontWeight: 800, color: warnGrey ? INK.ch : INK.goldInk }}>
                     {conflictTitle(picked.name, warn)}
                   </span>
                   <span className="block" style={{ fontSize: textPx(12), color: INK.chS, lineHeight: 1.45 }}>
-                    {warn.kind === "restriction" ? t("{name} follows {restriction}.", { name: first, restriction: restrictionLabel(warn.restriction ?? "") }) : t("The name suggests it. Check the ingredients with {name}.", { name: first })}
+                    {warn.kind === "restriction"
+                      ? t("{name} follows {restriction}.", { name: first, restriction: restrictionLabel(warn.restriction ?? "") })
+                      : warn.kind === "allergy_check"
+                        ? t("The name suggests it. Check the ingredients with {name}.", { name: first })
+                        : conflictBody(first, warn)}
                   </span>
                 </span>
               </div>

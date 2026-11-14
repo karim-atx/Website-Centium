@@ -90,7 +90,8 @@ test("conflicts: only a confirmed allergy blocks; a keyword match is Check this;
   const restr: ConflictRow = { kind: "restriction", allergen: null, severity: null, restriction: "dairy_free", detail: null };
   const unknown: ConflictRow = { kind: "allergies_unknown", allergen: null, severity: null, restriction: null, detail: null };
   assert.equal(worstConflict([restr, confirmed])?.kind, "allergy_confirmed");
-  assert.equal(worstConflict([check, restr])?.kind, "restriction");
+  // Batch D GI: the client's order, a word match before a restriction.
+  assert.equal(worstConflict([check, restr])?.kind, "allergy_check");
 
   const blocked = clientConflictLine(
     [
@@ -182,4 +183,30 @@ test("FQ: rows from today's database (no custom_allergy at all) read exactly as 
   // A check row with no allergen and no label still adds nothing (as before FQ).
   assert.equal(clientConflictLine([{ name: "Satay", rows: [legacy] }], label).text, "No conflicts");
   assert.equal(customLabel({ customAllergy: "  " }), null);
+});
+
+// ---- Batch D GI: may_contain and food_allergens_unknown, on the professional's side ----
+
+const gi = (kind: ConflictRow["kind"], extra: Partial<ConflictRow> = {}): ConflictRow => ({ kind, allergen: null, severity: null, restriction: null, detail: null, ...extra });
+
+test("GI: the client's precedence: confirmed, may contain, check, restriction, allergens unknown, preference", () => {
+  const rows = [
+    gi("preference", { restriction: "vegan" }),
+    gi("food_allergens_unknown"),
+    gi("restriction", { restriction: "halal" }),
+    gi("allergy_check", { allergen: "milk" }),
+    gi("may_contain", { allergen: "peanuts", severity: "mild" }),
+    gi("allergy_confirmed", { allergen: "milk", severity: "severe" }),
+  ];
+  const order = ["allergy_confirmed", "may_contain", "allergy_check", "restriction", "food_allergens_unknown", "preference"];
+  for (let i = 0; i < rows.length; i++) assert.equal(worstConflict(rows.slice(0, rows.length - i))?.kind, order[i]);
+  assert.equal(worstConflict([gi("allergies_unknown")]), null);
+});
+
+test("GI: the assign line says may contain (amber, not blocked) and allergens unknown (neutral)", () => {
+  const may = clientConflictLine([{ name: "Cereal bar", rows: [gi("may_contain", { allergen: "peanuts", severity: "severe" })] }], label);
+  assert.deepEqual([may.blocked, may.tone, may.text], [false, "req", "1 conflict: Cereal bar (may contain peanuts)."]);
+  assert.ok(!may.text.includes("severe"));
+  const unk = clientConflictLine([{ name: "Apple", rows: [gi("food_allergens_unknown")] }], label);
+  assert.deepEqual([unk.blocked, unk.tone, unk.text], [false, "none", "1 conflict: Apple (allergens unknown)."]);
 });

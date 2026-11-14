@@ -28,3 +28,14 @@ test("today's rows (no custom_allergy at all) read as before", () => {
   // A standard row that also carried a label keeps its allergen (the label is only read when allergen is null).
   assert.equal(conflictTitle("Satay", row({ allergen: "peanuts", customAllergy: "Pea" })), "Satay may contain peanuts. Check this.");
 });
+
+// Batch D GI: a "may contain" trace and an online food with no allergen data.
+test("GI: may contain names the allergen with the client's severity; allergens unknown never blocks", () => {
+  const may = row({ kind: "may_contain", allergen: "peanuts", severity: "severe" });
+  assert.equal(conflictTitle("Cereal bar", may), "Cereal bar may contain peanuts");
+  assert.equal(conflictBody("Sara", may), "Sara is allergic to peanuts (severe). The label says it may contain traces. Check it with Sara.");
+  assert.equal(conflictBody("Sara", { ...may, severity: null }), "Sara is allergic to peanuts. The label says it may contain traces. Check it with Sara.");
+  const unk = row({ kind: "food_allergens_unknown", detail: "Allergens unknown: there is no allergen information for this food." });
+  assert.equal(conflictTitle("Apple", unk), "Allergens unknown");
+  assert.equal(conflictBody("Sara", unk), "There's no allergen information for this food. Check the label with Sara.");
+});

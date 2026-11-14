@@ -11,7 +11,16 @@ export function ringStatus(v: number): RingStatus {
 }
 
 /** food_conflicts kinds (DB-5). */
-export type ConflictKind = "allergy_confirmed" | "allergy_check" | "restriction" | "preference" | "allergies_unknown";
+// Batch D GI (20261227110000): `may_contain` (a label's trace of the client's allergen, amber, with
+// their severity) and `food_allergens_unknown` (an online food with no allergen data, grey). Neither blocks.
+export type ConflictKind =
+  | "allergy_confirmed"
+  | "may_contain"
+  | "allergy_check"
+  | "restriction"
+  | "preference"
+  | "food_allergens_unknown"
+  | "allergies_unknown";
 /** Only a confirmed allergy (structured data) blocks; a keyword match is "Check this" and never decides severity. */
 export const conflictBlocks = (kind: ConflictKind): boolean => kind === "allergy_confirmed";
 

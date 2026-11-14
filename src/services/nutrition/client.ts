@@ -15,9 +15,10 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { t } from "../../i18n/core";
 import type { Allergen, AllergySeverity, ConflictRow, MealPlanDetailRow, MyAllergy, ProfessionalTargets } from "./clientNutritionModel";
-import { allergyDiff, assignmentIsCurrent } from "./clientNutritionModel";
+import { allergyDiff, assignmentIsCurrent, conflictRowsFrom } from "./clientNutritionModel";
 import { cleanLabel, isOtherProblem, otherAllergiesMissing, otherAllergyError, otherDiff, type OtherAllergy, type OtherDraft, type OtherProblem } from "./otherAllergies";
 import type { WeightGoalType } from "../../types";
+import { foundFoodConflictArgs, isMissingFunction, type FoundAllergenData } from "../food/onlineSearchModel";
 
 export type Read<T> = { ok: true; data: T } | { ok: false; offline: boolean };
 export type Write = { ok: true } | { ok: false; message: string };
@@ -304,9 +305,54 @@ export async function fetchFoodConflicts(
     p_name: item.name ?? undefined,
   } as never);
   if (error) return readFail(error);
-  // custom_allergy (FQ, 20261227020000): an "Other" allergy's label on its allergy_check rows; absent on today's database.
-  type R = { kind: string; allergen: string | null; severity: string | null; restriction: string | null; detail: string | null; custom_allergy?: string | null };
-  return { ok: true, data: ((data ?? []) as unknown as R[]).map((r) => ({ kind: r.kind, allergen: r.allergen, severity: r.severity, restriction: r.restriction, detail: r.detail, customAllergy: r.custom_allergy ?? null })) };
+  return { ok: true, data: conflictRowsFrom(data) };
+}
+
+// ---------------------------------------------------------------------------
+// found_food_conflicts (Batch D GI, 20261227110000): an online or barcode
+// result's warnings before it is saved
+// ---------------------------------------------------------------------------
+
+/** `missing`: the function isn't on this database yet, so the card shows what it showed before (nothing). */
+export type FoundConflicts = { ok: true; data: ConflictRow[] } | { ok: false; missing: boolean };
+
+const FOUND_TTL_MS = 5 * 60_000;
+const foundCache = new Map<string, { at: number; answer: Promise<FoundConflicts> }>();
+// Set once the database says the function doesn't exist: nothing more is asked this session.
+let foundMissing = false;
+
+/**
+ * found_food_conflicts for one result, asked once per result (`key`, e.g.
+ * "usda_fdc:123" or "off:<barcode>") and client for five minutes: the list,
+ * its card and the add step share the answer, and the request in flight.
+ * `clientId` is the member's own id, or a connected professional's client's.
+ */
+export function fetchFoundFoodConflicts(
+  clientId: string,
+  key: string,
+  food: FoundAllergenData & { name: string; brand: string | null }
+): Promise<FoundConflicts> {
+  if (foundMissing) return Promise.resolve({ ok: false, missing: true });
+  const cacheKey = `${clientId}|${key}`;
+  const hit = foundCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < FOUND_TTL_MS) return hit.answer;
+  const answer = (async (): Promise<FoundConflicts> => {
+    try {
+      const { data, error, status } = await supabase.rpc("found_food_conflicts" as never, foundFoodConflictArgs(clientId, food) as never);
+      if (!error) return { ok: true, data: conflictRowsFrom(data) };
+      if (isMissingFunction(error, status)) {
+        foundMissing = true;
+        return { ok: false, missing: true };
+      }
+      readFail(error);
+    } catch (e) {
+      readFail(e);
+    }
+    foundCache.delete(cacheKey); // a failure is asked again next time
+    return { ok: false, missing: false };
+  })();
+  foundCache.set(cacheKey, { at: Date.now(), answer });
+  return answer;
 }
 
 // ---------------------------------------------------------------------------

@@ -335,6 +335,12 @@ const pronutrition: Catalogue = {
   "Check: {label}": "تحقّق: {label}", // note: health-related; a name match only
   "{name} added {allergy} as an allergy in their own words ({severity}). Only the name matches, so check the ingredients with {name}.": "أضاف {name} {allergy} كحساسية بكلماته ({severity}). الاسم وحده هو المطابق، لذا تحقّق من المكوّنات مع {name}.", // note: health-related; a name match only
   "{name} added {allergy} as an allergy in their own words. Only the name matches, so check the ingredients with {name}.": "أضاف {name} {allergy} كحساسية بكلماته. الاسم وحده هو المطابق، لذا تحقّق من المكوّنات مع {name}.", // note: health-related; a name match only
+  // == Batch D GI: "may contain" traces and unknown allergens, as the client sees them ==
+  "{food} (may contain {allergen})": "{food} (قد يحتوي على {allergen})", // note: health-related; a "may contain" trace, never blocks
+  "{food} (allergens unknown)": "{food} (مسبّبات الحساسية غير معروفة)", // note: health-related; no allergen information
+  "{name} is allergic to {allergen} ({severity}). The label says it may contain traces. Check it with {name}.": "لدى {name} حساسية تجاه {allergen} ({severity}). يذكر الملصق أنه قد يحتوي على آثار منه. تحقّق من ذلك مع {name}.", // note: health-related; the client's own severity
+  "{name} is allergic to {allergen}. The label says it may contain traces. Check it with {name}.": "لدى {name} حساسية تجاه {allergen}. يذكر الملصق أنه قد يحتوي على آثار منه. تحقّق من ذلك مع {name}.", // note: health-related
+  "There's no allergen information for this food. Check the label with {name}.": "لا تتوفّر معلومات عن مسبّبات الحساسية في هذا الطعام. تحقّق من الملصق مع {name}.", // note: health-related; never blocks
 };
 
 export default pronutrition;

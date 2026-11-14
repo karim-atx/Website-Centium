@@ -27,7 +27,7 @@ import { PremiumLabel } from "../premium/PremiumAskHost";
 import { scansLeftText } from "../../services/premium/g2";
 import { NutritionDetails } from "./NutritionDetails";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
-import { fetchFoodConflicts } from "../../services/nutrition/client";
+import { fetchFoodConflicts, fetchFoundFoodConflicts } from "../../services/nutrition/client";
 import { addNotice, type ConflictRow } from "../../services/nutrition/clientNutritionModel";
 import { dietLabel } from "../../utils/dietaryRestrictions";
 import { FoodConflictNotice } from "./FoodConflictBadge";
@@ -48,7 +48,7 @@ import { textPx } from "../../theme/textSize";
 import { enqueueLog, isOfflineFailure, newQueueId, SAVED_ON_DEVICE } from "../../services/health-log/offlineQueue";
 import { provisionalFoodEntry } from "../../services/food/provisional";
 import type { LogFoodEntryParams } from "../../services/food";
-import { brandServing, onlineQuery } from "../../services/food/onlineSearchModel";
+import { brandServing, conflictWords, onlineQuery } from "../../services/food/onlineSearchModel";
 import { useOnlineFoodSearch } from "./useOnlineFoodSearch";
 import { FoundFoodCard, OnlineResults, SearchOnlineButton } from "./OnlineFoodSearch";
 import { t, tn, tk } from "../../i18n/core";
@@ -215,7 +215,8 @@ export const AddFoodSheet: React.FC<{
   // food it belongs to, onto the user's own diary row.
   const [scanOpen, setScanOpen] = useState(false);
   const [offProduct, setOffProduct] = useState<OffProduct | null>(null);
-  const [offAttribution, setOffAttribution] = useState<{ foodId: string; attribution: OffProduct["attribution"] } | null>(null);
+  // Batch D GI: with the product itself, whose allergen data the add step checks.
+  const [offAttribution, setOffAttribution] = useState<{ foodId: string; attribution: OffProduct["attribution"]; product: OffProduct } | null>(null);
 
   // --- logging ------------------------------------------------------------
   const [saving, setSaving] = useState(false);
@@ -422,23 +423,39 @@ export const AddFoodSheet: React.FC<{
   // blocks Add to Diary; a restriction turns it into "Add anyway"; a keyword
   // match only says "Check this". Nothing shows for a food with no conflict.
   const [conflictRows, setConflictRows] = useState<{ id: string; rows: ConflictRow[] } | null>(null);
+  // Batch D GI: an Open Food Facts product found by barcode isn't saved
+  // anywhere, so its own allergen data is checked (found_food_conflicts, the
+  // answer its card already asked for); on a database without that, its name
+  // alone, as before. A saved online food is a custom food: food_conflicts
+  // reads what was saved with it.
+  const offFound = selectedFood && offAttribution?.foodId === selectedFood.id ? offAttribution.product : null;
   useEffect(() => {
     if (!selectedFood || !authUserId) return;
     let cancelled = false;
     const food = selectedFood;
-    void fetchFoodConflicts(authUserId, {
-      foodId: food.source === "catalog" ? food.id : null,
-      customFoodId: food.source === "custom" ? food.id : null,
-      name: food.name,
-    }).then((r) => {
+    const byName = () =>
+      fetchFoodConflicts(authUserId, {
+        foodId: food.source === "catalog" ? food.id : null,
+        customFoodId: food.source === "custom" ? food.id : null,
+        name: food.name,
+      });
+    void (async () => {
+      if (offFound) {
+        const found = await fetchFoundFoodConflicts(authUserId, `off:${offFound.barcode}`, offFound);
+        if (found.ok) return found;
+      }
+      return byName();
+    })().then((r) => {
       if (!cancelled) setConflictRows({ id: food.id, rows: r.ok ? r.data : [] });
     });
     return () => {
       cancelled = true;
     };
-  }, [selectedFood, authUserId]);
+  }, [selectedFood, authUserId, offFound]);
+  // GI: an online food's ingredients are matched too, so "Check this" doesn't say it was the name alone.
+  const conflictWordsFor = offFound ? conflictWords(offFound) : selectedFood?.externalSource === "open_food_facts" ? "ingredients" : "name";
   const conflictNotice =
-    selectedFood && conflictRows?.id === selectedFood.id ? addNotice(selectedFood.name, conflictRows.rows, dietLabel) : null;
+    selectedFood && conflictRows?.id === selectedFood.id ? addNotice(selectedFood.name, conflictRows.rows, dietLabel, conflictWordsFor) : null;
   const addBlocked = !!conflictNotice?.blocks;
 
   // Foods the user created before custom-food writes were wired to Supabase
@@ -640,7 +657,7 @@ export const AddFoodSheet: React.FC<{
 
   const chooseOffProduct = (product: OffProduct) => {
     const food = offAsFood(product);
-    setOffAttribution({ foodId: food.id, attribution: product.attribution });
+    setOffAttribution({ foodId: food.id, attribution: product.attribution, product });
     setSelectedFood(food);
     setBarcodeOpen(false);
     setOffProduct(null);
