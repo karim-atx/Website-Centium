@@ -82,6 +82,26 @@ export function g3State<T>(p: Pick<MyPremium, "premiumOn"> | null | undefined, a
   return answer ?? { kind: "loading" };
 }
 
+/**
+ * Batch D GB · does a G3 route show? "no" only when the server said so: the
+ * Premium switch is off for the account (my_premium answered premium_on
+ * false), or premium_content_lines() answered hidden (ATXQ0, a Database
+ * without G3). A read that FAILED or was offline, my_premium's or the
+ * probe's, is "error": the route stays and offers Retry, so a cold start
+ * from the Monday push never lands on Home because of a bad connection.
+ * `content` is the probe's answer, null until it arrives.
+ */
+export type G3Probe = "loading" | "yes" | "no" | "error";
+export function g3ProbeDecision(premium: { loading: boolean; failed: boolean; on: boolean }, content: G3State<unknown> | null): G3Probe {
+  if (premium.loading) return "loading";
+  if (premium.failed) return "error";
+  if (!premium.on) return "no";
+  if (!content || content.kind === "loading") return "loading";
+  if (content.kind === "ready") return "yes";
+  if (content.kind === "error") return "error";
+  return "no";
+}
+
 // ---- the lines used everywhere ----
 
 export interface ContentLines {

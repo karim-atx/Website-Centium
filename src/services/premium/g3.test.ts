@@ -12,6 +12,7 @@ import {
   failKind,
   contentCacheKey,
   g3On,
+  g3ProbeDecision,
   g3State,
   groupByWeek,
   groupPrompts,
@@ -68,6 +69,28 @@ test("the switch off, loading or unknown hides G3; on shows it", () => {
   assert.deepEqual(g3State(OFF, { kind: "ready", value: 1 }), { kind: "hidden" });
   assert.deepEqual(g3State(ON, null), { kind: "loading" });
   assert.deepEqual(g3State(ON, { kind: "ready", value: 1 }), { kind: "ready", value: 1 });
+});
+
+// Batch D GB · a G3 route redirects only on the server's "no", never on a failed read.
+test("the G3 route probe: switch off or hidden → no; a failed or offline read → error; ready → yes", () => {
+  const on = { loading: false, failed: false, on: true };
+  const lines = { kind: "ready" as const, value: { programmeSafety: null, effortGuide: null, sessionOpening: null, sessionSupport: null } };
+  // The switch off for the account (my_premium answered premium_on false).
+  assert.equal(g3ProbeDecision({ loading: false, failed: false, on: false }, null), "no");
+  assert.equal(g3ProbeDecision({ loading: false, failed: false, on: false }, lines), "no");
+  // premium_content_lines() answered hidden (ATXQ0 / no G3 on this Database).
+  assert.equal(g3ProbeDecision(on, { kind: "hidden" }), "no");
+  // A failed read, the probe's or my_premium's.
+  assert.equal(g3ProbeDecision(on, { kind: "error", message: "Couldn't load this. Try again." }), "error");
+  assert.equal(g3ProbeDecision({ loading: false, failed: true, on: false }, null), "error");
+  // Offline reads arrive as errors too (read() → OFFLINE_MESSAGE).
+  assert.equal(g3ProbeDecision(on, { kind: "error", message: "Couldn't reach the server. Check your connection and try again." }), "error");
+  // Ready → the route shows.
+  assert.equal(g3ProbeDecision(on, lines), "yes");
+  // Still loading: my_premium, or the probe not answered yet.
+  assert.equal(g3ProbeDecision({ loading: true, failed: false, on: false }, null), "loading");
+  assert.equal(g3ProbeDecision(on, null), "loading");
+  assert.equal(g3ProbeDecision(on, { kind: "loading" }), "loading");
 });
 
 test("ATXQ0 and a missing function hide; ATXQ1 is the locked state; anything else is an error", () => {
