@@ -58,6 +58,9 @@ import { surgeryDate } from "../../../utils/recordDates";
 // The stored value stays the English name (user data); only the chip shows it translated.
 export const COMMON_CONDITIONS: string[] = [tk("Diabetes"), tk("Hypertension"), tk("Asthma"), tk("Thyroid condition"), tk("Heart condition"), tk("PCOS"), tk("Anxiety/Depression"), tk("Arthritis")];
 const conditionLabel = (c: string) => (COMMON_CONDITIONS.includes(c) ? t(c) : c);
+/** Batch D GA: Medications scrolled to sits this far down, below the page's fixed header and tabs. */
+const MEDS_SCROLL_MARGIN = 160;
+
 export const ROUTES: { value: MedicationRoute; label: string }[] = [
   { value: "oral", label: tk("Oral") },
   { value: "injectable", label: tk("Injectable") },
@@ -265,7 +268,8 @@ const OwnHistory: React.FC<{
       )}
       {errFor("surgeries")}
 
-      <SectionCaps>{t("Medications")}</SectionCaps>
+      {/* Batch D GA: the medication push's target (HealthRecords scrolls here), clear of the fixed header. */}
+      <SectionCaps id="history-medications" style={{ scrollMarginTop: MEDS_SCROLL_MARGIN }}>{t("Medications")}</SectionCaps>
       {loading && !medications.length ? (
         <ListCard>
           <div style={{ height: 66, padding: "9px 14px" }} className="flex items-center gap-3">
@@ -387,7 +391,13 @@ const OwnHistoryWeb: React.FC<{
       <ProfileProposals responseId={null} hideNumbers={hideNumbers} />
       <div className="grid items-start" style={{ gridTemplateColumns: `repeat(${rail ? 1 : 3}, minmax(0, 1fr))`, gap: 24 }}>
         {columns.map((col) => (
-          <section key={col.section} className="min-w-0 flex flex-col" data-web-history-col={col.section}>
+          <section
+            key={col.section}
+            id={col.section === "medications" ? "history-medications" : undefined}
+            className="min-w-0 flex flex-col"
+            data-web-history-col={col.section}
+            style={{ scrollMarginTop: MEDS_SCROLL_MARGIN }}
+          >
             <h2 className="uppercase" style={{ margin: "0 0 10px", fontSize: 13, lineHeight: "20px", fontWeight: 700, letterSpacing: "1.9px", color: "#9A94B3" }}>
               {col.heading}
             </h2>

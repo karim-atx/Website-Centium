@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { dayParam } from "../../utils/dayParam";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { calendarJump } from "../../components/ui/calendarJump";
 import { SubHeader } from "../../components/business-more/kit";
@@ -120,6 +122,31 @@ export default function BusinessCalendarTab() {
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
   const [composeOpen, setComposeOpen] = useState(false);
   const [draft, setDraft] = useState(blankDraft(selectedDate));
+
+  // Batch D GA: an appointment push opens /app/business/calendar?day=YYYY-MM-DD
+  // on that day, as the pro calendar's deep link does (pages/pro/Calendar.tsx):
+  // the day selected, its month showing, in Day view (where a tap on a date
+  // in Month lands). Not a real date: ignored. The param is cleared after.
+  // The day is applied while rendering (React's "adjust state on a prop
+  // change"), so the first frame already shows it; the effect only clears it.
+  const [params, setParams] = useSearchParams();
+  const dayRaw = params.get("day");
+  const [dayApplied, setDayApplied] = useState<string | null>(null);
+  if (dayRaw !== dayApplied) {
+    setDayApplied(dayRaw);
+    const d = dayParam(dayRaw);
+    if (d) {
+      setSelectedDate(d.iso);
+      setCursor({ year: d.year, month: d.month });
+      setView("day");
+    }
+  }
+  useEffect(() => {
+    if (dayRaw === null) return;
+    const next = new URLSearchParams(params);
+    next.delete("day");
+    setParams(next, { replace: true });
+  }, [dayRaw, params, setParams]);
   const monthNames = monthNamesOf("long");
   const monthShort = monthNamesOf("short");
 

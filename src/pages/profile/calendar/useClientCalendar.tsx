@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { monthLeadingBlanks, startOfWeekISO } from "../../../utils/week";
+import { dayParam } from "../../../utils/dayParam";
 import { t, tk } from "../../../i18n/core";
 import { useBack } from "../../../hooks/useBack";
 import { appLocale } from "../../../i18n/format";
@@ -356,6 +357,30 @@ export function useClientCalendar() {
     setParams(next, { replace: true });
     if (hit && ended) openRate({ bookingId: rateParam, title: hit.title, businessName: hit.businessName, classId: hit.classId });
   }, [rateParam, bookingsRead, bookedClasses, linkedBookings, params, setParams, openRate]);
+
+  // Batch D GA: a booking or calendar push opens /app/calendar?day=YYYY-MM-DD
+  // on that day: selected (its agenda under Month, its week under Week) with
+  // its month showing, in the view already open. Not a real date: ignored.
+  // Only `day` is cleared (as the pro calendar does), so a ?rate= beside it
+  // still opens its sheet, and a reload stays on today.
+  // Applied while rendering (React's "adjust state on a prop change"), so the
+  // first frame already shows the day; the effect only clears the param.
+  const dayRaw = params.get("day");
+  const [dayApplied, setDayApplied] = useState<string | null>(null);
+  if (dayRaw !== dayApplied) {
+    setDayApplied(dayRaw);
+    const d = dayParam(dayRaw);
+    if (d) {
+      setSelectedDate(d.iso);
+      setCursor({ year: d.year, month: d.month });
+    }
+  }
+  useEffect(() => {
+    if (dayRaw === null) return;
+    const next = new URLSearchParams(params);
+    next.delete("day");
+    setParams(next, { replace: true });
+  }, [dayRaw, params, setParams]);
 
   const bookedClassEvents = useMemo<ClientCalendarEvent[]>(
     () =>

@@ -241,10 +241,10 @@ export const EmptyCard: React.FC<{ icon: React.ComponentType<{ size?: number; st
 );
 
 /** Caps section label (9.5/14.3 700 ls1.9 uppercase #9A94B3, dark #8A8698), m 20 0 9 0. */
-export const SectionCaps: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => {
+export const SectionCaps: React.FC<{ children: React.ReactNode; style?: React.CSSProperties; id?: string }> = ({ children, style, id }) => {
   const { dark, hc } = useHealthMode();
   return (
-    <h2 className="uppercase" style={{ margin: "20px 0 9px", fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: hc ? INK : dark ? "#8A8698" : "#726C8A", ...style }}>
+    <h2 id={id} className="uppercase" style={{ margin: "20px 0 9px", fontSize: textPx(9.5), lineHeight: linePx(14.3), fontWeight: 700, letterSpacing: 1.9, color: hc ? INK : dark ? "#8A8698" : "#726C8A", ...style }}>
       {children}
     </h2>
   );
