@@ -107,7 +107,7 @@ export const HiredClassSheet: React.FC<{
             {tm ? (
               <>
                 <span style={{ fontSize: px(17), fontWeight: 800, color: ink }}>{tm.time}</span>
-                <span style={{ fontSize: px(10), fontWeight: 700, color: ink }}>{tm.meridiem}</span>
+                <span style={{ fontSize: px(10), fontWeight: 700, color: ink }}>{t(tm.meridiem)}</span>
               </>
             ) : null}
           </div>

@@ -538,7 +538,7 @@ export const SleepView: React.FC<{
           {
             label: t("Bedtime"),
             value: bedParts ? `${bedParts.hour}:${String(bedParts.minute).padStart(2, "0")}` : "–",
-            unit: bedParts?.meridiem,
+            unit: bedParts ? t(bedParts.meridiem) : undefined,
             delta: bd != null && Math.round(bd) !== 0 ? signedMin(bd) : null,
             dir: bd == null || Math.round(bd) === 0 ? null : bd > 0 ? "down" : "up",
             sub: t("Average"),
@@ -566,7 +566,7 @@ export const SleepView: React.FC<{
       if (!a.length) return null;
       const p = clockParts(Math.round(a.reduce((s, x) => s + x, 0) / a.length) % 1440);
       const sd = spread(a);
-      return { value: `${p.hour}:${String(p.minute).padStart(2, "0")}`, unit: p.meridiem, sub: sd != null ? t("± {n} min", { n: sd }) : undefined };
+      return { value: `${p.hour}:${String(p.minute).padStart(2, "0")}`, unit: t(p.meridiem), sub: sd != null ? t("± {n} min", { n: sd }) : undefined };
     };
     const bedU = usual(timed.map((x) => x.bed as number));
     const wakeU = usual(timed.map((x) => x.wake as number));

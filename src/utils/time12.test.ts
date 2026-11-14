@@ -1,11 +1,14 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { addCatalogue, setActiveLanguage } from "../i18n/core.ts";
 import {
   clock12,
   clock12Split,
   clockParts,
   formatMinutes12,
   hourLabel12,
+  hourTick12,
+  localiseSavedClock,
   minutesOfDay,
   range12,
   rangeClock12,
@@ -90,4 +93,42 @@ test("time12En: saved text keeps the English clock", () => {
   assert.equal(time12En("18:30:00"), "6:30 PM");
   assert.equal(time12En(""), "");
   assert.equal(time12En("soon"), "soon");
+});
+
+// Batch D FY: no English "AM" / "PM" reaches an Arabic reader.
+test("hourTick12: the compact chart tick in each language", () => {
+  assert.equal(hourTick12(0), "12am");
+  assert.equal(hourTick12(6), "6am");
+  assert.equal(hourTick12(12), "12pm");
+  assert.equal(hourTick12(14), "2pm");
+  assert.equal(hourTick12(24), "12am");
+  addCatalogue("ar", { AM: "ص", PM: "م" });
+  setActiveLanguage("ar");
+  try {
+    assert.equal(hourTick12(6), "6 ص");
+    assert.equal(hourTick12(18), "6 م");
+    assert.equal(hourTick12(0), "12 ص");
+  } finally {
+    setActiveLanguage("en");
+  }
+});
+
+test("localiseSavedClock: saved English times read in the app's language, the rest as saved", () => {
+  const saved = "Spin 45 · Sun, Tue 10:00 AM and HIIT 30 · Mon 7:30 PM";
+  assert.equal(localiseSavedClock(saved), saved);
+  assert.equal(localiseSavedClock(null), null);
+  assert.equal(localiseSavedClock(""), "");
+  addCatalogue("ar", { AM: "ص", PM: "م" });
+  setActiveLanguage("ar");
+  try {
+    // Each Arabic clock sits in a right-to-left isolate (RLI … PDI) inside the English text.
+    const rtl = (s: string) => `⁧${s}⁩`;
+    assert.equal(localiseSavedClock(saved), `Spin 45 · Sun, Tue ${rtl("10:00 ص")} and HIIT 30 · Mon ${rtl("7:30 م")}`);
+    assert.equal(localiseSavedClock(`Yoga · Sat, Oct 24, ${time12En("09:00")}`), `Yoga · Sat, Oct 24, ${rtl("9:00 ص")}`);
+    // A class title with "AM" in it is not a clock time.
+    assert.equal(localiseSavedClock("AM Yoga · Mon 6:15 AM"), `AM Yoga · Mon ${rtl("6:15 ص")}`);
+    assert.equal(localiseSavedClock(undefined), undefined);
+  } finally {
+    setActiveLanguage("en");
+  }
 });

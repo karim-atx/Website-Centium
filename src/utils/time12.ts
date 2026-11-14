@@ -16,7 +16,7 @@
 // t("{start} to {end}"). The Clock12 / split values keep the raw "AM" / "PM"
 // (callers compare them); a caller's own joiner ("–") is kept as given.
 
-import { t } from "../i18n/core";
+import { getLanguage, t } from "../i18n/core";
 
 export type Meridiem = "AM" | "PM";
 
@@ -140,4 +140,32 @@ export function rangeClock12(start: Date | string | number, end: Date | string |
 export function hourLabel12(hour: number): string {
   const p = clockParts(hour * 60);
   return `${p.hour} ${t(p.meridiem)}`;
+}
+
+/**
+ * A compact hour tick for a small chart axis: "6am", "12pm" in English (the
+ * handover's lowercase, no space), «6 ص» / «12 م» in Arabic. Batch D FY: no
+ * English meridiem reaches an Arabic reader. `hour` is 0 to 24, 24 reading
+ * as midnight.
+ */
+export function hourTick12(hour: number): string {
+  const p = clockParts(hour * 60);
+  return getLanguage() === "en" ? `${p.hour}${p.meridiem.toLowerCase()}` : `${p.hour} ${t(p.meridiem)}`;
+}
+
+/**
+ * Text the app SAVED in English (openings.schedule_label, and the hiring
+ * form's class labels built with time12En) shown in the app's language:
+ * every "10:00 AM" / "7:30 PM" in it reads «10:00 ص» / «7:30 م» in Arabic.
+ * Batch D FY: only the clock times change, and only at display; what is
+ * stored stays English, and the rest of the text (class titles, day names)
+ * is left as it came. The Arabic clock is wrapped in a right-to-left
+ * isolate (U+2067 … U+2069) so «7:00 ص» stays together inside the English
+ * text; without it the meridiem lands at the far end of the line.
+ */
+export function localiseSavedClock(text: string): string;
+export function localiseSavedClock(text: string | null | undefined): string | null | undefined;
+export function localiseSavedClock(text: string | null | undefined): string | null | undefined {
+  if (!text || getLanguage() === "en") return text;
+  return text.replace(/\b(\d{1,2}:\d{2})\s?(AM|PM)\b/g, (_, clock: string, mer: Meridiem) => `⁧${clock} ${t(mer)}⁩`);
 }
