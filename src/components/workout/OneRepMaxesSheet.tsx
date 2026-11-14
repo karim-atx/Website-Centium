@@ -17,6 +17,7 @@ import { textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { t, tn } from "../../i18n/core";
 import { ShareEntryButton } from "../share/client/ShareEntryButton";
+import { useExerciseName } from "./useExerciseName";
 
 /**
  * Mobile v5.1 R3 (no light islands): the colours here with no token of the
@@ -61,6 +62,8 @@ export const OneRepMaxesSheet: React.FC<{
   onShare?: (lift: LiftMax) => void;
 }> = ({ open, onClose, onSelect, onShare }) => {
   const { workoutSessions } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   const [sort, setSort] = useState<LiftSort>("highest");
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const dark = useIsDark();
@@ -125,7 +128,7 @@ export const OneRepMaxesSheet: React.FC<{
                   >
                     <span className="flex-1 min-w-0">
                       <span className="block truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: textPx(13.5), fontWeight: 700 }}>
-                        {lift.name}
+                        {shownName(lift.name, !!lift.customId)}
                       </span>
                       <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: textPx(10.5), marginTop: 2 }}>
                         {t("Last trained {date}", { date: shortDate(lift.lastTrained) })}

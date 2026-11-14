@@ -819,6 +819,19 @@ const workout: Catalogue = {
   // Round G clash fix: the same English with another meaning in this area.
   "Balance|training": "التوازن",
   "Set|workout": "المجموعة",
+  // Batch D GH: set limits and same-named exercises.
+  "{name} (custom)": "{name} (مخصّص)",
+  "Weights over {max} kg can't be saved.": "لا يمكن حفظ وزن يزيد على {max} كغ.",
+  "More than {max} reps can't be saved.": "لا يمكن حفظ أكثر من {max} تكرار.",
+  "Is this right?": "هل هذا صحيح؟",
+  "{weight} kg for {reps} reps is far more than most sets. Check the numbers before you log it.": "{weight} كغ لـ {reps} تكرار أكثر بكثير من معظم المجموعات. تحقّق من الأرقام قبل تسجيلها.",
+  "{weight} kg is far heavier than most lifts. Check the weight before you log it.": "{weight} كغ أثقل بكثير من معظم الرفعات. تحقّق من الوزن قبل تسجيله.",
+  "{reps} reps is far more than most sets. Check the reps before you log it.": "{reps} تكرار أكثر بكثير من معظم المجموعات. تحقّق من التكرارات قبل تسجيلها.",
+  "Yes, log it": "نعم، سجّلها",
+  "Change it": "تعديلها",
+  "Some sets are over the limit. Fix the ones marked in red, then finish.": "بعض المجموعات تتجاوز الحد. صحّح المميّزة بالأحمر، ثم أنهِ التمرين.",
+  "Some numbers in this workout are out of range. Your sets are still here: check them and try again.": "بعض أرقام هذا التمرين خارج النطاق. مجموعاتك ما زالت هنا: تحقّق منها وحاول مجددًا.",
+  "A one-rep max over {max} kg can't be saved.": "لا يمكن حفظ حد أقصى لتكرار واحد يزيد على {max} كغ.",
 };
 
 export default workout;

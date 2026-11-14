@@ -26,6 +26,7 @@ import { appLocale } from "../../../i18n/format";
 import { EmptyCard } from "./parts";
 import { capsLabel } from "./styles";
 import { t, tn } from "../../../i18n/core";
+import { useExerciseName } from "../../../components/workout/useExerciseName";
 
 // Website viewport v1 · WC-WO.3 History (WC-WO Workout Web v13) and its
 // popups (WC-WO.3.1). The Summary row with the period chip (40, anchored
@@ -376,6 +377,8 @@ const SessionCard: React.FC<{
   sentLine?: string | null;
   replies?: WorkoutLogReply[];
 }> = ({ session, family, expanded, onToggle, onChangeDate, onDelete, onShare, sentLine: sentText, replies }) => {
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   const [showAll, setShowAll] = useState(false);
   const d = new Date(`${session.date}T00:00:00`);
   const exercises = session.exercises;
@@ -448,7 +451,7 @@ const SessionCard: React.FC<{
               <div key={ex.exerciseId} className="flex items-center" style={{ padding: "8px 0", gap: 10 }}>
                 <span aria-hidden className="flex-none rounded-full" style={{ width: 6, height: 6, background: family.bar }} />
                 <span className="flex-1 min-w-0 truncate" style={{ fontSize: 15, lineHeight: "22px", fontWeight: 500, color: "#241F1B" }}>
-                  {ex.name}
+                  {shownName(ex.name, !!ex.customExerciseId)}
                 </span>
                 <span className="flex-none" style={{ fontSize: 13, lineHeight: "20px", color: "#5B5349", whiteSpace: "nowrap" }}>
                   {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? tn(done, "{n} set", "{n} sets") : ""}

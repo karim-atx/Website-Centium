@@ -6,6 +6,7 @@ import type {
   ImagingRecord,
 } from "../../types";
 import { localDayOf, todayLocal } from "../../utils/date";
+import { bodyWeightAllowed } from "../workout/setLimits";
 
 // A professional's read of their clients' own data.
 //
@@ -306,6 +307,8 @@ export async function fetchClientWeight(clientIds: string[]): Promise<ClientWeig
   for (const row of data ?? []) {
     const id = row.user_id;
     if (!(id in byClient)) continue;
+    // Batch D GH: a weight outside 20–500 kg (an old row) is no reading.
+    if (!bodyWeightAllowed(Number(row.value))) continue;
     if (!(id in firstSeen)) firstSeen[id] = Number(row.value);
     latest[id] = Number(row.value);
   }

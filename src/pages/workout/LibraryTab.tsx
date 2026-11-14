@@ -18,6 +18,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { LoadErrorCard, SkeletonRows, YoursTag, matchesSearch, searchKey, useLibraryInk } from "../../components/workout/LibraryParts";
 import { Toast } from "../../components/ui/Toast";
 import { customExerciseUsage, isCustomExerciseRule } from "../../services/exercises";
+import { useExerciseName } from "../../components/workout/useExerciseName";
 import { inlineScrolled } from "../../utils/inlineScroll";
 import { isRtl, t, tk, tn, tx } from "../../i18n/core";
 
@@ -170,6 +171,8 @@ export default function LibraryTab() {
     noteFeatureMilestone,
     accessibility,
   } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
 
   // Explorer milestone: "Browsing the shelves". One row per account for ever — the repeat is
   // a primary-key conflict the service treats as the success it is. This tab is the browsable library;
@@ -368,10 +371,9 @@ export default function LibraryTab() {
       tpl.exercises.some((ex) => ex.customExerciseId === customExerciseId)
     ).length,
     // personal_records CASCADEs on this column, so a record for the movement
-    // goes when the movement does.
-    hasPersonalRecord: Object.keys(personalRecords).some(
-      (name) => name === customExercises.find((c) => c.id === customExerciseId)?.name
-    ),
+    // goes when the movement does. Batch D GH: by its id (records are keyed
+    // "u:<id>"), so a same-named library record doesn't count.
+    hasPersonalRecord: personalRecords[`u:${customExerciseId}`] != null,
   });
 
   const flipSide = () => {
@@ -507,7 +509,7 @@ export default function LibraryTab() {
                       <span className="min-w-0">
                         <span className="flex items-center" style={{ gap: 6 }}>
                           <span className="truncate" style={{ fontSize: textPx(14), lineHeight: linePx(18), fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
-                            {e.name}
+                            {shownName(e.name, e.isCustom)}
                           </span>
                           {/* YOUR OWN MOVEMENT, MARKED: the "Yours" tag after
                               the name (WO2 #24), the one kind of row the user
@@ -683,7 +685,7 @@ export default function LibraryTab() {
                         padding: "11px 13px",
                       }}
                     >
-                      <span style={{ fontSize: textPx(13.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{e.name}</span>
+                      <span style={{ fontSize: textPx(13.5), fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{shownName(e.name, e.isCustom)}</span>
                       <span style={{ fontSize: textPx(11), color: "rgb(var(--c-charcoal-muted))" }}>{t(classificationLabel[e.classification])}</span>
                     </button>
                   ))}

@@ -45,6 +45,12 @@ export interface WorkoutSaveResult {
   /** The remote session id, present only on success. */
   id?: string;
   message?: string;
+  /**
+   * Batch D GH: the server refused a value (23514: logged_sets_weight_ceiling,
+   * logged_sets_reps_ceiling). The logger keeps the session open and flags
+   * the sets over the ceilings so they can be fixed; nothing here is lost.
+   */
+  outOfRange?: boolean;
 }
 
 function describe(error: PostgrestError): string {
@@ -169,10 +175,13 @@ export async function saveWorkoutSession(
   }
 
   const sessionId = sessionRow.id;
-  const abandon = async (message: string): Promise<WorkoutSaveResult> => {
+  // Batch D GH: this removes only the half-written ROWS (the inserts are not a
+  // transaction), never the workout: the logger still holds every set, and a
+  // refusal (outOfRange) comes back so it can flag them and save again.
+  const abandon = async (message: string, error?: PostgrestError | null): Promise<WorkoutSaveResult> => {
     // Cascade removes the exercises and sets with it.
     await supabase.from("workout_sessions").delete().eq("id", sessionId);
-    return { ok: false, message };
+    return { ok: false, message, ...(error?.code === "23514" ? { outOfRange: true } : {}) };
   };
 
   if (session.exercises.length === 0) return { ok: true, id: sessionId };
@@ -280,7 +289,7 @@ export async function saveWorkoutSession(
     const { error: setError } = await supabase.from("logged_sets").insert(setRows);
     if (setError) {
       console.error("[workout] Could not save sets:", setError.message);
-      return abandon(describe(setError));
+      return abandon(describe(setError), setError);
     }
   }
 

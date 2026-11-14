@@ -130,6 +130,22 @@ test("topLift picks the biggest change between first and latest", () => {
   assert.equal(topLift([s("2026-10-01T10:00:00Z", 70)]), null);
 });
 
+test("Batch D GH: topLift skips impossible sets and keeps same-named lifts apart", () => {
+  const s = (startedAt: string, sets: { lib: number; cus: number }): Pick<WorkoutSession, "startedAt" | "exercises"> => ({
+    startedAt,
+    exercises: [
+      { exerciseId: "a", catalogExerciseId: "lib", name: "Bench Press", sets: [set(5, sets.lib)] },
+      { exerciseId: "b", customExerciseId: "cus", name: "Bench Press", sets: [set(5, sets.cus)] },
+    ],
+  });
+  // The library lift rises 10 kg, the custom one 30 kg: mixed by name they would read 100 → 70.
+  const lift = topLift([s("2026-10-01T10:00:00Z", { lib: 100, cus: 40 }), s("2026-10-08T10:00:00Z", { lib: 110, cus: 70 })]);
+  assert.deepEqual(lift, { exercise: "Bench Press", firstKg: 40, lastKg: 70, reps: 5 });
+  // An old 5,000 kg set is no top lift.
+  const one = (startedAt: string, kg: number): Pick<WorkoutSession, "startedAt" | "exercises"> => ({ startedAt, exercises: [{ exerciseId: "x", name: "Back squat", sets: [set(5, kg)] }] });
+  assert.deepEqual(topLift([one("2026-10-01T10:00:00Z", 100), one("2026-10-08T10:00:00Z", 5000), one("2026-10-15T10:00:00Z", 105)]), { exercise: "Back squat", firstKg: 100, lastKg: 105, reps: 5 });
+});
+
 test("setTypesColumn matches set_types_valid", () => {
   assert.equal(setTypesColumn(undefined), null);
   assert.equal(setTypesColumn([null, "normal", null]), null);

@@ -7,6 +7,8 @@ import { UnverifiedProgramNotice } from "../../workout/UnverifiedProgramNotice";
 import { groupIntoRuns } from "../../../services/workout/blocks";
 import { prescriptionLine } from "../../../services/workout/prescription";
 import { formatDuration } from "../../../services/workout";
+// Batch D GH: a set over the ceilings (an old row) adds nothing to a session's volume.
+import { plausibleVolumeKg } from "../../../services/workout/setLimits";
 import { fetchProgrammeSessions, type ProgrammeSession } from "../../../services/pro/library";
 import { PinnedCta } from "../../ui/PinnedCta";
 import { textPx } from "../../../theme/textSize";
@@ -123,7 +125,7 @@ export const ProgrammeDetail: React.FC<{
             style={{ padding: "8px 0", minHeight: 44, borderTop: `1px solid ${INK.b06}` }}
           >
             <span className="block" style={{ fontSize: textPx(12.5), fontWeight: 600, color: INK.ch }}>
-              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(s.totalVolumeKg).toLocaleString(appLocale()) })}
+              {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(plausibleVolumeKg(s)).toLocaleString(appLocale()) })}
             </span>
             <span className="block truncate" style={{ fontSize: textPx(11.5), color: INK.chF }}>
               {s.exercises.map((e) => e.name).join(", ")}
@@ -178,7 +180,7 @@ export const ProgrammeDetail: React.FC<{
           {mine.slice(0, 3).map((s) => (
             <button key={s.id} type="button" onClick={() => onOpenLog(s.id)} className="flex items-center text-start hover:bg-[#F5F5F6]" style={{ minHeight: 44, gap: 12, borderTop: "1px solid rgba(36,31,27,0.06)" }}>
               <span className="whitespace-nowrap shrink-0" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
-                {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(s.totalVolumeKg).toLocaleString(appLocale()) })}
+                {fmtDay(s.date)} · {formatDuration(s.durationSec)} · {t("{n} kg", { n: Math.round(plausibleVolumeKg(s)).toLocaleString(appLocale()) })}
               </span>
               <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "20px", color: "#71685E" }}>
                 {reviewStateText(reviewStates[s.id]) ? `${reviewStateText(reviewStates[s.id])} · ` : ""}

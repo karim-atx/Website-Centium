@@ -2,6 +2,7 @@ import type { WorkoutSession } from "../../types";
 import { estimate1RM, loadKg } from "./index";
 import { countsTowardVolume } from "./session";
 import { isWorkingSet } from "./stats";
+import { onlyImplausibleSets, plausibleSet, plausibleVolumeKg } from "./setLimits";
 
 // Handover 2026-09-29 WO4.1, the Metrics page. Every value comes from logged
 // sessions (03 "WO4.1").
@@ -28,16 +29,19 @@ export function mondayOf(day: string): string {
 const chronological = (a: WorkoutSession, b: WorkoutSession) =>
   a.date.localeCompare(b.date) || a.startedAt.localeCompare(b.startedAt);
 
-/** One point per session, or per Monday–Sunday week; oldest first. */
+/**
+ * One point per session, or per Monday–Sunday week; oldest first. Batch D GH:
+ * a set over the server's ceilings adds nothing (plausibleVolumeKg).
+ */
 export function volumePoints(sessions: WorkoutSession[], mode: VolumeMode): VolumePoint[] {
   const ordered = [...sessions].sort(chronological);
   if (mode === "workout")
-    return ordered.map((s) => ({ t: dayMs(s.date), day: s.date, volumeKg: s.totalVolumeKg, sessions: [s] }));
+    return ordered.map((s) => ({ t: dayMs(s.date), day: s.date, volumeKg: plausibleVolumeKg(s), sessions: [s] }));
   const weeks = new Map<string, VolumePoint>();
   for (const s of ordered) {
     const monday = mondayOf(s.date);
     const w = weeks.get(monday) ?? { t: dayMs(monday), day: monday, volumeKg: 0, sessions: [] };
-    w.volumeKg += s.totalVolumeKg;
+    w.volumeKg += plausibleVolumeKg(s);
     w.sessions.push(s);
     weeks.set(monday, w);
   }
@@ -65,7 +69,7 @@ export function pointStats(sessions: WorkoutSession[]): PointStats {
     for (const ex of s.exercises) {
       seconds += ex.enduranceResult?.duration_seconds ?? 0;
       for (const set of ex.sets) {
-        if (countsTowardVolume(set)) {
+        if (countsTowardVolume(set) && plausibleSet(set)) {
           sets++;
           reps += set.reps;
         }
@@ -76,7 +80,7 @@ export function pointStats(sessions: WorkoutSession[]): PointStats {
       }
     }
   return {
-    volumeKg: sessions.reduce((n, s) => n + s.totalVolumeKg, 0),
+    volumeKg: sessions.reduce((n, s) => n + plausibleVolumeKg(s), 0),
     oneRmKg: oneRm || null,
     maxWeightKg: maxWeight || null,
     sets,
@@ -105,6 +109,8 @@ export function trainingFrequency(sessions: WorkoutSession[], today: string): Tr
   });
   const days = mondays.map(() => new Set<string>());
   for (const s of sessions) {
+    // Batch D GH: a session whose every set is over the ceilings is no training day.
+    if (onlyImplausibleSets(s)) continue;
     const i = mondays.indexOf(mondayOf(s.date));
     if (i >= 0) days[i].add(s.date);
   }

@@ -15,6 +15,7 @@ import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
 import { ShareEntryButton } from "../share/client/ShareEntryButton";
+import { useExerciseName } from "./useExerciseName";
 
 const RANGES: LiftRange[] = ["3M", "6M", "All"];
 /** The frame shows the four most recent sessions. */
@@ -52,6 +53,8 @@ const shortDate = (t: number) => new Date(t).toLocaleDateString(appLocale("en-US
 export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => void; onShare?: (lift: LiftMax) => void }> = ({ lift, onClose, onShare }) => {
   const [range, setRange] = useState<LiftRange>("3M");
   const dark = useIsDark();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   if (!lift) return null;
 
   const shown = sessionsInRange(lift, range, todayLocal());
@@ -59,7 +62,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
   const recent = [...lift.sessions].reverse().slice(0, RECENT);
 
   return (
-    <BottomSheet open onClose={onClose} title={lift.name} handle>
+    <BottomSheet open onClose={onClose} title={shownName(lift.name, !!lift.customId)} handle>
       <div className="animate-fade-slide-up">
         <div className="flex items-center" style={{ gap: 10 }}>
           <div className="flex-1 min-w-0 flex items-baseline" style={{ gap: 10 }}>

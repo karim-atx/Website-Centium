@@ -14,6 +14,7 @@ import { BODY_FIGURES, zoneMaskUrl, type FigureKey, type ZoneKey } from "../../.
 import { MUSCLE_GROUP_LABEL } from "../../../utils/muscleGroups";
 import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../../utils/exerciseTags";
 import { customExerciseUsage, isCustomExerciseRule } from "../../../services/exercises";
+import { useExerciseName } from "../../../components/workout/useExerciseName";
 import type { ExerciseClassification, ExerciseTag, MuscleGroup } from "../../../types";
 import { EmptyCard } from "./parts";
 import { borderCard } from "./styles";
@@ -105,6 +106,8 @@ export default function LibraryWeb() {
     personalRecords,
     noteFeatureMilestone,
   } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   useEffect(() => {
     noteFeatureMilestone("exercise_library");
   }, [noteFeatureMilestone]);
@@ -206,7 +209,8 @@ export default function LibraryWeb() {
   const deleteImpact = (customExerciseId: string) => ({
     routines: usage?.id === customExerciseId ? usage.routines : routines.filter((r) => r.exercises.some((ex) => ex.customExerciseId === customExerciseId)).length,
     templates: workoutTemplates.filter((tpl) => tpl.exercises.some((ex) => ex.customExerciseId === customExerciseId)).length,
-    hasPersonalRecord: Object.keys(personalRecords).some((name) => name === customExercises.find((c) => c.id === customExerciseId)?.name),
+    // Batch D GH: by its id (records are keyed "u:<id>"), never by name.
+    hasPersonalRecord: personalRecords[`u:${customExerciseId}`] != null,
   });
   const flipSide = () => {
     setSelectedGroup(null);
@@ -336,8 +340,8 @@ export default function LibraryWeb() {
                           >
                             <span className="flex-1 min-w-0">
                               <span className="flex items-center" style={{ gap: 6 }}>
-                                <span className="truncate" title={e.name} style={{ fontSize: 15, lineHeight: "22px", fontWeight: 500, color: "#241F1B" }}>
-                                  {e.name}
+                                <span className="truncate" title={shownName(e.name, e.isCustom)} style={{ fontSize: 15, lineHeight: "22px", fontWeight: 500, color: "#241F1B" }}>
+                                  {shownName(e.name, e.isCustom)}
                                 </span>
                                 {e.isCustom && (
                                   <span style={{ flex: "none", borderRadius: 6, padding: "1px 6px", background: "#F0EDF9", color: "#5F5093", fontSize: 11, lineHeight: "16px", fontWeight: 700 }}>{t("Yours")}</span>
@@ -433,7 +437,7 @@ export default function LibraryWeb() {
                         style={{ flex: "none", height: 52, boxSizing: "border-box", gap: 10, border: "1px solid rgba(36,31,27,0.1)", borderRadius: 12, padding: "0 16px" }}
                       >
                         <span className="min-w-0 truncate" style={{ fontSize: 15, lineHeight: "24px", fontWeight: 600, color: "#241F1B" }}>
-                          {e.name}
+                          {shownName(e.name, e.isCustom)}
                         </span>
                         <span style={{ flex: "none", whiteSpace: "nowrap", fontSize: 13, lineHeight: "20px", color: "#71685E" }}>{t(classificationLabel[e.classification])}</span>
                       </button>

@@ -31,6 +31,7 @@ import { isNewPr, prFacts } from "../../../components/share/client/clientShareDa
 import { appLocale } from "../../../i18n/format";
 import { borderCard, cardTitle } from "./styles";
 import { getLanguage, isRtl, t, tn, tx } from "../../../i18n/core";
+import { useExerciseName } from "../../../components/workout/useExerciseName";
 
 // Website viewport v1 · WC-WO.4 Metrics (WC-WO Workout Web v13). A 12-column
 // grid (8 beside the rail): the volume hero (8 columns, the chart with its
@@ -60,6 +61,8 @@ const heroCaps: React.CSSProperties = { fontSize: 13, lineHeight: "20px", fontWe
 
 export default function MetricsWeb() {
   const { workoutSessions, exerciseCatalog, customExercises, authUserId, noteFeatureMilestone, refreshAchievements } = useApp();
+  // Batch D GH: "(custom)" after a custom movement that shares a library name.
+  const shownName = useExerciseName();
   const { rail } = useWebLayout();
   const hideNumbers = useHideNumbers();
   useEffect(() => {
@@ -275,7 +278,7 @@ export default function MetricsWeb() {
                     style={{ borderRadius: 12, background: "#F2F7F6", padding: "10px 14px", minHeight: 64, boxShadow: fresh ? "0 0 0 1.5px #AEA1DC" : undefined }}
                   >
                     <span className="block truncate" style={{ fontSize: 13, lineHeight: "20px", fontWeight: 500, color: "#3B7570" }}>
-                      {lift.name}
+                      {shownName(lift.name, !!lift.customId)}
                     </span>
                     <span style={{ fontSize: 22, lineHeight: "28px", fontWeight: 800, color: "#3B7570" }}>
                       {kgWhole(lift.oneRm)}

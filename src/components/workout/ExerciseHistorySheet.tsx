@@ -7,6 +7,8 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { linePx, textPx } from "../../theme/textSize";
 import { appLocale } from "../../i18n/format";
 import { t } from "../../i18n/core";
+import { nameShared } from "../../services/workout/exerciseNames";
+import { useExerciseName } from "./useExerciseName";
 
 // Mobile v5.1 R3, dark mode (no light islands): on the card's lavender 10%
 // tint (#2B2C3A dark) the stat label takes text.secondary dark (tertiary
@@ -26,15 +28,19 @@ export const ExerciseHistorySheet: React.FC<{
   name: string;
   match: { catalogId?: string; customId?: string } | null;
 }> = ({ open, onClose, name, match }) => {
-  const { workoutSessions } = useApp();
+  const { workoutSessions, exerciseCatalog, customExercises } = useApp();
   const dark = useIsDark();
+  // Batch D GH: a name both a library and a custom movement use can't place
+  // an id-less legacy row, so those are left out (exerciseHistory).
+  const shared = useMemo(() => nameShared(name, exerciseCatalog, customExercises), [name, exerciseCatalog, customExercises]);
   const entries = useMemo(
-    () => (open ? exerciseHistory(workoutSessions, { ...match, name }) : []),
-    [open, workoutSessions, match, name]
+    () => (open ? exerciseHistory(workoutSessions, { ...match, name, nameShared: shared }) : []),
+    [open, workoutSessions, match, name, shared]
   );
+  const shownName = useExerciseName();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={t("{name} history", { name })}>
+    <BottomSheet open={open} onClose={onClose} title={t("{name} history", { name: shownName(name, !!match?.customId) })}>
       {entries.length === 0 ? (
         <div className="flex flex-col items-center text-center animate-fade-slide-up" style={{ padding: "26px 12px 10px", gap: 10 }}>
           <BookOpen size={20} style={{ color: "rgb(var(--thi-aea1dc))" }} />
