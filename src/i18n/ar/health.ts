@@ -75,6 +75,7 @@ export const FILES: string[] = [
   "components/health/records/LabsTab.tsx",
   "components/health/records/ImagingTab.tsx",
   "components/health/records/HistoryTab.tsx",
+  "services/medical-history/conditionLabel.ts",
   "components/health/records/InjuriesSection.tsx",
   "components/health/records/MarkerPage.tsx",
   "components/health/records/MarkerPickerSheet.tsx",
@@ -985,7 +986,9 @@ const health: Catalogue = {
   Asthma: "الربو", // note: health wording (condition chip)
   "Thyroid condition": "حالة في الغدة الدرقية", // note: health wording (condition chip)
   "Heart condition": "حالة قلبية", // note: health wording (condition chip)
-  PCOS: "متلازمة تكيّس المبايض", // note: health wording (condition chip)
+  // Batch D GJ: Karim's approved label until an official Arabic term exists (the chip still saves "PCOS";
+  // the cycle conditions keep the key "pcos").
+  "PMOS (formerly PCOS)": "PMOS (متلازمة تكيّس المبايض سابقًا)", // note: health wording (condition chip, cycle condition, doctor summary)
   "Anxiety/Depression": "القلق/الاكتئاب", // note: health wording (condition chip)
   Arthritis: "التهاب المفاصل", // note: health wording (condition chip)
   Oral: "عن طريق الفم", // note: health wording (medication route)

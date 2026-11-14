@@ -12,6 +12,7 @@ import { WheelPicker } from "../../ui/WheelPicker";
 import { CalendarPickerSheet } from "../../dashboard/CalendarPickerSheet";
 import { useApp } from "../../../context/AppContext";
 import { updateSurgeryRemote } from "../../../services/medical-history";
+import { PCOS_STORED, storedConditionText } from "../../../services/medical-history/conditionLabel";
 import { time12, minutesOfDay, clockParts } from "../../../utils/time12";
 import { ALL_MINUTES } from "../../calendar/calendarTime";
 import { textPx, linePx } from "../../../theme/textSize";
@@ -56,8 +57,10 @@ import { surgeryDate } from "../../../utils/recordDates";
 // B4 sweep (queue_medication_reminders, every 10 minutes) now delivers.
 
 // The stored value stays the English name (user data); only the chip shows it translated.
-export const COMMON_CONDITIONS: string[] = [tk("Diabetes"), tk("Hypertension"), tk("Asthma"), tk("Thyroid condition"), tk("Heart condition"), tk("PCOS"), tk("Anxiety/Depression"), tk("Arthritis")];
-const conditionLabel = (c: string) => (COMMON_CONDITIONS.includes(c) ? t(c) : c);
+// Batch D GJ: the PCOS chip still SAVES "PCOS" (PCOS_STORED; rows saved before the
+// rename say it too) and shows as "PMOS (formerly PCOS)" through conditionLabel.
+export const COMMON_CONDITIONS: string[] = [tk("Diabetes"), tk("Hypertension"), tk("Asthma"), tk("Thyroid condition"), tk("Heart condition"), PCOS_STORED, tk("Anxiety/Depression"), tk("Arthritis")];
+const conditionLabel = (c: string) => (c === PCOS_STORED ? storedConditionText(c) : COMMON_CONDITIONS.includes(c) ? t(c) : c);
 /** Batch D GA: Medications scrolled to sits this far down, below the page's fixed header and tabs. */
 const MEDS_SCROLL_MARGIN = 160;
 

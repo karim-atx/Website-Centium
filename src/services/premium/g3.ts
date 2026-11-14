@@ -21,6 +21,8 @@ import { t, tk, tn } from "../../i18n/core";
 import { isMissingFunction } from "./g2";
 import type { MyPremium } from "./model";
 import { surgeryDate, type DatePrecision } from "../../utils/recordDates";
+import { CONDITION_LABEL } from "../cycle/guidance";
+import { storedConditionText } from "../medical-history/conditionLabel";
 
 type Row = Record<string, unknown>;
 type Err = { code?: string | null; message?: string | null; details?: string | null; status?: number | null } | null | undefined;
@@ -819,7 +821,8 @@ export function summarySections(s: DoctorSummary, formatDay: (ymd: string) => st
   // note: health wording
   out.push({ key: "allergies", title: t("Allergies"), lines: [...s.allergies.map((a) => join([a.allergen, a.severity, a.note])), ...s.otherAllergies.map((a) => join([t("“{label}”", { label: `⁨${a.label}⁩` }), a.severity, a.note]))], empty: t("No allergies recorded.") });
   // note: health wording
-  out.push({ key: "conditions", title: t("Conditions"), lines: [...s.conditions], empty: t("No conditions recorded.") });
+  // Batch D GJ: the chip's stored "PCOS" prints as "PMOS (formerly PCOS)"; typed entries as written.
+  out.push({ key: "conditions", title: t("Conditions"), lines: s.conditions.map((c) => storedConditionText(c)), empty: t("No conditions recorded.") });
   out.push({ key: "surgeries", title: t("Surgeries"), lines: s.surgeries.map((x) => join([x.name, x.date ? surgeryDate({ date: x.date, datePrecision: x.datePrecision }, formatDay) : null])), empty: t("No surgeries recorded.") });
   const bp = s.bloodPressure;
   const bpLines: string[] = [];
@@ -864,7 +867,8 @@ export function summarySections(s: DoctorSummary, formatDay: (ymd: string) => st
       lines: [
         c.typicalCycleLength !== null ? tn(c.typicalCycleLength, "Typical cycle: {n} day", "Typical cycle: {n} days") : null,
         c.typicalPeriodLength !== null ? tn(c.typicalPeriodLength, "Typical period: {n} day", "Typical period: {n} days") : null,
-        ...c.conditions,
+        // cycle_settings.conditions are keys ("pcos", "irregular_cycles"): their labels, as the cycle settings show them.
+        ...c.conditions.map((k) => (Object.hasOwn(CONDITION_LABEL, k) ? t(CONDITION_LABEL[k]) : storedConditionText(k))),
       ].filter((x): x is string => !!x),
       empty: t("Nothing recorded."),
     });

@@ -31,6 +31,7 @@
 
 import type { CycleFlag, CyclePhase, Confidence } from "./types";
 import { t, tk, tn } from "../../i18n/core";
+import { PMOS_LABEL } from "../medical-history/conditionLabel";
 
 // UI labels below are marked with tk() and translated where they are shown; the
 // paragraphs stay English for clinical review (F13).
@@ -395,7 +396,8 @@ export const TRACKER_OFF_CTA = tk("Turn on cycle tracking");
 export const TIMEZONE_TITLE = tk("Time zone");
 
 export const CONDITION_LABEL: Record<string, string> = {
-  pcos: tk("PCOS"),
+  // Batch D GJ: shown as "PMOS (formerly PCOS)"; the stored key stays "pcos".
+  pcos: PMOS_LABEL,
   endometriosis: tk("Endometriosis"),
   thyroid: tk("Thyroid condition"),
   irregular_cycles: tk("Irregular cycles"),

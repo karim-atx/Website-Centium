@@ -51,7 +51,7 @@ import {
   trendLocked,
   trendResults,
 } from "./g3.ts";
-import { setActiveLanguage } from "../../i18n/core.ts";
+import { addCatalogue, setActiveLanguage } from "../../i18n/core.ts";
 import { surgeryDate } from "../../utils/recordDates.ts";
 
 const ON = { premiumOn: true, premium: false };
@@ -336,9 +336,10 @@ test("the doctor summary's sections: every part in order, weight only when given
   const rec = summarySections(parseDoctorSummary({ ...SUMMARY, numbers_hidden: true, weight: null })!);
   assert.ok(!rec.some((x) => x.key === "weight"));
 
-  // Tracking the cycle adds its section.
-  const cyc = summarySections(parseDoctorSummary({ ...SUMMARY, cycle: { typical_cycle_length: 28, typical_period_length: 5, conditions: ["PCOS"] } })!);
-  assert.deepEqual(cyc.at(-1)!.lines, ["Typical cycle: 28 days", "Typical period: 5 days", "PCOS"]);
+  // Tracking the cycle adds its section. Batch D GJ: cycle_settings.conditions are keys, shown by
+  // their labels ("pcos" reads "PMOS (formerly PCOS)"); an unknown value is printed as it came.
+  const cyc = summarySections(parseDoctorSummary({ ...SUMMARY, cycle: { typical_cycle_length: 28, typical_period_length: 5, conditions: ["pcos", "irregular_cycles", "constructor"] } })!);
+  assert.deepEqual(cyc.at(-1)!.lines, ["Typical cycle: 28 days", "Typical period: 5 days", "PMOS (formerly PCOS)", "Irregular cycles", "constructor"]);
 
   // Nothing recorded: empty lines, each section says so.
   const empty = summarySections(parseDoctorSummary({ period: {}, person: null, medications: [], allergies: [], conditions: [], surgeries: [], blood_pressure: { readings: 0 }, weight: null, lab_results: [] })!);
@@ -473,4 +474,20 @@ test("FQ: the doctor summary prints the member's own Other allergies, quoted, af
   assert.deepEqual(allergies.lines, ["Penicillin · severe", "“⁨Kiwi⁩” · severe"]);
   // A summary from today's database has no other_allergies: nothing extra.
   assert.deepEqual(parseDoctorSummary(SUMMARY)!.otherAllergies, []);
+});
+
+test("Batch D GJ: the medical-history chip's stored \"PCOS\" prints as PMOS, in English and Arabic; typed text as written", () => {
+  const s = parseDoctorSummary({ ...SUMMARY, conditions: ["PCOS", "Type 2 diabetes", "pcos (my words)"], cycle: { conditions: ["pcos"] } })!;
+  const lines = (key: string) => summarySections(s).find((x) => x.key === key)!.lines;
+  assert.deepEqual(lines("conditions"), ["PMOS (formerly PCOS)", "Type 2 diabetes", "pcos (my words)"]);
+  // What came back from the server is untouched.
+  assert.deepEqual(s.conditions, ["PCOS", "Type 2 diabetes", "pcos (my words)"]);
+  addCatalogue("ar", { "PMOS (formerly PCOS)": "PMOS (متلازمة تكيّس المبايض سابقًا)" });
+  setActiveLanguage("ar");
+  try {
+    assert.equal(lines("conditions")[0], "PMOS (متلازمة تكيّس المبايض سابقًا)");
+    assert.equal(lines("cycle")[0], "PMOS (متلازمة تكيّس المبايض سابقًا)");
+  } finally {
+    setActiveLanguage("en");
+  }
 });
